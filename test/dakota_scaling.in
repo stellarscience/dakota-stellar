@@ -1,0 +1,238 @@
+#@ s8: DakotaConfig=HAVE_ACRO
+#@ s9: DakotaConfig=HAVE_ACRO
+#@ s21: DakotaConfig=HAVE_ACRO
+#@ s2: DakotaConfig=HAVE_DOT
+#@ s3: DakotaConfig=HAVE_DOT
+#@ s4: DakotaConfig=HAVE_NPSOL
+#@ s5: DakotaConfig=HAVE_NPSOL
+#@ s16: DakotaConfig=HAVE_NPSOL
+#@ s17: DakotaConfig=HAVE_NPSOL
+#@ s20: DakotaConfig=HAVE_NPSOL
+#@ s12: TimeoutDelay=360
+#@ s13: TimeoutDelay=400
+
+# DAKOTA INPUT FILE - dakota_scaling.in
+# run tests with various scaling options for each class of optimizer
+#  - test scaling options for cdv, nonlinear constraints, linear constraints,
+#    functions and least squares terms
+#  - test modes user, auto, log, and none for each of these
+#  - inputs are like cyl_head (for most optimizers), mogatest (3, for JEGA),
+#    and textbook (for LSQ)
+
+#=======================================================================
+method,
+	scaling
+# OPT and MULTIOBJ formulations to run with cyl_head
+	conmin_mfd			#s0,#s1
+#	dot_sqp				#s2,#s3
+#	npsol_sqp			#s4,#s5,#s20
+#	optpp_q_newton			#s6,#s7
+#	  merit_function el_bakry	#s6,#s7
+#	coliny_direct			#s8,#s9,#s21
+#	  division major_dimension      #s8,#s9,#s21
+	  convergence_tolerance = 1e-8	#s0,#s1,#s2,#s3,#s4,#s5,#s6
+#	  convergence_tolerance = 1e-8	#s7,#s8,#s9,#s20,#s21
+#	mesh_adaptive_search	  	#s22,#s23,#s24
+#-----------------------------------------------------------------------
+# OPT tests with hessian formulations and log scaled functions
+#	optpp_newton			#s10,#s11
+#	  max_iterations = 50		#s10,#s11
+#	  convergence_tolerance = 1e-4	#s10,#s11
+#-----------------------------------------------------------------------
+# JEGA optimization formulations based on dakota_mogatest.in/2
+#       moga     						#s12,#s13
+#	output silent						#s12,#s13
+#       seed = 10983                              		#s12,#s13
+#       final_solutions = 2					#s12,#s13
+#	max_function_evaluations = 2000				#s12,#s13
+#	initialization_type unique_random			#s12,#s13
+#	crossover_type						#s12,#s13
+#	  multi_point_parameterized_binary = 2			#s12,#s13
+#	  crossover_rate = 0.8  		  		#s12,#s13
+#	mutation_type offset_normal				#s12,#s13
+#	  mutation_scale = 0.1					#s12,#s13
+#	fitness_type domination_count				#s12,#s13
+#	replacement_type below_limit = 6			#s12,#s13
+#	  shrinkage_percentage = 0.9				#s12,#s13
+#	convergence_type metric_tracker				#s12,#s13
+#	  percent_change = 0.05 num_generations = 10   		#s12,#s13
+#-----------------------------------------------------------------------
+# LSQ formulations to run with text_book
+#       nl2sol				#s14,#s15
+#	nlssol_sqp			#s16,#s17
+#	optpp_g_newton			#s18,#s19
+#         max_iterations = 100,     	#s14,#s15,#s16,#s17,#s18,#s19
+#         convergence_tolerance = 1e-6  #s14,#s15,#s16,#s17,#s18,#s19
+
+#=======================================================================
+variables,
+	continuous_design = 2
+#-----------------------------------------------------------------------------
+# OPT and MULTIOBJ	 cyl_head
+	  initial_point    1.8          1.0		#s0,#s1,#s2,#s3,#s4,#s5,#s6
+#	  initial_point    1.8          1.0		#s7,#s8,#s9,#s20,#s21
+#	  initial_point    1.8          1.0		#s22,#s23,#s24
+	  upper_bounds     2.164        4.0	        #s0,#s1,#s2,#s3,#s4,#s5,#s6
+#	  upper_bounds     2.164        4.0	        #s7,#s8,#s9,#s20,#s21
+#	  upper_bounds     2.164        4.0	        #s22,#s23,#s24
+	  lower_bounds     1.5          0.0	        #s0,#s1,#s2,#s3,#s4,#s5,#s6
+#	  lower_bounds     1.5          0.0	        #s7,#s8,#s9,#s20,#s21
+#	  lower_bounds     1.5          0.0	        #s22,#s23,#s24
+	  scale_types      'value'      'none'	#s0,#s20
+#	  scale_types      'value'	    'auto'	#s1,#s7,#s8,#s22
+#	  scale_types      'none'	    'auto'	#s2
+#	  scale_types      'log'        'none'	#s3,#s9,#s23
+#	  scale_types      'value'	    		#s4
+#         scale_types      'auto'       		#s5
+#         scale_types      'none'       		#s6
+#	  scale_types      'log'        'auto'	#s21,#s24
+	  scales           2.0	    1.5		#s0,#s1,#s4,#s7,#s8,#s20,#s22
+	  descriptors      'intake_dia' 'flatness'	#s0,#s1,#s2,#s3,#s4,#s5,#s6
+#	  descriptors      'intake_dia' 'flatness'	#s7,#s8,#s9,#s20,#s21
+#	  descriptors      'intake_dia' 'flatness'	#s22,#s23,#s24
+#-----------------------------------------------------------------------------
+# OPT and MULTIOBJ	 rosenbrock
+#         initial_point   2.     2.		#s10,#s11
+#         lower_bounds    0.1    0.1	#s10,#s11
+#         upper_bounds    100    100  	#s10,#s11
+#	  scale_types     'value'  'log' 	#s10
+#	  scales	      0.1     1.0	#s10
+#	  scale_types     'auto' 'value' 	#s11
+#	  scales	      1.0    5.0	#s11
+#         descriptors     'x1'   'x2'	#s10,#s11
+#-----------------------------------------------------------------------
+# JEGA
+#	  initial_point      0	  0   	#s12,#s13
+#	  upper_bounds      20  	 20	#s12,#s13
+#	  lower_bounds     -20	-20	#s12,#s13
+#	  scale_types	'value' 'auto'  #s12
+#	  scale_types	'value' 'none'  #s13
+#	  scales		5.0	1.0     #s12,#s13
+#	  descriptors       'x1'    'x2'	#s12,#s13
+#-----------------------------------------------------------------------
+# LSQ
+#	  initial_point    0.9      1.1	#s14,#s15,#s16,#s17,#s18,#s19
+#	  upper_bounds     5.8      2.9	#s14,#s15,#s16,#s17,#s18,#s19
+#	  lower_bounds     0.5     -2.9	#s14,#s15,#s16,#s17,#s18,#s19
+#         scale_types      'log'   'none'   #s14
+#         scale_types      'auto'  		#s16,#s19
+#	  scale_types      'value' 'none'	#s15,#s17,#s18
+#	  scales           2.0     1.0	#s15,#s17,#s18
+#	  descriptors      'x1'    'x2'	#s14,#s15,#s16,#s17,#s18,#s19
+#-----------------------------------------------------------------------
+# Linear constraints
+	linear_inequality_constraint_matrix = 1. 1.	#s0,#s4,#s6
+	linear_inequality_upper_bounds = 3.7         	#s0,#s4,#s6
+	linear_inequality_scale_types = 'auto'		#s0
+#	linear_inequality_scale_types = 'none'		#s4
+#	linear_inequality_scale_types = 'value'		#s6
+#	  linear_inequality_scales    = 1.9		#s6
+#	linear_equality_constraint_matrix = 1. 1.    	#s2,#s5,#s7
+#	linear_equality_targets = 3.7                 	#s2,#s5,#s7
+#	linear_equality_scale_types = 'value'		#s2
+#	  linear_equality_scales = 2.1			#s2
+#	linear_equality_scale_types = 'none'		#s5
+#	linear_equality_scale_types = 'auto'		#s7
+#	linear_inequality_constraint_matrix = 1. 1.	#s16,#s17,#s18,#s19
+#	linear_inequality_upper_bounds = 1.05	      	#s16,#s17,#s18,#s19
+# 	linear_inequality_scale_types = 'none'		#s17
+# 	linear_inequality_scale_types = 'auto'		#s18
+# 	linear_inequality_scale_types = 'value'		#s16,#s19
+# 	linear_inequality_scales = 2.0			#s16,#s19
+
+#=======================================================================
+interface,
+	direct					#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s13
+#	direct					#s14,#s15,#s16,#s17,#s18,#s19,#s20,#s21,#s22,#s23,#s24
+# OPT and MULTIOBJ
+	  analysis_driver=  'cyl_head'		#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7
+#	  analysis_driver=  'cyl_head'		#s8,#s9,#s20,#s21,#s22,#s23,#s24
+#	  analysis_driver=  'rosenbrock'	#s10,#s11
+# JEGA
+#	  analysis_driver = 'mogatest3'		#s12,#s13
+# LSQ
+#	  analysis_driver = 'text_book'		#s14,#s15,#s16,#s17,#s18,#s19
+
+#=======================================================================
+responses,
+# OPT
+	objective_functions = 1	#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s22,#s23
+#	objective_functions = 1	#s10,#s11
+	  objective_function_scale_types = 'value'	#s0,#s3,#s4,#s7,#s8,#s22
+	  objective_function_scales = 10.0 		#s0,#s3,#s4,#s7,#s8,#s22
+#	  objective_function_scale_types = 'none'	#s1,#s2,#s5,#s6,#s9,#s23
+#	  objective_function_scale_types = 'log'	#s11
+	nonlinear_inequality_constraints = 3     	#s0,#s2,#s4,#s5,#s6,#s7
+	  nonlinear_inequality_scale_types = 'value'	#s0,#s4
+	  nonlinear_inequality_scales = 0.5  2.0  5.0	#s0,#s4
+#	  nonlinear_inequality_scale_types = 'none'	#s2,#s7
+#	  nonlinear_inequality_scale_types = 'value' 'none' 'none'  #s5
+#	  nonlinear_inequality_scale_types = 'value' 'value' 'none' #s6
+#	  nonlinear_inequality_scales = 0.5  1.0  1.0	#s5,#s6
+#	nonlinear_inequality_constraints = 2     	#s1,#s3,#s8,#s9,#s22,#s23
+#	  nonlinear_inequality_lower_bounds = -.2 -.2  	#s1,#s3,#s8,#s9,#s22,#s23
+#	  nonlinear_inequality_upper_bounds =  .2  .2  	#s1,#s3,#s8,#s9,#s22,#s23
+#	  nonlinear_inequality_scale_types  = 'auto' 'none'	#s1,#s9,#s23
+#	  nonlinear_inequality_scale_types  = 'value' 'none'  	#s3
+#	  nonlinear_inequality_scale_types  = 'value' 'auto'  	#s8,#s22
+#	  nonlinear_inequality_scales       = 0.5 1.0		#s3,#s8,#s22
+#	nonlinear_equality_constraints = 1		#s1,#s3,#s8,#s9,#s22,#s23
+#	  nonlinear_equality_targets = -.2		#s1,#s3,#s8,#s9,#s22,#s23
+#	  nonlinear_equality_scale_types  = 'value' 	#s1,#s9,#s23
+#	  nonlinear_equality_scales  = 0.5		#s1,#s9,#s23
+#	  nonlinear_equality_scale_types  = 'auto'  	#s3
+#	  nonlinear_equality_scale_types  = 'none'  	#s8,#s22
+	analytic_gradients		#s0,#s2,#s4,#s5,#s10,#s11
+#	numerical_gradients		#s1,#s3,#s6,#s7
+#	no_gradients			#s8,#s9,#s22,#s23
+	no_hessians			#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s22,#s23
+#	quasi_hessians sr1		#s10
+#	numerical_hessians		#s11
+#--------------------------------------------------------------------------
+# JEGA
+#	objective_functions = 2				#s12,#s13
+#	  objective_function_scale_types = 'value' 'none'   	#s12
+#	  objective_function_scales = 2.5  1.0			#s12
+#	  objective_function_scale_types = 'value'		#s13
+#	  objective_function_scales = 2.5  1.5 			#s13
+#	nonlinear_inequality_constraints = 2 		#s12,#s13
+#	  nonlinear_inequality_upper_bounds = 0.0 0.0		#s12,#s13
+#	  nonlinear_inequality_scale_types = 'value' 		#s12
+#	  nonlinear_inequality_scales =       2.0 2.5 		#s12
+#	  nonlinear_inequality_scale_types = 'value' 'none'  	#s13
+#	  nonlinear_inequality_scales =       2.0 1.0   	#s13
+#	no_gradients						#s12,#s13
+#	no_hessians						#s12,#s13
+#-----------------------------------------------------------------------
+# LSQ
+#	calibration_terms = 3		#s14,#s15
+#	calibration_terms = 2		#s16,#s17,#s18,#s19
+#	  least_squares_term_scale_types = 'value' 'none' 'value' #s14,#s15
+#	  least_squares_term_scales = 2.5 1.0 2.0	          #s14,#s15
+#	  least_squares_term_scale_types = 'value' 'none' #s16,#s18
+#	  least_squares_term_scales      = 2.5      1.0	  #s16,#s18
+#	  least_squares_term_scale_types = 'value'	#s17,#s19
+#	  least_squares_term_scales = 2.5 1.5		#s17,#s19
+#	nonlinear_inequality_constraints = 1	#s16,#s17,#s18,#s19
+#	  nonlinear_inequality_scale_types = 'value'	#s16,#s18
+#	  nonlinear_inequality_scales = 2.0		#s16,#s18
+#	  nonlinear_inequality_scale_types = 'none'     #s17,#s19
+#	analytic_gradients	 		#s14,#s16,#s18
+#	numerical_gradients	 		#s15,#s17,#s19
+#	no_hessians				#s14,#s15,#s16,#s17,#s18,#s19
+#-----------------------------------------------------------------------
+# MULTIOBJ
+#	objective_functions = 3				#s20,#s21,#s24
+#	objective_function_scale_types = 'value' 'value' 'none'	#s20,#s21,#s24
+#	objective_function_scales = 2.5 1.5 1.0			#s20,#s21,#s24
+#	multi_objective_weights = .7 .1 .1			#s20,#s21,#s24
+#	nonlinear_inequality_constraints = 1		#s20,#s21,#s24
+#	nonlinear_inequality_scale_types = 'none'		#s20
+#	nonlinear_inequality_scale_types = 'value'		#s21,#s24
+#	nonlinear_inequality_scales = 5.0			#s21,#s24
+#	numerical_gradients					#s20
+#	  method_source dakota					#s20
+#	  interval_type central					#s20
+#	  fd_gradient_step_size = 1.e-4				#s20
+#	no_gradients						#s21,#s24
+#	no_hessians						#s20,#s21,#s24

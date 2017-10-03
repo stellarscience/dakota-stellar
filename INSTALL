@@ -1,0 +1,331 @@
+==============
+Dakota INSTALL
+==============
+
+Dakota is a framework which provides access to a broad variety of
+algorithms and services.  Downloading pre-built binaries from the
+Dakota web site or accessing a site-supported installation are the
+simplest routes to access Dakota.
+
+For more experienced users, building Dakota from source (either
+downloaded or checked out) allows customization with additional
+packages and porting to additional platforms or operating systems.
+This INSTALL file describes how to install pre-built binaries and setup 
+the environment, as well as how to compile from source code.
+
+NOTE: The most up to date installation guidance and tips can be found
+alongside the downloads on the Dakota website.
+
+
+=================
+Table of Contents
+=================
+
+Distribution Contents
+Binary Quick Start
+ I.   Install Unix-Like Binary (Linux RHEL6 or binary compatible, Mac OS X)
+ II.  Install Windows Executable
+ III. Test Binary Distribution installation.
+Source Quick Start
+Other Resources
+
+=====================
+Distribution Contents
+=====================
+
+The directories contained in Dakota distributions include:
+  * bin-dist denotes binary distributions 
+    	     (Dakota.release.platform.tar.gz, Dakota.release.platform.zip)
+  * src-dist denotes source or checkout distributions
+    	     (Dakota.release.src.tar.gz, Dakota.release.src.zip)
+
+Distribution  Directory	 Description
+Type
+------------  ---------  --------------------------------------------------  
+bin-dist      bin	 Binary files for Dakota, restart utility, dprepo
+	      		 and various third-part libraries (TPLs).
+
+bin-dist      examples	 Example problems from the Users Manual, examples of
+	      		 interfacing with other codes using script-based or
+			 direct linkage-based interfaces, parallel computing
+			 examples, and platform installation examples.
+
+bin-dist      test	 Files for regression and unit testing of the
+src-dist      unit_test	 Dakota system. Test simulator programs and Dakota
+			 input files are provided for testing different
+			 capabilities. 
+
+bin-dist      include	 Include files for Dakota and it's associated TPLs.
+
+bin-dist      lib	 Library files for Dakota and it's associated TPLs.
+
+src-dist      packages	 Libraries of iterative algorithms provided by
+	      		 commercial vendors and related Sandia projects.
+			 Additionally, libraries for parsing (nidr),
+			 vector/matrix utilities (Trilinos Teuchos),
+			 stochastic utilities (Pecos), algebraic
+			 interface (AMPL), surface fitting (Surfpack), etc.
+
+src-dist     cmake	 Scripts supporting CMake builds.	 
+
+src-dist     docs	 The Users, Reference, and Developers Manuals are 
+	     		 maintained here.  Other references are available from
+			 the Dakota Web site (http://dakota.sandia.gov).
+
+src-dist     src	 The main source code repository for Dakota core.
+
+==================
+Binary Quick Start
+==================
+
+Most users will install from a binary distribution, if available for
+the target platform.  This typically involves unpacking the archive
+and setting appropriate PATH variables, if required.
+
+Dakota binary distributions are provided in archive format (either tar.gz 
+or zip). 
+ * See Section I below to install tar.gz archive on Unix-like platform.
+ * See Section II below to install zip archive on Windows platform.
+ * See Section III below to test binary installion.
+
+--------------------------------------------------------------------
+I. Install Unix-Like Binary (Linux RHEL6 or binary compatible, Mac OS X)
+--------------------------------------------------------------------
+
+1. Extract archive file into suitable install location, e.g. /home/username.
+   If you have root access, you may extract archive file in a shared directory,
+   e.g. /usr/local. 
+
+       $ cd /path/to/Dakota/install/directory
+       $ tar xzvf /path/to/Dakota-release.src.tar.gz
+   
+   Rename the extracted Dakota binary executable directory:
+
+       $ ls
+       dakota-<release>.<platform>
+       $ mv dakota-<release>.<platform> Dakota
+
+   In the instructions below, $INSTALL_DIR refers to the path to this new
+   directory,
+	/path/to/Dakota/install/directory/Dakota
+
+2. Make sure Dakota executables (and optionally test files and current
+   directory) are available on the PATH by typing 'which dakota' at command
+   line prompt. 
+
+   If your PATH variable is set correctly, the path to the dakota binary
+   should be displayed. 
+        $ which dakota
+        $INSTALL_DIR/bin/dakota
+   where $INSTALL_DIR will be the absolute path specified in step #1 above.
+   Go to Section III to test the binary installation.
+
+   If your PATH variable is NOT set correctly, you will get a message like
+   the following:
+        $ which dakota
+        /usr/bin/which: no dakota in (/usr/local/bin:/usr/local/sbin)
+   Continue with step #3 to set your PATH variable.
+
+3. If your PATH is not set correctly, make the following change to your
+   appropriate shell login script:
+
+   Bash shell
+   ----------
+   a. Edit the startup file ~/.bashrc in your favorite text editor
+   b. Modify and export PATH variable. Type the following line, replacing
+      $INSTALL_DIR with the absolute path to your installation directory,
+      e.g. /home/username.
+
+         export PATH=$INSTALL_DIR/bin:$INSTALL_DIR/test:$PATH
+     
+      If installing Dakota on a Linux system, also set LD_LIBRARY_PATH:
+         
+         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INSTALL_DIR/lib:$INSTALL_DIR/bin
+
+      On a Mac, set DYLD_LIBRARY_PATH:
+
+         export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$INSTALL_DIR/lib:$INSTALL_DIR/bin
+
+   c. Save and close file.
+   d. Update changes in your terminal window. At
+      
+      $ source ~/.bashrc
+
+   C shell
+   -------
+   a. Edit the startup file ~/.cshrc in your favorite text editor
+   b. Set path variable. Type the following line, replacing
+      $INSTALL_DIR with the absolute path to your installation directory,
+      e.g. /home/username.
+
+         setenv path=($INSTALL_DIR/bin $INSTALL_DIR/test $path)
+
+      If installing Dakota on a Linux system, also set LD_LIBRARY_PATH:
+         
+         setenv LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${INSTALL_DIR}/lib:${INSTALL_DIR}/bin"
+
+      On a Mac, set DYLD_LIBRARY_PATH:
+
+         setenv DYLD_LIBRARY_PATH "${DYLD_LIBRARY_PATH}:${INSTALL_DIR}/lib:${INSTALL_DIR}/bin"
+
+   c. Save and close file.
+   d. Update changes in your terminal window. At
+      
+      $ source ~/.cshrc
+
+--------------------------------------------------------------------
+II.  Install Windows Executable
+--------------------------------------------------------------------
+
+1. Extract archive file into suitable install location, e.g. C:\Dakota using
+   the Windows extract utility. 
+       a. In Windows Explorer window, highight Dakota.<release>.<platform>.zip
+          file.
+       b. Right click and select "Extract All"
+       c. Select a destination, e.g. C:\Dakota, and click the Extract button.
+          In the instructions below, %dest_dir% refers to this destination
+	  directory.
+
+   Rename the extracted Dakota executable directory folder:
+       a. Right click the dakota-<release>.<platform> file, and select
+          'Rename'.
+       b. Rename file to 'Dakota'
+
+   In the instructions below, %install_dir% refers to the path to this new
+   directory, %dest_dir%\Dakota.
+
+2. Set path to your executable.
+   a. Click the Start button and type 'cmd' in the 'Search program and files'
+      text box to open cmd.exe.
+   b. At the command prompt, type the following command, replacing %install_dir%
+      with the path to your Dakota installation:
+
+      C:\Users\name> path=%path%;%install_dir%\bin;%install_dir%\test;%install_dir%\lib
+      
+      Note that the path will be set only for as long as the cmd window
+      remains open. To permanently add Dakota to your path, consult the 
+      documentation for your version of Windows. 
+
+--------------------------------------------------------------------
+III. Test Binary Distribution installation.
+--------------------------------------------------------------------
+1. At a terminal prompt (on Windows, dakota.exe), type 'dakota -v'. You should
+   see Dakota version information displayed.
+
+   > dakota -v
+   Running serial executable in serial mode.
+   Dakota released <release date>.
+   Subversion revision ### build <build data & time>.
+   Dakota execution time in seconds;
+   Total CPU = ...
+   Total wall clock = ...
+
+   If you do not get the expected version information, you may use the
+   following Dakota wrapper script for your platform. This wrapper script sets
+   expected environment variables and can be used instead of the executable
+   name. To test the Dakota installation use the following command:
+
+	Windows Command Terminal: dakota.bat -v
+	Linux:			  dakota.sh -v
+	Mac OS X:		  dakota.sh -v
+
+2. Refer to the "Tutorial" section of the User's Manual for instructions
+   on using the dakota executables or see the Quick Start page on the Dakota
+   web site.
+
+==================
+Source Quick Start
+==================
+
+To compile Dakota source distributions, use CMake to populate a build
+tree for the target platform with generated Makefiles, and then
+execute 'make'.  Given the large number of supported packages,
+specifying a few 'cmake' options and environment variables may be
+required.  Building the software with all packages may take from 15
+minutes to over an hour. 
+
+The following are instructions for building Dakota on a Unix-like platform
+in a Bash shell. You may need to use appropriate commands to work for your
+particular platform or shell.
+
+1. Install CMake 2.8.9 (or later) and ensure it is in your $PATH.
+
+2. Extract Dakota source archive file. In the example below, Dakota will
+   be extracted into the user's home directory, /home/username. 
+
+   $ cd $HOME
+   $ tar xzvf /path/to/dakota-<release>.public.src.tar.gz
+
+   You will see a new directory, /home/username/dakota-<release>.src. In
+   the instructions below, $DAK_SRC refers to this directory.
+
+   $ export DAK_SRC=$HOME/dakota-<release>.src
+
+3. Create separate build directory, e.g. $HOME/dakota-build. In the
+   instructions below, $DAK_BUILD refers to the directory that you create
+   for CMake to configure and build Dakota. 
+
+   $ mkdir -p /path/to/Dakota/build/directory
+   $ export DAK_BUILD=/path/to/Dakota/build/directory
+   
+4. Make a copy of the template BuildDakotaTemplate.cmake to customize a CMake
+   Dakota build for our platform. Keep file in the $DAK_SRC/cmake directory 
+   to use for subsequent Dakota CMake builds.
+
+   $ cp $DAK_SRC/cmake/BuildDakotaTemplate.cmake \
+        $DAK_SRC/cmake/BuildDakotaCustom.cmake
+
+5. Update $DAK_SRC/cmake/BuildDakotaCustom.cmake file to reflect your platform
+   configuration. Instructions are provided in this file.
+
+6. Configure and build Dakota. 
+
+   $ cd $DAK_BUILD
+   $ cmake -C $DAK_SRC/cmake/BuildDakotaCustom.cmake $DAK_SRC
+   $ make [-j#]
+   $ make install
+
+7. Set paths and library paths. In the instructions below, $DAK_INSTALL
+   refers to the Dakota installation path you specified for the variable
+   CMAKE_INSTALL_PREFIX in your BuildCustom.cmake file.
+
+   $ export PATH=$DAK_INSTALL/bin:$DAK_INSTALL/test:$PATH
+   $ export LD_LIBRARY_PATH=$DAK_INSTALL/lib:$DAK_INSTALL/bin:$LD_LIBRARY_PATH
+
+   NOTE: For Mac OS X, you need to set DYLD_LIBRARY_PATH instead.
+
+   $ export DYLD_LIBRARY_PATH=$DAK_INSTALL/lib:$DAK_INSTALL/bin:$DYLD_LIBRARY_PATH
+
+Miscellaneous Notes:
+ * 'make [-j#]': Dakota supports concurrent build processes
+
+ * 'make install' requires write privileges in CMAKE_INSTALL_PREFIX.
+
+ * Executing cmake without any options will result in an attempt to
+   build with as many vendor algorithms and packages as are available
+   in the distribution.  Options below and on the Dakota website
+   describe how to turn off features.
+
+ * Once make has successfully completed, the generated Dakota
+   executables (dakota and dakota_restart_util) will reside in
+   $DAK_BUILD/src.  If 'make install' is invoked, copies of the
+   executables will be placed in CMAKE_INSTALL_PREFIX/bin and copies
+   of the libraries (libdakota.a, etc.) are placed in
+   CMAKE_INSTALL_PREFIX/lib. You may set CMAKE_INSTALL_PREFIX in 
+   BuildDakotaCustom.cmake.
+
+===============
+Other Resources
+===============
+
+For additional help with installing Dakota from source, please
+visit https://dakota.sandia.gov/content/build-compile-source-code
+
+Topic include:
+* accessing Dakota via Subversion repository checkout
+* source installation dependencies
+* source installation options
+* Dakota CMake hints
+* generating local documentation
+* summary of distributed Dakota libraries
+* installing commercial libraries, such as DOT, NPSOL, and NLPQL 

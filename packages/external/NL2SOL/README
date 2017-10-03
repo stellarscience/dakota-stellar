@@ -1,0 +1,13 @@
+The .c files in this directory can be reconstructed by sending the E-mail request
+
+	send dn2f dn2fb dn2g dn2gb from port
+
+to netlib@netlib.bell-labs.com and running the returned .f files through f2c.
+(Source for f2c is available from netlib.)
+
+At this writing (Wed Apr 14 17:47:58 MDT 2004), d1mach.c and i1mach.c have
+been hand-modified to prevent trouble with gcc -O2, but a forthcoming update
+to f2c should make this hand modification unnecessary.
+
+File port.readme is netlib's port/readme file, which explains that dn2g, etc.,
+are "publicly available", a term used before GPL and LGPL were invented.

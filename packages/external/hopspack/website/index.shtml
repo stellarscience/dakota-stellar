@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<!-- 1. begin: SITE TITLE - REQUIRED -->
+<title>HOPSPACK - Download Page</title>
+<!-- 1. end: SITE TITLE - REQUIRED -->
+
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="cache-control" content="no-cache" /> 
+<meta http-equiv="pragma" content="no-cache" />
+
+
+<!-- 2. begin: METADATA - REQUIRED -->
+<meta name="keywords" content="Download, HOPSPACK, optimization, derivative-free, parallel computing">
+<meta name="description" content="Download page for HOPSPACK software">
+<meta name="sandia.approval_type" content="formal">
+<meta name="sandia.approved" content="SAND2010-2435W">
+<meta name="sandia.create_date" content="05/03/2010">
+<meta name="author" content="Todd Plantenga">
+<!-- 2. end: METADATA - REQUIRED -->
+
+
+<!-- 3. begin: METADATA - NOT REQUIRED -->
+<!-- 3. end: METADATA - NOT REQUIRED -->
+
+
+<!-- 4. begin: SITE CSS - REQUIRED -->
+<link rel="stylesheet" type="text/css" href="http://www.sandia.gov/css/home.css" media="all" />
+<!-- 4. end: SITE CSS - REQUIRED -->
+
+  <script type="text/javascript">
+  <!--
+    function setupLoad() {
+      if (document.enteraddress && document.enteraddress.emailaddr)
+        document.enteraddress.emailaddr.focus();
+      var element = document.getElementById ("errorMessage");
+      if (element && element.style && element.style.display)
+        element.style.display = "none";
+    }
+
+    function checkData() {
+      var userEntry = "";
+      if (document.enteraddress && document.enteraddress.emailaddr)
+        userEntry = document.enteraddress.emailaddr.value;
+      var element = document.getElementById ("errorMessage");
+      if (userEntry.length == 0) {
+        if (element && element.style && element.style.display)
+          element.style.display = "inline";
+        if (document.enteraddress && document.enteraddress.emailaddr)
+          document.enteraddress.emailaddr.focus();
+        return false;
+      }
+      else {
+        if (element && element.style && element.style.display)
+          element.style.display = "none";
+        return true;
+      }
+      return false;
+    }
+  // -->
+  </script>
+</head>
+
+<!-- ------------------------------------------------------------ -->
+<body onload="setupLoad();">
+
+<!-- sandia blue banner server-side include -->
+<!--#include file="sandia_banner_ssi.txt" -->
+
+<div style="font:normal 1.25em Verdana, Arial, Helvetica, sans-serif;
+            padding:20px; border:0;">
+
+<table>
+  <tr>
+
+    <td>
+      <!-- Left side content -->
+      <h2 style="color:rgb(0%,0%,0%)">HOPSPACK Download Page</h2>
+
+      <p><br>
+      Thank you for your interest in HOPSPACK.
+      </p>
+
+      <p><br>
+      Binaries and source code can be downloaded after you register and review
+      the license agreements.
+      </p>
+
+      <p><br>
+      If you have previously filled out the user registration form,
+      enter your email address below and click "Continue".
+      If you have not completed the registration process, please
+      <a href="registration.shtml">click here to register</a>.
+      We ask that you register an email address as a courtesy in exchange for
+      our free software.  Your email address will remain strictly confidential.
+      </p>
+
+      <p><br>
+      <center>
+      <form name="enteraddress"
+            method="post"
+            action="http://www.sandia.gov/cgi-bin/hopspack/hopspack_checkuser"
+            onSubmit="return checkData();">
+      <table border="0">
+        <tr>
+          <td>Email address:</td>
+            <td><input type="text" name="emailaddr" size="40"></td>
+            <td><input type="submit" value="Continue"></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>
+            <span style="color:rgb(100%,0%,0%);font-weight:bold;display:none"
+                  id="errorMessage">
+            Please enter an email address
+            </span>
+          </td>
+          <td></td>
+        </tr>
+      </table>
+      </form>
+      </center>
+      </p>
+
+      <p><br>
+      <table>
+        <tr>
+          <td>
+            <img src="usermanual_image_tiny.png" alt="User Manual"
+                 height="125" width="96" border="0">
+          </td>
+          <td valign="center">
+            &nbsp;
+            <a href="HopspackUserManual_2_0_2.pdf">
+            HOPSPACK User Manual</a> (PDF, 665 kbytes)
+          </td>
+        </tr>
+      </table>
+      </p>
+    </td>
+
+    <td style="padding-left:10px;vertical-align:top">
+      <!-- Right side logo and nav -->
+      <img src="HOPSPACK_Logo_120x118.png"
+           alt="HOPSPACK logo" border="0" height="120" width="118">
+      <p><br>
+         <strong>Page Contact</strong><br>
+         Principle Member Technical Staff<br>
+         <a href="mailto:tplante@sandia.gov">Todd Plantenga</a><br>
+         (925) 294-3486
+      </p>
+      <p><br>
+        <strong>Related Links</strong><br>
+        <a href="https://software.sandia.gov/trac/hopspack/">HOPSPACK Wiki</a>
+      </p>
+    </td>
+
+  </tr>
+</table>
+
+<p><br></p>
+
+</div>
+
+
+<a name="footer2"></a>
+<div id="footer2"> <p><a href="mailto:tplante@sandia.gov">Page contact</a></p>
+</div>
+
+<!-- sandia footer server-side include -->
+<!--#include file="sandia_footer_ssi.txt" -->
+
+</body>
+</html>

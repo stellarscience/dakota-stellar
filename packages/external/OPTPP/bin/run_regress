@@ -1,0 +1,250 @@
+#!/bin/sh
+#
+#  Run regression tests for OPT++ and send results to OPT++ development team
+#
+#  Usage:  run_regress 
+#
+#  Options: -c         check out PROJECT from repository
+#           -k         keep all working files
+#         
+###############################################################################
+#
+#
+# Configuration parameters you may want to specify for your particular project
+#
+# Project name and source directory name
+#
+PROJECT="OPT++"
+#
+# Name of directory where tests reside
+#
+PROJECT_TESTS="$PROJECT/tests"
+#
+# List of people to mail test results to
+#
+CVS_TEAM="opt++-cvs@csmr.ca.sandia.gov"
+#PROJECT_TEAM="JCMeza@lbl.gov"
+#PROJECT_TEAM="JCMeza@lbl.gov pdhough@ca.sandia.gov pwillia@sandia.gov"
+
+#
+# Environment variables needed for the build
+#
+export XERCESCROOT=$HOME/$PROJECT/xerces-2.1.0
+export PATH=$PATH:$HOME/$PROJECT/bin
+export TMP=$HOME/tmp
+
+###############################################################################
+#
+# First define some functions
+#
+###############################################################################
+
+write_header() {
+echo "<!DOCTYPE HTML PUBLIC \"OPT++ Regression Test Results\">" >> regtest.html
+echo "<HTML> " >> regtest.html
+echo " <HEAD> " >> regtest.html
+echo "	 <TITLE></TITLE> " >> regtest.html
+echo "  </HEAD> " >> regtest.html
+echo "  <BODY> " >> regtest.html
+echo "	 <P><B><FONT SIZE="+2">Results from $PROJECT Regression test</FONT></B> </P> " >> regtest.html
+echo "	 <P>Host:  $1 </P> " >> regtest.html
+shift
+echo "	 <P>Users who made commits: $*</P> " >> regtest.html
+echo "	 <TABLE BORDER="1"> " >> regtest.html
+echo "		<TR> " >> regtest.html
+echo "		  <TD><FONT SIZE="+2"><B>Test Name</B></FONT></TD> " >> regtest.html
+echo "		  <TD><FONT SIZE="+2"><B>Test Number</B></FONT></TD> " >> regtest.html
+echo "		  <TD><FONT SIZE="+2"><B>Status</B></FONT></TD> " >> regtest.html
+echo "     	  <TD><FONT SIZE="+2"><B>Comments</B></FONT></TD> " >> regtest.html
+echo "		</TR> " >> regtest.html
+return 0;
+}
+
+write_footer() {
+echo "	 </TABLE> </BODY>" >> regtest.html
+echo "</HTML>" >> regtest.html
+return 0;
+}
+
+write_entry() {
+echo $1 $2 $3
+echo "<TR> " >> regtest.html
+echo "<TD>$1</TD>" >> regtest.html 
+echo "<TD ALIGN=RIGHT>$2</TD> " >> regtest.html
+case "$3" in
+   "PASSED") echo "<TD><FONT COLOR=#00FF00>$3</FONT></TD> " >> regtest.html;;
+   "FAILED") echo "<TD><FONT COLOR=#FF0000>$3</FONT></TD> " >> regtest.html;;
+          *) echo "<TD><FONT COLOR=#FF0000>UNKNOWN</FONT></TD> " >> regtest.html;;
+    esac
+echo "<TD>&nbsp;</TD> " >> regtest.html
+echo "</TR> " >> regtest.html
+
+return 0;
+}
+###############################################################################
+#
+# Set defaults and clean up any old files
+#
+###############################################################################
+
+CHECKOUT=1
+RUNTESTS=1
+KEEP=0
+today=`date -I`
+machine=`hostname`
+
+/bin/rm -rf cvsusers regtest.html results.dat
+if [ -e regtest.out ]
+then
+    /bin/mv -f  ./regtest.out ./regtest.out.old 
+    touch regtest.out
+fi
+
+###############################################################################
+# Parse options
+###############################################################################
+while getopts co: OPTION
+do
+case $OPTION in
+    c) CHECKOUT=1;;
+    k) KEEP=1;;
+esac
+done
+
+if ([ $CHECKOUT -eq 1 ])
+then
+###############################################################################
+#
+# Check out PROJECT, and make tests
+#
+###############################################################################
+    export CVS_RSH=ssh
+#   remote host version
+#    cvsdir=":ext:meza@csmr.ca.sandia.gov:/var/cvs"
+#   local version
+    cvsdir="/var/cvs"
+    /bin/rm -rf ./$PROJECT
+    cvs -d $cvsdir co $PROJECT
+    if [ $? -ne 0 ]
+    then
+	echo "CVS checkout failed"
+	mail_message="CVS checkout of $PROJECT failed"
+	RUNTESTS=0
+    else
+	(cd $PROJECT; ./configure; \
+	    /bin/rm -rf maketests.$today.log; \
+	    make tests >& maketests.$today.log)
+	if [ $? -ne 0 ]
+	then
+	    echo "$PROJECT make failed"
+	    mail_message="$PROJECT make failed"
+	    RUNTESTS=0
+	fi
+    fi
+fi
+
+if [ $RUNTESTS -eq 1 ]
+then
+#
+# Process test results for all directories specified
+#
+    for dir in uncon hock parallel
+      do
+      (cd $PROJECT_TESTS/$dir; ./processTestResults.sh)
+      cat $PROJECT_TESTS/$dir/details.log >> regtest.out
+      cat $PROJECT_TESTS/$dir/results.dat >> results.dat
+    done
+#
+# Count failures
+#
+    passed=`grep "PASSED" results.dat | wc -l`
+    failed=`grep "FAILED" results.dat | wc -l`
+#################################################################################
+#
+# Create html file with results
+# Note: I assume that the processTestResults.sh script in the PROJECT tree
+#       writes out a file called results.dat with 1 line per test run.  
+#       Each line must be of the form:  
+#          testname testnumber teststatus
+#
+#################################################################################
+#
+# Extract all cvs users who executed a commit yesterday
+#
+#   remote host version
+#    cvsdir=":ext:meza@csmr.ca.sandia.gov:/var/cvs"
+#   local version
+    cvsdir="/var/cvs"
+    cvs -d $cvsdir history -a -c -D "1 day ago" | awk '{print $5}' | uniq > cvsusers
+
+    write_header $machine $today `cat cvsusers`
+    while read testname testnumber teststatus 
+    do
+      write_entry $testname $testnumber $teststatus
+    done <results.dat 
+    write_footer
+    mv regtest.html regtest.$today.html
+#   remote host version
+#    scp regtest.$today.html meza@csmr:/var/www/html/projects/opt++/regress_tests/.
+#   local version
+    cp regtest.$today.html /var/www/html/projects/opt++/regress_tests/.
+else
+mail -s "$PROJECT regression test results" $CVS_TEAM <<EOF
+This is an email automatically generated by the $PROJECT run_regress script.
+
+
+******  Regression test script failed for the following reasons. ******
+
+$mail_message
+
+
+EOF
+exit 0
+
+fi
+
+###############################################################################
+# mail results to development team
+###############################################################################
+
+if [ $failed -ge 1 ] 
+then
+mail -s "$PROJECT regression test results" $CVS_TEAM <<EOF
+This is an email automatically generated by the $PROJECT run_regress script.
+
+Number of tests passed: $passed
+Number of tests failed: $failed
+
+The complete results of today's regression tests can be found at:
+
+    http://csmr.ca.sandia.gov/projects/opt++/regress_tests/regtest.$today.html
+
+EOF
+echo "Regression test results mailed to $CVS_TEAM"
+
+else
+#
+# No failures, but send a message anyway
+#
+mail -s "$PROJECT regression test results" JCMeza@lbl.gov <<EOF
+This is an email automatically generated by the $PROJECT run_regress script.
+
+Number of tests passed: $passed
+Number of tests failed: $failed
+
+The complete results of today's regression tests can be found at:
+
+    http://csmr.ca.sandia.gov/projects/opt++/regress_tests/regtest.$today.html
+
+EOF
+echo "Regression test results mailed to JCMeza@lbl.gov"
+fi
+#
+# Cleanup
+#
+if [ $KEEP -eq 0 ]
+then
+    /bin/rm -rf regtest.$today.html regtest.html cvsusers regtest.out results.dat
+fi
+
+exit 0

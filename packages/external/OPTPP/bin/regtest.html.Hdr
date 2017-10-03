@@ -1,0 +1,16 @@
+<!DOCTYPE HTML PUBLIC "-//SoftQuad Software//DTD HoTMetaL PRO 6.0::19990601::extensions to HTML 4.0//EN" "hmpro6.dtd">
+<HTML> 
+  <HEAD> 
+	 <TITLE></TITLE> 
+  </HEAD> 
+  <BODY> 
+	 <P><B><FONT SIZE="+2">Results from OPT++ Regression test</FONT></B> </P>
+	 <P>run on: $DATE</P>
+	 <P>Last checkout: $NAME</P>
+	 <TABLE BORDER="1"> 
+		<TR> 
+		  <TD><FONT SIZE="+2"><B>Test Name</B></FONT></TD> 
+		  <TD><FONT SIZE="+2"><B>Test Number</B></FONT></TD> 
+		  <TD><FONT SIZE="+2"><B>Status</B></FONT></TD> 
+		  <TD><FONT SIZE="+2"><B>Comments</B></FONT></TD> 
+		</TR> 

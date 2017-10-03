@@ -1,0 +1,14 @@
+Blurb::
+Evaluate points in the pattern until an improving point is found
+Description::
+
+In the \c nonblocking case, all points in the pattern may not be evaluated. 
+The first improving point found becomes the next iterate. Since 
+the algorithm steps will be subject to parallel timing variabilities, 
+these runs will not generally be repeatable.
+
+Topics::
+Examples::
+Theory::
+Faq::
+See_Also::	

@@ -1,0 +1,38 @@
+This file briefly explains the steps to add a new distribution type to 
+the LHS UNIX Library/Standalone version of Latin Hypercube Sampling. 
+
+1.  In the LHS/mods directory, change the Distnm.f90 file to add
+distribution types.  Specifically, change LEND (increment it by the number 
+of distributions you are adding).  Change DIST and allow for enough 
+characters in the names of the distributions you are adding.  
+Add DISTRIBUTION XX (e.g., 38) after the current distributions, 
+in the SUBROUTINE DISTNM_INIT().
+
+2. Add the new_dist_name.f90 files in the main LHS directory. You may want 
+to pattern them after an existing distribution. 
+
+3.  Change Wrtpar.f90 to write the new distribution type (by using a 
+conditional clause such as IF(ID .EQ. 38) THEN ...). 
+
+4.  Change the Chkdat.f90 file to check for the correct parameter inputs 
+for the new distribution.  You need to add a distribution keyword near the top 
+of this file, then upon finding that distribution, you add the proper checks 
+for the associated parameters and also write statements. 
+
+5.  Add the distributions to lhs.f90, so that when lhs is called with 
+the new parameter, it will execute that distribution with a CALL routine. 
+
+6.  Add the same logic to Lhs_run.f90, the callable subroutine version of LHS. 
+
+7.  Add the new distribution.f90 file names to Makefile.am
+
+8.  Build and test, then commit the changes and the new files to the LHS 
+directory. 
+
+9.  To ensure compatibility with DAKOTA, you need to also add the new 
+distributions to the dakota input specification, and make the 
+corresponding additions to the DakotaVariables, DataVariables,
+DakotaNonD, DakotaModel, DataFitSurrModel, and NonDSampling classes. 
+The actual call to LHS is in NonDSampling.C.  The new distribution must 
+be entered in the same order as it is found in the input specification. 
+ 

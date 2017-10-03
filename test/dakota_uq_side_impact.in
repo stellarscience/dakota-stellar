@@ -1,0 +1,45 @@
+#@ s0: TimeoutDelay=360
+#@ s1: TimeoutDelay=360
+#@ s2: TimeoutDelay=360
+#@ s3: TimeoutDelay=360
+
+method,
+	sampling                          #s0,#s1
+    samples = 100000                #s0,#s1
+#	polynomial_chaos                  #s2,#s3
+#	  expansion_order = 2		          #s2,#s3
+#	  collocation_ratio = 2.	        #s2,#s3
+#	  samples_on_emulator = 100000    #s2,#s3
+    seed = 12347
+	  response_levels = 1. 32. 32. 32. .32 .32 .32 4.01 9.9 15.69	
+	  compute probabilities
+	  series system			#s0,#s2
+#	  parallel system		#s1,#s3
+	  complementary distribution	#s0,#s2
+	  output silent			#s0,#s1
+
+variables,
+	normal_uncertain = 11
+# FORM bilevel solution for variables 1-7
+	  means = .50000000000 1.3485334409 .50000000000 1.3238647473
+	  	  .88581358411 1.2000000000 .40000000000
+# mid-point for variables 1-7
+#	  means = 1.0  1.225 1.0 1.25 1.75  1.05 0.8
+# lower bnd for variables 1-7
+#	  means = 0.5  1.1   0.5 1.0  0.875 0.9  0.4
+# variables 8-11
+                  .345 .192   0.  0.
+	  std_deviations = .03  .03  .03  .03  .03  .03  .03 .006 .006  10. 10.
+	  descriptors = 'x1' 'x2' 'x3' 'x4' 'x5' 'x6' 'x7' 'x8' 'x9' 'x10' 'x11'
+
+interface,
+	id_interface = 'UQ_I'
+	direct
+	  analysis_driver = 'side_impact_perf'
+	  deactivate restart_file evaluation_cache
+
+responses,
+	id_responses = 'UQ_R'
+	response_functions = 10
+	no_gradients
+	no_hessians

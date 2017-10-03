@@ -1,0 +1,50 @@
+#@ s*: Label=FastTest
+
+# Tests borrowed from other files, but with results DB enabled
+
+environment,
+	results_output
+#	  results_output_file = 'uq.results.txt'	#s1,#s2
+
+method,
+	# dakota_rosenbrock.in:0
+	optpp_q_newton					#s0
+	  max_iterations = 50				#s0
+	  convergence_tolerance = 1e-4  		#s0
+
+ 	# dakota_rosenbrock_users.in:6
+#  	sampling					#s1
+#    	  sample_type random				#s1 
+#    	  samples = 200					#s1
+#    	  seed = 17					#s1
+#    	  response_levels = 100.0			#s1
+
+	# dakota_uq_rosenbrock_pce.in:1 
+#	polynomial_chaos				#s2
+#	  quadrature_order   = 5			#s2
+#	  dimension_preference = 5 3			#s2
+#	  samples_on_emulator = 10000				#s2
+#	  seed = 12347 rng rnum2			#s2
+#	  response_levels =				#s2
+#	  .1 1. 50. 100. 500. 1000.			#s2
+#	  variance_based_decomp #interaction_order = 1	#s2
+
+variables,
+	continuous_design = 2				#s0
+	  initial_point  -1.2  1.0			#s0
+#	uniform_uncertain = 2				#s1,#s2
+      	  lower_bounds      = -2.  -2. 		
+	  upper_bounds      =  2.   2.		
+	  descriptors       = 'x1' 'x2'		
+
+interface,
+	direct
+	analysis_driver = 'rosenbrock'		
+
+responses,
+	objective_functions = 1				#s0
+#	response_functions = 1				#s1,#s2
+	analytic_gradients				#s0
+#	no_gradients					#s1,#s2
+	no_hessians
+

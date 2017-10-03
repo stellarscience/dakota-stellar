@@ -1,0 +1,39 @@
+#@ s*: Label=FastTest
+# DAKOTA INPUT FILE : dakota_steel_section.in
+
+# This file is a verification test for second-order integration.
+
+environment,
+	#graphics
+
+method,
+	local_reliability
+#	  mpp_search x_taylor_mpp
+#	  mpp_search u_taylor_mpp
+	  mpp_search no_approx
+#	  integration second_order		#s1,#s2,#s3
+          num_response_levels = 1
+	  response_levels = 0.0
+#	  complementary distribution		#s2
+
+variables,
+	normal_uncertain = 1
+       	  means           = 54.0
+	  std_deviations  =  2.7
+	  descriptors     = 'Z'
+	lognormal_uncertain = 1
+       	  means          = 38.0
+	  std_deviations =  3.8
+	  descriptors    = 'F_y'
+
+interface,
+	system asynch
+	  analysis_driver = 'steel_section'
+
+responses,
+	response_functions = 1
+	analytic_gradients
+	no_hessians				#s0
+#	analytic_hessians			#s1,#s2
+#	numerical_hessians			#s3
+#	quasi_hessians bfgs

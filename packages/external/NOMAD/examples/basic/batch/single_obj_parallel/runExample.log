@@ -1,0 +1,43 @@
+Warning: {
+	The maximum number of evaluations may be exceeded when BB_MAX_BLOCK_SIZE>1.
+} 
+
+NOMAD - version 3.7.2 - www.gerad.ca/nomad
+
+Copyright (C) 2001-2015 {
+	Mark A. Abramson     - The Boeing Company
+	Charles Audet        - Ecole Polytechnique de Montreal
+	Gilles Couture       - Ecole Polytechnique de Montreal
+	John E. Dennis, Jr.  - Rice University
+	Sebastien Le Digabel - Ecole Polytechnique de Montreal
+	Christophe Tribes    - Ecole Polytechnique de Montreal
+} 
+
+Funded in part by AFOSR and Exxon Mobil.
+
+License   : '$NOMAD_HOME/src/lgpl.txt'
+User guide: '$NOMAD_HOME/doc/user_guide.pdf'
+Examples  : '$NOMAD_HOME/examples'
+Tools     : '$NOMAD_HOME/tools'
+
+Please report bugs to nomad@gerad.ca
+
+MADS run {
+
+	BBE	OBJ
+
+	  2	288.7926372100 (PhaseOne)
+	  3	254.0899760400 (PhaseOne)
+	  4	0.0000000000 (PhaseOne)
+	  4	-1.0733100000
+	 10	-1.6099700000
+	 23	-2.4149500000
+	 26	-3.4882700000
+	 48	-3.7565900000
+	101	-3.7565900000
+
+} end of run (max number of blackbox evaluations)
+
+blackbox evaluations                     : 101
+best infeasible solution (min. violation): ( 1.106853649 0.9391485505 1.01741093 1.00623059 -4.024922359 ) h=0.265307 f=-4.02492
+best feasible solution                   : ( 0.9838699101 0.5366563146 1.744133022 1.341640786 -3.756594202 ) h=0 f=-3.75659

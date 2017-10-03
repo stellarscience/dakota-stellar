@@ -1,0 +1,37 @@
+# HOPSPACK parameters for Community Problem UNC5, bounds only.
+
+
+@ "Problem Definition"
+  "Number Unknowns" int 12
+  "Upper Bounds" vector 12 990 990 990 990 990 990 990 990  6.4e-3  6.4e-3  6.4e-3  6.4e-3
+  "Lower Bounds" vector 12  10  10  10  10  10  10  10  10 -6.4e-3 -6.4e-3 -6.4e-3 -6.4e-3
+  "Scaling"      vector 12 990 990 990 990 990 990 990 990  6.4e-3  6.4e-3  6.4e-3  6.4e-3
+  "Display" int 2
+  "Initial X" vector    12 150 750 400 750 250 650 250 450  6.4e-3  6.4e-3 -6.4e-3 -6.4e-3
+  "Initial F" vector 1  80212
+@@
+
+
+@ "Evaluator"
+  "Evaluator Type"  string "System Call"
+  "Executable Name" string "./evaljob_hc.sh"
+  "Input Prefix"    string "hopseval_in"
+  "Output Prefix"   string "hopseval_out"
+@@
+
+
+@ "Mediator" 
+  "Citizen Count" int 1                   # One citizen will be invoked
+  "Number Processors" int 2               # Used with MPI execution
+  "Maximum Evaluations" int -1
+  "Solution File" string "solution_point.txt"
+  "Solution File Precision" int 5
+  "Display" int 3                         # 0 = no debug info, 5 = most detail
+@@
+
+
+@ "Citizen 1"                             # Citizen name
+  "Type" string "GSS"                     # GSS is Generalized Set Search
+  "Step Tolerance" double 0.02            # Controls solution accuracy
+  "Display" int 1
+@@

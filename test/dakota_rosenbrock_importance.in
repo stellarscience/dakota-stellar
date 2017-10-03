@@ -1,0 +1,62 @@
+#@ On Windows: File IO/performance issue?
+#@ *: DakotaConfig=UNIX
+#@ s2: TimeoutAbsolute=2400
+#@ s2: TimeoutDelay=1200
+
+# DAKOTA INPUT FILE - dakota_rosenbrock_importance.in
+# This file tests the importance sampling capabilities based on LHS. 
+# It is may be integrated into another rosenbrock file but for now 
+# it is cleanest to have a simple, standalone file. 
+# In the current version of the test, all of the different 
+# importance_sampling versions (import, adapt_import, and mm_adapt_import) 
+# start with 250 samples ("initial_samples = 250"). 
+# Then, more samples are added based on the three types of importance sampling.  
+# Each time samples are added, 100 samples are added around certain points 
+# of interest ("refinement_samples = 100"). 
+# In mm_adapt_sampling, 100 points are added around multiple points of interest 
+# and the process keeps iteratively updating until it converges, which is why 
+# it takes so long. 
+# NOTE:  to keep computational costs down, we could add "max_iterations = 5" 
+# in the method block for adapt_import and mm_adapt_import.
+
+environment,
+	  tabular_data
+
+method,
+  importance_sampling
+	  import                                   #s0,#s3,#s4
+#	  adapt_import                             #s1
+#	  mm_adapt_import                          #s2
+	  response_levels = 0.5 5 50 500 
+	 #response_levels = 3.0  
+    initial_samples = 250
+	  refinement_samples = 100
+	  seed = 5639
+    output quiet 
+
+variables,
+#       uniform_uncertain = 2                     #s3
+#         lower_bounds   -2.0 -2.0                #s3
+#         upper_bounds    2.0  2.0                #s3
+#       beta_uncertain  = 1                       #s4
+#         alphas = 0.5                            #s4
+#         betas = 2.0                             #s4
+#         lower_bounds = 0.0                      #s4      
+#         upper_bounds = 1.0                      #s4
+#         descriptors  'x1'                       #s4
+#       exponential_uncertain = 1                 #s4
+#         betas = 3.0                             #s4
+#         descriptors 'x2'                        #s4
+        normal_uncertain = 2                      #s0,#s1,#s2
+         means = 0. 0.                            #s0,#s1,#s2
+         std_deviations = 1. 1.                   #s0,#s1,#s2
+	 descriptors     'x1' 'x2'                #s0,#s1,#s2,#s3
+
+interface,
+        direct	
+	  analysis_driver = 'rosenbrock'
+
+responses,
+	response_functions = 1 
+	no_gradients
+	no_hessians

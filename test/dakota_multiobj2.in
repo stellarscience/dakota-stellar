@@ -1,0 +1,42 @@
+#@ s*: Label=FastTest
+#@ *: DakotaConfig=HAVE_NPSOL
+# DAKOTA INPUT FILE - dakota_multiobj2.in
+
+# Constrained multiobjective optimization using the Cylinder Head problem.
+#
+# The formulation is: minimize F
+#                     s.t. x_l <= x <= x_u
+#                          g1(x) <= 0
+#
+# where F  = w1*f1 + w2*f2 + w3*f3
+#       f1 = original cyl_head objective fcn
+#       f2 = original cyl_head constraint 1
+#       f3 = original cyl_head constraint 2
+#       g1 = original cyl_head constraint 3
+
+method,
+        npsol_sqp
+	  convergence_tolerance = 1.e-8
+
+variables,
+	continuous_design = 2
+	  initial_point    1.8    1.0
+	  upper_bounds     2.164  4.0
+	  lower_bounds     1.5    0.0
+	  descriptors'intake_dia' 'flatness'
+#	linear_inequality_constraint_matrix = 1. 1.  #s1
+#	linear_inequality_upper_bounds = 3.7	     #s1
+
+interface,
+	system asynchronous
+	  analysis_driver=  'cyl_head'
+
+responses,
+	objective_functions = 3
+	multi_objective_weights = .7 .1 .1
+	nonlinear_inequality_constraints = 1
+	numerical_gradients
+	  method_source dakota
+	  interval_type central
+	  fd_gradient_step_size = 1.e-4
+	no_hessians

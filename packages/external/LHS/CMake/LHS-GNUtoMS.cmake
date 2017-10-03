@@ -1,0 +1,12 @@
+if(MINGW OR MSYS OR CYGWIN)
+  return()
+endif()
+
+foreach(lib lhs mod mods)
+  get_property(configs TARGET ${lib} PROPERTY IMPORTED_CONFIGURATIONS)
+  foreach(config ${configs})
+    get_property(implib TARGET ${lib} PROPERTY IMPORTED_IMPLIB_${config})
+    string(REGEX REPLACE "\\.dll\\.a$" ".lib" implib "${implib}")
+    set_property(TARGET ${lib} PROPERTY IMPORTED_IMPLIB_${config} ${implib})
+  endforeach()
+endforeach()

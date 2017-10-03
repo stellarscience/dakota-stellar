@@ -1,0 +1,26 @@
+Blurb::
+Aleatory uncertain variable - gumbel
+Description::
+The Gumbel distribution is also referred to as the Type I Largest Extreme Value distribution. The distribution of maxima in sample sets from a population with a normal distribution will asymptotically converge to this distribution. It is commonly used to model demand variables such as wind loads and flood levels.
+
+The density function for the Gumbel distribution is given by: 
+\f[f(x) = \alpha e^{-\alpha(x-\beta)} exp(-e^{-\alpha(x-\beta)})\f]
+where 
+\f$\mu_{GU} = \beta + \frac{0.5772}{\alpha}\f$ 
+and 
+\f$\sigma_{GU} = \frac{\pi}{\sqrt{6}\alpha}\f$.
+
+
+Topics::	continuous_variables, aleatory_uncertain_variables
+Examples::
+Theory::
+When used with design of experiments and multidimensional parameter
+studies, distribution bounds are inferred.
+These bounds are [\f$\mu - 3 \sigma\f$, \f$\mu + 3 \sigma\f$]
+
+For vector and centered parameter studies, an inferred initial
+starting point is needed for the uncertain variables.
+These variables are initialized to their means for these studies.
+
+Faq::
+See_Also::	

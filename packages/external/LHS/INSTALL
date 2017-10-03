@@ -1,0 +1,53 @@
+LHS UNIX Library/Standalone. Sandia National Laboratories 2004.
+
+Copyright 2004 Sandia Corporation.  Under the terms of Contract
+DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government
+retains certain rights in this software.
+
+At the present time, LHS UNIX Library/Standalone is being
+distributed as part of the DAKOTA framework, under the DAKOTA GNU
+GPL (see the LICENSE file in the top Dakota directory for more
+information).
+
+------------------------------------------------------------------------
+
+This INSTALL file provides directions for compiling LHS UNIX Library/
+Standalone.  Note that the current setup creates two executables from 
+one makefile: one for the standalone version, lhsdrv, and one for the 
+library version, TestRun.  
+
+To compile LHS (liblhs.a, TestRun and lhsdrv) on UN*X systems:
+
+1. Get the DAKOTA source (Dakota_votd.src.tar.gz) from
+   http://www.cs.sandia.gov/DAKOTA/ and unpack it;
+
+2. Change directories into the DAKOTA directory;
+   $ cd Dakota
+
+3. Set DAKOTA environment variable to the directory specified in step 2 via:
+   $ setenv DAKOTA $PWD # for csh and tcsh
+   $ export DAKOTA=$PWD # for sh and bash
+
+4. Run configure with the following arguments:
+   $ ./configure --without-dot --without-npsol --without-graphics --with-lhs --without-mpi --without-pico --without-sgopt --without-utilib
+
+5. Change directories into the LHS directory via:
+   $ cd $DAKOTA/methods/LHS/
+
+6. Compile the two executables and liblhs.a via:
+   $ make
+
+7. Change directories into the build directory via:
+   $ cd i686-unknown-linux # on Linux for example
+
+8. Symbolically link the necessary files via:
+   $ ln -s ../SIPRA.INI SIPRA.INI
+   $ ln -s ../KEYWORD.DAT KEYWORD.DAT
+   $ ln -s ../InpData.txt InpData.txt
+
+9. Run the executables:
+   $ ./TestRun
+   $ ./lhsdrv KEYWORD.DAT
+
+10. Examine the files created by running the executables;
+    these are 1NewIn.Out, 1.OUT, 2NewIn.Out, 2.OUT, fort.4, fort.6

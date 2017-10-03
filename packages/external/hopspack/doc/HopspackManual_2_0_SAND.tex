@@ -1,0 +1,293 @@
+%%
+%% This document template is derived from Tammy Kolda, which was based on
+%%   http://www.cs.sandia.gov/~rolf/SANDreport/
+%%
+
+%% ----------------------------------------------------------------------
+%% IMPORTANT: C H O O S E   D O C U M E N T   C L A S S
+%% ----------------------------------------------------------------------
+%\documentclass[final]{SANDreport}
+\documentclass[final,11pt,blank]{SANDreport}
+
+%% ----------------------------------------------------------------------
+%% IMPORTANT: C H O O S E   O P T I O N S
+%% ----------------------------------------------------------------------
+%% sand - for SANDreport class
+%% sanddist - for SANDreport class, to include distribution page
+%% colorlinks - use color links
+%% blacklinks - for black links (best for printing)
+%% ----------------------------------------------------------------------
+%\usepackage[blacklinks,sand,sanddist]{optional}
+\usepackage[colorlinks,sand]{optional}
+
+%% ----------------------------------------------------------------------
+%% Load packages, declarations, and definitions
+%% ----------------------------------------------------------------------
+% Make equations be centered and add many nice environments.
+\usepackage{amsmath}
+
+%% THIS PACKAGE AND CALLS TO hypersetup CREATE HYPERLINKS IN A PDF DOCUMENT.
+%% ALSO ENABLES texorpdfstring.
+\usepackage{hyperref}
+%\input{pre-packages}
+
+\newcommand{\BlankPage}{
+  \clearpage
+  ~
+  \vspace{4 in}
+  \begin{center}
+    \emph{This page intentionally left blank.}
+  \end{center}
+  \vfil
+  \newpage
+}
+
+\newenvironment{INDENTdescription}%
+{\begin{list}{}{
+      \setlength{\labelwidth}{0pt}
+      \setlength{\itemindent}{0pt}
+      \setlength{\listparindent}{\parindent}
+      \renewcommand{\makelabel}{\descriptionlabel}}
+}%
+{\end{list}}
+
+%% LET SECTION AND PAGE HYPERLINKS INCLUDE THE DESCRIPTIVE WORD.
+%%
+%% THESE DON'T WORK RIGHT WHEN BUILT WITH pdflatex FOR RED HAT EL4
+%% (tetex-latex-2.0.2-22.0.1.EL4.10).
+%% PROBLEM IS THE HYPERLINK EXTENDS TO THE END OF A LINE.
+%%
+\newcommand{\SECREF}[1]{\hyperref[#1]{Section~\ref*{#1}}}
+\newcommand{\PGREF}[1]{\hyperref[#1]{p~\pageref{#1}}}
+\newcommand{\FIGREF}[1]{\hyperref[#1]{Figure~\ref*{#1}}}
+%% HOPSPACK Version Numbers
+\newcommand{\HOPSVER}{2.0}
+\newcommand{\HOPSMINORBUGVER}{2.0.2}
+
+%% Note command to add notes to each other
+\newcommand{\Note}[1]{{\sf\color{red}{#1}}}
+
+%% ----------------------------------------------------------------------
+%% Main information (title, keywords, etc.) goes here.
+%% ----------------------------------------------------------------------
+
+\newcommand{\TheTitle}{HOPSPACK {\HOPSVER } User Manual
+                                \Large{(v \HOPSMINORBUGVER)}}
+
+\newcommand{\TheShortTitle}{HOPSPACK {\HOPSVER } User Manual}
+
+\newcommand{\TheAuthors}{Todd D. Plantenga}
+
+\newcommand{\TheShortAuthors}{T.\@ D.\@ Plantenga}
+
+\newcommand{\TheKeywords}{derivative free, software framework,
+                          parallel processing, optimization}
+
+%% ----------------------------------------------------------------------
+%% SAND Report set-up for title, author, number, date, etc.
+%% ----------------------------------------------------------------------
+\opt{sand}{
+  \title{\TheTitle}
+  \author{
+    Todd D. Plantenga \\
+    Informatics and Decision Science Department \\
+    Sandia National Laboratories \\
+    Livermore, CA 94551-9159 \\
+    Email: \texttt{tplante@sandia.gov}
+  }
+  \date{}
+  \SANDnum{SAND2009-6265}
+  \SANDauthor{\TheAuthors}
+  \SANDprintDate{October 2009}
+}
+
+%% ----------------------------------------------------------------------
+%% PDF Set-up for title, author, keywords, and various link options.
+%% ----------------------------------------------------------------------
+% PDF TITLE AND AUTHOR APPEAR IN PDF -> File -> Document Properties,
+% AND ON WINDOWS AS THE PROPERTIES OF THE PDF FILE.
+\hypersetup{
+  pdftitle={\TheTitle},
+  pdfauthor={\TheAuthors},
+  pdfkeywords={\TheKeywords},
+  pdfcreator=Sandia National Laboratories,
+  pdfproducer=Sandia National Laboratories
+}
+\opt{colorlinks}{
+  \hypersetup{colorlinks=true,urlcolor=blue,citecolor=blue,linkcolor=blue}
+}
+\opt{blacklinks}{
+  \hypersetup{colorlinks=true,urlcolor=black,citecolor=black,linkcolor=black}
+}
+
+\hypersetup{
+  bookmarksnumbered=true,      % NUMBER THE BOOKMARKS
+  bookmarksopen=true,          % START WITH BOOKMARKS SHOWING
+  bookmarksopenlevel=1,        %   TO THIS DEPTH
+  pdfpagemode=UseOutlines,     % OPEN ACROBAT WITH THE BOOKMARKS SHOWING
+  pdfpagelayout=SinglePage,    % ONE PAGE PER SCREEN
+  pageanchor=true,             % NEED THIS TO ENABLE TOC LINKS?
+  pdfstartview=Fit,            % FIT THE PAGE TO THE ACROBAT WINDOW SIZE
+  pdffitwindow=true,           % RESIZE TO FIT THE ACROBAT WINDOW SIZE
+  pdfstartview=FitV,           % FIT TO THE ACROBAT WINDOW SIZE (FitH, FitV)
+}
+
+
+%% ----------------------------------------------------------------------
+%% Begin Document
+%% ----------------------------------------------------------------------
+\begin{document}
+
+%% ----------------------------------------------------------------------
+%% Title
+%% ----------------------------------------------------------------------
+\opt{sand}{\pdfbookmark[1]{Front Page}{frontpage}}
+\maketitle
+\opt{sand}{\pdfbookmark[1]{Title \& Abstract}{abstract}}
+
+%% ----------------------------------------------------------------------
+%% Abstract
+%% ----------------------------------------------------------------------
+\begin{abstract}
+HOPSPACK (Hybrid Optimization Parallel Search PACKage) solves derivative-free
+optimization problems using an open source, C++ software framework.
+The framework enables parallel operation using MPI or multithreading,
+and allows multiple solvers to run simultaneously and interact to find
+solution points.
+HOPSPACK comes with an asynchronous pattern search solver that
+handles general optimization problems with linear and nonlinear constraints,
+and continuous and integer-valued variables.
+This user manual explains how to install and use HOPSPACK to solve problems,
+and how to create custom solvers within the framework.
+
+\bigskip
+This SAND report was first issued in October 2009 as the User Manual for
+HOPSPACK 2.0.  Minor revisions to the manual were made for subsequent minor
+releases of the software.
+
+\bigskip
+\begin{tabbing}
+ x \= xxxxx \= xxxxxxxxx \= \kill
+ User Manual revision history  \\
+ \> 2.0    \> Oct 2009 \> First HOPSPACK User Manual.  \\
+ \> 2.0.1  \> Mar 2010 \> Added instructions for building on Mac OSX
+                          (\SECREF{subinstall:SR}), and clarified \\
+ \>        \>          \> the return status when evaluating by System Call
+                          (\SECREF{subcalleval:systemcall}). \\
+ \> 2.0.2  \> Apr 2011 \> Added an example of linking Fortran
+                          LAPACK libraries (\SECREF{subinstall:LA}), \\
+ \>        \>          \> and added information about scaling of variables
+                          (\SECREF{sec:params}). \\
+ \> 2.0.3  \> Jan 2014 \> Updated build instructions (\SECREF{sec:build}),
+                          clarified licensing (\SECREF{subintro:licenses}).
+              
+\end{tabbing}
+\end{abstract}
+
+%% ----------------------------------------------------------------------
+%% Special upfront material for SAND report, including
+%% acknowledgments, TOC, etc.
+%% ----------------------------------------------------------------------
+\opt{sand}{
+
+  %% SAND Reports put acknowledgments up front.
+  \clearpage
+  \phantomsection
+  \pdfbookmark[1]{Acknowledgments}{ack}
+  \section*{Acknowledgments}
+  This work was funded by the U.S. Department of Energy, through the
+  Office of Advanced Scientific Computing Research (ASCR), as part of the
+  Applied Mathematics Research Program
+  (\url{http://www.er.doe.gov/ascr/Research/AppliedMath.html}).
+
+  The developers thank Joshua Griffin for his preliminary work on
+  ``HOPSPACK 1.0'', which tested many ideas and formed the basis of the
+  current software.
+
+  Thanks to Professor Komei Fukuda for allowing the use of CDDLIB source code
+  in the GSS solver.
+
+
+  %% Table of Contents
+  \cleardoublepage
+  \phantomsection
+  \pdfbookmark[1]{Contents}{toc}
+  \tableofcontents
+
+  %% Uncomment next 4 lines for list of figures
+%%   \clearpage
+   \phantomsection
+   \pdfbookmark[1]{Figures}{lof}
+   \listoffigures
+
+  %% Uncomment next 4 lines for list of tables
+%%   \clearpage
+%%   \phantomsection
+%%   \pdfbookmark[1]{Tables}{lot}
+%%   \listoftables
+
+  %% Uncomment next 5 lines for list of algorithms
+%%   \clearpage
+%%   \phantomsection
+%%   \pdfbookmark[1]{Algorithms}{toa}
+%%   \renewcommand{\listalgorithmname}{\raggedright \bf Algorithms}
+%%   \listofalgorithms
+
+  %% Indicates that the main part of the paper comes next...
+%%  \BlankPage
+  \SANDmain
+}
+
+%% ----------------------------------------------------------------------
+%% M A I N   B O D Y
+%% ----------------------------------------------------------------------
+%% Insert blank pages for SAND report with the command:
+%% \opt{sand}{\BlankPage}
+%% ----------------------------------------------------------------------
+
+\input{userman_intro.tex}
+\input{userman_quickstart.tex}
+\input{userman_theory.tex}
+\input{userman_configparams.tex}
+\input{userman_calleval.tex}
+\input{userman_building.tex}
+\input{userman_extending.tex}
+\input{userman_cmake.tex}
+
+
+
+%% ----------------------------------------------------------------------
+%% For SAND reports, start a new page and put the references into the
+%% contents and bookmarks.
+%% ----------------------------------------------------------------------
+\opt{sand}{
+  \clearpage
+  \phantomsection
+  \addcontentsline{toc}{section}{References}
+}
+
+%% ----------------------------------------------------------------------
+%% Bibliography
+%% ----------------------------------------------------------------------
+% Any references not included in allrefs.bib should be put in references.bib.
+% When adding new citations to references.bib,
+%   run pdflatex (or latex), then bibtex, then pdflatex twice more
+%% ----------------------------------------------------------------------
+\bibliographystyle{siam}
+\bibliography{references}
+
+%% ----------------------------------------------------------------------
+%% Appendix after the bibliography in the SAND report
+%% ----------------------------------------------------------------------
+\opt{sand}{
+%  \appendix
+%  \input{input-appendix}      % Appendix
+%  \input{input-appendix-b}      % Appendix
+}
+%% ----------------------------------------------------------------------
+%% SAND Report Distribution List.
+%% Only include this in the printed version.
+%% ----------------------------------------------------------------------
+\opt{sanddist}{\input{post-sand-dist.tex}}
+
+\end{document}

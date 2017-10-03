@@ -1,0 +1,58 @@
+//-----------------------------------------------------------------------bl-
+//--------------------------------------------------------------------------
+//
+// QUESO - a library to support the Quantification of Uncertainty
+// for Estimation, Simulation and Optimization
+//
+// Copyright (C) 2008-2015 The PECOS Development Team
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the Version 2.1 GNU Lesser General
+// Public License as published by the Free Software Foundation.
+//
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc. 51 Franklin Street, Fifth Floor,
+// Boston, MA  02110-1301  USA
+//
+//-----------------------------------------------------------------------el-
+//
+// grvy.h: Basic API Definitions
+//
+//--------------------------------------------------------------------------
+
+#ifndef QUESO_H_
+#define QUESO_H_
+
+// Library version/build info
+
+#define QUESO_MAJOR_VERSION  @GENERIC_MAJOR_VERSION@
+#define QUESO_MINOR_VERSION  @GENERIC_MINOR_VERSION@
+#define QUESO_MICRO_VERSION  @GENERIC_MICRO_VERSION@
+
+#define QUESO_BUILD_USER     "@BUILD_USER@"
+#define QUESO_BUILD_ARCH     "@BUILD_ARCH@"
+#define QUESO_BUILD_HOST     "@BUILD_HOST@"
+#define QUESO_BUILD_DATE     "@BUILD_DATE@"
+#define QUESO_BUILD_VERSION  "@BUILD_VERSION@"
+
+#define QUESO_LIB_VERSION    "@VERSION@"
+#define QUESO_LIB_RELEASE    "@BUILD_DEVSTATUS@"
+
+#define QUESO_CXX            "@CXX@"
+#define QUESO_CXXFLAGS       "@CXXFLAGS@"
+
+// External libraries
+
+#define QUESO_TRILINOS_DIR  "@TRILINOS_HOME@"
+#define QUESO_GSL_DIR       "@GSL_LIBS@"
+#define QUESO_GRVY_DIR      "@GRVY_PREFIX@"
+#define QUESO_GLPK_DIR      "@GLPK_PREFIX@"
+#define QUESO_HDF5_DIR      "@HDF5_PREFIX@"
+
+#endif

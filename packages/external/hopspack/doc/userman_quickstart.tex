@@ -1,0 +1,120 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Quick Start}
+\label{sec:quickstart}
+
+The fastest way to start using HOPSPACK is to download a precompiled
+executable package and interface your optimization problem based on the
+examples provided with the package.
+The precompiled code is limited to a single machine, but can parallel process
+using threads on a machine with multiple processors or cores.
+Precompiled executables do not require additional third party software installs.
+Packages are available for:
+\begin{INDENTdescription}
+  \item[Linux.]   32-bit x86 processors, compiled with g++ 3.4.6
+                  on Red Hat Enterprise Linux WS 4.
+  \item[Mac OSX.] 32-bit x86 processors, compiled with g++ 4.0.1 (XCode 3.1.2)
+                  on Mac OSX 10.5.8.
+  \item[Windows.] 32-bit x86 processors, compiled with
+                  Microsoft Visual C++ 9.0 on Windows XP (SP2).
+                  Should run on 32-bit Windows Vista, Windows Server 2003,
+                  and Windows Server 2008.
+                  Should also run in 32-bit emulation mode (WOW64) on Windows
+                  XP Professional x64.
+\end{INDENTdescription}
+
+\medskip
+\noindent
+Follow these steps to quickly solve your optimization problem:
+\begin{itemize}
+  \item  {\bf Download a package for your machine.}  Follow the links at
+         \vspace{-11pt}
+         \begin{tabbing}
+         xxx \= xxxxxxxxx \= \kill
+         \> \href{https://software.sandia.gov/trac/hopspack}
+                 {https://software.sandia.gov/trac/hopspack}
+         \end{tabbing}
+         Get a binary package, save it in any directory, and unzip the file.
+         No administrative privileges are needed.
+  \item  {\bf Run an example.}  Open a command line terminal window.
+         Find the directory where you unzipped HOPSPACK and change to
+         {\sf examples/1-var-bnds/only}
+         (on Windows use backslashes {\tt '$\backslash$'} instead of {\tt '/'}).
+         Now type
+         \vspace{-11pt}
+         \begin{tabbing}
+         xxx \= xxxxxxxxx \= \kill
+         \> {\tt > ../../HOPSPACK\_main\_serial example1\_params.txt}
+         \end{tabbing}
+         Compare the answer with results in the file
+         {\sf examples/README.txt}.
+  \item  {\bf Learn how to configure a parameter file.}
+         For instance, to get a more accurate solution to the first example,
+         edit the text file {\sf example1\_params.txt} and change
+         the {\tt Step Tolerance} in the ``Citizen 1'' sublist
+         from 0.01 to 0.002.
+         Then run the example again.
+         Read \SECREF{sec:params} to learn about configuration parameters,
+         especially the example parameter file at the beginning of the section.
+  \item  {\bf Interface your problem with HOPSPACK.}
+         Create your own parameter file, based on one of the examples.
+         The number of variables, bounds, and linear constraints are specified
+         in this file (details are in \SECREF{subconfig:PD}
+         and \SECREF{subconfig:LC}).
+         Write a simple script or program that computes the objective function
+         and any nonlinear constraint values (for instance, see
+         {\sf examples/2-linear-constraints/linear\_constraints.cpp}).
+         The program should take an input file name, evaluate the functions,
+         and write the answer to a file.
+         Edit the parameter file and put the name of your program
+         as the {\tt Executable Name} in sublist ``Evaluator''.
+         Read \SECREF{subconfig:DEFINITION} to learn more about formulating
+         your optimization problem, and \SECREF{sec:calleval} to learn more
+         about the evaluation step.
+%         TBD...If your problem is written in AMPL, then you output it as a
+%         ``.nl'' file and simply include the file name in the configuration.
+  \item  {\bf Run your problem.}
+         Invoke HOPSPACK with your parameter file name:
+         \vspace{-11pt}
+         \begin{tabbing}
+         xxx \= xxxxxxxxx \= \kill
+         \> {\tt > ../../HOPSPACK\_main\_serial your\_params.txt}
+         \end{tabbing}
+         If your machine has multiple processors or cores, then you can
+         try parallel evaluations:
+         \vspace{-11pt}
+         \begin{tabbing}
+         xxx \= xxxxxxxxx \= \kill
+         \> {\tt > ../../HOPSPACK\_main\_threaded your\_params.txt}
+         \end{tabbing}
+         Edit the parameter file and increase the {\tt Number Threads}
+         parameter to engage more CPU resources.
+\end{itemize}
+
+\medskip
+\noindent
+What to do next:
+\begin{INDENTdescription}
+  \item[Build HOPSPACK.]
+    The precompiled code is limited to multithreaded parallelization on one
+    machine, and executes linear algebra routines with the standard Netlib
+    LAPACK library.
+    You can download source code and build with your own compiler,
+    compile with MPI for distributed machine operation, link with a different
+    LAPACK library, and more.
+    Read \SECREF{sec:build} to learn how.
+  \item[Extend HOPSPACK.]
+    You can download source code and make modifications to suit special needs.
+    For example, you can embed HOPSPACK in other software, call the application
+    that computes function values directly, or change the way parallel
+    resources are allocated.
+    Read \SECREF{sec:extend} to learn more.
+  \item[Write your own solver.]
+    This is what the HOPSPACK framework is intended for.  You can download
+    source code and add your own algorithm in a new solver.  You might write
+    a global search solver that controls the GSS local solver in HOPSPACK,
+    or write your own local search solver, or hybridize different algorithms.
+    Start with \SECREF{subswoperation} to learn about the framework,
+    read the description of the GSS solver in \SECREF{subgss},
+    and refer to \SECREF{sec:extend} to learn about extending the software.
+\end{INDENTdescription}

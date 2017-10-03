@@ -1,0 +1,42 @@
+method,
+	conmin_frcg				#s0,#s1,#s4,#s5,#s8,#s9,#s12,#s13,#s14,#s15,#s16,#s17
+#	optpp_newton				#s2,#s3,#s6,#s7,#s10,#s11
+	  max_iterations = 100           
+	  convergence_tolerance = 1e-8  
+
+
+variables,
+	continuous_design = 2			#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11
+	  initial_point  -0.9 -1.1		#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11
+	  lower_bounds   -2.0 -2.0		#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11
+	  upper_bounds    2.0  2.0		#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11
+	  descriptors    'x1' 'x2'		#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11
+#	continuous_design = 3			#s12,#s13,#s14
+#	  initial_point  -0.9 -1.1 -1.1 	#s12,#s13,#s14
+#	  lower_bounds   -2.0 -2.0 -2.0		#s12,#s13,#s14
+#	  upper_bounds    2.0  2.0  2.0		#s12,#s13,#s14
+#	  descriptors    'x1' 'x2' 'x3'		#s12,#s13,#s14
+#	continuous_design = 4			#s15,#s16,#s17
+#	  initial_point  -0.9 -1.1 -1.1	-1.1	#s15,#s16,#s17
+#	  lower_bounds   -2.0 -2.0 -2.0	-2.0	#s15,#s16,#s17
+#	  upper_bounds    2.0  2.0  2.0	 2.0 	#s15,#s16,#s17
+#	  descriptors    'x1' 'x2' 'x3' 'x4'	#s15,#s16,#s17
+
+
+interface,
+#	system
+	direct
+	  analysis_driver = 'herbie'		#s0,#s1,#s2,#s3,#s12,#s15
+#	  analysis_driver = 'smooth_herbie'	#s4,#s5,#s6,#s7,#s13,#s16
+#	  analysis_driver = 'shubert'		#s8,#s9,#s10,#s11,#s14,#s17
+
+responses,
+	objective_functions = 1	
+	numerical_gradients			#s0,#s4,#s8
+#	analytic_gradients			#s1,#s2,#s3,#s5,#s6,#s7,#s9,#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17
+	no_hessians				#s0,#s1,#s4,#s5,#s8,#s9,#s12,#s13,#s14,#s15,#s16,#s17
+#	numerical_hessians			#s2,#s6,#s10
+#	analytic_hessians			#s3,#s7,#s11
+
+
+

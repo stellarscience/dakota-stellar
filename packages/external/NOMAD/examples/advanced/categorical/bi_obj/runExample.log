@@ -1,0 +1,45 @@
+Warning: {
+	Model use is disabled for problem with categorical variables.
+} 
+Warning: {
+	Default anisotropic mesh is disabled with categorical and binary variables.
+} 
+Warning: {
+	Model use is disabled in parallel mode (MPI).
+} 
+Warning: {
+	Asynchronous mode is disabled in parallel mode (MPI) when dynamic directions (ortho n+1) are used.
+} 
+
+multi-MADS run {
+
+	MADS run  1 ...... OK [bb eval= 78] [overall bb eval=   78] [# dominant pts=   2] [# new pts=   2] [f1=52.02241823 f2=51.31041823]
+	MADS run  2 ...... OK [bb eval= 39] [overall bb eval=  117] [# dominant pts=   3] [# new pts=   1] [f1=52.0224221 f2=51.0754221]
+	MADS run  3 ...... OK [bb eval= 39] [overall bb eval=  156] [# dominant pts=   3] [# new pts=   0] [f1=52.02242186 f2=51.23342186]
+	MADS run  4 ...... OK [bb eval= 38] [overall bb eval=  194] [# dominant pts=   4] [# new pts=   1] [f1=52.02242186 f2=51.06242186]
+	MADS run  5 ...... OK [bb eval= 39] [overall bb eval=  233] [# dominant pts=   5] [# new pts=   1] [f1=52.02242186 f2=51.19342186]
+	MADS run  6 ...... OK [bb eval=  7] [overall bb eval=  240] [# dominant pts=   5] [# new pts=   0] [f1=52.02242186 f2=51.19342186]
+	MADS run  7 ...... OK [bb eval= 39] [overall bb eval=  279] [# dominant pts=   2] [# new pts=  -3] [f1=45.36506988 f2=44.51306988]
+	MADS run  8 ...... OK [bb eval= 39] [overall bb eval=  318] [# dominant pts=   3] [# new pts=   1] [f1=45.36506988 f2=44.51306988]
+	MADS run  9 ...... OK [bb eval= 39] [overall bb eval=  357] [# dominant pts=   7] [# new pts=   4] [f1=44.99982416 f2=44.55082416]
+	MADS run 10 ...... OK [bb eval= 39] [overall bb eval=  396] [# dominant pts=   4] [# new pts=  -3] [f1=44.97647101 f2=44.00347101]
+	MADS run 11 ...... OK [bb eval= 39] [overall bb eval=  435] [# dominant pts=   4] [# new pts=   0] [f1=44.9661848 f2=44.1371848]
+	MADS run 12 ...... OK [bb eval= 39] [overall bb eval=  474] [# dominant pts=   5] [# new pts=   1] [f1=44.9661848 f2=44.1371848]
+	MADS run 13 ...... OK [bb eval= 26] [overall bb eval=  500] [# dominant pts=   5] [# new pts=   0] [f1=44.96576761 f2=45.17076761]
+
+} end of run (max number of bb evaluations)
+
+
+blackbox evaluations                     : 500
+number of MADS runs                      : 13
+
+Pareto front {
+
+	44.9348019953 45.4168019953 
+	44.9657676108 45.1707676108 
+	44.9661847951 44.1371847951 
+	44.9738637269 44.0708637269 
+	44.9764710086 44.0034710086 
+} 
+
+number of Pareto points: 5

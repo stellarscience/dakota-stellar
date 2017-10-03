@@ -1,0 +1,11 @@
+Import('bas_env')
+test_env = bas_env.Clone()
+
+test_env.Append(CPPPATH = ['#src'])
+test_env.Append(LIBPATH = ['#src'])
+
+test_env.Prepend(LIBS = ['pecos'])
+test_env.Append(LIBS  = ['lapack', 'm'])
+
+test_env.Program(target = 'sconsPecosTest', source = ['test.cpp'])
+

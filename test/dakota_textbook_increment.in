@@ -1,0 +1,59 @@
+#@ s*: Label=FastTest
+#@ s0: Restart=write
+#@ s1: Restart=read DependsOn=s0
+#@ s2: Restart=write
+#@ s3: Restart=read DependsOn=s2
+#@ s4: Restart=write
+#@ s5: Restart=read DependsOn=s4
+
+# DAKOTA INPUT FILE - dakota_textbook_increment.in
+
+environment,
+        tabular_data
+
+method,
+  sampling
+	  initial_samples = 30 seed = 1833
+      sample_type lhs
+#       refinement_samples = 30       #s1,#s3,#s5
+
+variables,
+#       active all                                              #s4,#s5
+	normal_uncertain = 2					#s0,#s1,#s2,#s3
+	  means             =  5, 10				#s0,#s1,#s2,#s3
+	  std_deviations    =   1,   2				#s0,#s1,#s2,#s3
+	  descriptors       =  'TF1n'  'TF2n'			#s0,#s1,#s2,#s3
+        uniform_uncertain = 2
+          lower_bounds = 0 0
+          upper_bounds = 10 10
+          descriptors       =  'TF1u' 'TF2u'
+        exponential_uncertain = 1				#s0,#s1,#s2,#s3
+          betas = 0.5						#s0,#s1,#s2,#s3
+          descriptors       = 'TF1e'				#s0,#s1,#s2,#s3
+#        binomial_uncertain = 1					#s2,#s3
+#          probability_per_trial = 0.2				#s2,#s3
+#          num_trials = 10					#s2,#s3
+#        histogram_point_uncertain				#s2,#s3
+#          integer 2						#s2,#s3
+#          pairs_per_variable = 3 7				#s2,#s3
+#          abscissas = -1 0 1 2 5 8 11 14 17 20			#s2,#s3
+#          counts = 1 1 1 1 1 1 1 1 1 1 			#s2,#s3
+#        discrete_uncertain_set					#s2,#s3
+#          integer 1						#s2,#s3
+#          elements 5:50					#s2,#s3
+#          real 2						#s2,#s3
+#          elements_per_variable 3 2				#s2,#s3
+#          elements 11.7 13.1 15.9 22.1 23.2			#s2,#s3
+#        discrete_uncertain_set					#s4,#s5
+#          string 1                                             #s4,#s5
+#          elements 'Dakota' 'gamely' 'handles'                 #s4,#s5
+#                   'my' 'string' 'variable'			#s4,#s5
+
+interface,
+        direct
+	  analysis_driver = 'text_book'                        
+
+responses,
+	response_functions = 1
+	no_gradients
+	no_hessians

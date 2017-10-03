@@ -1,0 +1,12 @@
+This directory (platform/) contains platform-specific information for
+building and installing Dakota..  
+
+--------------------------------
+CMake cache initialization files
+--------------------------------
+
+Files *.cmake contain example cases of leveraging CMake's '-C cache_file'
+option on various platforms.  These settings may not always be
+kept up to date with Dakota, nor with individual operating
+system/platform settings.
+

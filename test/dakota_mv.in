@@ -1,0 +1,43 @@
+#@ s*: Label=FastTest
+#@ s0: UserMan=textbook_uq_meanvalue
+#@ [taxonomy:start]
+#@ s0: [analysis:UQ]
+#@ s0: [method:Reliability]
+#@ s0: [goal:FailureProbabilities]
+#@ s0: [variable:Continuous]
+#@ s0: [model:Smooth]
+#@ [taxonomy:end]
+
+# DAKOTA INPUT FILE - dakota_mv.in
+# Dakota Input File: textbook_uq_meanvalue.in     #s0
+
+environment
+  #graphics
+
+method
+  local_reliability
+
+interface
+  fork asynch
+    analysis_driver = 'text_book'
+
+variables
+  lognormal_uncertain = 2
+    means                 =  1.      1.
+    std_deviations        =  0.5     0.5
+    descriptors           =  'TF1ln' 'TF2ln'
+#    uncertain_correlation_matrix =  1       0.3  #s1,#s4
+#    				     0.3     1		                    #s1,#s4
+
+responses
+  response_functions = 3
+  numerical_gradients                             #s0,#s1,#s3,#s4
+    method_source dakota
+    interval_type central
+    fd_gradient_step_size = 1.e-4                 #s0,#s1,#s3,#s4
+#  mixed_gradients                                #s2
+#    id_numerical_gradients = 1				            #s2
+#    id_analytic_gradients  = 2 3			            #s2
+#    fd_gradient_step_size  = 1.e-4 1.e-3		      #s2
+  no_hessians						                          #s0,#s1,#s2
+#  numerical_hessians					                    #s3,#s4

@@ -1,0 +1,49 @@
+#@ s*: Label=AcceptanceTest
+
+environment,
+#	output_precision = 16
+
+method,
+	polynomial_chaos  askey			#s0,#s1,#s2,#s3
+#	stoch_collocation askey			#s4,#s5,#s6,#s7
+	  dimension_adaptive p_refinement generalized
+#	    max_refinement_iterations = 10
+	    convergence_tol = 1.e-6
+	  sparse_grid_level = 0
+#	  non_nested					#s1,#s3,#s5,#s7
+#	  num_response_levels = 0 1			#s2,#s3,#s6,#s7
+#	  response_levels = 0.0				#s2,#s3,#s6,#s7
+#	  compute reliabilities				#s2,#s3,#s6,#s7
+#	  compute probabilities
+#	    samples_on_emulator = 100000 seed = 1237 fixed_seed
+#	  cumulative distribution			#s2,#s3,#s6,#s7
+#	  output silent
+
+variables,
+	normal_uncertain = 2
+	  means             500.0   2000.0
+	  std_deviations    100.0    400.0
+	  descriptors       'P'      'M'
+	lognormal_uncertain = 1
+       	  means             5.0
+	  std_deviations    0.5
+	  descriptors       'Y'
+        uniform_uncertain = 2
+	  lower_bounds       5.    15.
+	  upper_bounds      15.    25.
+          descriptors       'b'    'h'
+	uncertain_correlation_matrix =  1 0.5 0 0 0
+					0.5 1 0 0 0
+					0   0 1 0 0
+					0   0 0 1 0
+					0   0 0 0 1
+interface,
+        direct
+          analysis_driver = 'short_column'
+	  deactivate restart_file #evaluation_cache
+
+responses,
+        response_functions = 2
+        response_descriptors = 'area' 'limit_state'
+        no_gradients
+        no_hessians

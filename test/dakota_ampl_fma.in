@@ -1,0 +1,51 @@
+#@ s*: Label=FastTest
+#@ *: DakotaConfig=HAVE_AMPL
+#@ s0: DakotaConfig=HAVE_NPSOL
+#@ s1: DakotaConfig=HAVE_NPSOL
+#@ s2: DakotaConfig=HAVE_NPSOL
+#@ s3: DakotaConfig=HAVE_NPSOL
+# DAKOTA INPUT FILE : dakota_ampl_fma.in
+
+environment,
+#	graphics tabular_data
+
+method,
+	npsol_sqp					#s0,#s1,#s2,#s3
+#	vector_parameter_study				#s4,#s5,#s6,#s7
+#	  step_vector = 1. 1. 1.       num_steps = 5	#s4,#s6
+#	  step_vector = 1. 1. 1. 1. 1. num_steps = 5	#s5,#s7
+
+variables,
+	continuous_design = 3				#s0,#s2,#s4,#s6
+	  descriptors        'mass' 'a'      'v'	#s0,#s2,#s4,#s6
+	  initial_point       2.0  1.0       3.0	#s0,#s2,#s4,#s6
+	  lower_bounds        0.0 -5.0      -5.0	#s0,#s2,#s4,#s6
+	  upper_bounds       10.0  5.0       5.0	#s0,#s2,#s4,#s6
+#	continuous_design = 5				#s1,#s3,#s5,#s7
+#	  descriptors   'x1' 'mass' 'a' 'x4' 'v'	#s1,#s3,#s5,#s7
+#	  initial_point  0.0  2.0  1.0  0.0  3.0	#s1,#s3,#s5,#s7
+#	  lower_bounds  -3.0  0.0 -5.0 -3.0 -5.0	#s1,#s3,#s5,#s7
+#	  upper_bounds   3.0 10.0  5.0  3.0  5.0	#s1,#s3,#s5,#s7
+
+interface,
+	algebraic_mappings = 'dakota_ampl_fma.nl'
+#	system						#s1,#s3,#s5,#s7
+#	  analysis_driver = 'text_book'			#s1,#s3,#s5,#s7
+#	  parameters_file = 'tb.in'			#s1,#s3,#s5,#s7
+#	  results_file    = 'tb.out'			#s1,#s3,#s5,#s7
+#	  file_tag					#s1,#s3,#s5,#s7
+#	asynchronous					#s2,#s3,#s6,#s7
+
+responses,
+	response_descriptors = 'force' 'energy'		#s0,#s2,#s4,#s6
+#	response_descriptors = 'force' 'ineq1' 'energy'	#s1,#s3,#s5,#s7
+	objective_functions = 1
+#	nonlinear_inequality_constraints = 1	#s1,#s3,#s5,#s7
+	nonlinear_equality_constraints = 1
+	nonlinear_equality_targets = 20.0
+	analytic_gradients				#s0,#s1,#s4,#s5,#s6,#s7
+#	numerical_gradients				#s2,#s3
+#	  method_source dakota				#s2,#s3
+#	  interval_type central				#s2,#s3
+#	analytic_hessians				#s4,#s5,#s6,#s7
+	no_hessians					#s0,#s1,#s2,#s3

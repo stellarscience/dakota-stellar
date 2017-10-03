@@ -1,0 +1,8 @@
+diff_option = FDiff
+fcn_accrcy  = 1.0e-12
+fcn_tol     = 1.0e-08
+grad_tol    = 1.0e-06
+maxfeval    = 500
+maxiter     = 100
+max_step    = 400
+search      = linesearch

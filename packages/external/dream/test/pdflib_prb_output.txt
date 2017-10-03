@@ -1,0 +1,45 @@
+10 June 2013 07:45:41 AM
+
+PDFLIB_PRB
+  C++ version
+  Test the PDFLIB library.
+
+INITIALIZE - Note:
+  The RNGLIB package has been initialized.
+
+TEST01
+  R8MAT_POFAC computes the Cholesky factor R of a
+  positive definite matrix A, so that A = R' * R.
+
+  Start with random R1;
+  Compute A = R1' * R1.
+  Call R8MAT_POFAC and see if you recover R2 = R1.
+
+  R1:
+
+  Col:          0             1             2             3             4       
+  Row
+
+    0:     0.323711      0.324392       0.28873      0.566211      0.895177  
+    1:            0      0.493388      0.353007       0.82072      0.336599  
+    2:            0             0      0.153961      0.325495      0.285023  
+    3:            0             0             0       0.34008      0.503381  
+    4:            0             0             0             0      0.773531  
+
+  A:
+
+  Col:          0             1             2             3             4       
+  Row
+
+    0:     0.104789      0.105009     0.0934649      0.183289      0.289778  
+    1:     0.105009      0.348662      0.267831      0.588607      0.456462  
+    2:    0.0934649      0.267831      0.231683      0.503315      0.421168  
+    3:     0.183289      0.588607      0.503315       1.21578       1.04708  
+    4:     0.289778      0.456462      0.421168       1.04708       1.84762  
+
+  Frobenius difference between R1 and R2 = 1.22502e-15
+
+PDFLIB_PRB
+  Normal end of execution.
+
+10 June 2013 07:45:41 AM

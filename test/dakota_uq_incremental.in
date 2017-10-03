@@ -1,0 +1,35 @@
+#@ s*: Label=FastTest
+#@ s0: Restart=write
+#@ s1: Restart=read
+
+# dakota_incremental_sampling.in
+
+environment,
+	  tabular_data
+
+method,
+	sampling
+    seed = 234
+    initial_samples = 10	
+	  sample_type lhs
+#	    refinement_samples = 10	    #s1
+#	    refinement_samples = 10 20	#s2
+
+variables,
+	uniform_uncertain = 2
+	  lower_bounds = 2 2
+	  upper_bounds = 3 3
+	normal_uncertain = 2
+	  means = 10 2
+    std_deviations = 2. 1.0
+
+interface,
+	direct
+	  analysis_driver = 'text_book'
+	  #parameters_file = 'params.in'
+	  #results_file = 'results.out'
+
+responses,
+	response_functions = 2
+	no_gradients
+	no_hessians

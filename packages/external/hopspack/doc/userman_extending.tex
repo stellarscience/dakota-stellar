@@ -1,0 +1,78 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Extending HOPSPACK}
+\label{sec:extend}
+
+The HOPSPACK framework is written with the intention that users will extend it
+to suit their own needs.  Software is written in C++ and follows object
+oriented design practices.  The code compiles on major platforms using the
+CMake build tool (see \SECREF{sec:cmake}).
+
+Comments throughout the code conform
+to Doxygen standards (\href{http://www.doxygen.org/}{http://www.doxygen.org/})
+for automated source code documentation.  HTML documentation pages generated
+from Doxygen are provided with the source code distribution.  Open the file
+{\sf src/doc\_doxygen/html/index.html} in a browser to get started and use
+this documentation to learn how the software is layed out.
+New documentation can be generated for modified code if you install the
+Doxygen tool on your machine and run it using the configuration file
+{\sf src/Doxyfile.txt}.
+
+A common extension is to call an application directly from the HOPSPACK
+evaluator, rather than start it as a separate process for every trial point.
+This extension is described in \SECREF{subcalleval:inlineeval}.
+
+HOPSPACK can be embedded as a callable library, provided the parent application
+is careful in devoting the proper number of parallel resources to HOPSPACK.
+User code needs to construct an instance of the {\tt Executor} and {\tt Hopspack}
+classes, and form a {\tt ParameterList} of configuration parameters.
+Then the code simply calls the method {\tt Hopspack::solve()}.
+Refer to {\sf src/src-main/HOPSPACK\_main\_serial.cpp} and
+{\sf src/src-main/HOPSPACK\_main\_threaded.cpp} for examples.
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Writing a New Citizen}
+
+Users are encouraged to write their own citizen code to test out new
+algorithm ideas or to create hybrid solution methods.  The HOPSPACK 2.0
+release provides only three citizens (GSS, GSS-NLC, GSS-MS), and the
+multi-start citizen is just a placeholder for more sophisticated algorithms.
+New citizens can be added to the source code alongside the existing citizens.
+Applications can enable or disable citizens in any combination through
+the configuration file.
+
+A new citizen must implement a subclass of {\tt Citizen}, which is declared
+in the file {\sf src/src-citizens/HOPSPACK\_Citizen.hpp}.
+It is best to create a new
+subdirectory under {\sf src/src-citizens} for each new citizen.
+A new citizen should define a unique string as the value of the
+{\tt Type} parameter in sublist ``Citizen''; for example, the GSS citizen
+uses the value {\tt "GSS"}~(\PGREF{param:GS-type}).
+Then code should be added to the {\tt Citizen::newInstance()} method of
+{\sf src/src-citizens/HOPSPACK\_Citizen.cpp}, using the string identifier.
+This code should recognize the citizen type and construct
+an instance of the subclass.
+
+A citizen must implement all of the virtual void methods in {\tt Citizen}.
+Most of these are fairly simple and can be written by looking at
+the GSS and GSS-NLC citizens as examples.
+The heart of a citizen's activity is the method {\tt exchange()}.
+This is called once per iteration by the Mediator.  As described in
+\SECREF{subswoperation}, the citizen receives a list of newly evaluated
+trial points and is expected to return a new list of candidate points.
+In effect, the method exchanges new trial points for old ones.  The citizen
+receives points from all other citizens, but is supplied with a corresponding
+list of ``owner tags'' so it can identify its own points.  Beyond these
+simple requirements, a citizen is free to pursue any algorithmic method
+for processing old points and generating new ones.  The Mediator will
+call {\tt getState()} to learn if the citizen is finished.
+
+A citizen can define its own configuration parameters to get runtime
+information from the user.  A citizen can call subproblem solvers or be
+called as a subproblem (see {\sf src/src-citizens/citizen-gss-nlc} for
+an example).
+
+Notes in this section are admittedly brief and will be expanded in the future.
+Our hope is to see more citizens added to the base source code of HOPSPACK
+as the project evolves.

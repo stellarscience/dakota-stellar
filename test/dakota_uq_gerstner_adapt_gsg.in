@@ -1,0 +1,35 @@
+#@ s*: Label=FastTest
+#@ s*: Label=AcceptanceTest
+
+environment,
+#	output_precision = 16
+
+method,
+	polynomial_chaos				#s0,#s1,#s2,#s3,#s4,#s5
+#	stoch_collocation				#s6,#s7,#s8,#s9,#s10,#s11
+	  dimension_adaptive p_refinement generalized
+	    convergence_tol = 1.e-10
+	  sparse_grid_level = 0
+#	  output debug
+
+variables,
+	uniform_uncertain = 2
+	  lower_bounds      0.  0.
+	  upper_bounds      1.  1.
+	  descriptors =    'x' 'y'
+
+interface,
+        direct
+          analysis_driver = 'gerstner'
+	  analysis_components = 'iso1'			#s0,#s6
+#	  analysis_components = 'iso2'			#s1,#s7
+#	  analysis_components = 'iso3'			#s2,#s8
+#	  analysis_components = 'aniso1'		#s3,#s9
+#	  analysis_components = 'aniso2'		#s4,#s10
+#	  analysis_components = 'aniso3'		#s5,#s11
+#	  deactivate restart_file evaluation_cache
+
+responses,
+        response_functions = 1
+        no_gradients
+        no_hessians

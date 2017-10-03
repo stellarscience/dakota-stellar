@@ -1,0 +1,39 @@
+#@ s*: Label=AcceptanceTest
+# DAKOTA INPUT FILE - dakota_cantilever_dream.in
+
+
+method,									
+        bayes_calibration dream,						
+          chain_samples = 1000 seed = 348					
+          chains = 5
+         # output verbose
+         output debug
+	probability_level 0.05 0.1
+ 			  0.05 0.1
+
+variables,								
+        active design 
+        continuous_design 2
+          upper_bounds  1.e8 10.0
+#  Truth value is 2.85e7 2.5 
+          lower_bounds 1.e6 0.1
+          descriptors 'E' 'w' 
+        continuous_state 4 
+          initial_state 3 40000 500 1000 
+          descriptors 't' 'R' 'X' 'Y' 
+
+interface,								
+        #system
+	direct
+          analysis_driver = 'mod_cantilever'
+
+responses,								
+	calibration_terms = 2
+        calibration_data_file = 'dakota_cantilever_dream.withsigma.dat'
+          freeform
+          num_experiments = 10
+	  # read two scalar sigma values in each row
+	  variance_type = 'scalar'
+  	descriptors = 'stress' 'displacement'
+ 	no_gradients							
+	no_hessians

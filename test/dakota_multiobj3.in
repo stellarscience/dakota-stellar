@@ -1,0 +1,62 @@
+#@ s*: Label=FastTest
+#@ s0: DakotaConfig=HAVE_ACRO
+#@ s1: DakotaConfig=HAVE_ACRO
+# DAKOTA INPUT FILE - dakota_multiobj3.in
+
+# Unconstrained nongradient-based multiobjective optimization using
+# the Cylinder Head problem.
+#
+# The formulation is: minimize F
+#                     s.t. x_l <= x <= x_u
+#
+# where F  = w1*f1 + w2*f2 + w3*f3 + w4*f4
+#       f1 = original cyl_head objective fcn
+#       f2 = original cyl_head constraint 1
+#       f3 = original cyl_head constraint 2
+#       f4 = original cyl_head constraint 3
+
+method,
+        coliny_pattern_search					#s0,#s1
+	  solution_accuracy = -3.0				#s0,#s1
+	  initial_delta = .2					#s0,#s1
+	  threshold_delta = 1.e-4				#s0,#s1
+	  pattern_basis coordinate				#s0,#s1
+	  exploratory_moves basic_pattern			#s0,#s1
+#	soga							#s2
+#       moga     						#s3
+#	  seed = 10983                              		#s2,#s3
+#	  max_function_evaluations = 2000             		#s2,#s3
+#	  initialization_type unique_random            		#s2,#s3
+#	  mutation_type offset_normal				#s2,#s3
+#	    mutation_scale = 0.1				#s2,#s3
+#	  crossover_type shuffle_random				#s2
+#	    num_offspring = 2 num_parents = 2			#s2
+#	    crossover_rate = 0.8		  		#s2
+#	  replacement_type favor_feasible			#s2
+#	  final_solutions = 5	     				#s3
+#	  crossover_type            				#s3
+#	    multi_point_parameterized_binary = 2        	#s3
+#	    crossover_rate = 0.8            			#s3
+#	  fitness_type domination_count            		#s3
+#	  replacement_type below_limit = 6            		#s3
+#	    shrinkage_percentage = 0.9            		#s3
+#	  convergence_type metric_tracker            		#s3
+#	    percent_change = 0.05 num_generations = 10          #s3
+
+variables,
+	continuous_design = 2
+	  initial_point    1.8    1.0
+	  upper_bounds     2.164  4.0
+	  lower_bounds     1.5    0.0
+	  descriptors'intake_dia' 'flatness'
+
+interface,
+	direct
+	  analysis_driver=  'cyl_head'
+
+responses,
+	objective_functions = 4
+	  multi_objective_weights = .7 .1 .1 .1			#s0,#s1,#s2
+#	  sense = "min" "max" "max" "max"	       	   	#s1,#s2,#s3
+	no_gradients
+	no_hessians

@@ -1,0 +1,14 @@
+Blurb::
+Evaluate all points in a pattern
+Description::
+
+In the \c blocking case, all points in the pattern are evaluated (in parallel), 
+and if the best of these trial points is an improving point, then it becomes 
+the next iterate. These runs are reproducible, assuming use of the same seed 
+in the stochastic case. 
+
+Topics::	
+Examples::
+Theory::
+Faq::
+See_Also::	

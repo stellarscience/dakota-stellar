@@ -1,0 +1,25 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+  <!-- 1. begin: SITE TITLE - REQUIRED -->
+  <title>%TITLE%</title>
+  <!-- 1. end: SITE TITLE - REQUIRED -->
+
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta http-equiv="cache-control" content="no-cache" /> 
+  <meta http-equiv="pragma" content="no-cache" />
+
+  <!-- 2. begin: METADATA - REQUIRED -->
+  <meta name="keywords" content="Registration, HOPSPACK">
+  <meta name="description" content="Dynamic page - %TITLE%">
+  <meta name="sandia.approval_type" content="formal">
+  <meta name="sandia.approved" content="SAND2010-2435W">
+  <meta name="author" content="Todd Plantenga">
+  <!-- 2. end: METADATA - REQUIRED -->
+
+  <!-- 3. begin: METADATA - NOT REQUIRED -->
+  <!-- 3. end: METADATA - NOT REQUIRED -->
+
+  <!-- 4. begin: SITE CSS - REQUIRED -->
+  <link rel="stylesheet" type="text/css" href="http://www.sandia.gov/css/home.css" media="all" />
+  <!-- 4. end: SITE CSS - REQUIRED -->

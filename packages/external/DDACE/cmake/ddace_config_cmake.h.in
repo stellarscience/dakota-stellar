@@ -1,0 +1,2 @@
+#include "ddace_fortran.h"
+#define F77_FUNC(name,NAME) DDACE_FORTRAN_GLOBAL(name,NAME)

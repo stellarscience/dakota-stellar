@@ -1,0 +1,25 @@
+Made the following changes to pecos/src
+
+ProjectOrthogPolyApproximation.hpp
+----------------------------------
+
+Moved functions below from protected to public
+  void compute_coefficients();
+  void restore_coefficients();
+  void increment_coefficients();
+  void decrement_coefficients();
+  void finalize_coefficients();
+
+
+SharedProjectOrthogPolyApproxData.hpp
+-------------------------------------
+
+Moved functions below from protected to public
+  void allocate_data();
+  void pre_restore_data();
+  void post_restore_data();
+  void increment_data();
+  void decrement_data();
+  void pre_finalize_data();
+  void post_finalize_data();
+

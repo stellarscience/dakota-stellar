@@ -1,0 +1,100 @@
+#@ *: DakotaConfig=HAVE_NPSOL
+# DAKOTA INPUT FILE - dakota_sbo_barnes.in
+
+# Demonstrates the use of approximation models and a trust region
+# optimization environment in performing constrained minimization on
+# the textbook test function.
+
+# These tests exercise global, local, and multipoint surrogates for
+# feasible and infeasible starting points with and without constraint
+# relaxation.
+
+environment,
+#	graphics
+	method_pointer = 'SBLO'
+
+method,
+	id_method = 'SBLO'
+	surrogate_based_local
+	model_pointer = 'SURROGATE'
+	approx_method_pointer = 'NLP'
+	max_iterations = 50
+	trust_region
+	  initial_size = 0.10
+	  contraction_factor = 0.5
+#	  constraint_relax homotopy		#s6,#s8,#s9,#s11
+	  expansion_factor   = 1.50
+
+method,
+	id_method = 'NLP'
+	npsol
+	  max_iterations = 50
+	  convergence_tolerance = 1e-4
+
+model,
+	id_model = 'SURROGATE'
+	responses_pointer = 'SURROGATE_RESP'
+	surrogate global                  	#s0,#s2,#s3,#s5,#s6,#s8,#s9,#s11,#s14,#s15
+	  dace_method_pointer = 'SAMPLING'	#s0,#s2,#s3,#s5,#s6,#s8,#s9,#s11,#s14,#s15
+	  polynomial quadratic			#s0,#s2,#s3,#s5,#s6,#s8,#s9,#s11
+#	  gaussian_process surfpack		#s14,#s15
+#	  use_derivatives			#s15
+#	  correction additive first_order	#s0,#s3,#s6,#s9
+# 	surrogate local taylor_series		#s1,#s4,#s7,#s10
+#	  actual_model_pointer = 'TRUTH'	#s1,#s4,#s7,#s10
+# 	surrogate multipoint tana		#s12,#s13
+#	  actual_model_pointer = 'TRUTH'	#s12,#s13
+
+variables,
+	continuous_design = 2
+#   Feasible starting point
+	  initial_point    30.   40.	#s0,#s1,#s2,#s3,#s4,#s5,#s12,#s14,#s15
+# Infeasible starting point
+#	  initial_point    65.    1.
+# Infeasible starting point
+#	  initial_point    10.   20.	#s6,#s7,#s8,#s9,#s10,#s11,#s13
+	  lower_bounds      0.    0.
+	  upper_bounds     80.   80.
+	  descriptors      'x1'  'x2'
+
+responses,
+	id_responses = 'SURROGATE_RESP'
+	objective_functions = 1
+	nonlinear_inequality_constraints = 3
+	nonlinear_inequality_lower_bounds = 0.     0.     0.
+	nonlinear_inequality_upper_bounds = 1.e+50 1.e+50 1.e+50
+	analytic_gradients
+	no_hessians
+
+###############################################
+# SAMPLING method specifications for building #
+# surrogate function(s)			      #
+###############################################
+method,
+	id_method = 'SAMPLING'
+	model_pointer = 'TRUTH'
+	sampling
+	  seed = 12345 rng rnum2 samples = 10
+
+model,
+	id_model = 'TRUTH'
+	single
+	  interface_pointer = 'TRUE_FN'
+	  responses_pointer = 'TRUE_RESP'
+
+interface,
+	direct #system #asynchronous
+	id_interface = 'TRUE_FN'
+ 	  analysis_driver = 'barnes'
+
+responses,
+	id_responses = 'TRUE_RESP'
+	objective_functions = 1
+	nonlinear_inequality_constraints = 3
+	nonlinear_inequality_lower_bounds = 0.     0.     0.
+	nonlinear_inequality_upper_bounds = 1.e+50 1.e+50 1.e+50
+	no_gradients		 	#s0,#s2,#s6,#s8,#s14
+#	numerical_gradients		#s7
+#	  method_source dakota		#s7
+#	analytic_gradients		#s1,#s3,#s4,#s5,#s9,#s10,#s11,#s12,#s13,#s15
+	no_hessians

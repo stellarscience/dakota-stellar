@@ -1,0 +1,12 @@
+# externals.all: pecos external packages
+#  - File to track revisions of all externals not included in
+#    checkout by default.
+#  - Update this to reflect correct external paths and revs when 
+#    branching/tagging a release
+#  - Use Subversion 1.5 externals format
+#
+-rHEAD	 https://software.sandia.gov/svn/public/tpl/dfftpack/tags/1.0		dfftpack
+-rHEAD	 https://software.sandia.gov/svn/public/tpl/fftw/tags/3.2.2		fftw
+-rHEAD	 https://software.sandia.gov/svn/public/LHS/trunk			LHS
+-rHEAD	 https://software.sandia.gov/svn/public/tpl/teuchos/tags/11.0.3		teuchos
+-rHEAD	 https://software.sandia.gov/svn/public/tpl/VPISparseGrid/trunk	  	VPISparseGrid

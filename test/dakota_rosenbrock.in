@@ -1,0 +1,55 @@
+#@ s9: DakotaConfig=HAVE_NPSOL
+#@ s10: DakotaConfig=HAVE_NPSOL
+#@ s16: DakotaConfig=HAVE_NPSOL
+#@ s17: DakotaConfig=HAVE_DOT
+## DAKOTA INPUT FILE - dakota_rosenbrock.in
+
+# This sample Dakota input file optimizes the Rosenbrock function.
+# See p. 95 in Practical Optimization by Gill, Murray, and Wright.
+
+# This tester fills out a test matrix of CG/QNewton/FDNewton/Newton/
+# GNewton/PDS vs. vendor numerical/dakota analytic gradients with
+# bound constraints applied where supported.  Additional tests are
+# added for least squares coverage.
+
+method,
+	optpp_q_newton			#s0,#s1,#s15
+#	optpp_fd_newton			#s2,#s3
+#	optpp_cg		   	#s4,#s5
+#	optpp_newton			#s6
+#	optpp_g_newton			#s7
+#	optpp_pds			#s8
+#	nlssol_sqp			#s9,#s10
+#	nl2sol				#s11,#s12,#s13,#s14
+#	npsol_sqp			#s16
+#	dot_sqp				#s17
+#	optpp_newton			#s18,#s19
+	  max_iterations = 50           #s0,#s1,#s2,#s3,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17,#s18,#s19
+	  convergence_tolerance = 1e-4  #s0,#s1,#s2,#s3,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17,#s18,#s19
+# CG is a poor performer on Rosenbrock      
+#	  max_iterations = 100          #s4,#s5
+#	  convergence_tolerance = 1e-6  #s4,#s5
+#	  output debug
+
+variables,
+	continuous_design = 2
+	  initial_point  -1.2  1.0
+	  lower_bounds   -2.0 -2.0	#s0,#s1,#s2,#s3,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s15,#s16,#s17,#s18,#s19
+	  upper_bounds    2.0  2.0	#s0,#s1,#s2,#s3,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s15,#s16,#s17,#s18,#s19
+	  descriptors     'x1' 'x2'
+
+interface,
+	direct
+	  analysis_driver = 'rosenbrock'
+
+responses,
+	objective_functions = 1	#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s8
+#	calibration_terms = 2	#s7,#s9,#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17,#s18,#s19
+#	no_gradients			#s8
+	analytic_gradients		#s0,#s2,#s4,#s6,#s7,#s9,#s11,#s13,#s15,#s16,#s17,#s18,#s19
+#	numerical_gradients		#s1,#s3,#s5,#s10,#s12,#s14
+#	  method_source vendor		#s1,#s3,#s5,#s10,#s12,#s14
+#	  interval_type forward		#s1,#s3,#s5,#s10
+#	  fd_gradient_step_size = 1.e-5	#s1,#s3,#s5,#s10
+	no_hessians		  	#s0,#s1,#s2,#s3,#s4,#s5,#s7,#s8,#s9,#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17,#s18
+#	analytic_hessians		#s6,#s19

@@ -1,0 +1,80 @@
+
+NOMAD - version 3.7.1 - www.gerad.ca/nomad
+
+Copyright (C) 2001-2015 {
+	Mark A. Abramson     - The Boeing Company
+	Charles Audet        - Ecole Polytechnique de Montreal
+	Gilles Couture       - Ecole Polytechnique de Montreal
+	John E. Dennis, Jr.  - Rice University
+	Sebastien Le Digabel - Ecole Polytechnique de Montreal
+	Christophe Tribes    - Ecole Polytechnique de Montreal
+} 
+
+Funded in part by AFOSR and Exxon Mobil.
+
+License   : '$NOMAD_HOME/src/lgpl.txt'
+User guide: '$NOMAD_HOME/doc/user_guide.pdf'
+Examples  : '$NOMAD_HOME/examples'
+Tools     : '$NOMAD_HOME/tools'
+
+Please report bugs to nomad@gerad.ca
+
+MADS run {
+
+	BBE	OBJ
+
+	   1	0.0008855723
+	  13	0.0008629415
+	  73	0.0007682919
+	 158	0.0007674024
+	 160	0.0007590596
+	 176	0.0007580561
+	 223	0.0007473508
+	 238	0.0007418250
+	 253	0.0007372242
+	 313	0.0007347847
+	 315	0.0007332118
+	 317	0.0007326378
+	 319	0.0007305500
+	 349	0.0007267455
+	 364	0.0007266172
+	 387	0.0007257315
+	 394	0.0007248895
+	 435	0.0007231991
+	 437	0.0007231585
+	 439	0.0007228901
+	 445	0.0007225342
+	 475	0.0007215812
+	 490	0.0007212792
+	 505	0.0007211745
+	 511	0.0007211392
+	 532	0.0007207825
+	 547	0.0007206714
+	 606	0.0007200196
+	 635	0.0007200045
+	 653	0.0007198430
+	 657	0.0007198134
+	 684	0.0007197965
+	 711	0.0007197807
+	 712	0.0007197631
+	 767	0.0007197518
+	 783	0.0007197518
+	 811	0.0007197377
+	 825	0.0007197358
+	 840	0.0007197336
+	 841	0.0007197273
+	 902	0.0007197266
+	 904	0.0007197250
+	 919	0.0007197244
+	 920	0.0007197231
+	 935	0.0007197211
+	 963	0.0007197196
+	 965	0.0007197191
+	 993	0.0007197174
+	1000	0.0007197174
+
+} end of run (max number of blackbox evaluations)
+
+blackbox evaluations                     : 1000
+best infeasible solution (min. violation): ( 0.8485876659 1.323962574e-06 2.55409902e-06 1.18495206e-06 4.478102654e-06 0.07926348224 0.03138097659 0.01128972406 ) h=0.05000000006 f=0.0007197247301
+best feasible solution                   : ( 0.8485431024 1.006379485e-06 7.250492715e-07 1.072192777e-06 2.36219915e-06 0.07937295341 0.03130849192 0.01130402409 ) h=0 f=0.0007197173872

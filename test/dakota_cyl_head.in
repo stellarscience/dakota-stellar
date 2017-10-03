@@ -1,0 +1,69 @@
+#@ s0: DakotaConfig=HAVE_NPSOL
+#@ s1: DakotaConfig=HAVE_NPSOL
+#@ s2: DakotaConfig=HAVE_NPSOL
+#@ s3: DakotaConfig=HAVE_NPSOL
+#@ s4: DakotaConfig=HAVE_NPSOL
+#@ s5: DakotaConfig=HAVE_DOT
+#@ s6: DakotaConfig=HAVE_DOT
+#@ s7: DakotaConfig=HAVE_DOT
+#@ s8: DakotaConfig=HAVE_DOT
+#@ s9: DakotaConfig=HAVE_DOT
+#@ s20: DakotaConfig=HAVE_NLPQL
+#@ s21: DakotaConfig=HAVE_NLPQL
+#@ s22: DakotaConfig=HAVE_NLPQL
+#@ s23: DakotaConfig=HAVE_NLPQL
+#@ s24: DakotaConfig=HAVE_NLPQL
+# DAKOTA INPUT FILE : dakota_cyl_head.in
+# This file covers a testing matrix in which NPSOL, DOT, CONMIN, and OPT++
+# each solve the cyl_head problem with 5 different formulations:
+# (1) minimization w/ 3 nonlinear 1-sided ineq
+# (2) minimization w/ 3 nonlinear 1-sided ineq plus 1 linear 1-sided ineq
+# (3) minimization w/ 3 nonlinear 1-sided ineq plus 1 linear eq
+# (4) minimization w/ 2 nonlinear 2-sided ineq plus 1 nonlinear eq
+# (5) maximization w/ 3 nonlinear 1-sided ineq (non-default bounds)
+
+environment,
+#	  graphics
+	  tabular_data
+
+method,
+	npsol_sqp					#s0,#s1,#s2,#s3,#s4
+#	dot_sqp						#s5,#s6,#s7,#s8,#s9
+#	conmin_mfd     					#s10,#s11,#s12,#s13,#s14
+#	optpp_q_newton					#s15,#s16,#s17,#s18,#s19
+#	nlpql_sqp					#s20,#s21,#s22,#s23,#s24
+#	reduced_sqp
+	  convergence_tolerance = 1.e-8
+
+variables,
+	continuous_design = 2
+	  initial_point    1.8          1.0
+	  upper_bounds     2.164        4.0
+	  lower_bounds     1.5          0.0
+	  descriptors      'intake_dia' 'flatness'
+#	linear_inequality_constraint_matrix = 1. 1.	#s1,#s6,#s11,#s16,#s21
+#	linear_inequality_upper_bounds = 3.7		#s1,#s6,#s11,#s16,#s21
+#	linear_equality_constraint_matrix = 1. 1.	#s2,#s7,#s12,#s17,#s22
+#	linear_equality_targets = 3.7			#s2,#s7,#s12,#s17,#s22
+
+interface,
+  direct
+	  analysis_driver=  'cyl_head'
+
+responses,
+	objective_functions = 1
+#	sense = "maximize"				    #s4,#s9,#s14,#s19,#s24
+	nonlinear_inequality_constraints = 3		    #s0,#s1,#s2,#s4,#s5,#s6,#s7,#s9,#s10,#s11,#s12,#s14,#s15,#s16,#s17,#s19,#s20,#s21,#s22,#s24
+#	nonlinear_inequality_lower_bounds = -.25 -.25 -.25  #s4,#s9,#s14,#s19,#s24
+#	nonlinear_inequality_upper_bounds = 1e50 1e50 1e50  #s4,#s9,#s14,#s19,#s24
+#	nonlinear_inequality_constraints = 2		    #s3,#s8,#s13,#s18,#s23
+#	nonlinear_inequality_lower_bounds = -.2 -.2	    #s3,#s8,#s13,#s18,#s23
+#	nonlinear_inequality_upper_bounds =  .2  .2	    #s3,#s8,#s13,#s18,#s23
+#	nonlinear_equality_constraints = 1   	 	    #s3,#s8,#s13,#s18,#s23
+#	nonlinear_equality_targets = -.2 		    #s3,#s8,#s13,#s18,#s23
+	analytic_gradients
+#	numerical_gradients
+#	  method_source dakota
+#	  interval_type central
+#	  fd_gradient_step_size = 1.e-4
+	no_hessians

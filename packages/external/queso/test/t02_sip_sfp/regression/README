@@ -1,0 +1,12 @@
+This directory houses simple regression solutions for the baseline
+sip+sfp example. A time record of the resulting "screen" output file
+is maintained here along with this log which documents changes to the
+reference output file
+
+Notes:
+
+-> 12 July 2009: initial reference output file checked in for use with
+   automatic regression testing. 
+
+-> 06 September 2009: changed ip_mc_... options to ip_mh_.... Also, then changed
+   occurances of 'mh_mh_' to 'mh_' only.

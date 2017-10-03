@@ -1,0 +1,208 @@
+#@ Tests 2--5, 7, 9, 10, 21, 26--29 may randomly DIFF (should be fewer; only some are asynch)
+#@ *: Label=StochDiff
+#@ s4: TimeoutAbsolute=1800
+#@ s5: TimeoutAbsolute=1800
+#@ p0: MPIProcs=2
+#@ p1: MPIProcs=2
+#@ p2: MPIProcs=2
+#@ p3: MPIProcs=2
+#@ p4: MPIProcs=2
+#@ p5: MPIProcs=2
+#@ p6: MPIProcs=2
+#@ p7: MPIProcs=2
+#@ p8: MPIProcs=2
+#@ p9: MPIProcs=3
+#@ p10: MPIProcs=3
+#@ p11: MPIProcs=2
+#@ p12: MPIProcs=2
+#@ p13: MPIProcs=2
+#@ p14: MPIProcs=2
+#@ p15: MPIProcs=2
+#@ p16: MPIProcs=2
+#@ p17: MPIProcs=2
+#@ p18: MPIProcs=2
+#@ p19: MPIProcs=2
+#@ p20: MPIProcs=2
+#@ p21: MPIProcs=3
+#@ p22: MPIProcs=2
+#@ p23: MPIProcs=2
+#@ p24: MPIProcs=3
+#@ p25: MPIProcs=3
+#@ p26: MPIProcs=2
+#@ p27: MPIProcs=2
+#@ p28: MPIProcs=3
+#@ p29: MPIProcs=3
+
+# DAKOTA INPUT FILE - dakota_apps.in
+# Tests:  asynch_pattern_search
+# This set of tests was arrived at by creating an orthogonal array
+# across the algorithm and execution parameters and then modifying it
+# to eliminate unsupported combinations.
+#  s0-s22: serial tests (synch/asynch, blocking/nonblocking)
+#  p0-p21: MPI parallel tests
+# p22-p29: hybrid parallel tests (block/nonblock, peer/master, system/fork)
+
+method,
+#	max_function_evaluations 500		#s2,#s5,#s6,#s8,#s10,#s11
+#	max_function_evaluations 500		#s13,#s14,#s20,#s21,#s22
+#	max_function_evaluations 500		#p2,#p5,#p6,#p8,#p10,#p11
+
+#	max_function_evaluations 500		#p13,#p14,#p20,#p21,#p22,#p23
+#	max_function_evaluations 500		#p24,#p25,#p26,#p27,#p28,#p29
+#	constraint_tolerance	1.e-6		#s2,#s4,#s6,#s8,#s10,#s12
+#	constraint_tolerance	1.e-6		#s14,#s16,#s18,#s20
+#	constraint_tolerance	1.e-6		#p2,#p4,#p6,#p8,#p10,#p12
+#	constraint_tolerance	1.e-6		#p14,#p16,#p18,#p20,#p22,#p23
+#	constraint_tolerance	1.e-6		#p24,#p25,#p26,#p27,#p28,#p29
+#
+	asynch_pattern_search
+#		initial_delta = .5		#s4,#s9,#s10,#s11,#s12,#s13
+#		initial_delta = .5		#s15,#s16,#s19,#s20
+#		initial_delta = .5		#p4,#p9,#p10,#p11,#p12,#p13
+#		initial_delta = .5		#p15,#p16,#p19,#p20,#p22,#p23
+#		initial_delta = .5		#p24,#p25,#p26,#p27,#p28,#p29
+#		contraction_factor = 0.25	#s2,#s3,#s4,#s6,#s8,#s9,#s14,#s15,#s16
+#		contraction_factor = 0.25	#s19,#s20,#s21,#s22,#p2,#p3,#p4,#p6
+#		contraction_factor = 0.25	#p8,#p9,#p14,#p15,#p16
+#		contraction_factor = 0.25	#p19,#p20,#p21,#p22,#p23
+#		contraction_factor = 0.25	#p24,#p25,#p26,#p27,#p28,#p29
+#		threshold_delta = 1.e-4		#s2,#s5,#s6,#s9,#s10,#s16
+#		threshold_delta = 1.e-4		#s17,#s18,#s19,#s20
+#		threshold_delta = 1.e-4		#p2,#p5,#p6,#p9,#p10,#p16
+#		threshold_delta = 1.e-4		#p17,#p18,#p19,#p20,#p22,#p23
+#		threshold_delta = 1.e-4		#p24,#p25,#p26,#p27,#p28,#p29
+#		solution_target = 1.e-6		#s2,#s6,#s7,#s8,#s9,#s11,#s12,#s15
+#		solution_target = 1.e-6		#s18,#s19,#s21,#s22,#p2,#p6,#p7,#p8
+#		solution_target = 1.e-6		#p9,#p11,#p12,#p15,#p18,#p19
+#		solution_target = 1.e-6		#p21,#p22,#p23,#p24,#p25,#p26
+#		solution_target = 1.e-6		#p27,#p28,#p29
+#		synchronization blocking	#s1,#s6,#s8,#s11,#s12,#s13,#s14
+#		synchronization blocking	#s15,#s16,#s17,#s18,#s19,#s20,#s22
+		synchronization blocking	#s0,#p0,#p1,#p6,#p8,#p11,#p12
+#		synchronization blocking	#p13,#p14,#p15,#p16,#p17,#p18
+#		synchronization blocking	#p19,#p20,#p22,#p23,#p24,#p25
+#		merit_function merit_max		#s11,#s14,#s19
+#		merit_function merit_max		#p11,#p14,#p19
+#		merit_function merit_max_smooth		#s1,#s7,#s15,#s20
+#		merit_function merit_max_smooth		#p1,#p7,#p15,#p20
+#		merit_function merit1			#s17
+#		merit_function merit1			#p17
+#		merit_function merit1_smooth		#s4,#s6
+#		merit_function merit1_smooth		#p4,#p6
+#		merit_function merit2			#s3,#s21,#s22
+#		merit_function merit2			#p3,#p21
+#		merit_function merit2_squared		#s13,#s18
+#		merit_function merit2_squared		#p13,#p18
+#		constraint_penalty = 1000.0		#s5,#s7,#s9,#s13,#s15
+#		constraint_penalty = 1000.0		#s17,#s18,#s19
+#		constraint_penalty = 1000.0		#p5,#p7,#p9,#p13,#p15
+#		constraint_penalty = 1000.0		#p17,#p18,#p19
+#		smoothing_factor = 1.0			#s4,#s5,#s6,#s7,#s9
+#		smoothing_factor = 1.0			#s11,#s14,#s15,#s17
+#		smoothing_factor = 1.0			#p4,#p5,#p6,#p7,#p9
+#		smoothing_factor = 1.0			#p11,#p14,#p15,#p17
+
+variables,
+	continuous_design = 3
+		initial_point	-1.0    1.5   2.0
+		upper_bounds	10.0   10.0  10.0	#s0,#p0
+#		upper_bounds	10.0   10.0  10.0	#s1,#s2,#s4,#s8,#s9,#s11
+#		upper_bounds	10.0   10.0  10.0	#s17,#s18,#s20,#s21,#s22
+#		upper_bounds	10.0   10.0  10.0	#p1,#p2,#p4,#p8
+#		upper_bounds	10.0   10.0  10.0	#p9,#p11,#p17,#p18
+#		upper_bounds	10.0   10.0  10.0	#p20,#p21,#p22,#p23,#p24
+#		upper_bounds	10.0   10.0  10.0	#p25,#p26,#p27,#p28,#p29
+		lower_bounds   -10.0  -10.0 -10.0	#s0,#p0
+#		lower_bounds   -10.0  -10.0 -10.0	#s1,#s3,#s5,#s8,#s9,#s12,#s13
+#		lower_bounds   -10.0  -10.0 -10.0	#s14,#s18,#s19,#s20,#s21,#s22
+#		lower_bounds   -10.0  -10.0 -10.0	#p1,#p3,#p5,#p8
+#		lower_bounds   -10.0  -10.0 -10.0	#p9,#p12,#p13,#p14
+#		lower_bounds   -10.0  -10.0 -10.0	#p18,#p19,#p20,#p21
+#		lower_bounds   -10.0  -10.0 -10.0	#p22,#p23,#p24,#p25
+#		lower_bounds   -10.0  -10.0 -10.0	#p26,#p27,#p28,#p29
+#		scale_types	'value'			#s1,#s3,#s5,#s8,#s10,#s11,#s12
+#		scale_types	'value'			#s15,#s17,#s19,#s20,#s21,#s22
+#		scale_types	'value'			#p1,#p3,#p5,#p8
+#		scale_types	'value'			#p10,#p11,#p12,#p15
+#		scale_types	'value'			#p17,#p19,#p20,#p21
+#		scales		5.0   1.5   2.0		#s1,#s3,#s5,#s8,#s10,#s11,#s12
+#		scales		5.0   1.5   2.0		#s15,#s17,#s19,#s20,#s21,#s22
+#		scales		5.0   1.5   2.0		#p1,#p3,#p5,#p8
+#		scales		5.0   1.5   2.0		#p10,#p11,#p12,#p15
+#		scales		5.0   1.5   2.0		#p17,#p19,#p20,#p21
+		descriptors	'x1'  'x2'  'x3'
+#		linear_equality_constraint_matrix = 2. 1. 1.	#s3,#s5,#s8,#s9
+#		linear_equality_constraint_matrix = 2. 1. 1.	#s11,#s13,#s15,#s16
+#		linear_equality_constraint_matrix = 2. 1. 1.	#s17,#s18,#s21,#s22
+#		linear_equality_constraint_matrix = 2. 1. 1.	#p3,#p5,#p8,#p9
+#		linear_equality_constraint_matrix = 2. 1. 1.	#p11,#p13,#p15
+#		linear_equality_constraint_matrix = 2. 1. 1.	#p16,#p17
+#		linear_equality_constraint_matrix = 2. 1. 1.	#p18,#p21
+#		linear_equality_targets = 4.0			#s3,#s5,#s8,#s9
+#		linear_equality_targets = 4.0			#s11,#s13,#s15,#s16
+#		linear_equality_targets = 4.0			#s17,#s18,#s21,#s22
+#		linear_equality_targets = 4.0			#p3,#p5,#p8,#p9
+#		linear_equality_targets = 4.0			#p11,#p13,#p15
+#		linear_equality_targets = 4.0			#p16,#p17
+#		linear_equality_targets = 4.0			#p18,#p21
+#		linear_inequality_constraint_matrix = 1. 1. 1.	#s1,#s2,#s3,#s10
+#		linear_inequality_constraint_matrix = 1. 1. 1.	#s11,#s14,#s16
+#		linear_inequality_constraint_matrix = 1. 1. 1.	#s18,#s19,#s21,#s22
+#		linear_inequality_constraint_matrix = 1. 1. 1.	#p1,#p2,#p3
+#		linear_inequality_constraint_matrix = 1. 1. 1.	#p10,#p11,#p14
+#		linear_inequality_constraint_matrix = 1. 1. 1.	#p16,#p18
+#		linear_inequality_constraint_matrix = 1. 1. 1.	#p19,#p21
+#		linear_inequality_upper_bounds = 5.0		#s1,#s2,#s3,#s10
+#		linear_inequality_upper_bounds = 5.0		#s11,#s14,#s16
+#		linear_inequality_upper_bounds = 5.0		#s18,#s19,#s21,#s22
+#		linear_inequality_upper_bounds = 5.0		#p1,#p2,#p3
+#		linear_inequality_upper_bounds = 5.0		#p10,#p11,#p14
+#		linear_inequality_upper_bounds = 5.0		#p16,#p18
+#		linear_inequality_upper_bounds = 5.0		#p19,#p21
+
+interface,
+	system					#s0,#s2,#s3,#s13,#s18
+#	system					#p0,#p2,#p3,#p13,#p18
+#	system					#p22,#p24,#p26,#p28
+#	fork					#s1,#s4,#s7,#s8
+#	fork					#p1,#p4,#p7,#p8,
+#	fork					#p23,#p25,#p27,#p29
+#       direct					#s5,#s6,#s9,#s10,#s11,#s12,#s14,#s15,#s16,#s17,#s19,#s20,#s21,#s22
+#       direct					#p5,#p6,#p9,#p10,#p11,#p12,#p14,#p15,#p16,#p17,#p19,#p20,#p21
+		asynchronous			#s0,#s3,#s7,#s8,#s18
+#		asynchronous			#p0,#p3,#p7,#p8,#p11,#p18,#p19
+#		asynchronous			#p20,#p22,#p23,#p24,#p25,#p26
+#		asynchronous			#p27,#p28,#p29
+#		evaluation_concurrency 10	#s3,#s8,#s18
+#		evaluation_concurrency 2	#p22,#p23,#p24,#p25
+#		evaluation_concurrency 2	#p26,#p27,#p28,#p29
+#		evaluation_scheduling master	#p5,#p24,#p25,#p28,#p29
+		analysis_driver = 'text_book'   #s0,#p0
+#		analysis_driver = 'text_book'   #s1,#s2,#s3,#s4,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s13,
+#		analysis_driver = 'text_book'   #s14,#s16,#s17,#s18,#s19,#s20,#s21,#s22
+#		analysis_driver = 'text_book'   #p1,#p2,#p3,#p4,#p6,#p7,#p8,#p9,#p10,#p11,#p12,#p13,#p14
+#                analysis_driver = 'text_book'   #p16,#p17,#p18,#p19,#p20,#p21,#p22,#p23,#p24,#p25,#p26,#p27,#p28,#p29
+#		analysis_driver = 'scalable_text_book' #s5, #s15
+#		analysis_driver = 'scalable_text_book' #p5, #p15
+
+responses,
+	objective_functions = 1
+#	nonlinear_equality_constraints = 1		  #s1,#s3,#s4,#s5,#s6
+#	nonlinear_equality_constraints = 1		  #s9,#s11,#s15,#s18
+#	nonlinear_equality_constraints = 1		  #p1,#p3,#p4,#p5,#p6
+#	nonlinear_equality_constraints = 1		  #p9,#p11,#p15,#p18
+#		nonlinear_equality_targets = -.2	  #s1,#s3,#s4,#s5,#s6
+#		nonlinear_equality_targets = -.2	  #s9,#s11,#s15,#s18
+#		nonlinear_equality_targets = -.2	  #p1,#p3,#p4,#p5,#p6
+#		nonlinear_equality_targets = -.2	  #p9,#p11,#p15,#p18
+#	nonlinear_inequality_constraints = 2	  #s4,#s5,#s7,#s13,#s14,#s15
+#	nonlinear_inequality_constraints = 2	  #s17,#s18,#s19,#s20,#s21,#s22
+#	nonlinear_inequality_constraints = 2	  #p4,#p5,#p7,#p13
+#	nonlinear_inequality_constraints = 2	  #p14,#p15,#p17,#p18
+#	nonlinear_inequality_constraints = 2	  #p19,#p20,#p21,#p22,#p23
+#	nonlinear_inequality_constraints = 2	  #p24,#p25,#p26,#p27,#p28,#p29
+#	nonlinear_inequality_lower_bounds = 0.0 0.0	  #s22
+#	nonlinear_inequality_upper_bounds = 1.e+50 1.e+50 #s22
+	no_gradients
+	no_hessians
+

@@ -1,0 +1,130 @@
+<html>
+<head>
+<title>Trilinos Package Dependencies</title>
+</head>
+
+<body>
+
+<p><huge><b>Trilinos Test/Example and Library Package Dependencies</b></huge></p>
+
+<TABLE BORDER=4>
+
+<COL ALIGN=LEFT>
+<COL ALIGN=LEFT>
+<COL ALIGN=LEFT>
+<COL ALIGN=LEFT>
+
+<TR>
+ <TD><b>Packages</b></TD>
+ <TD><b>P01</b></TD>
+ <TD><b>P02</b></TD>
+ <TD><b>Packages</b></TD>
+</TR>
+
+<TR>
+ <TD><b>P01) TrilinosFramework</b></TD>
+ <TD>X</TD>
+ <TD>.</TD>
+ <TD><b>P01) TrilinosFramework</b></TD>
+</TR>
+
+<TR>
+ <TD><b>P02) Teuchos</b></TD>
+ <TD>.</TD>
+ <TD>X</TD>
+ <TD><b>P02) Teuchos</b></TD>
+</TR>
+
+<TR>
+ <TD><b>Packages</b></TD>
+ <TD><b>P01</b></TD>
+ <TD><b>P02</b></TD>
+ <TD><b>Packages</b></TD>
+</TR>
+</TABLE>
+
+<p><b>Packages:</b> P01) TrilinosFramework, P02) Teuchos</p>
+
+<p><b>Legend</b></p>
+
+
+<ul>
+<li> <b>X</b>: Diagonal entry for the package itself
+<li> <b>LR</b>: Direct library required dependency
+<li> <b>ILR</b>: Indirect library required dependency
+<li> <b>LO</b>: Direct library optional dependency
+<li> <b>ILO</b>: Indirect library optional dependency
+<li> <b>TR</b>: Direct test/example required dependency
+<li> <b>ITR</b>: Indirect test/example required dependency
+<li> <b>TO</b>: Direct test/example optional dependency
+<li> <b>ITO</b>: Indirect test/example optional dependency
+</ul>
+
+NOTE: When more than one type of dependency is present for any cell the final selection is determined in the following order:
+<ul>
+<li> A required dependency trumps an optional dependency
+<li> A direct dependency trumps an indirect dependency
+<li> A library dependency trumps a test/example dependency
+</ul>
+
+<p><b><huge>Trilinos Libary-Only Package Dependencies</huge></b></p>
+
+<TABLE BORDER=4>
+
+<COL ALIGN=LEFT>
+<COL ALIGN=LEFT>
+<COL ALIGN=LEFT>
+<COL ALIGN=LEFT>
+
+<TR>
+ <TD><b>Packages</b></TD>
+ <TD><b>P01</b></TD>
+ <TD><b>P02</b></TD>
+ <TD><b>Packages</b></TD>
+</TR>
+
+<TR>
+ <TD><b>P01) TrilinosFramework</b></TD>
+ <TD>X</TD>
+ <TD>.</TD>
+ <TD><b>P01) TrilinosFramework</b></TD>
+</TR>
+
+<TR>
+ <TD><b>P02) Teuchos</b></TD>
+ <TD>.</TD>
+ <TD>X</TD>
+ <TD><b>P02) Teuchos</b></TD>
+</TR>
+
+<TR>
+ <TD><b>Packages</b></TD>
+ <TD><b>P01</b></TD>
+ <TD><b>P02</b></TD>
+ <TD><b>Packages</b></TD>
+</TR>
+</TABLE>
+
+<p><b>Packages:</b> P01) TrilinosFramework, P02) Teuchos</p>
+
+<p><b>Legend</b></p>
+
+
+<ul>
+<li> <b>X</b>: Diagonal entry for the package itself
+<li> <b>LR</b>: Direct library required dependency
+<li> <b>ILR</b>: Indirect library required dependency
+<li> <b>LO</b>: Direct library optional dependency
+<li> <b>ILO</b>: Indirect library optional dependency
+</ul>
+
+NOTE: When more than one type of dependency is present for any cell the final selection is determined in the following order:
+<ul>
+<li> A required dependency trumps an optional dependency
+<li> A direct dependency trumps an indirect dependency
+<li> A library dependency trumps a test/example dependency
+</ul>
+
+</body>
+
+</html>

@@ -1,0 +1,179 @@
+#@ s13: TimeoutAbsolute=1800
+#@ s*: DakotaConfig=HAVE_ACRO
+
+# DAKOTA INPUT FILE - dakota_coliny.in
+# Tests:
+# EVEN=unconstrained; ODD=constrained
+# s0-s5   coliny_direct
+# s6-s13  coliny_pattern_search
+# s14-s19 coliny_solis_wets
+# s20-s21 coliny_cobyla
+# s22-s31 coliny_ea
+
+environment,
+#	tabular_data
+	#graphics
+
+method,
+#	DEFAULTS FOR ALL TESTS
+	max_iterations 100
+	solution_accuracy = 1.e-6
+	seed = 1234
+#       FOR DEBUGGING: MUST COMMENT OUT 'misc_options' BELOW
+#	misc_options = 	'output_header=verbose'
+	max_function_evaluations 1000
+#
+	coliny_direct				#s0,#s1,#s2,#s3,#s4,#s5
+#         EXPLICIT DEFAULT OPTIONS
+#	    global_balance_parameter = 0.0	#s2,#s3
+#	    local_balance_parameter = 1.e-8	#s2,#s3
+#	    max_boxsize_limit = 0.0		#s2,#s3
+#	    min_boxsize_limit = 0.0001		#s2,#s3
+#	    constraint_penalty = 1000.0		#s2,#s3
+#	    division major_dimension		#s2,#s3
+#	  OPTION TESTING 1
+#	    division major_dimension		#s4,#s5
+#
+#	coliny_pattern_search			#s6,#s7,#s8,#s9
+#	coliny_pattern_search			#s10,#s11,#s12,#s13
+#	  REQUIRED
+#	    initial_delta = .2			#s6,#s7,#s8,#s9
+#	    initial_delta = .2			#s10,#s11,#s12,#s13
+#	    threshold_delta = 1.e-4		#s6,#s7,#s8,#s9
+#	    threshold_delta = 1.e-4		#s10,#s11,#s12,#s13
+#         EXPLICIT DEFAULT OPTIONS
+#	    constraint_penalty = 1.0		#s8,#s9
+#	    expand_after_success = 1		#s8,#s9
+#	    contraction_factor = 0.5		#s8,#s9
+#	    exploratory_moves basic_pattern	#s8,#s9
+#	    synchronization nonblocking		#s8,#s9
+#	  OPTION TESTING 1
+#	    synchronization blocking		#s10,#s11
+#	    pattern_basis simplex		#s10,#s11
+#	    stochastic				#s10,#s11
+#	    constant_penalty			#s10,#s11
+#	    no_expansion			#s10,#s11
+#	    total_pattern_size = 6		#s10,#s11
+#	    exploratory_moves multi_step	#s10,#s11
+#	  OPTION TESTING 2
+#	    synchronization blocking		#s12,#s13
+#	    exploratory_moves adaptive_pattern	#s12,#s13
+#
+#	coliny_solis_wets			#s14,#s15,#s16,#s17,#s18,#s19
+#	  REQUIRED
+#	    initial_delta = 0.2 		#s14,#s15,#s16,#s17,#s18,#s19
+#           threshold_delta = 1.e-4		#s14,#s15,#s16,#s17,#s18,#s19
+#         EXPLICIT DEFAULT OPTIONS
+#	    expand_after_success = 5		#s16,#s17
+#	    contract_after_failure = 3		#s16,#s17
+#	    contraction_factor = 0.5		#s16,#s17
+#	    constraint_penalty = 1.0		#s16,#s17
+#	  OPTION TESTING 1
+#	    no_expansion			#s18,#s19
+#	    constant_penalty			#s18,#s19
+#	    misc_options  = 'max_failure=6'	#s18,#s19
+#
+#	coliny_cobyla				#s20,#s21
+#	  REQUIRED
+# 	    initial_delta = .2			#s20,#s21
+# 	    threshold_delta = 1.e-4		#s20,#s21
+#
+#	coliny_ea 				#s22,#s23,#s24,#s25,#s26
+#	coliny_ea 				#s27,#s28,#s29,#s30,#s31,#s32,#s33
+#         DEFAULT OPTIONS
+#	    population_size = 5			#s24,#s25
+#	    crossover_rate 0.0			#s24,#s25
+### mutation_rate and mutation_scale are only relevent to tests 32-37
+### but were marked for 30 and 31
+#	    mutation_rate 1.0			#s24,#s25
+#	    mutation_scale = 0.1
+#	    mutation_range = 2
+#	    fitness_type linear_rank		#s24,#s25
+#	    crossover_type uniform		#s24,#s25
+#	    replacement_type random = 0		#s24,#s25
+#	    new_solutions_generated = 50	#s24,#s25
+#	    initialization_type unique_random	#s24,#s25
+#	    mutation_type replace_uniform	#s24,#s25
+#	  OPTION TESTING 1
+#	    fitness_type merit_function		#s26,#s27
+#	    crossover_type two_point		#s26,#s27
+#	    crossover_rate 1.00			#s26,#s27
+#	    replacement_type random = 2		#s26,#s27
+#	    new_solutions_generated = 48	#s26,#s27
+#	    initialization_type simple_random	#s26,#s27
+#	    mutation_type offset_normal 	#s26,#s27
+#	    non_adaptive			#s26,#s27
+#	  OPTION TESTING 2
+#	    crossover_type blend 		#s28,#s29
+#	    replacement_type chc = 3		#s28,#s29
+#	    initialization_type 		#s28,#s29
+#	      flat_file = 'dakota_coliny.dat'	#s28,#s29
+#	    mutation_type offset_cauchy 	#s28,#s29
+#	  OPTION TESTING 3
+#	    mutation_type offset_uniform 	#s30,#s31
+#
+#	coliny_beta				#s34
+#	  beta_solver_name 'sco:PatternSearch'	#s34
+#	  misc_options = 'initial_step=0.5'	#s34
+
+variables,
+	continuous_design = 3
+	  initial_point   -1.0    1.5   2.0
+	  upper_bounds    10.0   10.0  10.0	#s0,#s1
+#	  upper_bounds    10.0   10.0  10.0	#s2,#s3,#s4,#s5,#s6,#s7
+#	  upper_bounds    10.0   10.0  10.0	#s8,#s9,#s12,#s13,#s14,#s15
+#	  upper_bounds    10.0   10.0  10.0	#s16,#s17,#s18,#s19,#s21
+#	  upper_bounds    10.0   10.0  10.0	#s22,#s23,#s24,#s25,#s26,#s27,#s28
+#	  upper_bounds    10.0   10.0  10.0	#s29,#s30,#s31,#s32,#s33,#s34
+#	  upper_bounds     2.0    2.0   2.0	#s20
+	  lower_bounds   -10.0  -10.0 -10.0	#s0,#s1,#s2,#s3
+#	  lower_bounds   -10.0  -10.0 -10.0	#s6,#s7,#s8,#s9
+#	  lower_bounds   -10.0  -10.0 -10.0	#s14,#s15,#s16,#s17,#s21
+#	  lower_bounds   -10.0  -10.0 -10.0	#s22,#s23,#s24,#s25
+#	  lower_bounds   -10.0  -10.0 -10.0 	#s26,#s27,#s28,#s29
+#         lower_bounds     0.0    0.0   0.0	#s4,#s5,#s12,#s13,#s18,#s19
+#         lower_bounds     0.0    0.0   0.0	#s30,#s31,#s32,#s33,#s34
+#         lower_bounds    -2.0   -2.0  -2.0	#s20
+	  descriptors      'x1'  'x2'  'x3'
+#	discrete_design_range = 2		#s22,#s23,#s24,#s25,#s26
+#	discrete_design_range = 2		#s27,#s28,#s29,#s30,#s31
+#	  initial_point      2     2	#s22,#s23,#s24,#s25,#s26
+#	  initial_point      2     2	#s27,#s28,#s29,#s30,#s31
+#	  lower_bounds       1     1	#s22,#s23,#s24,#s25,#s26
+#	  lower_bounds       1     1	#s27,#s28,#s29,#s30,#s31
+#	  upper_bounds       4     9	#s22,#s23,#s24,#s25,#s26
+#	  upper_bounds       4     9	#s27,#s28,#s29,#s30,#s31
+#	  descriptors      'y1'   'y2'	#s22,#s23,#s24,#s25,#s26
+#	  descriptors      'y1'   'y2'	#s27,#s28,#s29,#s30,#s31
+#       discrete_design_set					#s32,#s33
+#         real = 2						#s32
+#           num_set_values = 4 5                                #s32
+#           set_values = 1.2 2.3 3.4 4.5 1.2 3.3 4.4 5.5 7.7    #s32
+#           descriptors      'y1'   'y2'                        #s32
+#         integer = 2                           		#s32,#s33
+#           num_set_values = 2 2                                #s32,#s33
+#           set_values = 4 7 8 9                                #s32,#s33
+#           descriptors      'z1'   'z2'                        #s32,#s33
+#         string = 2                                            #s33
+#           num_set_values = 3 3				#s33
+#           set_values = 'apple' 'banana' 'pineapple'           #s33
+#                        'cottonwood' 'fir'   'maple'           #s33
+#           descriptors      's1'   's2'			#s33
+interface,
+	system asynch				#s0,#s6,#s10,#s20,#s22
+#       direct                                  #s1,#s2,#s3,#s5,#s7,#s8,#s9
+#       direct                                  #s11,#s14,#s15,#s16,#s17
+#	direct					#s19,#s21,#s23,#s24,#s25
+#	direct					#s26,#s27,#s28,#s29
+#	direct					#s31,#s32,#s33,#s34
+#	fork asynch evaluation_concurrency 100	#s4,#s12,#s13,#s18,#s30
+	  analysis_driver = 'text_book'
+
+responses,
+	objective_functions = 1
+#	nonlinear_inequality_constraints = 2 #s1,#s3,#s5,#s7
+#	nonlinear_inequality_constraints = 2 #s9,#s11,#s13,#s15,#s17
+#	nonlinear_inequality_constraints = 2 #s19,#s21,#s23,#s25,#s27
+#	nonlinear_inequality_constraints = 2 #s29,#s31,#s34
+	no_gradients
+	no_hessians

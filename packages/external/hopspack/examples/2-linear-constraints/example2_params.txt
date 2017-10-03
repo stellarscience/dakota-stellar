@@ -1,0 +1,70 @@
+# $Id: example2_params.txt 166 2010-03-22 19:58:07Z tplante $
+# $URL: https://software.sandia.gov/svn/hopspack/trunk/examples/2-linear-constraints/example2_params.txt $
+#
+# ************************************************************************
+#         HOPSPACK: Hybrid Optimization Parallel Search Package
+#                Copyright 2009-2010 Sandia Corporation
+#
+#   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#   the U.S. Government retains certain rights in this software.
+# ************************************************************************
+
+# HOPSPACK parameters for example 2
+# See linear_constraints.cpp for the definition of the objective function.
+
+
+#-- SUBLIST TO DEFINE THE NUMBER OF UNKNOWNS, VARIABLE BOUNDS, ETC.
+
+@ "Problem Definition"
+  "Number Unknowns" int 4                      # Number of variables
+  "Upper Bounds" vector 4  10  10  10  10
+  "Lower Bounds" vector 4 -10 -10 -10 -10
+  "Scaling"      vector 4   1   1   1   1      # Scale the variables
+  "Initial X"    vector 4  -1   1  -1  -1      # Initial point
+  "Display" int 2
+@@
+
+#-- SUBLIST TO DEFINE GENERAL LINEAR CONSTRAINTS IN THE PROBLEM.
+
+@ "Linear Constraints"
+  #-- PROBLEM HAS TWO LINEAR INEQUALITIES AND ONE LINEAR EQUALITY.
+  "Inequality Matrix" matrix 2 4
+   -1 -1 -1 -1
+    1 -1  1 -1
+  "Inequality Lower" vector 2  -10 DNE
+  "Inequality Upper" vector 2  DNE  -1
+  "Equality Matrix" matrix 1 4
+   2 0 2 -7
+  "Equality Bounds" vector 1 3
+  "Display" int 2
+@@
+
+
+#-- SUBLIST TO DEFINE HOW THE OBJECTIVE FUNCTION IS EVALUATED.
+
+@ "Evaluator"
+  "Executable Name" string "linear_constraints"
+@@
+
+
+#-- SUBLIST OF MEDIATOR CONTROL PARAMETERS.
+
+@ "Mediator" 
+  "Citizen Count" int 1                  # One citizen will be invoked
+  "Number Processors" int 2              # Used with MPI executable
+  "Number Threads" int 2                 # Used with multithreaded executable
+  "Maximum Evaluations" int -1
+  "Solution File" string "solution.txt"  # Append the solution to this file
+  "Display" int 2                        # 0 = no debug info, 5 = most detail
+@@
+
+
+#-- SUBLISTS TO DEFINE EACH CITIZEN (ONLY ONE IN THIS EXAMPLE).
+
+@ "Citizen 1"                            # Citizen name
+  "Type" string "GSS"                    # GSS is Generalized Set Search
+  "Step Tolerance" double 0.005          # Stop when step lengths are smaller
+  "Initial Step" double 1.0              # Initial GSS step length
+  "Add Projected Normals" bool false
+  "Display" int 1                        # 0 = no debug info, 3 = most detail
+@@

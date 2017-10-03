@@ -1,0 +1,74 @@
+# DAKOTA INPUT FILE - dakota_textbook_lhs_approx.in
+
+environment,
+	#graphics
+	  method_pointer = 'UQ'
+
+method,
+	id_method = 'UQ'
+	model_pointer = 'UQ_M'
+	sampling
+	  samples = 5000 seed = 5
+	  sample_type lhs
+	  response_levels = 2.e-5 3.e-5 4.e-5		#s0,#s1,#s2,#s3,#s6,#s7
+
+model,
+	id_model = 'UQ_M'
+	surrogate global
+	  dace_method_pointer = 'DACE'
+	  polynomial quadratic		#s0
+# 	  neural_network		#s1
+#	  gaussian_process surfpack	#s2,#s4,#s5,#s6,#s7
+#           export_model                #s2
+#           filename_prefix = 'exported_GP'  formats = algebraic_file binary_archive #s2
+#	  mars				#s3
+
+# Test 2 with a samples file, free-form or annotated
+#	samples_file = 'dakota_uq_textbook_lhs_approx.annotated' #s6
+#	samples_file = 'dakota_uq_textbook_lhs_approx.freeform'	 #s7
+#	  freeform     						 #s7
+
+variables,
+	lognormal_uncertain =  2			#s0,#s1,#s2,#s3,#s4,#s6,#s7
+	  means             =  1.0  1.0			#s0,#s1,#s2,#s3,#s4,#s6,#s7
+#	  std_deviations    =  0.5	 0.5		#s0,#s1,#s2,#s3,#s4,#s6,#s7
+	  error_factors     =  1.1  1.1			#s0,#s1,#s2,#s3,#s4,#s6,#s7
+	  descriptors       =  'TF1ln' 'TF1ln'		#s0,#s1,#s2,#s3,#s4,#s6,#s7
+#	discrete_uncertain_set integer = 1				#s4
+#	  set_probs  = .1 .2 .4 .2 .1					#s4
+#	  set_values =  1  2  3  4  5					#s4
+#	  descriptors = 'ModelForm'					#s4
+#	histogram_point_uncertain real = 2				#s5
+#	  num_pairs 7 7		  					#s5
+#	  abscissas 0.200 2.166 4.133 6.100 8.067 10.033 12.000		#s5
+#	            0.200 2.166 4.133 6.100 8.067 10.033 12.000		#s5
+#	  counts    1     1     1     1     1     1      1		#s5
+#	            1     1     1     1     1     1      1		#s5
+
+responses,
+	response_functions = 1
+	no_gradients
+	no_hessians
+
+#########################################
+# interface truth model and dace method #
+#########################################
+
+method,
+	id_method = 'DACE'
+	model_pointer = 'DACE_M'
+	sampling
+	  samples = 2			#s0
+#	  samples = 20			#s3,#s4,#s5
+	  seed = 50
+	  sample_type lhs
+
+model,
+	id_model = 'DACE_M'
+	single
+	  interface_pointer = 'I1'
+
+interface,
+	id_interface = 'I1'
+	system asynchronous
+	  analysis_driver = 'text_book'

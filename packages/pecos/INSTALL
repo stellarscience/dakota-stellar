@@ -1,0 +1,233 @@
+
+The Parallel Environment for Creation Of Stochastics (PECOS) library
+generates samples of random fields (RFs) and stochastic processes
+(SPs) from a set of user-defined power spectral densities (PSDs).  The
+RF/SP may be either Gaussian or non-Gaussian and either stationary or
+nonstationary, and the resulting sample is intended for run-time query
+by parallel finite element simulation codes.
+
+
+=================
+Table of Contents
+=================
+
+Quick Start
+Distributions and Checkouts
+Basic Installation
+Useful Environment Settings
+Generating Local Documentation
+Library Notes
+
+*** This is draft INSTALL documentation adapted from DAKOTA. ***
+*** It will soon be updated with Cmake instructions.         ***
+
+===========
+Quick Start
+===========
+
+For the PECOS version 1.x source distributions, the following basic
+installation approach is recommended:
+
+  1) gunzip Pecos_releasename.tar.gz
+  2) tar xvf Pecos_releasename.tar
+  3) cd Pecos
+  4) ./configure [--disable-mpi]
+  5) make [-j#]
+
+where support for the message-passing interface (MPI) may not be
+available on all platforms.
+
+The following sections explain the quick start steps in more detail.
+The first two steps are described in the Distributions and Checkouts
+section.  All subsequent steps are overviewed in the Basic
+Installation section.
+
+
+===========================
+Distributions and Checkouts
+===========================
+
+Installation of PECOS can be done from a source distribution tar file
+or a checkout from the Subversion repository.  For source tar files,
+the following steps are needed to uncompress the tar file and extract
+the files:
+
+   1) gunzip Pecos_releasename.tar.gz
+   2) tar xvf Pecos_releasename.tar
+
+These steps will create a distribution directory with the name Pecos.
+Refer to the Basic Installation section below for instructions on
+building this distribution.
+
+To access PECOS and associated packages directly from the Subversion
+repositories, you need to have access to the Sandia SRN and have
+accounts on development.sandia.gov and software.sandia.gov. You will
+also need specific developer group permissions to be set for your
+accounts on these systems. The table below shows the system, group and
+contact information for Pecos and associated package repositories
+currently available.
+
+Package    System                  Group         Contact
+---------  ----------------------  ------------  -------------
+Pecos      development.sandia.gov  svn           Mike Eldred
+teuchos    software.sandia.gov     cvs           Heidi Thornquist
+
+For PECOS checkout from development.sandia.gov, you will need to set
+your Subversion URL target to the repository directory where PECOS
+resides (i.e., svn+ssh://development.sandia.gov/usr/local/svn).  Refer
+to the PECOS Users Manual for help installing and configuring
+Subversion, and to the Subversion man pages for additional information
+on svn (the checkout, diff, update, and commit commands are the
+essential subset).  The following steps can then be executed:
+
+   1) cd $HOME (or other appropriate directory)
+   2) setenv SVNROOT svn+ssh://development.sandia.gov/usr/local/svn
+   3) svn checkout $SVNROOT/Pecos/trunk Pecos
+   4) cd Pecos
+   5) autoreconf -i -v   
+
+Command 5) creates the GNU Autotools generated files which are
+necessary to configure PECOS.  Following this step, your subversion
+distribution will be in the same state as the source distribution tar
+file.  For further information on installing the versions of the
+Autotools used to develop PECOS, consult the PECOS Users Manual.
+
+
+==================
+Basic Installation
+==================
+
+For both the source distribution tar file and checkout from version
+control cases, there should now be a Pecos directory containing the
+autoconf-generated scripts to enable configuration.  External tools
+will appear in Pecos/packages.
+
+To build PECOS with all possible packages, some platform-dependent
+software dependencies exist.  These include the Message Passing
+Interface (MPI) library amd the Basic Linear Algebra Subprograms
+(BLAS) and Linear Algebra PACKage (LAPACK) libraries.  Of these,
+support for MPI is not a strict requirements since it can be
+optionally omitted from the build by configuring with --disable-mpi
+(see Installation Details below); however, BLAS/LAPACK support is
+currently required.  To the extent possible, autoconf will
+automatically locate the required software for the build; however, in
+some cases, it will need some assistance to supplement or override the
+automatic detection capabilities.
+
+With respect to the MPI software, installation directories will vary
+from platform to platform.  To utilize message-passing parallelism
+within PECOS, it may be necessary to locate an MPI installation or
+download and build your own.  PECOS will look for C++ wrapper scripts
+provided by the MPI installation (such as mpiCC or mpCC) to build
+sources requiring MPI headers and link executables requiring MPI
+libraries.  In some cases (i.e., Sun, DEC, SGI, IBM, Red Storm), a
+platform-optimized implementation of MPI is already provided as part
+of the environment.  If the MPI libraries and header files are already
+in locations standardly searched by the compiler (e.g., /usr/lib and
+/usr/include on DEC and SGI), then no additional setup is needed.
+
+In cases where MPI is not a standard part of the environment (e.g.,
+Mac OSX, Cygwin, Linux), you will either need to locate an MPI
+distribution installed by someone else (look for mpi or similar in
+/usr/local, /usr/netpub, /usr/share, etc.) or you will need to
+download MPI and build/install it yourself (MPICH downloads are
+available from http://www-unix.mcs.anl.gov/mpi/mpich1/download.html 
+and Sun HPC ClusterTools downloads are available from
+http://www.sun.com/products/hpc/communitysource/download.html).
+
+If the MPI installation is not in a default search location, then the
+environment variable MPICXX must be set to the C++ wrapper script
+provided by  the local MPI installation prior to or at configuration-
+time.  Examples of how to do this are shown below:
+
+   1) Setting the variable prior to running configure;
+      setenv MPICXX <path_to_C++_mpi_wrapper> # CSH/TCSH
+      export MPICXX=<path_to_C++_mpi_wrapper> # SH/BASH
+      ./configure
+
+   2) Setting the variable in the configure command.
+      ./configure MPICXX=<path_to_C++_mpi_wrapper>
+
+With respect to BLAS and LAPACK, these libraries are often optimized
+for performance on particular chip architectures and are usually
+provided as part of the environment.  In a few instances (Cygwin for
+Windows, older Red Hat Linux, and some other Linux vendors), it may be
+necessary to download and install BLAS/LAPACK (see
+http://www.netlib.org/blas and http://www.netlib.org/lapack).  If
+these libraries cannot be installed in a location normally searched by
+the compiler (e.g., /usr/lib), then the path to these libraries will
+need to be added to either the $BLAS_LIBS and $LAPACK_LIBS environment
+variables or to the --with-blas and --with-lapack configure options
+(see Installation Details below for information about environment
+variables and Cygwin (PC Windows) for an example).
+
+At this point, the preliminaries have been completed and you are ready
+to configure and build the software.  First, the platform-specific
+Makefiles must be generated using the configure script.  Running
+configure without any options will result in an attempt to build with
+as many packages as are available in the distribution.  Finally, the
+Makefiles are executed by typing make.  The PECOS build process
+supports parallel make using multiple processors by passing the -j
+option (for example, "make -j4" compiles 4 source files concurrently
+during the build).  These steps are summarized as follows:
+
+   1) cd Pecos [if needed]
+   2) ./configure [config options] [environment variables]
+   3) make [-j#]
+
+Once make has successfully completed, the generated PECOS libraries
+(libpecos.a et al.) are placed in $prefix/lib, where $prefix is
+specified as a path argument to the --prefix configure option (see
+Installation Details below).
+
+
+===========================
+Useful Environment Settings
+===========================
+
+Add man page paths for MPI and PECOS Manuals:
+  setenv MANPATH <your_default_man_paths>:<path_to_mpi_installation>/man:<path_to_your_pecos>/docs/man
+
+
+==============================
+Generating Local Documentation
+==============================
+
+To build a local copy of the Users Manual in HTML, LaTeX, and man page
+formats, you will need the doxygen tool available for download from
+http://www.doxygen.org.  Once doxygen is downloaded and installed, the
+commands are:
+
+  cd Pecos/docs
+  doxygen Doxyfile
+
+These steps generate HTML, man pages and raw LaTeX source.  To process the
+LaTeX source and convert it to a Postscript or PDF manual for printing, a
+Makefile is provided for which you can use one or more of the following
+make commands:
+
+  cd latex
+  make                   [generates refman.dvi]
+  make ps                [generates refman.ps]
+  make pdf               [generates refman.pdf]
+
+To access the man pages with the man command, add the Pecos/docs/man
+directory to your $MANPATH as described in the Useful Environment
+Settings section.
+
+
+=============
+Library Notes
+=============
+
+Library versions that are distributed with PECOS have been tested for
+a particular PECOS release.  The latest versions of these libraries
+are (or will be) available directly from:
+
+  fftw:    http://
+  teuchos: http://
+
+When upgrading to the latest libraries, modifications to the supporting 
+PECOS code (e.g., the wrapper class) may be required. Sharing upgrades 
+of this type with the development team is greatly appreciated.  Direct 
+messages to pecos-developers@dev.sandia.gov.

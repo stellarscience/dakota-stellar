@@ -1,0 +1,85 @@
+<p><b>HOPSPACK 2.0.2 precompiled binaries.</b></p>
+
+<p><br>
+Executable software is made available for general use, subject to the following
+disclaimer:
+NEITHER SANDIA, THE UNITED STATES NOR THE UNITED STATES DEPARTMENT OF
+ENERGY, NOR ANY OF THEIR EMPLOYEES MAKES ANY WARRANTY, EXPRESS OR IMPLIED,
+INCLUDING ANY WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR
+PURPOSE, OR ASSUMES ANY LEGAL LIABILITY OR RESPONSIBILITY FOR THE ACCURACY,
+COMPLETENESS, OR USEFULNESS OF ANY INFORMATION, APPARATUS, PRODUCT,
+OR PROCESS, OR ASSUMES ANY LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL
+DAMAGES RESULTING FROM ITS USE BY ANYONE.
+</p>
+
+<p><br>
+Each package includes the serial version, multithreaded version,
+user manual and examples.  
+</p>
+<div style="padding-left:20px">
+<ul>
+  <li><a href="http://www.sandia.gov/hopspack/code_drops/hopspack-2.0.2-lnx32.tar.gz"
+         onclick="checkdnld('Linux32');">
+      Download binary</a>
+      for Linux 32-bit (compiled with g++ 3.4.6 on RHEL 4)
+  <li><a href="http://www.sandia.gov/hopspack/code_drops/hopspack-2.0.2-lnx64.tar.gz"
+         onclick="checkdnld('Linux64');">
+      Download binary</a>
+      for Linux 64-bit (compiled with g++ 4.1.2 on RHEL 5)
+  <li><a href="http://www.sandia.gov/hopspack/code_drops/hopspack-2.0.2-mac32.tar.gz"
+         onclick="checkdnld('Mac32');">
+      Download binary</a>
+      for Mac OSX 32-bit (compiled with g++ 4.0.1 on Mac OSX 10.5.8)
+  <li><a href="http://www.sandia.gov/hopspack/code_drops/hopspack-2.0.2-win32.zip"
+         onclick="checkdnld('Win32');">
+      Download binary</a>
+      for Windows 32-bit (compiled with Microsoft Visual C++ 9.0)
+</ul>
+</div>
+
+
+<p><br></p>
+
+<p><b>HOPSPACK 2.0.2 source code.</b></p>
+
+<p><br>
+Source code is made available subject to copyright assertion by the Department
+of Energy and the GNU Lesser General Public License:
+</p>
+<div style="padding-left:20px">
+<ul>
+  <li>Copyright 2009 Sandia Corporation.
+      Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+      the U.S. Government retains certain rights in this software.
+  <li><a href="http://www.gnu.org/licenses/lgpl.html">
+      GNU Lesser General Public License (LGPL)</a>
+      governing the use of HOPSPACK source code
+</ul>
+</div>
+
+<p><br>
+The package includes source for all versions (serial, multithreaded, and MPI),
+the user manual and examples.
+The two archived formats (tar.gz and zip) have identical contents.
+Source code release history is available on the
+<a href="https://software.sandia.gov/trac/hopspack/">HOPSPACK Wiki</a>.
+</p>
+<div style="padding-left:20px">
+<ul>
+  <li><a href="http://www.sandia.gov/hopspack/code_drops/hopspack-2.0.2-src.tar.gz"
+         onclick="checkdnld('SrcLnx');">
+      Download source</a>
+      (as a gzipped tar file)
+  <li><a href="http://www.sandia.gov/hopspack/code_drops/hopspack-2.0.2-src.zip"
+         onclick="checkdnld('SrcWin');">
+      Download source</a>
+      (as a Windows zip file)
+</ul>
+</div>
+
+<p><br></p>
+
+If you have problems with the download,
+please send email to <a href="mailto:tplante@sandia.gov">tplante@sandia.gov</a>.
+
+<p><br></p>

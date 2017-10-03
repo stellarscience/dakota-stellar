@@ -1,0 +1,53 @@
+#@ s*: Label=FastTest
+#@ s2: DakotaConfig=HAVE_DOT
+#@ s3: DakotaConfig=HAVE_DOT
+# DAKOTA INPUT FILE - dakota_illum.in
+
+# This sample Dakota input file optimizes the illumination example
+# taken from course notes taught by Prof. Stephen Boyd at Stanford.
+#
+# the "hero solution" for the illumination problem found by using
+# ncsu_direct and then polishing that answer with conmin_frcg is
+# <<<<< Best parameters          =
+#                       1.0000000000e+00 x1
+#                       2.8186100902e-01 x2
+#                       0.0000000000e+00 x3
+#                       0.0000000000e+00 x4
+#                       0.0000000000e+00 x5
+#                       7.5621311116e-01 x6
+#                       1.0000000000e+00 x7
+# <<<<< Best objective function  =
+#                       1.0759888860e+00
+
+
+method,
+	optpp_q_newton,         			#s0
+#	optpp_newton					#s5
+#	optpp_pds,              			#s1
+#	dot_bfgs,					#s2
+#	dot_frcg,					#s3
+#	conmin_frcg,					#s4
+  	  max_iterations = 50,
+	  convergence_tolerance = 1e-4
+
+variables,
+	continuous_design = 7
+	  initial_point .5 .5 .5 .5 .5 .5 .5
+     	  lower_bounds   0. 0. 0. 0. 0. 0. 0.	#s0,#s2,#s3,#s4,#s5
+          upper_bounds   1. 1. 1. 1. 1. 1. 1.	#s0,#s2,#s3,#s4,#s5
+          descriptors   'x1' 'x2' 'x3' 'x4' 'x5' 'x6' 'x7'
+
+interface,
+	direct
+	  analysis_drivers = 'illumination'
+
+responses,
+        objective_functions = 1
+#	no_gradients					#s1
+	numerical_gradients				#s0,#s2,#s3,#s4
+	  method_source dakota 				#s0,#s2,#s3,#s4
+	  interval_type central 			#s0,#s2,#s3,#s4
+	  fd_gradient_step_size = .000001		#s0,#s2,#s3,#s4
+	no_hessians					#s0,#s1,#s2,#s3,#s4
+#	analytic_gradients				#s5
+#	analytic_hessians				#s5

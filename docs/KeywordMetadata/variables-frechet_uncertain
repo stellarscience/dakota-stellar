@@ -1,0 +1,25 @@
+Blurb::
+Aleatory uncertain variable - Frechet
+Description::
+The Frechet distribution is also referred to as the Type II Largest Extreme Value distribution. 
+The distribution of maxima in sample sets from a population with a lognormal distribution will asymptotically converge to this distribution. It is commonly used to model non-negative demand variables.
+
+The density function for the frechet distribution is: 
+\f[f(x) = \frac{\alpha}{\beta}(\frac{\beta}{x})^{\alpha+1}e^{-(\frac{\beta}{x})^\alpha}\f]
+where \f$\mu_F = \beta\Gamma(1-\frac{1}{\alpha})\f$ and 
+\f$\sigma_F^2 = \beta^2[\Gamma(1-\frac{2}{\alpha})-\Gamma^2(1-\frac{1}{\alpha})]\f$
+
+Topics::	continuous_variables, aleatory_uncertain_variables
+Examples::
+Theory::
+When used with design of experiments and multidimensional parameter
+studies, distribution bounds are inferred.
+These bounds are [0, \f$\mu + 3 \sigma\f$].
+
+For vector and centered parameter studies, an inferred initial
+starting point is needed for the uncertain variables.
+These variables are initialized to their means for these studies.
+
+
+Faq::
+See_Also::	

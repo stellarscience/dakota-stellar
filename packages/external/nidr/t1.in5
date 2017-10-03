@@ -1,0 +1,12 @@
+method
+id_method  = 'this is my method'
+model_pointer 'some model'
+;
+strategy
+graphics
+tabular_graphics_data tabular_graphics_file 'my graphics file'
+multi_level uncoupled
+num_solutions_transferred = 37
+method_list = 'method 1' 'method abc'
+surrogate_based_opt
+;

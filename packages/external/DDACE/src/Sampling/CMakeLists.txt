@@ -1,0 +1,13 @@
+set(Sampling_sources
+  DDaceArraySampler.cpp 
+  DDaceBoxBehnkenSampler.cpp 
+  DDaceCentralCompositeSampler.cpp 
+  DDaceFactorialSampler.cpp 
+  DDaceLHSampler.cpp 
+  DDaceOALHSampler.cpp 
+  DDaceOASampler.cpp 
+  DDaceRandomSampler.cpp 
+  DDaceSamplePoint.cpp 
+  DDaceSampler.cpp 
+  DDaceUserInputSampler.cpp
+)

@@ -1,0 +1,61 @@
+# $Id: example1_params.txt 202 2012-03-07 22:26:01Z tplante $
+# $URL: https://software.sandia.gov/svn/hopspack/trunk/examples/1-var-bnds-only/example1_params.txt $
+#
+# ************************************************************************
+#         HOPSPACK: Hybrid Optimization Parallel Search Package
+#                Copyright 2009-2012 Sandia Corporation
+#
+#   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#   the U.S. Government retains certain rights in this software.
+# ************************************************************************
+
+# HOPSPACK parameters for example 1.
+# See var_bnds_only.c for the definition of the objective function.
+
+
+#-- SUBLIST TO DEFINE THE NUMBER OF UNKNOWNS, VARIABLE BOUNDS, ETC.
+
+@ "Problem Definition"
+  "Number Unknowns" int 2                 # Number of variables
+  "Upper Bounds" vector 2  1  1           # Upper bounds on variables
+  "Lower Bounds" vector 2 -1 -1           # Lower bounds on variables
+  "Scaling"      vector 2  2  2           # Scale the variables
+  "Objective Target" double 1e-8          # Exact answer is known to be zero
+  "Display" int 2                         # 0 = no info, 2 = full problem detail
+  #-- OPTIONAL DEFINITION OF AN INITIAL POINT AND ITS VALUE.
+  "Initial X" vector 2  2e-1 0.3
+  "Initial F" vector 1  0.22
+@@
+
+
+#-- SUBLIST TO DEFINE HOW THE OBJECTIVE FUNCTION IS EVALUATED.
+
+@ "Evaluator"
+  "Evaluator Type"  string "System Call"
+  "Executable Name" string "var_bnds_only"
+  "Input Prefix"    string "ex1_in"
+  "Output Prefix"   string "ex1_out"
+  "Debug Eval Worker" bool false          # True enables evaluator debug messages
+  "Save IO Files" bool false              # Delete evaluator I/O files
+@@
+
+
+#-- SUBLIST OF MEDIATOR CONTROL PARAMETERS.
+
+@ "Mediator" 
+  "Citizen Count" int 1                   # One citizen will be invoked
+  "Number Processors" int 2               # Used with MPI executable
+  "Number Threads" int 2                  # Used with multithreaded executable
+  "Maximum Evaluations" int 1000
+  "Solution File" string "solution_point.txt"
+  "Display" int 3                         # 0 = no debug info, 5 = most detail
+@@
+
+
+#-- SUBLISTS TO DEFINE EACH CITIZEN (ONLY ONE IN THIS EXAMPLE).
+
+@ "Citizen 1"                             # Citizen name
+  "Type" string "GSS"                     # GSS is Generalized Set Search
+  "Step Tolerance" double 0.01            # Controls solution accuracy
+  "Display" int 1                         # 0 = no debug info, 3 = most detail
+@@

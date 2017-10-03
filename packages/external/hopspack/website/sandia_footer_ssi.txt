@@ -1,0 +1,6 @@
+<div id="footer">
+
+<p>&copy;2010-2012 Sandia Corporation | <a href='&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#119;&#101;&#98;&#109;&#97;&#115;&#116;&#101;&#114;&#64;&#115;&#97;&#110;&#100;&#105;&#97;&#46;&#103;&#111;&#118;'>Questions and Comments</a> | <a href="http://www.sandia.gov/general/privacy-security/index.html">Privacy and Security</a> | <a href="http://www.sandia.gov/news/resources/news_releases/feed/"><img src="http://www.sandia.gov/news/resources/news_releases/images/feed-icon.png" align="absmiddle" style="width:10px; margin-top:-3px;" /> News release RSS feed</a>
+<br />
+
+</div>

@@ -1,0 +1,93 @@
+\documentclass[letterpaper]{book}
+
+%\usepackage{a4wide}
+\oddsidemargin  0.25 in
+\evensidemargin 0 in
+\topmargin  0 in
+\textwidth  6.25 in
+\textheight 8.25 in
+
+\usepackage{makeidx}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{alltt}
+\usepackage{times}
+\ifx\pdfoutput\undefined
+\usepackage[ps2pdf,
+            pagebackref=true,
+            colorlinks=true,
+            linkcolor=blue
+           ]{hyperref}
+\else
+\usepackage[pdftex,
+            pagebackref=true,
+            colorlinks=true,
+            linkcolor=blue
+           ]{hyperref}
+\fi
+
+\usepackage{doxygen}
+% Override some settings from doxygen.sty:
+\rfoot[\fancyplain{}{\bfseries\scriptsize PECOS Version 1.0 Users Manual generated on \today}]{}
+\lfoot[]{\fancyplain{}{\bfseries\scriptsize PECOS Version 1.0 Users Manual generated on \today}}
+
+\makeindex
+\setcounter{tocdepth}{1}
+\renewcommand\footrulewidth{0.4pt}
+
+\begin{document}
+
+\begin{titlepage}
+\pagenumbering{arabic}
+\setcounter{page}{3}
+\begin{center}
+{\large SAND2008-xxxx}\\
+{\large Unlimited Release}\\
+%{\large xxxx 2008}\\
+{\large \today}\\
+
+\vspace*{1.5cm}
+{\LARGE PECOS, A Parallel Environment for Creation of Random Field and
+Stochastic Process Realizations}\\
+\vspace*{1cm}
+{\LARGE Version 1.0 Users Manual}\\
+\vspace*{1cm}
+
+{\large \bf Michael S. Eldred, Eric T. Phipps, Clayton G. Webster}\\
+{\large Optimization and Uncertainty Estimation Department}\\
+\vspace*{0.5cm}
+{\large \bf Richard V. Field, Jr.}\\
+{\large ... Department}\\
+\vspace*{0.5cm}
+{\large Sandia National Laboratories}\\
+{\large P.O. Box 5800}\\
+{\large Albuquerque, New Mexico 87185}\\
+\vspace*{1cm}
+
+{\Large \bf Abstract}
+\end{center}
+
+The PECOS (Parallel Environment for Creation Of Stochastics) library
+generates samples of random fields (RFs) and stochastic processes
+(SPs) from a set of user-defined power spectral densities (PSDs).  The
+RF/SP may be either Gaussian or non-Gaussian and either stationary or
+nonstationary, and the resulting sample is intended for run-time query
+by parallel finite element simulation codes.
+
+This report serves as a Users Manual for the PECOS software and
+describes the PECOS class hierarchies and their interrelationships.
+It derives directly from annotation of the actual source code and
+provides detailed class documentation, including all member functions
+and attributes.
+
+\end{titlepage}
+
+\cleardoublepage
+\tableofcontents
+\cleardoublepage
+% Comment out lines:
+%   \chapter{PECOS Page Documentation}
+% Edit:
+%   none at this time
+% ------------------------- End header-dev.tex -------------------------

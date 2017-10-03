@@ -1,0 +1,206 @@
+-----------------------------------------------------
+QUESO: Quantification of Uncertainty for Estimation,
+Simulation, and Optimization.
+-----------------------------------------------------
+
+Version 0.54.0
+  * Fix memory leak in test_GslVector
+  * Make MPI optional
+  * Optimise GSLMatrix::operator() and GslVector::operator[]
+  * Add 'txt' file output option
+  * Add SharedPtr
+  * Add input file options for optimisation and monitoring
+  * Fix some compiler warnings
+  * Fix HDF5 #include issues
+
+Version 0.53.0
+  * Add linear interpolation surrogates
+  * Refactor input options processing
+  * Refactor existing queso errors and asserts
+  * Add new error checking macros
+  * Add basic scoped pointer wrappers
+  * Better error message reporting for bad sample covariance matrices
+
+Version 0.52.0
+  * Add canned Gaussian likelihoods
+  * Fix bug in logit transform logic
+
+Version 0.51.0
+  * Add canned likelihood for scalar GPMSA use-case a la Higdon et al
+  * Add a logit-transformed transition kernel for more efficient proposals
+  * Adding jeffreys distribution as an available prior distribution
+  * Adding likelihood value caching to ML sampler
+  * Adding Eric Wright to contributors list
+
+Version 0.50.0
+  * Implemented MCMC sampling on function spaces
+  * Added function space MCMC unit tests
+  * Added serial and parallel function space MCMC examples
+  * Replace exit() calls with a macro exception handler
+
+Version 0.47.1
+  * created two simple statistical examples, simpleStatisticalForwardProblem and simpleStatisticalInverseProblem
+  * included description of the new examples on QUESO user's manual, including how to run and to process the generated data
+  * updated QUESO user's manual to include description of validationCycle example
+  * updated links for how to obtain QUESO and contact information (github/git)
+
+Version 0.47.0
+  * removed example statisticalInverseProblem as it has a bug - it fails to recreate the problem described in the Normal test from Laine's MCMC tool: http://helios.fmi.fi/~lainema/mcmc/ex/normalex.html.
+
+Version 0.47.1 (23 Sep 2013)
+
+  * Update manual and fix broken Makefile
+
+Version 0.47.0 (4 Sep 2013)
+
+  * Migrated library to github
+
+Version 0.46 (13 May 2013)
+
+  * changed libGRVY linkage to be optional
+  * added additional regression tests to 'make check'
+  * added rng (random number generator) class to accommodate either GSL or BOOST rng's
+  * added basic PDFs (beta and gamma) class to accommodate either GSL or BOOST PDFs
+  * beginning to add some GP based emulation capabilities
+  * updated QUESO user's manual, to include better description of the classes, installation procedure and examples
+  * included Doxygen documentation in most of core classes
+
+Version 0.45.3 (05 November 2012)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.45.3
+
+  * bug fix: set uqGslMatrixClass private variables to NULL after deletion
+  * simplified statistical post processing of Markov chains and Monte Carlo sequences
+  * resolved compilation warnings related to gcc 4.7.2
+  * allowed intermediated writings of MCMC samples, of MC input parameters, and of MC output qois
+  * allowed optional calculation of unnormalized pdfs
+  * added 'AllowAll' boolean options for the sampling classes
+
+Version 0.45.2 (24 July 2012)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.45.2
+
+  * added option to use svd for linear system solve
+  * added calculation of matrix rank
+  * added calculation of median
+  * added debug option for filtered matrix output
+    (if value is too small in magnitude, it is printed as zero)
+  * include calculation of determinants
+  * allow possibility of concatenating matrices vertically
+  * added calculation of conditional Gaussian vector RVs
+
+Version 0.45.1 (22 May 2012)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.45.1
+
+  * updated autotools bootstrapping mechanism to use autoreconf
+  * increased minimum autoconf requirement to v2.65
+  * bug fixes with multi-level restart capability
+  * bug fixes with uqDistArrayClass copy constructor
+  * imposing bounds on Gaussian random variables, if such bounds are indeed requested
+  * added gamma random variable
+  * added beta random variable
+  * added wigner random variable
+  * added log-normal random variable
+  * added DRAM option to read the initial position of the chain
+  * added DRAM option to read the initial proposal covariance matrix
+  * added DRAM option to write the adapted matrices, with writing period
+  * improved concatenation (more than 2 objects at once) of RV, pdf, realizer, subset, and uqGslVector classes
+  * added transpose operation of non-square matrices
+  * added block-diagonal and block-sideways filling of matrices
+  * added tensor product operation of matrices and vectors
+  * improved cwSet() operation ('cw' = component wise) on matrices and vectors
+  * improved trace and error messages
+
+Version 0.45.0 (10 April 2011)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.45.0
+
+  * standalone version binary renamed to queso_version
+  * removed several redundant files from tarball distribution
+  * include install of queso.h versioning header
+  * added unifiedReadContents() routine to uqScalarSequenceClass
+  * added HDF5 capability to unifiedWriteContents() routine of uqScalarSequenceClass
+  * added restart capability to ML algorithm
+  * added expected information gain calculations to ML algorithm
+
+Version 0.44.0 (22 February 2011)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.44.0
+
+  * added uqMpiCommClass
+  * added uqMapClass
+  * added uqDistArrayClass
+  * configure options modified to allow for optional use of Trilinos, HDF5 and GLPK;
+    with the change, the minimum dependencies for QUESO are Boost, GSL, and GRVY
+  * improved uqScalarSequenceClass and uqSequenceOfVectorsClass
+
+Version 0.43.0 (24 January 2011)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.43.0
+
+  * release for Sandia/CSRI
+
+Version 0.42.1 (02 February 2011)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.42.1
+
+  * bux fixed for extra MPI_Barrier() calls in uqEnvironmentClass
+  * added uqPiecewiseLinear1D1DFunctionClass
+
+Version 0.42.0 (07 December 2010)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.42
+
+  * fixed output runtime failure when running multiple chains in parallel
+  * fixed race condition in output directory creation
+  * inclusion of automatic licensing header support
+  * added minimum version requirement for autoconf
+  * added configuration support for the GNU Linear Programming Toolkit (GLPK)
+  * added interface to HDF5 for some I/O
+  * added quadrature classes
+  * added extra cdf computing capabilities on scalar and vector sequences
+  * added capability to set QUESO options at run time, without the need of input files
+  * added multi-level capability for uniprocessor environments
+  * added multi-level capability for multiprocessor environments, including load balancing logic
+  * added options on Metropolis Hastings for Brooks-Gelman convergence assessment
+  * parameters values in the chain output files are now written with better precision (when written in ASCII format)
+  * added extra logical checks throughout the code, for robustness (e.g., check of trilinos map in vector space class)
+  * switched to updated API for libGRVY
+  * added Wigner pdf
+  * added finite distribution capability
+  * force LU decomposition on matrix class to run again once a matrix is changed
+  * added eigenvalue and eigenvector capabilities to vector class
+
+Version 0.41.0 (30 October 2009)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.41
+
+  * user likelihood routines should now return ln(value), instead of -2*ln(value)
+  * inclusion of inverse Gamma random variable (in addition to standard uniform and Gaussian options)
+  * uniform pdf now returns (1/volume of domain), instead of just 1. If volume is infinite or zero,
+    then the uniform pdf returns 1.
+  * random variables can be now be formed by concatenation of existing random variable
+    definitions (uniform, Gaussian, inverse Gamma)
+  * unified mean and unified sample variance explicitly computed and printed
+  * Brooks-Gelman convergence assessment available
+  * primary code logic of examples/validationCycle2/src is now in *.C files instead of *.h files
+  * update to documentation system, support for "make docs"
+
+Version 0.40.2 (10 September 2009)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.40.2
+
+  * bug fix for several header files not included in "make dist" distribution
+  * inclusion of additional example files in distribution
+
+Version 0.40.1 (08 September 2009)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.40.1
+
+  * bug fix for output path containing a filename with no leading ./filename
+  * additional examples and comments
+
+Version 0.40.0 (22 July 2009)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.4.0
+
+  * option to compute correlation between parameters and QOIs in statistical forward problems
+  * dynamic library build for libqueso via libtool
+  * configuration support for MPI and HPCT
+  * updated examples provided during install (see examples/ directory)
+  * introduction of a basic API for statistical inverse problems (includes C/Fortran)
+
+Version 0.30.0 (13 Feb 2009)
+https://svn.ices.utexas.edu/repos/pecos/uq/queso/releases/0.3.0
+
+  * autoconf/automake based configuration
+  * initial working version with Stochastic Newton

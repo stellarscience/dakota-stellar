@@ -1,0 +1,51 @@
+#@ Requires Windows, with very specific configuration
+#@ *: DakotaConfig=WIN32
+# Select work directory tests for Windows, taken from
+# dakota_workdir.in (left) to tests in this file (right)
+#  0 --> 0
+#  1 --> 1
+#  2 --> 2
+#  5 --> 3
+#  6 --> 4
+#  8 --> 5
+#  9 --> 6
+
+method
+  multidim_parameter_study		
+    partitions = 2 2			
+  output debug
+
+variables
+  continuous_design = 2			
+    lower_bounds    -2.0     -2.0	
+    upper_bounds     2.0      2.0	
+    descriptors      'x1'     'x2'	
+
+interface
+# If Python is registered to handle .py files, system calls will work,
+# but fork requires a valid binary object as argv[0]
+  system	#s0,#s2,#s4,#s5
+#  fork		#s1,#s3,#s6
+#    asynchronous evaluation_concurrency = 2	     	     	#s1,#s2,#s6
+    analysis_driver = 'dakota_workdir_windows.py'			#s0
+#    analysis_driver = 'C:/Python26/python.exe ../dakota_workdir_windows.py tag'			#s1
+#    analysis_driver = 'dakota_workdir_windows.py tag_save' 		#s2
+#    analysis_driver = 'C:/Python26/python.exe ../dakota_workdir_windows.py templatefiles_copy' 	#s3
+#    analysis_driver = 'dakota_workdir_windows.py templatedir_copy' 	#s4
+#    analysis_driver = 'dakota_workdir_windows.py named_params' 	#s5
+#    analysis_driver = 'C:/Python26/python.exe ../dakota_workdir_windows.py saved_params' 	#s6
+
+    work_directory
+      named 'trydir'
+# TODO: disable tag for p0 depending on parallel concurrency
+#	directory_tag						#s1,#s2,#s6
+#	directory_save  					#s2,#s6
+# 	copy_files = 'dakota_workdir_windows.root.dat' 			#s3
+#	copy_files = 'dakota_workdir_windows.templatedir/*'		#s4
+#	parameters_file = 'params.in'				#s5,#s6
+#	  file_save						#s6
+
+responses
+  objective_functions = 1             
+  no_gradients				
+  no_hessians

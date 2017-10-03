@@ -1,0 +1,36 @@
+#@ s*: Label=FastTest
+
+environment,
+#	output_precision = 16
+
+method,
+	polynomial_chaos				#s0,#s1,#s2,#s3
+#	stoch_collocation				#s4,#s5,#s6,#s7
+	  dimension_adaptive p_refinement generalized
+#	    max_refinement_iterations  = 20
+	    convergence_tol = 1.e-6
+	  sparse_grid_level = 2
+#	  non_nested					#s1,#s3,#s5,#s7
+#	  num_response_levels = 1			#s2,#s3,#s6,#s7
+#	  response_levels = 0.0				#s2,#s3,#s6,#s7
+#	  compute reliabilities				#s2,#s3,#s6,#s7
+#	  compute probabilities
+#	    samples_on_emulator = 100000 seed = 1237 fixed_seed
+#	  cumulative distribution			#s2,#s3,#s6,#s7
+#	  output silent
+
+variables,
+	uniform_uncertain = 3
+	  lower_bounds      0. 0. 0.
+	  upper_bounds      1. 1. 1.
+	  descriptors =   'x1' 'x2' 'x3'
+
+interface,
+        direct
+          analysis_driver = 'sobol_ishigami'
+	  deactivate restart_file #evaluation_cache
+
+responses,
+        response_functions = 1
+        no_gradients
+        no_hessians

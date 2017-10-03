@@ -1,0 +1,147 @@
+$  This is TEST #34 for LHS to show that a large number and variety of
+$  distributions have no effect on the accuracy of the statistics as compared
+$  with other tests previously run with 1 type of distribution and very few
+$  variables  (after FRACTION changes)
+lhstitl TEST #34Ran2SA
+lhsout 1.out
+lhsmsg 2.out
+lhsseed 1342
+lhsobs 180
+$ lhsreps 2
+lhsrpts corr hist
+$ lhsopts random pairing
+dataset:
+dist1 normal 12.0 7.0
+dist2 normal 3 .12
+dist3 normal 25 12
+dist4 normal 250 52
+dist17 triangular 0.0 2.0 4.0
+dist18 triangular 5 8 8
+dist19 triangular 9 9 30
+dist20 triangular 3 13 15
+dist5 lognormal 12 7
+dist6 lognormal 3 2
+dist7 lognormal 25 12
+dist8 lognormal 250 52
+dist9 gamma 2 3.0
+dist10 gamma 14 7.0
+dist11 gamma 10 8.0
+dist12 gamma 112 1.0
+dist13 bounded normal 5.0 3.0 1.0 7.0
+dist14 bounded normal 12 7 11 15
+dist15 bounded normal 29 2 25 29.5
+dist16 bounded normal 100 50 99 148
+dist21 weibull 1 2
+dist22 weibull 1 1
+dist23 weibull 2 1
+dist24 weibull 2 2
+dist25 uniform 0 1
+dist26 uniform 25.3 89.4
+dist27 uniform 3 20
+dist28 uniform 4 100
+dist29 poisson 98
+dist30 poisson 1
+dist31 poisson 50
+dist32 poisson 12
+dist33 pareto 4 8
+dist34 pareto 12 1
+dist35 pareto 3.14 12
+dist36 pareto 6.28 2
+dist37 exponential 4
+dist38 exponential 12.9
+dist39 exponential 23
+dist40 exponential 1002.89
+dist41 geometric .67
+dist42 geometric .33
+dist43 geometric .01
+dist44 geometric .95
+dist45 hypergeometric 20 10 15
+dist46 hypergeometric 100 10 35
+dist47 hypergeometric 35 2 23
+dist48 hypergeometric 50 5 25
+dist49 binomial .45 45
+dist50 binomial .33 300
+dist51 binomial .12 20
+dist52 binomial .99 5000
+dist53 negative binomial .45 45
+dist54 negative binomial .33 300
+dist55 negative binomial .12 20
+dist56 negative binomial .99 5000
+dist57 beta 0 1 2 3
+dist58 beta 0 1 3 2
+dist59 beta 2 3 1 1
+dist60 beta 7 8 1 2
+dist61 discrete cumulative 4 5 .2 7 .4 11 .6 14 1
+dist62 discrete cumulative 3 7.8 .33 9.2 .666 11.4 1
+dist63 discrete cumulative 5 1 .2 2 .4 3 .6 4 .8 5 1
+dist64 discrete cumulative 3 6.9 .4 8.8 .55 10 1
+dist65 inverse gaussian 1 2
+dist66 inverse gaussian 2 5
+dist67 inverse gaussian 10 7
+dist68 inverse gaussian 3 3
+dist69 truncated normal 0 1 .5398 .9981
+dist70 truncated normal 0 1 .6915 .9772
+dist71 truncated normal 0 1 .8413 .9987
+dist72 truncated normal 0 1 .5398 .9332
+dist73 normal-b -9.36098 15.36098
+dist74 normal-b -3.09024 3.090245
+dist75 normal-b -1.09024 5.090245
+dist76 normal-b 6.364633 15.63537
+dist77 lognormal-n 1.7 5.2
+dist78 lognormal-n 9.2 1.3
+dist79 lognormal-n 6 3
+dist80 lognormal-n 10 2.2
+dist81 bounded lognormal 2 1.45 1 3
+dist82 bounded lognormal 3 2 1 3.5
+dist83 bounded lognormal 12 4 11 13
+dist84 bounded lognormal 5 2 2 6
+dist85 bounded lognormal-n 2 1.45 1 3
+dist86 bounded lognormal-n 3 2 1 3.5
+dist87 bounded lognormal-n 12 4 11 13
+dist88 bounded lognormal-n 5 2 2 6
+dist89 truncated lognormal 2 1.45 .12 .98
+dist90 truncated lognormal 3 2 .5 .75
+dist91 truncated lognormal 12 4 .2 .8
+dist92 truncated lognormal 5 2 .3 .4
+dist93 truncated lognormal-n 2 3 .15 .98
+dist94 truncated lognormal-n 5 1 .2 .5
+dist95 truncated lognormal-n 1 1 .3 .4
+dist96 truncated lognormal-n 10 2.2 .1 .4
+dist97 lognormal-b 6.95604017e-4 78490.2741566
+dist98 lognormal-b 4.29106639504e-3 113064015036
+dist99 lognormal-b 4.53928806549e-2 21.9824630195
+dist100 lognormal-b .696992938186 38004864437.8
+dist101 uniform* 4 18 36 54 72 0 1 2 3 5
+dist102 uniform* 3 54 54 72 0 4 5 10
+dist103 uniform* 5 36 36 36 36 36 0 0.5 2 2.2 2.3 5
+dist104 uniform* 3 4 4 172 0 .5 1 1.5
+dist105 loguniform 0.001 10
+dist106 loguniform 100 1000
+dist107 loguniform 7 14
+dist108 loguniform 9 9.8
+dist109 loguniform* 2 90 90 1 3 9
+dist110 loguniform* 3 36 36 108 .001 1 10 20 
+dist111 loguniform* 4 54 54 54 18 10 11 12 13 15
+dist112 loguniform* 3 48 72 60 10 100 1000 1500
+dist113 continuous linear 3 5 0 7 .72 10 1
+dist114 continuous linear 4 0 0 4 .15 6 .2 10 1
+dist115 continuous linear 5 1 0 2 .5 7 .9 13 .93 20 1
+dist116 continuous linear 3 1 0 5 .5 10 1 
+dist117 continuous frequency 4 11 1 23 18.6 30 7.2 38.6 2.4
+dist118 continuous frequency 3 10 23 16 14 19 11
+dist119 continuous frequency 4 12 27 52 16 92 48 100 10
+dist120 continuous frequency 3 12.3 6 14.7 9 102.3 14
+dist121 discrete histogram 3 5 17 7 17 10 17
+dist122 discrete histogram 4 8 17 9 16 10 12 11 4
+dist123 discrete histogram 2 9 20 100 10
+dist124 discrete histogram 5 1 100 10 200 100 10 150 20 1000 60
+dist125 maximum entropy 1 2 3
+dist126 maximum entropy 2 4 6
+dist127 maximum entropy 2 3 9
+dist128 maximum entropy 5 6 12
+dist129 continuous logarithmic 4 3 0 5 .35 7 .79 11 1
+dist130 continuous logarithmic 3 5 0 7 .67 10 1
+dist131 continuous logarithmic 5 2 0 4 .4 6 .6 8 .8 10 1
+dist132 continuous logarithmic 3 4 0 9.5 .22 100 1
+correlate dist1 dist2 0.9 
+correlate dist2 dist3 -0.3

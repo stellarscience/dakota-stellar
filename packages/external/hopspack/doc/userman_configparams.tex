@@ -1,0 +1,2083 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Config Parameters}
+\label{sec:params}
+
+Execution of HOPSPACK is controlled by a number of configuration parameters.
+The user provides a text file containing parameters and passes the file name
+on the command line.  HOPSPACK reads the file, parses parameter values,
+and stores them for use during execution.
+Most parameters have default values, but an input file is always required
+to define the optimization problem and how it is evaluated.
+
+As an example, consider solving
+\[
+  \begin{array}{cc}
+    \min
+      & (x_1 - 10)^2 + (x_2 - 10)^2 + (x_3 - 10)^2 + (x_4 - 10)^2  \\
+    \vspace{-0.1in}  \\
+    \mbox{subject to}
+      & \begin{array}{rcrcr}
+              &      & -x_1 - x_2 - x_3 - x_4 & \geq & -10    \\
+           -1 & \geq &  x_1 - x_2 + x_3 - x_4                 \\
+              &      & 2x_1 \hspace{5mm} +2x_3 -7x_4 & =    &  3  \\
+      \end{array}  \\
+      & \hspace{1.0in}
+        10 \; \geq \; x_i \; \geq \; -10  \qquad i = 1, \ldots, 4
+  \end{array}
+\]
+This problem is provided in the directory {\sf examples/2-linear-constraints},
+where there is more documentation.
+The input lines below are sufficient to define and solve the problem on HOPSPACK:
+\begin{verbatim}
+    @ "Problem Definition"
+      "Number Unknowns" int 4                    # Number of variables
+      "Upper Bounds" vector 4  10  10  10  10    # Variable upper bounds
+      "Lower Bounds" vector 4 -10 -10 -10 -10    # Variable lower bounds
+      "Initial X"    vector 4  -1   1  -1  -1    # Initial point
+    @@
+    @ "Linear Constraints"
+      "Inequality Matrix" matrix 2 4             # 2 ineq, 4 variables
+       -1 -1 -1 -1
+        1 -1  1 -1
+      "Inequality Lower" vector 2  -10 DNE       # Lower bounds on 2 ineqs
+      "Inequality Upper" vector 2  DNE  -1       # Upper bounds on 2 ineqs
+      "Equality Matrix" matrix 1 4               # 1 equality, 4 variables
+       2.0  0  2.0  -0.7e+1
+      "Equality Bounds" vector 1 3               # Right-hand side of eqs
+    @@
+    @ "Evaluator"                                # Program computing the obj
+      "Executable Name" string "linear_constraints"
+    @@
+    @ "Mediator" 
+      "Citizen Count" int 1                      # One citizen to start
+    @@
+    @ "Citizen 1"                                # Citizen name
+      "Type" string "GSS"                        # Generalized Set Search
+    @@
+\end{verbatim}
+
+As the example illustrates, parameters are organized into sublists that begin
+with the {\tt @} character and a keyword name; for example,
+{\tt @ "Problem Definition"}.  Sublists end with a line containing {\tt @@}.
+Sublists can appear in any order.
+
+Within a sublist are one or more parameters, each on a separate line.
+Parameters can appear in any order within a sublist.  Parameter names are
+scoped within a sublist, so if the same parameter name appears in two
+sublists, it is actually two separate parameters with separate values.
+Each line begins with the parameter name (a case-sensitive string), the type
+of the parameter ({\tt int}, {\tt double}, etc.), and then the value.
+The file can contain empty lines, leading whitespace, and comments beginning
+with the {\tt \#} character.
+
+\begin{itemize}
+\item
+String, integer, and double precision parameters are specified as follows:
+\begin{verbatim}
+      "String Parameter Name" string "string value"
+      "Integer Parameter Name" int integer_value
+      "Double Parameter Name" double double_value
+\end{verbatim}
+The double precision value can be in floating point or scientific format.
+HOPSPACK also accepts the string ``{\tt DNE}'' for a double precision value,
+which indicates the value ``does not exist''.  For instance, in the example above
+{\tt DNE} is used to show the first inequality constraint has no upper bound.
+
+\item
+Boolean values are specified as follows:
+\begin{verbatim}
+      "Boolean Parameter Name" bool value
+\end{verbatim}
+The value is the word ``true'' or ``false'', without quotes, or one of the
+equivalent words ``TRUE'', ``True'', ``T'' (similarly, for ``false'').
+
+\item
+Vector parameters are specified with a length (N) and then double precision
+values, all on one line:
+\begin{verbatim}
+      "Vector Parameter Name" vector N double_1 ... double_N
+\end{verbatim}
+
+\item
+Matrix parameters are specified with a number of rows (M) and columns (N).
+Double precision values for each row are given on consecutive lines:
+\begin{verbatim}
+      "Matrix Parameter Name" matrix M N
+        double_1,1 ... double_1,N
+        double_2,1 ... double_2,N
+                 ...
+        double_M,1 ... double_M,N
+\end{verbatim}
+
+\item
+A special character vector parameter is used to specify variable types.
+It is a vector of single-letter characters:
+\begin{verbatim}
+      "Character Vector Parameter Name" charvec N char_1 ... char_N
+\end{verbatim}
+
+\end{itemize}
+
+The next section (\ref{subconfig:DEFINITION}) describes the
+assumptions made when formulating an optimization problem. A
+quick reference guide to all the parameters is provided in
+\SECREF{subconfig:QUICKREF}. The remaining sections
+describe each parameter in HOPSPACK, grouped by sublist.
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Defining the Optimization Problem}
+\label{subconfig:DEFINITION}
+
+Certain conventions are assumed when defining an optimization problem for
+HOPSPACK.  The main points are described below.  Documentation of the
+configuration parameters should also be consulted, especially the
+``Problem Definition'' sublist (\SECREF{subconfig:PD}) and
+the ``Linear Constraints'' sublist (\SECREF{subconfig:LC}).
+
+
+\begin{itemize}
+
+\item
+Variables appear in an arbitrary order determined by the user, but that order
+must be maintained when listing upper and lower bounds, variable types,
+scaling factors, and any initial start point.
+
+\item
+If the objective cannot be evaluated at a point, then the application should
+return the string ``{\tt DNE}'' to indicate the value does not exist.
+Also return {\tt DNE} for any nonlinear constraints that cannot be evaluated
+at a point.
+
+\item
+Linear equalities and inequalities are separated using different parameters
+(see \SECREF{subconfig:LC}).  Constraints within each set
+appear in an arbitrary order determined by the user, but that order must be
+maintained when listing the matrix coefficients and bounds.  A single inequality
+can have a lower and upper bound, or just one bound.
+
+\item
+Nonlinear equalities and inequalities are separated.  Constraints within each set
+appear in an arbitrary order determined by the user, but that order must be
+maintained when returning evaluation values or defining values at an initial
+start point.
+Nonlinear equalities should be defined to equal zero; i.e., a value of zero
+at $x$ indicates the equality is satisfied:
+\[
+  c_{\cal E}(x) = 0 .
+\]
+Nonlinear inequalities should be defined as greater than zero:
+\[
+  c_{\cal I}(x) \geq 0 .
+\]
+Hence, a negative value at $x$ indicates that an inequality is violated,
+and a nonnegative value indicates feasibility.
+A nonlinear inequality with an upper and lower bound should be written as
+two inequalities; for example,
+\[
+  \begin{array}{ccc}
+     8 \; \geq \; x^2 + y^2 \; \geq \; 5
+    & \rightarrow
+    & \left\{ \begin{array}{rcl}
+                8 - x^2 - y^2 & \geq & 0  \\
+                x^2 + y^2 - 5 & \geq & 0
+              \end{array}
+      \right.
+  \end{array}
+\]
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\subsection{Quick Reference for Config Parameters}
+\label{subconfig:QUICKREF}
+
+The tables below list all configuration parameters in alphabetical order,
+grouped by sublist.
+
+\begin{tabbing}
+  xx \= xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \= xxxxxxxx \= \kill
+  \>{\bf Problem Definition} sublist (\SECREF{subconfig:PD})  \\
+  \>{\it Parameter Name}               \>{\it Type}
+      \>{\it Default Value}  \\
+
+  \>Display                            (\PGREF{param:PD-display})
+      \>{\tt int}
+      \>{\tt 0} (no display of problem definition)  \\
+  \>Initial F                          (\PGREF{param:PD-initf})
+      \>{\tt vector}
+      \>{\tt DNE} (no initial values)  \\
+  \>Initial Nonlinear Eqs              (\PGREF{param:PD-initeqs})
+      \>{\tt vector}
+      \>{\tt DNE} (no initial values)  \\
+  \>Initial Nonlinear Ineqs            (\PGREF{param:PD-initineqs})
+      \>{\tt vector}
+      \>{\tt DNE} (no initial values)  \\
+  \>Initial X                          (\PGREF{param:PD-initx})
+      \>{\tt vector}
+      \>no initial point  \\
+  \>Lower Bounds                       (\PGREF{param:PD-lbnd})
+      \>{\tt vector}
+      \>no lower bounds (all equal {\tt DNE})  \\
+  \>Nonlinear Active Tolerance         (\PGREF{param:PD-nacttol})
+      \>{\tt double}
+      \> {\tt 1.0e-7}  \\
+  \>Number Nonlinear Eqs               (\PGREF{param:PD-numeqs})
+      \>{\tt int}
+      \>{\tt 0}  \\
+  \>Number Nonlinear Ineqs             (\PGREF{param:PD-numineqs})
+      \>{\tt int}
+      \>{\tt 0}  \\
+  \>Number Objectives                  (\PGREF{param:PD-numobjs})
+      \>{\tt int}
+      \>{\tt 1}  \\
+  \>Number Unknowns                    (\PGREF{param:PD-numunks})
+      \>{\tt int}
+      \> none (parameter is required)  \\
+  \>Objective Percent Error            (\PGREF{param:PD-objpcnt})
+      \>{\tt double}
+      \>{\tt DNE} (no stop test based on percent error)  \\
+  \>Objective Target                   (\PGREF{param:PD-objtgt})
+      \>{\tt double}
+      \>{\tt DNE} (no target)  \\
+  \>Objective Type                     (\PGREF{param:PD-objtype})
+      \>{\tt string}
+      \>{\tt "Minimize"}  \\
+  \>Scaling                            (\PGREF{param:PD-scaling})
+      \>{\tt vector}
+      \>automatic scaling if possible  \\
+  \>Upper Bounds                       (\PGREF{param:PD-ubnd})
+      \>{\tt vector}
+      \>no upper bounds (all equal {\tt DNE})  \\
+  \>Variable Types                     (\PGREF{param:PD-vartypes})
+      \>{\tt charvec}
+      \>all variables continuous
+\end{tabbing}
+
+\begin{tabbing}
+  xx \= xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \= xxxxxxxx \= \kill
+  \>{\bf Linear Constraints} sublist (\SECREF{subconfig:LC})  \\
+  \>{\it Parameter Name}               \>{\it Type}
+      \>{\it Default Value}  \\
+
+  \>Active Tolerance                   (\PGREF{param:LC-acttol})
+      \>{\tt double}
+%TBD      \> 4 * machine epsilon ($\approx 8.9 \times 10^{-16}$)  \\
+      \> {\tt 1.0e-12}  \\
+  \>Display                            (\PGREF{param:LC-display})
+      \>{\tt int}
+      \> {\tt 0} (no display of constraints)  \\
+  \>Equality Bounds                    (\PGREF{param:LC-eqbnds})
+      \>{\tt vector}
+      \> no equality constraints  \\
+  \>Equality Matrix                    (\PGREF{param:LC-eqmat})
+      \>{\tt matrix}
+      \> no equality constraints  \\
+  \>Inequality Lower                   (\PGREF{param:LC-ineql})
+      \>{\tt vector}
+      \> no inequality constraints  \\
+  \>Inequality Matrix                  (\PGREF{param:LC-ineqmat})
+      \>{\tt matrix}
+      \> no inequality constraints  \\
+  \>Inequality Upper                   (\PGREF{param:LC-inequ})
+      \>{\tt vector}
+      \> no inequality constraints
+\end{tabbing}
+
+\begin{tabbing}
+  xx \= xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \= xxxxxxxx \= \kill
+  \>{\bf Evaluator} sublist (\SECREF{subconfig:EV})  \\
+  \>{\it Parameter Name}               \>{\it Type}
+      \>{\it Default Value}  \\
+
+  \>Debug Eval Worker                  (\PGREF{param:EV-debug})
+      \>{\tt bool}
+      \>{\tt false}  \\
+  \>Evaluator Type                     (\PGREF{param:EV-type})
+      \>{\tt string}
+      \>{\tt "System Call"}  \\
+  \>Executable Name                    (\PGREF{param:EV-execname})
+      \>{\tt string}
+      \>{\tt "a.out"}  \\
+  \>File Precision                     (\PGREF{param:EV-prec})
+      \>{\tt int}
+      \>{\tt 14}  \\
+  \>Input Prefix                       (\PGREF{param:EV-inprefix})
+      \>{\tt string}
+      \>{\tt "input"}  \\
+  \>Output Prefix                      (\PGREF{param:EV-outprefix})
+      \>{\tt string}
+      \>{\tt "output"}  \\
+  \>Save IO Files                      (\PGREF{param:EV-savefiles})
+      \>{\tt bool}
+      \>{\tt false}
+\end{tabbing}
+
+\begin{tabbing}
+  xx \= xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \= xxxxxxxx \= \kill
+  \>{\bf Mediator} sublist (\SECREF{subconfig:ME})  \\
+  \>{\it Parameter Name}               \>{\it Type}
+      \>{\it Default Value}  \\
+
+  \>Cache Comparison Tolerance         (\PGREF{param:MD-cachetol})
+      \>{\tt double}
+      \> 2 * machine epsilon ($\approx 4.4 \times 10^{-16}$)  \\
+  \>Cache Enabled                      (\PGREF{param:MD-cacheenabled})
+      \>{\tt bool}
+      \>{\tt true}  \\
+  \>Cache Input File                   (\PGREF{param:MD-cacheinfile})
+      \>{\tt string}
+      \>no input file  \\
+  \>Cache Output File                  (\PGREF{param:MD-cacheoutfile})
+      \>{\tt string}
+      \>no output file  \\
+  \>Cache Output Precision             (\PGREF{param:MD-cacheoutfileprec})
+      \>{\tt int}
+      \>{\tt 14}  \\
+  \>Citizen Count                      (\PGREF{param:MD-ctzns})
+      \>{\tt int}
+      \>none (parameter is required)  \\
+  \>Display                            (\PGREF{param:MD-display})
+      \>{\tt int}
+      \>{\tt 2}  \\
+  \>Max Initial Eval Failures          (\PGREF{param:MD-maxinitfails})
+      \>{\tt int}
+      \>{\tt 5}  \\
+  \>Maximum Evaluations                (\PGREF{param:MD-maxeval})
+      \>{\tt int}
+      \>{\tt -1} (unlimited)  \\
+  \>Maximum Exchange Return            (\PGREF{param:MD-maxexch})
+      \>{\tt int}
+      \>{\tt 1000}  \\
+  \>Minimum Exchange Return            (\PGREF{param:MD-minexch})
+      \>{\tt int}
+      \>{\tt 1}  \\
+  \>Number Processors                  (\PGREF{param:MD-numproc})
+      \>{\tt int}
+      \> none (parameter required with MPI)  \\
+  \>Number Threads                     (\PGREF{param:MD-numthreads})
+      \>{\tt int}
+      \> none (parameter required if multithreaded)  \\
+  \>Precision                          (\PGREF{param:MD-prec})
+      \>{\tt int}
+      \>{\tt 3}  \\
+  \>Reserved Citizen Workers           (\PGREF{param:MD-resctzns})
+      \>{\tt int}
+      \>{\tt 0}  \\
+  \>Solution File                      (\PGREF{param:MD-solfile})
+      \>{\tt string}
+      \>no solution file  \\
+  \>Solution File Precision            (\PGREF{param:MD-solfileprec})
+      \>{\tt int}
+      \>{\tt 14}  \\
+  \>Synchronous Evaluations            (\PGREF{param:MD-synch})
+      \>{\tt bool}
+      \>{\tt false}
+\end{tabbing}
+
+\begin{tabbing}
+  xx \= xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \= xxxxxxxx \= \kill
+  \>{\bf Citizen GSS} sublist (\SECREF{subconfig:GS})  \\
+  \>{\it Parameter Name}               \>{\it Type}
+      \>{\it Default Value}  \\
+
+  \>Add Projected Compass              (\PGREF{param:GS-addcompass})
+      \>{\tt bool}
+      \>{\tt false}  \\
+  \>Add Projected Normals              (\PGREF{param:GS-addnormals})
+      \>{\tt bool}
+      \>{\tt true}  \\
+  \>Citizen Priority                   (\PGREF{param:GS-priority})
+      \>{\tt int}
+      \>{\tt 1} (highest priority)  \\
+  \>Contraction Factor                 (\PGREF{param:GS-contract})
+      \>{\tt double}
+      \>{\tt 0.5}  \\
+  \>Display                            (\PGREF{param:GS-display})
+      \>{\tt int}
+      \>{\tt 0} (no display of GSS operation)  \\
+  \>Epsilon Max                        (\PGREF{param:GS-epsmax})
+      \>{\tt double}
+      \>{\tt 2 * Step Tolerance}  \\
+  \>Ignore Other Points                (\PGREF{param:GS-ignore})
+      \>{\tt bool}
+      \>{\tt false}  \\
+  \>Initial Step                       (\PGREF{param:GS-initstep})
+      \>{\tt double}
+      \>{\tt 1.0}  \\
+  \>Maximum Evaluations                (\PGREF{param:GS-maxeval})
+      \>{\tt int}
+      \>{\tt -1} (unlimited)  \\
+  \>Maximum Queue Size                 (\PGREF{param:GS-maxq})
+      \>{\tt int}
+      \>{\tt 0}  \\
+  \>Minimum Step                       (\PGREF{param:GS-minstep})
+      \>{\tt double}
+      \>{\tt 2 * Step Tolerance}  \\
+  \>Penalty Function                   (\PGREF{param:GS-penfn})
+      \>{\tt string}
+      \>{\tt "L2 Squared"}  \\
+  \>Penalty Parameter                  (\PGREF{param:GS-penparam})
+      \>{\tt double}
+      \>{\tt 1.0}  \\
+  \>Penalty Smoothing Value            (\PGREF{param:GS-pensmooth})
+      \>{\tt double}
+      \>{\tt 0.0}  \\
+  \>Snap Distance                      (\PGREF{param:GS-snapdist})
+      \>{\tt double}
+      \>{\tt Step Tolerance / 2}  \\
+  \>Snap To Boundary                   (\PGREF{param:GS-snap})
+      \>{\tt bool}
+      \>{\tt false}  \\
+  \>Step Tolerance                     (\PGREF{param:GS-steptol})
+      \>{\tt double}
+      \>{\tt 0.01}  \\
+  \>Sufficient Improvement Factor      (\PGREF{param:GS-suffimpr})
+      \>{\tt double}
+      \>{\tt 0.01}  \\
+  \>Type                               (\PGREF{param:GS-type})
+      \>{\tt string}
+      \>{\tt "GSS"}  \\
+  \>Use Random Order                   (\PGREF{param:GS-random})
+      \>{\tt bool}
+      \>{\tt true}
+\end{tabbing}
+
+\begin{tabbing}
+  xx \= xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \= xxxxxxxx \= \kill
+  \>{\bf Citizen GSS-NLC} sublist (\SECREF{subconfig:GSN})  \\
+  \>{\it Parameter Name}               \>{\it Type}
+      \>{\it Default Value}  \\
+
+  \>Display                            (\PGREF{param:GSN-display})
+      \>{\tt int}
+      \>{\tt 0} (no display of GSS-NLC operation)  \\
+  \>Display Subproblem                 (\PGREF{param:GSN-displaysub})
+      \>{\tt int}
+      \>{\tt 0} (no display of subproblem operation)  \\
+  \>Final Step Tolerance               (\PGREF{param:GSN-finalstep})
+      \>{\tt double}
+      \>{\tt 0.001}  \\
+  \>Ignore Other Points                (\PGREF{param:GSN-ignore})
+      \>{\tt bool}
+      \>{\tt false}  \\
+  \>Initial Step Tolerance             (\PGREF{param:GSN-initialstep})
+      \>{\tt double}
+      \>{\tt 0.1}  \\
+  \>Maximum Evaluations                (\PGREF{param:GSN-maxeval})
+      \>{\tt int}
+      \>{\tt -1} (unlimited)  \\
+  \>Max Subproblem Evaluations         (\PGREF{param:GSN-maxsubeval})
+      \>{\tt int}
+      \>{\tt -1} (unlimited)  \\
+  \>Penalty Function                   (\PGREF{param:GSN-penfn})
+      \>{\tt string}
+      \>{\tt "L2 Squared"}  \\
+  \>Penalty Parameter                  (\PGREF{param:GSN-penparam})
+      \>{\tt double}
+      \>{\tt 1.0}  \\
+  \>Penalty Parameter Increase         (\PGREF{param:GSN-penincrease})
+      \>{\tt double}
+      \>{\tt 2.0}  \\
+  \>Penalty Parameter Maximum          (\PGREF{param:GSN-penmax})
+      \>{\tt double}
+      \>{\tt 1.0e+8}  \\
+  \>Penalty Smoothing Value            (\PGREF{param:GSN-pensmooth})
+      \>{\tt double}
+      \>{\tt 0.0}  \\
+  \>Smoothing Value Decrease           (\PGREF{param:GSN-smoothdecrease})
+      \>{\tt double}
+      \>{\tt 0.5}  \\
+  \>Smoothing Value Minimum            (\PGREF{param:GSN-smoothmin})
+      \>{\tt double}
+      \>{\tt 1.0e-5}  \\
+  \>Step Tolerance Decrease            (\PGREF{param:GSN-steptoldecrease})
+      \>{\tt double}
+      \>{\tt 0.5}  \\
+  \>Type                               (\PGREF{param:GSN-type})
+      \>{\tt string}
+      \>{\tt "GSS-NLC"}
+\end{tabbing}
+
+
+%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\subsection{Problem Definition Sublist Parameters}
+\label{subconfig:PD}
+
+This sublist defines the optimization objective, the variables, bounds on
+the variables, scaling factors for each variable, a starting point for algorithms
+to use, and the number and type of nonlinear constraints.
+The sublist has one required parameter:  {\tt Number Unknowns}.
+All other parameters have default values that assume the problem is an
+unconstrained minimization of continuous variables.
+
+%----
+\subparagraph{Number Unknowns.}  \label{param:PD-numunks}
+Specifies the number of optimization variables in the problem, including
+continuous and integer-valued unknowns.
+The parameter value must be a positive integer.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: none (the parameter is required)
+
+\hspace{0.2in}
+Example: {\tt "Number Unknowns" int 4}
+%----
+
+%----
+\subparagraph{Lower Bounds.}  \label{param:PD-lbnd}
+Specifies a lower bound for each variable.  If a variable has
+no lower bound, then use the value {\tt DNE} in that position of the vector.
+It is possible, but not recommended, to define a simple variable bound as an
+inequality in the ``Linear Constraints'' sublist.
+The number of values supplied by the parameter must equal the number of unknowns.
+
+\hspace{0.2in}
+Type: {\tt vector}
+
+\hspace{0.2in}
+Default: no lower bounds (all values equal {\tt DNE})
+%----
+
+%----
+\subparagraph{Upper Bounds.}  \label{param:PD-ubnd}
+Specifies an upper bound for each variable.  If a variable has
+no upper bound, then use the value {\tt DNE} in that position of the vector.
+It is possible, but not recommended, to define a simple variable bound as an
+inequality in the ``Linear Constraints'' sublist.
+The number of values supplied by the parameter must equal the number of unknowns.
+
+\hspace{0.2in}
+Type: {\tt vector}
+
+\hspace{0.2in}
+Default: no upper bounds (all values equal {\tt DNE})
+%----
+
+%----
+\subparagraph{Scaling.}  \label{param:PD-scaling}
+Variables with widely different ranges can substantially slow the convergence
+of GSS and other algorithms.  Scaling allows algorithms to correct for the
+discrepancy, and is considered essential for good performance.
+
+\noindent
+The parameter states the expected range of each variable, in either absolute
+or relative terms.  If no parameter is specified, then a default value of one
+is used (i.e., all variables are scaled equally).
+However, HOPSPACK insists that the problem define either scaling or upper
+and lower bounds on each variable.  This ensures citizens have some information
+about the range of variables for their algorithm; for example, GSS chooses
+a default value for {\tt Initial Step}~(\PGREF{param:GS-initstep})
+based on the scaling or variable bounds.
+
+\noindent
+The GSS algorithm makes many internal calculations in scaled coordinates, and
+its behavior can change based on the scaling.  For example, the
+{\tt Step Tolerance}~(\PGREF{param:GS-steptol}) determines when a local
+solution is found.  If scaling is increased for a problem, then the step
+tolerance may need to decrease in order to reach a solution with the same
+accuracy.
+
+\noindent
+If the user has no information about variable scaling but is confident of the
+upper and lower bounds, then often a reasonable guess for scaling is the
+range of the variable:
+\[
+  \mbox{scale}_i = u_i - l_i
+\]
+The number of values supplied by the parameter must equal the number of unknowns.
+
+\hspace{0.2in}
+Type: {\tt vector}
+
+\hspace{0.2in}
+Default: automatic scaling if possible, else the parameter is required
+%----
+
+%----
+\subparagraph{Variable Types.}  \label{param:PD-vartypes}
+Specifies the type of each variable with a vector of character values.
+Possible character codes are {\tt C} (or {\tt c}) for real-valued continuous
+variables, {\tt I} (or {\tt i}) for integer-valued variables that can be
+relaxed to continuous values, and {\tt O} (or {\tt o}) for ordinal
+variables that can only take integer values.
+Variables of type {\tt I} and {\tt O} are both integral at the solution, but
+an application with type {\tt I} variables will accept continuous values;
+for example, mixed integer programming problems that can be relaxed to
+a continuous linear programming problem have variables of type {\tt I}.
+Type {\tt O}, known as ordinal or categorical variables, require
+integer values at all evaluations points.
+The number of values supplied by the parameter must equal the number of unknowns.
+
+\hspace{0.2in}
+Type: {\tt charvec}
+
+\hspace{0.2in}
+Default: all variables continuous
+
+\hspace{0.2in}
+Example: {\tt "Variable Types" charvec 3  C C I}
+%----
+
+%----
+\subparagraph{Number Objectives.}  \label{param:PD-numobjs}
+Specifies the number of optimization objective functions.
+A value of one indicates there is a single objective function.
+A value of zero means there is no objective and the goal is to find a
+feasible point.
+A value greater than one indicates there are multiple objectives.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 1}
+%----
+
+%----
+\subparagraph{Objective Type.}  \label{param:PD-objtype}
+Specifies the goal of the optimization, which must be one of the keywords
+{\tt "Minimize"} or {\tt "Maximize"}.
+The parameter is ignored if {\tt Number Objectives} is zero.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: {\tt "Minimize"}
+%----
+
+%----
+\subparagraph{Objective Target.}  \label{param:PD-objtgt}
+Specifies a satisfactory value for the objective function to reach.
+If HOPSPACK finds a feasible point with an objective equal to or better than
+the target value, then execution stops immediately.
+If the {\tt Objective Type} parameter is {\tt "Minimize"},
+then HOPSPACK stops when the objective value is less than or
+equal to the target; if {\tt "Maximize"},
+then it stops when the objective is greater than or equal to the target.
+(Note:  in APPSPACK this parameter was called ``Known Global Minimum''.)
+
+\noindent
+In many problems the optimal value of the objective is not known.  In this case,
+leave the parameter undefined.  HOPSPACK can still find a solution, but will
+probably take more iterations compared to a known target, because it will
+make extra evaluations to confirm that neighboring points are no better.
+
+\noindent
+Use the parameter {\tt Objective Percent Error} to instruct HOPSPACK to stop
+when within a certain range of the target value.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt DNE} (no target)
+%----
+
+%----
+\subparagraph{Objective Percent Error.}  \label{param:PD-objpcnt}
+Specifies a desired value for the objective function to reach,
+in terms of parameter {\tt Objective Target}.  Suppose the current objective
+value is $f$ and the target value is $f_T$.  If $f$ reaches or exceeds the
+target, then HOPSPACK stops, as explained in the description of parameter
+{\tt Objective Target}.  If $f$ does not reach the target but is within a
+percentage of it as defined in the equation below, then HOPSPACK stops.
+Pseudocode for the combined stop test follows:
+\begin{tabbing}
+  xxxxxxxx \= xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \= \kill
+     \> If $f$ reaches or exceeds {\tt Objective Target}
+        \> Then stop  \\
+     \> If $\; 100 \times
+                \displaystyle \frac{| f - f_T |}{\max \{ 10^{-4}, | f_T | \}}
+             \; \leq \;$ {\tt Objective Percent Error}
+        \> Then stop
+\end{tabbing}
+The parameter value cannot be negative.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt DNE} (no stop test based on percent error)
+
+\hspace{0.2in}
+Example: {\tt "Objective Percent Error" double 2.5} (stop if within 2.5\%)
+%----
+
+%----
+\subparagraph{Number Nonlinear Eqs.}  \label{param:PD-numeqs}
+Specifies the number of nonlinear equality constraints in the problem.
+Nonlinear equalities are defined in the form $c(x) = 0$, so a value of zero
+indicates feasibility.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0}
+%----
+
+%----
+\subparagraph{Number Nonlinear Ineqs.}  \label{param:PD-numineqs}
+Specifies the number of nonlinear inequality constraints in the problem.
+Nonlinear inequalities are defined in the form $c(x) \geq 0$, so a negative
+value indicates the constraint is violated.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0}
+%----
+
+%----
+\subparagraph{Nonlinear Active Tolerance.}  \label{param:PD-nacttol}
+Specifies the maximum violation beyond which a nonlinear equality or inequality
+constraint is considered active.  For example, if an equality constraint
+evaluates to a value larger than the tolerance, then the point is interpreted
+to be infeasible.
+Note that the nonlinear tolerance is defined and treated differently
+than the {\tt Active Tolerance} parameter
+in the ``Linear Constraints'' sublist (\PGREF{param:LC-acttol}).
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 1.0e-7} ($10^{-7}$)
+%----
+
+%----
+\subparagraph{Initial X.}  \label{param:PD-initx}
+Initial point for optimization to begin at.  If any variable violates its
+upper or lower bound, then it is moved to the bound to become feasible.
+If the initial point violates linear constraints, then a least squares
+subproblem is automatically solved to project it onto the constraints,
+providing a feasible initial point.
+If an initial point is not defined, then each citizen is at liberty to define
+a default initial point.
+The number of values supplied by the parameter must equal the number of unknowns.
+
+\hspace{0.2in}
+Type: {\tt vector}
+
+\hspace{0.2in}
+Default: no initial point
+%----
+
+%----
+\subparagraph{Initial F.}  \label{param:PD-initf}
+Provides known objective values at the initial point specified
+by parameter {\tt Initial X}.  If no initial point is given, or if the
+point is moved by HOPSPACK to satisfy constraints, then this parameter is
+ignored.
+If parameter {\tt Initial X} is given and this parameter is not, then
+HOPSPACK will evaluate the initial point before any other trial points.
+
+\hspace{0.2in}
+Type: {\tt vector} (initial objective values)
+
+\hspace{0.2in}
+Default: values not known
+%----
+
+%----
+\subparagraph{Initial Nonlinear Eqs.}  \label{param:PD-initeqs}
+Provides known values for all nonlinear equality constraints at the initial
+point specified by parameter {\tt Initial X}.
+Nonlinear equalities are defined in the form $c(x) = 0$, so a value of zero
+indicates feasibility.
+If no initial point is given,
+or if the point is moved by HOPSPACK to satisfy constraints, then this parameter
+is ignored.
+If the problem has nonlinear equalities, parameter {\tt Initial X} is given
+and this parameter is not,
+then HOPSPACK will evaluate the initial point before any other trial points.
+The number of values supplied by the parameter must equal the value of
+{\tt Number Nonlinear Eqs}.
+
+\hspace{0.2in}
+Type: {\tt vector} (initial equality constraint values)
+
+\hspace{0.2in}
+Default: values not known
+%----
+
+%----
+\subparagraph{Initial Nonlinear Ineqs.}  \label{param:PD-initineqs}
+Provides known values for all nonlinear inequality constraints at the initial
+point specified by parameter {\tt Initial X}.
+Nonlinear inequalities are defined in the form $c(x) \geq 0$, so a negative
+value indicates the constraint is violated.
+If no initial point is given,
+or if the point is moved by HOPSPACK to satisfy constraints, then this parameter
+is ignored.
+If the problem has nonlinear inequalities, parameter {\tt Initial X} is given
+and this parameter is not,
+then HOPSPACK will evaluate the initial point before any other trial points.
+The number of values supplied by the parameter must equal the value of
+{\tt Number Nonlinear Ineqs}.
+
+\hspace{0.2in}
+Type: {\tt vector} (initial inequality constraint values)
+
+\hspace{0.2in}
+Default: values not known
+%----
+
+%----
+\subparagraph{Display.}  \label{param:PD-display}
+Specifies whether to print the problem definition to the console.
+Printing of the problem definition can happen at the start of HOPSPACK execution,
+and when the GSS citizen initializes.  Possible values are:
+\begin{tabbing}
+  xxxxxxxx \= xx \= \kill
+     \> {\tt 0} \> display nothing \\
+     \> {\tt 1} \> display problem summary  \\
+     \> {\tt 2} \> display all details, including bounds and type of
+                   each variable
+\end{tabbing}
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0} (display nothing)
+%----
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Linear Constraints Sublist Parameters}
+\label{subconfig:LC}
+
+This sublist defines linear equality and inequality constraints in the problem,
+and a tolerance for determining when a constraint is active.
+The sublist can be omitted if the problem has no linear constraints.
+Simple bounds on a single variable should be defined in the
+``Problem Definition'' sublist (\SECREF{subconfig:PD}).
+
+%----
+\subparagraph{Equality Bounds.}  \label{param:LC-eqbnds}
+Provides the right-hand side for all linear equality constraints.
+The order of values matches the order of the rows in {\tt Equality Matrix}.
+See the example at the beginning of \SECREF{sec:params}.
+
+\hspace{0.2in}
+Type: {\tt vector}
+
+\hspace{0.2in}
+Default: no equality constraints
+%----
+
+%----
+\subparagraph{Equality Matrix.}  \label{param:LC-eqmat}
+Provides the left-hand side coefficients for all linear equality
+constraints.  The order of matrix rows matches the order of the values
+in {\tt Equality Bounds}.
+The number of matrix columns must equal the number of unknowns.
+Coefficients are listed in dense notation; that is, a zero value must be
+given for any missing variable terms.
+See the example at the beginning of \SECREF{sec:params}.
+
+\hspace{0.2in}
+Type: {\tt matrix}
+
+\hspace{0.2in}
+Default: no equality constraints
+%----
+
+%----
+\subparagraph{Inequality Lower.}  \label{param:LC-ineql}
+Provides the lower bound for all linear inequality constraints.
+The order of values matches the order of the rows in {\tt Inequality Matrix}.
+If an inequality has no lower bound, then use the value {\tt DNE} in that
+position of the vector.
+See the example at the beginning of \SECREF{sec:params}.
+
+\hspace{0.2in}
+Type: {\tt vector}
+
+\hspace{0.2in}
+Default: no inequality constraints
+%----
+
+%----
+\subparagraph{Inequality Upper.}  \label{param:LC-inequ}
+Provides the upper bound for all linear inequality constraints.
+The order of values matches the order of the rows in {\tt Inequality Matrix}.
+If an inequality has no upper bound, then use the value {\tt DNE} in that
+position of the vector.
+See the example at the beginning of \SECREF{sec:params}.
+
+\hspace{0.2in}
+Type: {\tt vector}
+
+\hspace{0.2in}
+Default: no inequality constraints
+%----
+
+%----
+\subparagraph{Inequality Matrix.}  \label{param:LC-ineqmat}
+Provides the coefficients for all linear inequality constraints.
+The order of matrix rows matches the order of the values in
+{\tt Inequality Lower} and {\tt Inequality Upper}.
+The number of matrix columns must equal the number of unknowns.
+Coefficients are listed in dense notation; that is, a zero value must be
+given for any missing variable terms.
+See the example at the beginning of \SECREF{sec:params}.
+
+\hspace{0.2in}
+Type: {\tt matrix}
+
+\hspace{0.2in}
+Default: no inequality constraints
+%----
+
+%----
+\subparagraph{Active Tolerance.}  \label{param:LC-acttol}
+Specifies the distance over which an equality or inequality boundary is
+considered active.  For example, a point located beyond the active tolerance
+of a linear equality constraint is interpreted to be infeasible.
+Several other HOPSPACK operations depend on the tolerance value:
+the computation of a step length to the bounds
+(see {\tt HOPSPACK\_LinConstr::maxStep()}),
+the choice of a set of active constraints to ``snap'' onto
+(see {\tt HOPSPACK\_LinConstr::formSnapSystem()}),
+the threshold for declaring a constraint to be degenerate
+(see {\tt HOPSPACK\_Matrix::nullspace()}),
+the construction of normal and tangent cones for generating search
+directions in the GSS citizen (see methods in {\tt HOPSPACK\_GssDirections}),
+and the solution of a least squares subproblem to project infeasible trial
+points onto the linear constraints
+(see methods in {\tt HOPSPACK\_SolveLinConstrProj}).
+
+\noindent
+In most cases the active tolerance is applied against a scaled distance
+to a constraint.  Therefore, if {\tt Scaling}~(\PGREF{param:PD-scaling})
+is large for some variables, the active tolerance may need to increase
+beyond its default value.
+
+\noindent
+Note that the linear tolerance is defined and treated differently
+than the {\tt Nonlinear Active Tolerance} parameter
+in the ``Problem Definition'' sublist (\PGREF{param:PD-nacttol}).
+
+\noindent
+The problem in {\sf examples/2-linear-constraints} illustrates the importance of
+this parameter.  If the tolerance is made smaller than the default, then some
+trial points computed by projection onto the constraints are judged to be
+infeasible.  As an example, try changing the tolerance to
+{\tt 4.0e-16} (exact results of this experiment depend on the machine
+architecture).
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 1.0e-12} ($10^{-12}$)
+%----
+
+%----
+\subparagraph{Display.}  \label{param:LC-display}
+Specifies whether to print the linear constraints to the console.
+Printing of the problem definition can happen at the start of HOPSPACK execution,
+and when the GSS citizen initializes.  Possible values are:
+\begin{tabbing}
+  xxxxxxxx \= xx \= \kill
+     \> {\tt 0} \> display nothing \\
+     \> {\tt 1} \> display linear constraints summary  \\
+     \> {\tt 2} \> display all details, including the constraint matrices
+\end{tabbing}
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0} (display nothing)
+%----
+
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Evaluator Sublist Parameters}
+\label{subconfig:EV}
+
+This sublist determines how functions are evaluated.
+Every optimization problem must provide a way for HOPSPACK to compute its
+objective and nonlinear constraints.
+Read \SECREF{sec:calleval} for an explanation of how HOPSPACK invokes
+an evaluation.
+
+%----
+\subparagraph{Evaluator Type.}  \label{param:EV-type}
+Specifies the evaluator type with a special string value.
+Possible values are {\tt "System Call"} and {\tt "AMPL Call"}.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: {\tt "System Call"}
+%----
+
+%----
+\subparagraph{Executable Name.}  \label{param:EV-execname}
+Specifies the name of an executable program that HOPSPACK calls to evaluate
+optimization problem data at a trial point.  The program is passed certain
+command line arguments and uses files to communicate inputs and outputs.
+See \SECREF{sec:calleval} for information on writing the executable.
+
+\noindent
+This parameter is used only if the {\tt Evaluator Type} parameter is
+{\tt"System Call"}.  Note the executable name should be a full path
+if the user's {\tt PATH} environment variable does not include the
+location of the executable.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: {\tt "a.out"}
+%----
+
+%----
+\subparagraph{Input Prefix.}  \label{param:EV-inprefix}
+Specifies the prefix of file names that are used to pass input data to the
+executable program defined by parameter {\tt Executable Name}.
+The full file name has the
+form {\sf input\_prefix.NNN\_TT}, where {\sf NNN} is a unique integer
+tag assigned to the trial point and {\sf TT} is the type of information
+requested.
+
+\noindent
+This parameter is used only if the {\tt Evaluator Type} parameter is
+{\tt"System Call"}.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: {\tt "input"}
+%----
+
+%----
+\subparagraph{File Precision.}  \label{param:EV-prec}
+Specifies the number of digits after the decimal point
+for each floating point number written to the file named with parameter
+{\tt Input Prefix}.
+
+\noindent
+This parameter is used only if the {\tt Evaluator Type} parameter is
+{\tt"System Call"}.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 14}
+%----
+
+%----
+\subparagraph{Output Prefix.}  \label{param:EV-outprefix}
+Specifies the prefix of file names that are used to return output from the
+executable program defined by parameter {\tt Executable Name}.
+The full file name has
+the form {\sf output\_prefix.NNN\_TT}, where {\sf NNN} is a unique
+integer tag assigned to the trial point and {\sf TT} is the type of information
+requested.
+
+\noindent
+This parameter is used only if the {\tt Evaluator Type} parameter is
+{\tt"System Call"}.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: {\tt "output"}
+%----
+
+%----
+\subparagraph{Save IO Files.}  \label{param:EV-savefiles}
+If true, then the data files formed with parameters {\tt Input Prefix}
+and {\tt Output Prefix} are saved.  If false, then the files are deleted
+when no longer needed.  Keep in mind that two files will be created for every
+trial point that HOPSPACK evaluates.
+
+\noindent
+This parameter is used only if the {\tt Evaluator Type} parameter is
+{\tt"System Call"}.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt false}
+%----
+
+%----
+\subparagraph{Debug Eval Worker.}  \label{param:EV-debug}
+If true, then debugging messages are written during execution of the
+HOPSPACK evaluator.  On the MPI version of HOPSPACK, evaluations usually take
+place on distributed machines, and this is where the debugging messages
+will appear.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt false}
+%----
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Mediator Sublist Parameters}
+\label{subconfig:ME}
+
+This sublist controls operation of the HOPSPACK framework, including the
+number of citizens and citizen workers, the Cache of evaluated trial points,
+the manner in which points are exchanged with the Executor, and the maximum
+number of evaluations.
+The sublist has one required parameter: {\tt Citizen Count}.
+
+%----
+\subparagraph{Citizen Count.}  \label{param:MD-ctzns}
+Specifies the number of citizens defined in the configuration parameters file.
+The value must match the number of citizen sublists.  Some citizens may
+dynamically create child citizens during HOPSPACK execution, but these dynamic
+citizens are not part of the {\tt Citizen Count}.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: none (the parameter is required)
+%----
+
+%----
+\subparagraph{Number Processors.}  \label{param:MD-numproc}
+Specifies the number of processors to be used with the MPI version of HOPSPACK.
+One processor will be dedicated to the main loop that runs the Mediator and
+Citizens.  Additional processors will be allocated to match the value of
+{\tt Reserved Citizen Workers}.  The remaining processors are used to evaluate
+trial points.  There must be enough processors to support at least one
+evaluation worker.  The value should not exceed the number of processors
+passed to MPI when HOPSPACK is invoked.
+
+\noindent
+The parameter is ignored if the HOPSPACK executable does not use MPI.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: none (the parameter is required with an MPI executable)
+%----
+
+%----
+\subparagraph{Number Threads.}  \label{param:MD-numthreads}
+Specifies the number of threads to be started with the multithreaded version
+of HOPSPACK.
+One thread will be dedicated to the main loop that runs the Mediator and
+Citizens.  Additional threads will be allocated to match the value of
+{\tt Reserved Citizen Workers}.  The remaining threads are used to evaluate
+trial points.  There must be enough threads to support at least one
+evaluation worker.
+
+\noindent
+If the number of threads exceeds the number of CPU cores, then some evaluation
+workers will do much less work than others, and overall efficiency
+usually decreases.
+
+\noindent
+The parameter is ignored if the HOPSPACK executable does not use multithreading.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: none (the parameter is required with a multithreaded executable)
+%----
+
+%----
+\subparagraph{Reserved Citizen Workers.}  \label{param:MD-resctzns}
+(This parameter is reserved for future use.)
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0}
+%----
+
+%----
+\subparagraph{Maximum Evaluations.}  \label{param:MD-maxeval}
+Specifies how many trial points should be evaluated before halting.
+The limit applies to executed function evaluations and does not include
+trial points found in the Cache.
+A negative value means there is no limit on the number of evaluations.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt -1} (unlimited)
+%----
+
+%----
+\subparagraph{Max Initial Eval Failures}  \label{param:MD-maxinitfails}
+Specifies how many consecutive trial points can fail to evaluate before
+the Mediator halts execution.  The threshold applies only to the first few
+evaluations, and is designed to detect configuration problems with the
+HOPSPACK Evaluator.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 5}
+%----
+
+%----
+\subparagraph{Cache Enabled.}  \label{param:MD-cacheenabled}
+If true, then evaluated points are saved in the Cache and used to prevent
+duplicate evaluation requests.  If false, then the Cache is not even constructed.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt true}
+%----
+
+%----
+\subparagraph{Cache Comparison Tolerance.}  \label{param:MD-cachetol}
+Specifies how far apart two points must be for the Cache to
+consider them distinct.  The tolerance is measured as a scaled distance, and
+applies to each component of a point.  If the two points are vectors $a$
+and $b$, the scaling vector is $s$, and the comparison tolerance is
+denoted by $\tau$, then the Cache considers $a$ and $b$ to be distinct if
+\[
+     |a_i - b_i| > \tau s_i \;\; \mbox{for some} \; i = 1, \dots, n
+\]
+or, equivalently,
+\[
+     \left\| \frac{a_i - b_i}{s_i} \right\|_{\infty} > \tau .
+\]
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: 2 * machine epsilon ($\approx 4.4 \times 10^{-16}$)
+%----
+
+%----
+\subparagraph{Cache Input File.}  \label{param:MD-cacheinfile}
+Specifies the name of an input file containing evaluated points
+for the current problem definition.
+The file is read when HOPSPACK starts and all points are loaded into the Cache,
+using the current {\tt Cache Comparison Tolerance} to determine when points are
+distinct.  The file format is text, and is identical to a file produced by
+setting {\tt Cache Output File} and running HOPSPACK.  Users must be careful
+that the input file corresponds to the current problem definition.
+
+\noindent
+Note that the HOPSPACK file format is not compatible with the older APPSPACK
+cache file format.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: no input file
+%----
+
+%----
+\subparagraph{Cache Output File.}  \label{param:MD-cacheoutfile}
+Specifies the name of an output file to write all evaluated
+points.  Points and their evaluations are appended to the file; hence,
+users must be careful that any existing data corresponds to the same problem
+definition.
+Only distinct points are written, based on the current value of
+{\tt Cache Comparison Tolerance}.
+The file format is text, and is identical to the format expected for
+{\tt Cache Input File}.
+The number of digits written for each floating point number is determined by
+{\tt Cache Output File Precision}.
+
+\noindent
+Note that the HOPSPACK file format is not compatible with the older APPSPACK
+cache file format.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: no output file
+%----
+
+%----
+\subparagraph{Cache Output File Precision.}  \label{param:MD-cacheoutfileprec}
+Specifies the number of digits after the decimal point
+for each floating point number written to {\tt Cache Output File}.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 14}
+%----
+
+%----
+\subparagraph{Synchronous Evaluations.}  \label{param:MD-synch}
+Determines the primary behavior of a Conveyor iteration.
+If true, then all trial points submitted by citizens are evaluated in a single
+Conveyor iteration.  Thus, from the point of view of a citizen, the list of
+trial points submitted is returned on the next call with evaluation information,
+as though the citizen plus evaluations were happening in a single execution path.
+If the parameter is false, then the number of points submitted and returned
+by a Conveyor iteration is governed by the parameters
+{\tt Maximum Exchange Return} and {\tt Minimum Exchange Return}.
+From the point of view of a citizen, submitted
+trial points are returned asynchronously at an unknown future iteration.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt false}
+%----
+
+%----
+\subparagraph{Maximum Exchange Return.}  \label{param:MD-maxexch}
+Specifies the maximum number of evaluated points returned during a single
+iteration of the Conveyor.  The actual number returned may be less, depending
+on asynchronous behavior of the architecture.
+The value must be positive and no smaller than the value of
+ {\tt Minimum Exchange Return}.
+The parameter is ignored if {\tt Synchronous Evaluations} is set {\tt true}.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 1000}
+%----
+
+%----
+\subparagraph{Minimum Exchange Return.}  \label{param:MD-minexch}
+Specifies the minimum number of trial points submitted for evaluation during
+a single iteration of the Conveyor.  The actual number submitted may be less if
+citizens have not queued the minimum number at the start of a Conveyor iteraton.
+The value must be positive.
+The parameter is ignored if {\tt Synchronous Evaluations} is set {\tt true}.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 1}
+%----
+
+%----
+\subparagraph{Solution File.}  \label{param:MD-solfile}
+Provides the name of an output file to write the final
+solution.  The point and its evaluations are appended to the file; hence,
+users must be careful that any existing data corresponds to the same
+problem definition.
+The number of digits written for each floating point number is determined by
+{\tt Solution File Precision}.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: no solution file
+%----
+
+%----
+\subparagraph{Solution File Precision.}  \label{param:MD-solfileprec}
+Specifies the number of digits after the decimal point for each
+floating point number written to {\tt Solution File}.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 14}
+%----
+
+%----
+\subparagraph{Precision.}  \label{param:MD-prec}
+Specifies the number of digits after the decimal point when
+printing numbers associated with vectors and matrices.  For example,
+the parameter controls the format of evaluated points printed during
+execution.  The parameter may also control the output from some citizens.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 3}
+%----
+
+%----
+\subparagraph{Display.}  \label{param:MD-display}
+Specifies how much information to print about operation of
+the HOPSPACK framework.  Citizens must provide their own {\tt Display} parameter
+to print their internal operations.
+Possible values are:
+\begin{tabbing}
+  xxxxxxxx \= xx \= \kill
+     \> {\tt 1} \> display the final solution  \\
+     \> {\tt 2} \> display the final solution and input parameters  \\
+     \> {\tt 3} \> display the above, and all evaluated points  \\
+     \> {\tt 4} \> display the above, and all trial points  \\
+     \> {\tt 5} \> display the above, and execution details
+\end{tabbing}
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 2} (display final solution and input parameters)
+%----
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Citizen GSS Sublist Parameters}
+\label{subconfig:GS}
+
+This sublist determines operational specifics of a Generating Search Set
+algorithm.  The citizen is designed for problems with continuous variables,
+a single start point, and at most linear constraints (no nonlinear constraints).
+Like all citizens, the {\tt Type} parameter is required to identify the citizen.
+See \SECREF{subgss} for more information about the GSS algorithm.
+
+%----
+\subparagraph{Type.}  \label{param:GS-type}
+Specifies the citizen type with a special string value.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Must be: {\tt "GSS"}
+%----
+
+%----
+\subparagraph{Citizen Priority.}  \label{param:GS-priority}
+Specifies the priority of submitted trial points.  All citizens
+are assigned a priority, and the Conveyor submits points from higher priority
+citizens before lower priority citizens.  The value must be between 1 and 10,
+with 1 being the highest priority.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 1}
+%----
+
+%----
+\subparagraph{Step Tolerance.}  \label{param:GS-steptol}
+Determines the smallest steps that GSS will try before stopping.
+When a trial point in a particular search direction fails to improve upon
+its parent point (see {\tt Sufficient Improvement Factor}), then the step
+length is decreased by the {\tt Contraction Factor}.  GSS continues to try
+shorter steps until they become smaller than the value of {\tt Step Tolerance}.
+When all search directions from the current ``best point'' have contracted
+to a length smaller than {\tt Step Tolerance}, then GSS identifies the point
+as a solution and stops.
+
+\noindent
+Step length is measured as a scaled distance, based on the {\tt Scaling}
+parameter in the ``Problem Definition'' sublist (\PGREF{param:PD-scaling}).
+If $s_i$ is the scaling factor for variable $x_i$, then GSS stops searching
+along $x_i$ when
+\[
+    | \mbox{(step length)}_i | < s_i (\mbox{\tt Step Tolerance}) .
+\]
+If scaling is unity in every direction, then {\tt Step Tolerance} can be
+thought of as percent error over a unit cube centered on the point identified
+as a solution.
+
+\noindent
+Note that {\tt Step Tolerance} should not be smaller than the
+{\tt Cache Comparison Tolerance} parameter in the ``Mediator'' sublist
+~(\PGREF{param:MD-cachetol}); otherwise, small steps may be assigned the
+value of a previously evaluated neighbor.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.01}
+%----
+
+%----
+\subparagraph{Contraction Factor.}  \label{param:GS-contract}
+Specifies the reduction in step length in a particular search direction after
+a trail point is rejected.  A point is rejected if the objective does not
+improve enough compared with its parent (see {\tt Sufficient Improvement Factor}
+for more details).
+The value must be positive and less than one.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.5}
+%----
+
+%----
+\subparagraph{Sufficient Improvement Factor.}  \label{param:GS-suffimpr}
+Determines the amount of improvement that the objective of a trial point must
+make in comparison with its parent point in order to be accepted.
+The necessary improvement $\rho$ is computed as
+\[
+  \rho = \alpha \mbox{(step length)}^2
+\]
+where $\alpha$ is the {\tt Sufficent Improvement Factor}.
+Convergence of the GSS method is guaranteed (with certain assumptions about
+the objective function) when $\alpha > 0$.
+The value can also be set to zero.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.01}
+%----
+
+%----
+\subparagraph{Initial Step.}  \label{param:GS-initstep}
+Specifies the initial, scaled step length when generating a new trial point.
+Ideally, the initial step covers the expected distance from start point
+to a solution.  If unsure, it is best to make the value too large rather than
+too small.
+
+\noindent
+If no value is supplied and the {\tt Scaling} parameter in the
+``Problem Definition'' sublist (\PGREF{param:PD-scaling}) is defined,
+then the default value of {\tt Initial Step} is 1.
+If no value is supplied, {\tt Scaling} is not provided, and the default
+assignment of {\tt Scaling} values equals one, then
+GSS computes a value equal to half the maximum distance between upper
+and lower variable bounds.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 1.0}
+%----
+
+%----
+\subparagraph{Minimum Step.}  \label{param:GS-minstep}
+Specifies the smallest size step that can be taken when generating a new
+GSS trial point.  The value must be greater than {\tt Step Tolerance}.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 2 * Step Tolerance}
+%----
+
+%----
+\subparagraph{Epsilon Max.}  \label{param:GS-epsmax}
+Defines the maximum allowed radius about a point when determining whether a
+linear constraint is active.  The active set of constraints influences the
+generation of search directions and new trial points.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 2 * Step Tolerance}
+%----
+
+%----
+\subparagraph{Snap To Boundary.}  \label{param:GS-snap}
+If true, then every newly generated point is ``snapped'' onto nearby linear
+constraints.  A constraint is considered ``nearby'' if its scaled range is less
+than or equal to {\tt Snap Distance}.  Snapping can speed the discovery of a
+solution point at a corner of the feasible region, and provides more accuracy
+when there is such a solution.  Snapping requires that HOPSPACK be configured
+with LAPACK (see \SECREF{subinstall:LA}).
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt false}
+%----
+
+%----
+\subparagraph{Snap Distance.}  \label{param:GS-snapdist}
+Specifies the search radius for finding nearby linear constraints that a point
+may ``snap'' onto.  The radius is interpreted as a scaled distance.
+The parameter is ignored if {\tt Snap To Boundary} is set {\tt false}.
+(Note:  in APPSPACK this parameter was called ``Bounds Tolerance''.)
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt Step Tolerance / 2}
+%----
+
+%----
+\subparagraph{Use Random Order.}  \label{param:GS-random}
+If true, then trial points are submitted to the Conveyor in random order.
+When evaluations are made asynchronously, random ordering reduces the
+tendency for initial search directions to be overemphasized.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt true}
+%----
+
+%----
+\subparagraph{Ignore Other Points.}  \label{param:GS-ignore}
+Specifies whether the GSS citizen ignores evaluated points that were
+generated by other citizens.  If false, then GSS will consider all
+evaluated points and center the search around the best point found, regardless
+of how that point was generated.  If true, then the citizen determines a best
+point only from the set of candidates that it generated.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt false}
+%----
+
+%----
+\subparagraph{Add Projected Compass.}  \label{param:GS-addcompass}
+Specifies whether to include certain directions when generating
+a pattern search.  If true, then standard compass directions are added after
+being projected onto the null space of the active linear constraints.
+Compass directions are vectors aligned with each coordinate axis, both
+positive and negative:
+\[
+  \{ \pm e_1, \pm e_2, \ldots, \pm e_n \}
+\]
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt false}
+%----
+
+%----
+\subparagraph{Add Projected Normals.}  \label{param:GS-addnormals}
+Specifies whether to include certain directions when generating
+a pattern search.  If true, then generators for the normal cone are added after
+being projected onto the null space of any linear equality constraints.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt true}
+%----
+
+%----
+\subparagraph{Maximum Queue Size.}  \label{param:GS-maxq}
+Specifies the maximum number of points that remain ``pending'' in a GSS citizen
+queue.  The Conveyor asks a citizen for new trial points at the beginning of
+each Conveyor iteration.  If the number of previously submitted points still
+waiting for evaluation exceeds {\tt Maximum Queue Size}, then the GSS citizen
+will discard excess points, and then add any newly generated trial points.
+Note that the number of points submitted by a GSS citizen can exceed
+the parameter value.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0}
+%----
+
+%----
+\subparagraph{Maximum Evaluations.}  \label{param:GS-maxeval}
+Specifies how many trial points should be evaluated before the GSS citizen
+halts.  The limit applies to executed function evaluations and does not include
+trial points found in the Cache.
+The parameter limits evaluations by each instance of a GSS citizen, whether
+created directly from the configuration file or called as a subproblem on
+behalf of another citizen.
+A negative value means there is no limit on the number of evaluations.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt -1} (unlimited)
+%----
+
+%----
+\subparagraph{Penalty Function.}  \label{param:GS-penfn}
+The parameter is typically used when the citizen is solving a
+subproblem on behalf of another citizen.  For more information, see the
+``Penalty Function'' parameter in the ``Citizen GSS-NLC'' sublist
+(\PGREF{param:GSN-penfn}).
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: {\tt "L2 Squared"}
+%----
+
+%----
+\subparagraph{Penalty Parameter.}  \label{param:GS-penparam}
+The parameter is typically used when the citizen is solving a
+subproblem on behalf of another citizen.  For more information, see the
+``Penalty Parameter'' parameter in the ``Citizen GSS-NLC'' sublist
+(\PGREF{param:GSN-penparam}).
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 1.0}
+%----
+
+%----
+\subparagraph{Penalty Smoothing Value.}  \label{param:GS-pensmooth}
+The parameter is typically used when the citizen is solving a
+subproblem on behalf of another citizen.  For more information, see the
+``Penalty Smoothing Value'' parameter in the ``Citizen GSS-NLC'' sublist
+(\PGREF{param:GSN-pensmooth}).
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.0}
+%----
+
+%----
+\subparagraph{Display.}  \label{param:GS-display}
+Specifies how much information to print about operation of the GSS citizen.
+Possible values are:
+\begin{tabbing}
+  xxxxxxxx \= xx \= \kill
+     \> {\tt 0} \> display nothing  \\
+     \> {\tt 1} \> display the final solution and each new ``best point''  \\
+     \> {\tt 2} \> display the above, and all generated trial points  \\
+     \> {\tt 3} \> display the above, and all search directions  \\
+\end{tabbing}
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0} (display nothing)
+%----
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Citizen GSS-NLC Sublist Parameters}
+\label{subconfig:GSN}
+
+This sublist determines operational specifics of a Generating Search Set
+algorithm for problems with nonlinear constraints.
+The citizen is designed for problems
+with continuous variables, a single start point, and any set of constraints.
+The algorithm solves a sequence of linearly constrained subproblems using
+child instances of the GSS citizen (see \SECREF{subgss} for more
+information about the GSS-NLC algorithm).
+Most parameters from the ``Citizen GSS'' sublist (\SECREF{subconfig:GS})
+can be provided in the GSS-NLC sublist, and will be passed directly
+to the GSS child citizens.
+If a GSS parameter is listed below as a GSS-NLC parameter, then it means
+GSS child citizens will receive a modified version as explained below.
+
+%----
+\subparagraph{Type.}  \label{param:GSN-type}
+Specifies the citizen type with a special string value.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Must be: {\tt "GSS-NLC"}
+%----
+
+%----
+\subparagraph{Penalty Function.}  \label{param:GSN-penfn}
+Specifies the penalty function to use when computing a penalty term for any
+nonlinear constraints.  The penalty term equals the penalty function times
+the current penalty parameter.
+The penalty term causes the objective function to become
+worse if constraints are violated.  For instance, if the {\tt Objective Type}
+parameter is {\tt "Minimize"}, then a positive penalty term is added to the
+objective, and this total value is minimized by GSS searching.  If the
+parameter is {\tt "Maximize"}, then a positive penalty term is subtracted.
+
+\noindent
+Penalty functions are identified by a string name.
+The notation below defines a vector $c(x)$ composed
+from the nonlinear constraints defined in
+equation~\ref{eq:probdef}~(\PGREF{eq:probdef}).
+The vector includes all nonlinear equality constraints $c_{\cal E}(x)$
+and all violated nonlinear inequalities from $c_{\cal I}(x)$.
+Possible values for the penalty function are:
+\begin{tabbing}
+  xxxxxxxx \= xxxxxxxxxxxxxxxxxxxx \= \kill
+     \> {\tt "L2 Squared"}        \> $\| c(x) \|_2^2$  \\
+     \> {\tt "L1"}                \> $\| c(x) \|_1$  \\
+     \> {\tt "L1 (smoothed)"}     \> smoothed version of $\| c(x) \|_1$  \\
+     \> {\tt "L2"}                \> $\| c(x) \|_2$  \\
+     \> {\tt "L2 (smoothed)"}     \> smoothed version of $\| c(x) \|_2$  \\
+     \> {\tt "L\_inf"}            \> $\| c(x) \|_\infty$  \\
+     \> {\tt "L\_inf (smoothed)"} \> smoothed version of $\| c(x) \|_\infty$
+\end{tabbing}
+Smoothed versions are described fully in \cite{GSS-GrKoSAND07}.
+The degree of smoothing is determined by the {\tt Penalty Smoothing Value}.
+
+\hspace{0.2in}
+Type: {\tt string}
+
+\hspace{0.2in}
+Default: {\tt "L2 Squared"}
+%----
+
+%----
+\subparagraph{Penalty Parameter.}  \label{param:GSN-penparam}
+Specifies the initial value of the penalty parameter.  The penalty
+function is multiplied by the current penalty parameter to create a penalty term,
+which combines with the objective value.
+The penalty parameter may be updated after solving a GSS subproblem, and
+the new value is based on {\tt Penalty Parameter Increase}.
+The value cannot be negative.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 1.0}
+%----
+
+%----
+\subparagraph{Penalty Parameter Increase.}  \label{param:GSN-penincrease}
+Specifies the factor by which the penalty parameter is increased.  Increases
+happen if a GSS subproblem converges to a point that is sufficiently
+infeasible with respect to the nonlinear constraints.
+See \cite{GSS-GrKoSAND07} for more information.
+The value must be greater than one.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 2.0}
+%----
+
+%----
+\subparagraph{Penalty Parameter Maximum.}  \label{param:GSN-penmax}
+Specifies the maximum value that the penalty parameter can achieve after
+multiplying by {\tt Penalty Parameter Increase}.  The maximum determines
+when the GSS-NLC citizen will ``give up'' trying to reach feasibility:
+the citizen stops if the penalty parameter is at its maximum, the current
+subproblem solution is infeasible, and the subproblem solution is unchanged
+from the previous subproblem's.
+The value cannot be less than the value of {\tt Penalty Parameter}.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 1.0e+8} ($10^8$)
+%----
+
+%----
+\subparagraph{Penalty Smoothing Value.}  \label{param:GSN-pensmooth}
+Specifies the initial value of the smoothing parameter $\alpha$ used in
+smoothed penalty functions.
+The smoothing parameter may be updated after solving a GSS subproblem, and
+the new value is based on {\tt Smoothing Value Decrease}.
+The value must satisfy $0 \leq \alpha \leq 1$.
+This parameter is ignored if {\tt Penalty Function} is not smoothed.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.0}
+%----
+
+%----
+\subparagraph{Smoothing Value Decrease.}  \label{param:GSN-smoothdecrease}
+Specifies the factor by which the smoothing parameter is decreased.  Decreases
+happen if a GSS subproblem converges to a point that is sufficiently
+infeasible with respect to the nonlinear constraints.
+The value must be positive and less than one.
+This parameter is ignored if {\tt Penalty Function} is not smoothed.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.5}
+%----
+
+%----
+\subparagraph{Smoothing Value Minimum.}  \label{param:GSN-smoothmin}
+Specifies the minimum value that the smoothing parameter can achieve after
+multiplying by {\tt Smoothing Value Decrease}.
+The value cannot be negative, and for the {\tt "L1 (smoothed)"} and
+{\tt "L\_inf (smoothed)"} penalty functions cannot be zero.
+This parameter is ignored if {\tt Penalty Function} is not smoothed.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 1.0e-5} ($10^{-5}$)
+%----
+
+%----
+\subparagraph{Final Step Tolerance.}  \label{param:GSN-finalstep}
+Determines the smallest steps that GSS subproblems will try before stopping,
+and therefore has a strong influence on accuracy of the GSS-NLC solution.
+Each subproblem is passed a current
+{\tt Step Tolerance}~(\PGREF{param:GS-steptol}) from the GSS-NLC parent citizen.
+The current tolerance decreases according to {\tt Step Tolerance Decrease}
+until the final tolerance is reached.
+The value must be positive.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.001}
+%----
+
+%----
+\subparagraph{Initial Step Tolerance.}  \label{param:GSN-initialstep}
+Specifies the initial step tolerance that is passed to the first GSS
+subproblem as {\tt Step Tolerance}~(\PGREF{param:GS-steptol}).
+The value cannot be smaller than {\tt Final Step Tolerance}.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.1}
+%----
+
+%----
+\subparagraph{Step Tolerance Decrease.}  \label{param:GSN-steptoldecrease}
+Specifies the factor by which the step tolerance is decreased before
+starting a new GSS subproblem.
+The value cannot be negative or greater than one.
+
+\hspace{0.2in}
+Type: {\tt double}
+
+\hspace{0.2in}
+Default: {\tt 0.5}
+%----
+
+%----
+\subparagraph{Maximum Evaluations.}  \label{param:GSN-maxeval}
+Specifies how many trial points should be evaluated before the GSS-NLC citizen
+halts.  The limit applies to executed function evaluations and does not include
+trial points found in the Cache.
+The parameter limits evaluations by each instance of a GSS-NLC citizen, whether
+created directly from the configuration file or called as a subproblem on
+behalf of another citizen.
+A negative value means there is no limit on the number of evaluations.
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt -1} (unlimited)
+%----
+
+%----
+\subparagraph{Max Subproblem Evaluations.}  \label{param:GSN-maxsubeval}
+Specifies the maximum number of trial points evaluated by each GSS subproblem.
+The limit applies to executed function evaluations and does not include
+trial points found in the Cache.
+The work done by a subproblem is primarily controlled by the step tolerance,
+but this parameter provides a separate way to limit work.
+A negative value means there is no limit on the number of evaluations.
+The value should not exceed
+{\tt Maximum Evaluations}~(\PGREF{param:GSN-maxeval}).
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt -1} (unlimited)
+%----
+
+%----
+\subparagraph{Ignore Other Points.}  \label{param:GSN-ignore}
+Specifies whether GSS subproblems ignore evaluated points that were
+generated by other citizens.  If false, then subproblems will consider all
+evaluated points and center the search around the best point found, regardless
+of how that point was generated.  If true, then the citizen determines a best
+point only from the set of candidates that it generated.
+
+\hspace{0.2in}
+Type: {\tt bool}
+
+\hspace{0.2in}
+Default: {\tt false}
+%----
+
+%----
+\subparagraph{Display.}  \label{param:GSN-display}
+Specifies how much information to print about operation of the GSS-NLC citizen.
+Possible values are:
+\begin{tabbing}
+  xxxxxxxx \= xx \= \kill
+     \> {\tt 0} \> display nothing  \\
+     \> {\tt 1} \> display the final solution and initial parameters  \\
+     \> {\tt 2} \> display the above, and interactions with subproblems  \\
+\end{tabbing}
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0} (display nothing)
+%----
+
+%----
+\subparagraph{Display Subproblem.}  \label{param:GSN-displaysub}
+Specifies how much information to print about operation of the GSS citizen
+subproblems.  Possible values are:
+\begin{tabbing}
+  xxxxxxxx \= xx \= \kill
+     \> {\tt 0} \> display nothing  \\
+     \> {\tt 1} \> display the final solution and each new ``best point''  \\
+     \> {\tt 2} \> display the above, and all generated trial points  \\
+     \> {\tt 3} \> display the above, and all search directions  \\
+\end{tabbing}
+
+\hspace{0.2in}
+Type: {\tt int}
+
+\hspace{0.2in}
+Default: {\tt 0} (display nothing)
+%----

@@ -1,0 +1,83 @@
+#@ *: DakotaConfig=HAVE_NPSOL
+# DAKOTA INPUT FILE - dakota_sbo_hierarchical.in
+
+# Demonstrates the use of hierarchical approximations and a trust
+# region optimization environment in minimizing Rosenbrock's function.
+
+# These tests exercise each of the surrogate correction approaches
+# (additive and multiplicative; zeroth, first, and second order) for
+# the multifidelity (i.e., hierarchical) variant of surrogate-based
+# optimization.  Note that correction is required for hierarchical SBO.
+
+environment,
+	tabular_data graphics
+	method_pointer = 'SBLO'
+
+method,
+	id_method = 'SBLO'
+	surrogate_based_local
+	model_pointer = 'SURROGATE'
+	approx_method_pointer = 'NLP'
+	trust_region
+	  initial_size = 0.10
+	  contract_threshold = 0.25
+	  expand_threshold = 0.75
+	  contraction_factor = 0.50
+	  expansion_factor   = 1.50
+
+method,
+	id_method = 'NLP'
+	npsol_sqp
+	  max_iterations = 50,
+	  convergence_tolerance = 1e-10
+
+model,
+	id_model = 'SURROGATE'
+	surrogate hierarchical
+	  ordered_model_fidelities = 'LOFI' 'HIFI'
+	  correction additive       second_order	#s0,#s3,#s6,#s9
+#	  correction multiplicative second_order	#s1,#s4,#s7,#s10
+#	  correction combined       second_order	#s2,#s5,#s8,#s11
+#	  correction additive       first_order		#s12
+#	  correction multiplicative first_order		#s13
+#	  correction combined       first_order		#s14
+#	  correction additive       zeroth_order	#s15
+#	  correction multiplicative zeroth_order	#s16
+#	  correction combined       zeroth_order	#s17
+
+variables,
+	continuous_design = 2
+	  initial_point   -2.0      1.0
+	  lower_bounds    -5.0     -5.0
+	  upper_bounds     5.0 	5.0
+	  descriptors      'x1'     'x2'
+
+responses,
+	objective_functions = 1
+ 	analytic_gradients
+	analytic_hessians			#s0,#s1,#s2
+#	numerical_hessians			#s3,#s4,#s5
+#	  fd_hessian_step_size = 0.001		#s3,#s4,#s5
+#	quasi_hessians bfgs			#s6,#s7,#s8
+#	quasi_hessians sr1			#s9,#s10,#s11
+#	no_hessians				#s12,#s13,#s14,#s15,#s16,#s17
+
+model,
+	id_model = 'LOFI'
+	single
+	  interface_pointer = 'LOFI_FN'
+
+interface,
+	id_interface = 'LOFI_FN'
+	direct 
+ 	  analysis_drivers = 'lf_poly_prod'
+
+model,
+	id_model = 'HIFI'
+	single
+	  interface_pointer = 'HIFI_FN'
+
+interface,
+	id_interface = 'HIFI_FN'
+	direct
+ 	  analysis_drivers = 'poly_prod'

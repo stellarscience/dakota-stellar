@@ -1,0 +1,13 @@
+Blurb::
+Stochastic Collocation polynomial surrogate model
+
+Description::
+Selects stochastic collocation (SC) model to use in the Bayesian
+likelihood calculations. When using SC as a surrogate within the
+Bayesian framework, the build points (training points) for the
+stochastic collocation are constructed from a sparse grid.
+
+Topics::	
+Examples::
+Faq::
+See_Also::      method-stoch_collocation	

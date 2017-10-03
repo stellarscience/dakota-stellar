@@ -1,0 +1,26 @@
+
+ Volume in drive G is VOL1       
+ Directory of G:\CDISK\CUJ\1809\allison
+
+.              <DIR>                        .
+..             <DIR>                        ..
+TEST     CPP         1,098  07-18-00  4:59p test.cpp
+STACK    H           1,622  06-19-00  4:23p stack.h
+STACKTES CPP         1,865  06-19-00  4:24p stacktest.cpp
+SUITE    H           1,225  06-19-00  4:27p suite.h
+SUITE    CPP         2,341  06-19-00  4:25p suite.cpp
+TEST     H           1,627  06-19-00  4:20p test.h
+TEST0    JAV         1,841  05-12-00  5:03p Test.java
+COMPTEST CPP         1,076  06-19-00  4:26p comptest.cpp
+CSUITE   C           5,390  05-12-00  5:00p CSUITE.C
+CSUITE   H             652  05-12-00  5:01p CSUITE.H
+CTEST    C           4,675  05-12-00  5:01p CTEST.C
+CTEST    H           1,155  05-12-00  5:01p CTEST.H
+MAIN1    C           1,146  05-12-00  5:00p MAIN1.C
+MAIN1    CPP         2,294  05-12-00  5:02p MAIN1.CPP
+MAIN2    CPP         1,807  05-12-00  5:01p MAIN2.CPP
+SUITE0   JAV         1,271  05-12-00  5:03p Suite.java
+BOOL     H              82  05-12-00  5:01p BOOL.H
+LIST     TXT             0  08-09-00  9:19a list.txt
+        18 file(s)         31,167 bytes
+         2 dir(s)        8,851.88 MB free

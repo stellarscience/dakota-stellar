@@ -1,0 +1,66 @@
+#@ s*: Label=FastTest
+# DAKOTA INPUT FILE : dakota_rosenbrock_global.in
+
+environment,
+	#graphics
+
+method,
+	sampling
+	  samples = 10000 seed = 12347
+	  response_levels = .1 1. 50. 100. 500. 1000.
+	  output silent
+
+variables,
+	normal_uncertain = 2				#s0
+      	  means             =  0.   0. 		#s0
+	  std_deviations    =  1.   1.		#s0
+	  descriptors       = 'x1' 'x2'		#s0
+#	uniform_uncertain = 2				#s1
+#      	  lower_bounds      = -2.  -2. 		#s1
+#	  upper_bounds      =  2.   2.		#s1
+#	  descriptors       = 'x1' 'x2'		#s1
+#	exponential_uncertain = 2			#s2
+#	  betas             =  2.   2.		#s2
+#	  descriptors       = 'x1' 'x2'		#s2
+#	beta_uncertain = 2				#s3
+#	  alphas            =  1.5  1.5		#s3
+#	  betas             =  2.   2.		#s3
+#      	  lower_bounds      = -2.  -2. 		#s3
+#	  upper_bounds      =  2.   2.		#s3
+#	  descriptors       = 'x1' 'x2'		#s3
+#	gamma_uncertain = 2				#s4
+#	  alphas           =  2.5  2.5		#s4
+#	  betas            =  2.   2.		#s4
+#	  descriptors      = 'x1' 'x2'		#s4
+#	normal_uncertain = 1				#s5
+#      	  means             =  0. 			#s5
+#	  std_deviations    =  1.			#s5
+#	  descriptors       = 'x1'			#s5
+#	uniform_uncertain = 1				#s5
+#      	  lower_bounds      = -2. 			#s5
+#	  upper_bounds      =  2.			#s5
+#	  descriptors       = 'x2'			#s5
+#	exponential_uncertain = 1			#s5
+#	  betas             =  2.			#s5
+#	  descriptors       = 'x3'			#s5
+#	beta_uncertain = 1				#s5
+#	  alphas            =  1.5			#s5
+#	  betas             =  2.			#s5
+#      	  lower_bounds      = -2. 			#s5
+#	  upper_bounds      =  2.			#s5
+#	  descriptors       = 'x4'			#s5
+#	gamma_uncertain = 1				#s5
+#	  alphas           =  2.5			#s5
+#	  betas            =  2.			#s5
+#	  descriptors      = 'x5'			#s5
+
+interface,
+	direct
+	  analysis_driver = 'rosenbrock'	#s0,#s1,#s2,#s3,#s4
+#	  analysis_driver = 'generalized_rosenbrock'	#s5
+	  deactivate evaluation_cache restart_file
+
+responses,
+	response_functions = 1
+	no_gradients
+	no_hessians

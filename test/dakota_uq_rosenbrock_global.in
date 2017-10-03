@@ -1,0 +1,34 @@
+#@ s0: TimeoutDelay=600
+#@ s1: TimeoutDelay=600
+
+# DAKOTA INPUT FILE : dakota_uq_rosenbrock_global.in
+
+environment,
+	#graphics
+
+method,
+	global_reliability
+	  x_gaussian_process dakota   #s0
+#	  x_gaussian_process surfpack #s1
+    # explicit default:
+#   initial_samples = 6         #s1 
+#	  u_gaussian_process
+	  response_levels = .5 1. 5. 10. 50. 100. 500. 1000.
+	  seed = 123457
+
+variables,
+	normal_uncertain = 2
+       	  means             =  0.   0.
+	  std_deviations    =  1.   1.
+	  descriptors       =  'x1' 'x2'
+#	uncertain_correlation_matrix =  1   0.3
+#					0.3 1
+
+interface,
+	direct
+	  analysis_driver = 'rosenbrock'
+
+responses,
+	response_functions = 1
+	no_gradients
+	no_hessians

@@ -1,0 +1,94 @@
+#
+#	Makefile for OPt++/tests/minpack2 
+#
+
+#### Placeholder for Makefile fragment
+
+
+OPT++DEFINES	= $(OPTPP_DEFS) $(NEWMAT_DEFS) $(MPI_DEFINES) $(ARCH_DEFINES)
+
+OPT++INCLUDES	= -I. $(OPTPP_INCL) $(NEWMAT_INCL) $(MPI_INCLUDES) $(ARCH_INCLUDES)
+
+OPT++HEADERS	= $(OPTPP_INCL_ALT)/NLP.h $(OPTPP_INCL_ALT)/NLF.h   \
+		  $(OPTPP_INCL_ALT)/TOLS.h $(OPTPP_INCL_ALT)/Opt.h
+
+LIBS		= $(OPTPP_ARCHIVE) $(NEWMAT_ARCHIVE) $(MPI_LIBS) $(ARCH_LIBS)
+
+PGMS		= elastic journal minsurf optdesign steady
+
+all:	$(PGMS)
+
+tests:	$(PGMS)
+
+#
+# Elastic-Platic Torsion Problem
+#
+elastic.o: elastic.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) elastic.C 
+
+deptfg.o: deptfg.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) deptfg.C 
+
+elastic: elastic.o deptfg.o
+	$(LD) $(LDFLAGS)  -o $@ elastic.o deptfg.o $(LIBS)
+
+#
+# Pressure Distribution in a Journal Bearing Problem
+#
+
+journal.o: journal.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) journal.C 
+
+dpjbfg.o: dpjbfg.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) dpjbfg.C 
+
+journal: journal.o dpjbfg.o 
+	$(LD) $(LDFLAGS)  -o $@ $? $(LIBS)
+
+#
+# Minimal Surfaces Problem
+#
+
+minsurf.o: minsurf.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) minsurf.C 
+
+dmsafg.o: dmsafg.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) dmsafg.C 
+
+minsurf: minsurf.o dmsafg.o 
+	$(LD) $(LDFLAGS)  -o $@ $? $(LIBS)
+#
+# Optimal Design with Composite Materials Problem
+#
+
+optdesign.o: optdesign.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) optdesign.C 
+
+dodcfg.o: dodcfg.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) dodcfg.C 
+
+optdesign: optdesign.o dodcfg.o 
+	$(LD) $(LDFLAGS)  -o $@ $? $(LIBS)
+
+#
+# Steady-State Combustion Problem
+#
+
+steady.o: steady.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) steady.C 
+
+dsscfg.o: dsscfg.C
+	$(CXX) $(CXXFLAGS) $(OPT++DEFINES) $(OPT++INCLUDES) dsscfg.C 
+
+steady: steady.o dsscfg.o 
+	$(LD) $(LDFLAGS)  -o $@ $? $(LIBS)
+
+clean:
+	$(RM) core *.o *.a *.d *.ti *.log *~
+
+clobber:	clean
+	$(RM) *.out $(PGMS)
+	$(RM) -r SunWS_cache ii_files cxx_repository
+
+distclean:	clobber
+	$(RM) Makefile Makefile-$(TARGET_NAME) config.status

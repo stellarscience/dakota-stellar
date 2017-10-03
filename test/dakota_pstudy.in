@@ -1,0 +1,67 @@
+# DAKOTA INPUT FILE - dakota_pstudy.in
+
+method,
+	vector_parameter_study				#s0,#s1,#s2,#s6
+	  step_vector = .1 .1 .1        num_steps = 4	#s0,#s1
+#	  final_point =  2. 2. 2.       num_steps = 4	#s2
+#	  step_vector = .1 .1 .1 1 1 1  num_steps = 4	#s6
+#	list_parameter_study				#s3,#s7
+#	  list_of_points = 1.1 1.2 1.3 1.4 1.5 1.6	#s3
+#			   1.7 1.8 1.9 2.0 2.1 2.2	#s3
+#	  discrete set types use an index (marked i) in point list
+#                                        i i
+#	  list_of_points = 1.1 1.2 1.3 1 0 1		#s7
+#			   1.4 1.5 1.6 2 1 2		#s7
+#			   1.7 1.8 1.9 3 2 3		#s7
+#			   2.0 2.1 2.2 4 3 4		#s7
+# Tests 10 and 11 mirror 3 and 7, but with user-specified points
+#	list_parameter_study				#s10,#s11
+#	  import_points_file = 'dakota_pstudy.3.dat'	#s10
+#	    annotated					#s10
+#	  import_points_file = 'dakota_pstudy.7.dat'	#s11
+#	    freeform					#s11
+#
+#	centered_parameter_study			#s4,#s8
+#	  step_vector = .05 .05 .05			#s4
+#	  steps_per_variable = 5			#s4
+#	  step_vector = .05 .05 .05 1 1 1		#s8
+#	  steps_per_variable = 2			#s8
+#	multidim_parameter_study			#s5,#s9
+#	  partitions = 2 3 4				#s5
+#         partitions = 2				#s9
+
+variables,
+	continuous_design = 3
+	  initial_point    1.0   1.0   1.0
+#	  upper_bounds    10.0  10.0  10.0		#s5,#s9
+#	  lower_bounds   -10.0 -10.0 -10.0		#s5,#s9
+#       discrete_design_range = 1                       #s6,#s7,#s8,#s9,#s11
+#	  initial_point = 0				#s6
+#	  initial_point = 3				#s8
+#         lower_bounds  = 0				#s9
+#         upper_bounds  = 6				#s9
+#       discrete_design_set                     	#s6,#s7,#s8,#s9,#s11
+# 	  integer = 1					#s6,#s7,#s8,#s9,#s11
+#	    initial_point = 2				#s6
+#	    initial_point = 6				#s8
+#	    set_values = 2 4 6 8 10			#s6,#s7,#s8,#s9,#s11
+#         real = 1                    			#s6,#s7,#s8,#s9,#s11
+#	    initial_point = 1.				#s6
+#	    initial_point = 5.				#s8
+#	    set_values = 1. 3. 5. 7. 9.			#s6,#s7,#s8,#s9,#s11
+
+interface,
+	system asynchronous evaluation_concurrency = 5
+	  analysis_driver = 'text_book'
+
+responses,
+	objective_functions = 1
+	nonlinear_inequality_constraints = 2
+	analytic_gradients				#s0,#s2,#s6
+#	no_gradients					#s3,#s4,#s5,#s7,#s8,#s9,#s10,#s11
+#	numerical_gradients				#s1
+#	  method_source dakota				#s1
+#	  interval_type central				#s1
+#	  fd_gradient_step_size = 1.e-4			#s1
+#	no_hessians       				#s1,#s3,#s4,#s5,#s7,#s8,#s9,#s10,#s11
+	analytic_hessians       			#s0,#s2,#s6

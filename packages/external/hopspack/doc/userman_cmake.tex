@@ -1,0 +1,153 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{More About CMake}
+\label{sec:cmake}
+
+Documentation for CMake is part of the CMake installation
+(Section~\ref{subinstall:CM}), and can be found on the CMake web site
+(\href{http://cmake.org/}{http://cmake.org/}).
+Files in the HOPSPACK source distribution named {\sf CMakeLists.txt} or files
+that end with the suffix {\sf .cmake} were written for HOPSPACK.
+Any of these CMake files can be examined and potentially edited to alter
+CMake behavior.  The remainder of this section describes specific situations
+where you might want to alter behavior when building HOPSPACK.
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Debugging the Build Process}
+
+Sometimes it helps to see more makefile output during compilation.
+On makefile systems detailed output is enabled by editing
+{\sf ConfigureBuildType.cmake} and uncommenting the line
+
+\hspace{0.2in}
+{\tt SET (CMAKE\_VERBOSE\_MAKEFILE ON)}
+
+\noindent
+Then you should call {\tt cmake} in a clean ``out of source'' directory to
+rebuild the HOPSPACK makefiles.
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Building a Debug Version of the Code}
+
+To compile a HOPSPACK executable with debugging symbols, use the command line
+option {\tt -DHOPSPACK\_DEBUG:BOOL=true}.  For example, on a Linux machine
+start in a clean ``out of source'' directory and call:
+
+\hspace{0.2in}
+{\tt > cmake ../hopspack-\HOPSVER.x $\;$ -DHOPSPACK\_DEBUG:BOOL=true}
+
+\noindent
+Then, of course, all files must be recompiled.
+On Windows machines using the Visual Studio compiler, the debug option is
+usually true by default.
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Specifying a Different Compiler}
+
+Early in its configuration process, CMake chooses a C++ compiler to use.
+The command line version usually prints messages about its choice; for example,
+here is some of the output from the build of a serial HOPSPACK executable
+on Linux:
+\vspace{-11pt}
+\begin{verbatim}
+      -- The CXX compiler identification is GNU
+      -- The C compiler identification is GNU
+      -- Check for working CXX compiler: /usr/bin/c++
+      -- Check for working CXX compiler: /usr/bin/c++ -- works
+      ...
+\end{verbatim}
+
+You can force CMake to use a different compiler by altering the environment
+variables {\tt CXX} and {\tt CC}.  In addition, you can add compiler flags
+by setting {\tt CXXFLAGS} and tell the linker to include certain libraries
+by setting {\tt CMAKE\_EXE\_LINKER\_FLAGS}.
+As an example, suppose the Intel C++ compiler (version 8.1) is installed
+on a Linux machine.  Assume the {\sf bin} directory containing the
+compiler {\tt icc} is in {\tt PATH}, and that the libraries directory is
+placed in {\tt LD\_LIBRARY\_PATH}.
+Then you instruct CMake to build a makefile system as follows:
+\vspace{-11pt}
+\begin{tabbing}
+  xxx \= xxxxxxxxx \= \kill
+  \> {\tt > mkdir build\_serial} \\
+  \> {\tt > cd build\_serial} \\
+  \> {\tt > export CXX=icc} \\
+  \> {\tt > export CC=icc} \\
+  \> {\tt > export CXXFLAGS=-cxxlib-icc} \\
+  \> {\tt > cmake ../hopspack-\HOPSVER.x  $\; \backslash$} \\
+  \> \> {\tt -DCMAKE\_EXE\_LINKER\_FLAGS="-lcprts -lcxa -lunwind"} \\
+  \> {\tt -- The CXX compiler identification is Intel} \\
+  \> {\tt -- The C compiler identification is Intel} \\
+  \> {\tt ...}
+\end{tabbing}
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Fortran Compiler Warnings}
+
+CMake configuration files are capable of linking with LAPACK Fortran
+libraries (see \SECREF{subinstall:LA}).  For this reason, the initial
+CMake configuration step may look for a Fortran compiler and warn
+if one cannot be found:
+\vspace{-11pt}
+\begin{tabbing}
+  xxx \= xxxxxxxxx \= \kill
+  \> {\tt ...} \\
+  \> {\tt -- Looking for a Fortran compiler} \\
+  \> {\tt -- Looking for a Fortran compiler - NOTFOUND} \\
+  \> {\tt ...}
+\end{tabbing}
+
+\noindent
+This warning can be ignored unless LAPACK is based on Fortran libraries,
+in which case the build will probably fail.  If LAPACK is Fortran-based,
+then the Fortran compiler may be invoked to generate adaptive function
+declarations in {\sf src/src-shared/HOPSPACK\_LapackWrappers.cpp}.
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Adding Libraries to an Executable}
+\label{subsec:cmakeaddlib}
+
+If source code modifications introduce dependencies on external libraries,
+then CMake must be given the library names so they can be linked with the
+executables.
+
+A simple way is to add the library name explicitly in the CMake
+configuration file that generates an executable.  For example, suppose the
+serial version of HOPSPACK on a Linux machine needs to link with the {\sf dl}
+system library (perhaps the function {\tt dlopen()} was called in a custom
+evaluator such as the one described in \SECREF{subcalleval:inlineeval}).
+A simple fix is to edit {\sf src/src-main/CMakeLists.txt} and add
+{\tt -ldl} in the list of {\tt TARGET\_LINK\_LIBRARIES} at the bottom of
+the file.  Assuming the library is in the system's load path, CMake will
+find it the next time the executable is built.
+
+The simple fix described above is hard-coded for Linux.  If the library
+exists on all platforms, then CMake has a better way.
+For example, suppose you want to link a personal library of utility functions
+named ``myutils''.  On Linux this would typically be named {\sf libmyutils.a}
+or {\sf libmyutils.so}, while Windows would typically name it {\sf myutils.dll}.
+CMake provides a utility that finds the platform-specific name:
+
+\hspace{0.2in}
+{\tt FIND LIBRARY (MY\_UTILS\_VAR NAMES myutils DOC "find myutils")}
+
+\noindent
+This stores the platform-specific name in the CMake variable named
+{\tt MY\_UTILS\_VAR}.  Add the variable to the list of
+{\tt TARGET\_LINK\_LIBRARIES} instead of a hard-coded name.
+
+For more examples, look at {\sf ConfigureLapack.cmake} and
+{\sf ConfigureSysLibs.cmake} in the top directory of the HOPSPACK distribution.
+
+
+
+%TBD...Rollin Thomas needs a little explanation of CMake where to put -I and -L
+
+
+
+%TBD...name and describe ConfigureLapack.cmake, the g2c location

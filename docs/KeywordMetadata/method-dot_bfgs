@@ -1,0 +1,10 @@
+Blurb::
+A conjugate gradient optimization method
+Description::
+This is a duplicated keyword. Please use \ref method-dot instead.
+
+Topics::	
+Examples::
+Theory::
+Faq::
+See_Also::	method-dot-bfgs

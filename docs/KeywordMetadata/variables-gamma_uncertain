@@ -1,0 +1,26 @@
+Blurb::
+Aleatory uncertain variable - gamma
+Description::
+The gamma distribution is sometimes used to model time to complete a task, such as a repair or service task. It is a very flexible distribution with its shape governed by alpha and beta.
+
+The density function for the gamma distribution is given by: 
+\f[f(x) = \frac{{x}^{\alpha-1}{e}^{\frac{-x}{\beta}}}{\beta^{\alpha}\Gamma(\alpha)}\f]
+where 
+\f$\mu_{GA} = \alpha\beta\f$ and \f$\sigma^2_{GA} = \alpha\beta^2\f$. 
+Note that the exponential distribution is a special
+case of this distribution for parameter \f$\alpha = 1\f$.
+
+Topics::	continuous_variables, aleatory_uncertain_variables
+Examples::
+Theory::
+When used with design of experiments and multidimensional parameter
+studies, distribution bounds are inferred.
+These bounds are [0, \f$\mu + 3 \sigma\f$].
+
+For vector and centered parameter studies, an inferred initial
+starting point is needed for the uncertain variables.
+These variables are initialized to their means for these studies.
+
+
+Faq::
+See_Also::	

@@ -1,0 +1,24 @@
+         1        40 -888.0000         0 1.0000000         1         0
+ 0 0 0 0 0 0 0 0 0 0
+CONSTANT 1.00000e+000
+CONSTANT 2.02000e+001
+CONSTANT 2.02005e+001
+CONSTANT 1.50300e-004 "Transmissivity Layer 1"
+CONSTANT 1.67000e-005 "Leakance Layer 1"
+CONSTANT 1.50300e-004 "Transmissivity Layer 2"
+CONSTANT 1.67000e-005 "Leakance Layer 2"
+CONSTANT 1.50300e-004 "Transmissivity Layer 3"
+CONSTANT 1.67000e-005 "Leakance Layer 3"
+CONSTANT 1.50300e-004 "Transmissivity Layer 4"
+CONSTANT 1.67000e-005 "Leakance Layer 4"
+CONSTANT 1.50300e-004 "Transmissivity Layer 5"
+CONSTANT 1.67000e-005 "Leakance Layer 5"
+CONSTANT 1.50300e-004 "Transmissivity Layer 6"
+CONSTANT 1.67000e-005 "Leakance Layer 6"
+CONSTANT 1.50300e-004 "Transmissivity Layer 7"
+CONSTANT 1.67000e-005 "Leakance Layer 7"
+CONSTANT 1.50300e-004 "Transmissivity Layer 8"
+CONSTANT 1.67000e-005 "Leakance Layer 8"
+CONSTANT 1.50300e-004 "Transmissivity Layer 9"
+CONSTANT 1.67000e-005 "Leakance Layer 9"
+CONSTANT 1.50300e-004 "Transmissivity Layer 10"

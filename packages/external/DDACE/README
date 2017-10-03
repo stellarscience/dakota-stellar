@@ -1,0 +1,25 @@
+
+DDACE - Distributed Design and Analysis of Computer Experiments
+
+DDACE is a package of algorithms for rapid design space exploration
+through computer experiments and their analyis.  The software package
+is predominantly written in C++, with a few components written in C or
+Fortran.
+
+DDACE is distributed under the GNU Lesser General Public License.  It
+is free software; you can redistribute it and/or modify it under the
+terms of the GNU Lesser General Public License as published by the
+Free Software Foundation; either version 2.1 of the License, or (at
+your option) any later version.  A copy of this license is included in
+the "GNU_LGPL" file, and is also available online from
+http://www.gnu.org/licenses/lgpl.html.  Also refer to the COPYRIGHT
+file for important U.S. Government legal notices.
+
+The DDACE distribution contains libraries which are available
+separately under compatible licensing terms.  In particular, MARS and
+BOSE are available under the StatLib licensing agreement.  A copy of
+this license is included in the "LICENSE_MARS" and "LICENSE_BOSE" files
+in the src/FATools and src/Bose directories, respectively, and is also
+available online from http://lib.stat.cmu.edu/graphmod/submissions.
+
+

@@ -1,0 +1,11 @@
+# WJB: Use conditional compilation to build just a stub of a library (for now)
+
+#pecos_env = Environment()   # Create an environment
+Import('bas_env')
+pecos_env = bas_env.Clone()
+
+lib_target  = 'pecos'
+lib_sources = ['NatafTransformation.cpp', 'Transformation.cpp']
+
+libpecos = pecos_env.Library(target = lib_target, source = lib_sources)
+

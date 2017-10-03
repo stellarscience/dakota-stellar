@@ -1,0 +1,24 @@
+#  cvt_07_00010.latin.txt
+#  created by LATINIZE.CC
+#  at 10 October 2004 07:36:14 AM
+#
+#  Spatial dimension M = 7
+#  Number of points N =  10
+#  EPSILON (unit roundoff) = 2.22045e-16
+#
+#  This data was created
+#  the C++ FSU_LATINIZE_STANDALONE program.
+#  The data was read from cvt_07_00010.txt by DTABLE_DATA_READ.CC
+#  The data was latinized by FSU_LATINIZE.CC.
+#  The data was written to cvt_07_00010.latin.txt by DTABLE_DATA_WRITE.CC.
+#
+      0.05        0.85        0.65        0.45        0.35        0.15        0.15  
+      0.15        0.55        0.25        0.05        0.45        0.85        0.75  
+      0.75        0.35        0.85        0.35        0.05        0.05        0.55  
+      0.85        0.75        0.35        0.15        0.75        0.25        0.65  
+      0.45        0.65        0.95        0.85        0.85        0.45        0.85  
+      0.25        0.15        0.75        0.75        0.15        0.75        0.35  
+      0.55        0.45        0.05        0.95        0.25        0.55        0.95  
+      0.65        0.05        0.55        0.25        0.95        0.95        0.45  
+      0.95        0.95        0.45        0.65        0.55        0.65        0.05  
+      0.35        0.25        0.15        0.55        0.65        0.35        0.25  

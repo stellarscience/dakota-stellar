@@ -1,0 +1,352 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+  <!-- 1. begin: SITE TITLE - REQUIRED -->
+  <title>HOPSPACK - Registration Page</title>
+  <!-- 1. end: SITE TITLE - REQUIRED -->
+
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta http-equiv="cache-control" content="no-cache" /> 
+  <meta http-equiv="pragma" content="no-cache" />
+
+  <!-- 2. begin: METADATA - REQUIRED -->
+  <meta name="keywords" content="Registration, HOPSPACK">
+  <meta name="description" content="Registration page for HOPSPACK software">
+  <meta name="sandia.approval_type" content="formal">
+  <meta name="sandia.approved" content="SAND2010-2435W">
+  <meta name="sandia.create_date" content="05/03/2010">
+  <meta name="author" content="Todd Plantenga">
+  <!-- 2. end: METADATA - REQUIRED -->
+
+  <!-- 4. begin: SITE CSS - REQUIRED -->
+  <link rel="stylesheet" type="text/css" href="http://www.sandia.gov/css/home.css" media="all" />
+  <!-- 4. end: SITE CSS - REQUIRED -->
+
+
+  <script type="text/javascript">
+  <!--
+    //---- RESTORE ASTERISKS AND THE HIDDEN ERROR MESSAGE TO NORMAL.
+    function restoreErrMsgs() {
+
+      var element;
+
+      element = document.getElementById ("errorMessage");
+      if (element && element.style && element.style.display)
+        element.style.display = "none";
+      element = document.getElementById ("emailaddrErrorMessage");
+      if (element && element.style && element.style.display)
+        element.style.display = "none";
+
+      var starEle;
+
+      starEle = document.getElementById ("emailaddrStar");
+      if (starEle && starEle.style) {
+        starEle.style.color = "rgb(0%,0%,0%)";
+        starEle.style.fontWeight = "normal";
+      }
+      starEle = document.getElementById ("fullnameStar");
+      if (starEle && starEle.style) {
+        starEle.style.color = "rgb(0%,0%,0%)";
+        starEle.style.fontWeight = "normal";
+      }
+      starEle = document.getElementById ("companyStar");
+      if (starEle && starEle.style) {
+        starEle.style.color = "rgb(0%,0%,0%)";
+        starEle.style.fontWeight = "normal";
+      }
+      starEle = document.getElementById ("sectorStar");
+      if (starEle && starEle.style) {
+        starEle.style.color = "rgb(0%,0%,0%)";
+        starEle.style.fontWeight = "normal";
+      }
+      starEle = document.getElementById ("countryStar");
+      if (starEle && starEle.style) {
+        starEle.style.color = "rgb(0%,0%,0%)";
+        starEle.style.fontWeight = "normal";
+      }
+      starEle = document.getElementById ("regionStar");
+      if (starEle && starEle.style) {
+        starEle.style.color = "rgb(0%,0%,0%)";
+        starEle.style.fontWeight = "normal";
+      }
+
+      return;
+    }
+
+    function setupLoad() {
+      if (document.regform && document.regform.emailaddr)
+        document.regform.emailaddr.focus();
+      restoreErrMsgs();
+      return;
+    }
+
+    //---- CHECK THAT REQUIRED FIELDS ARE NONEMPTY.
+    function checkData() {
+
+      var wasAnError = false;
+      var userEntry = "";
+      var starEle;
+
+      restoreErrMsgs();
+
+      userEntry = "";
+      if (document.regform && document.regform.emailaddr)
+        userEntry = document.regform.emailaddr.value;
+      starEle = document.getElementById ("emailaddrStar");
+      if (userEntry.length == 0) {
+        wasAnError = true;
+        if (starEle && starEle.style) {
+          starEle.style.color = "rgb(100%,0%,0%)";
+          starEle.style.fontWeight = "bold";
+        }
+      }
+      //---- MINIMAL TEST THAT THE EMAIL IS SYNTACTICALLY VALID.
+      if (   (userEntry.length > 0)
+          && (   (userEntry.indexOf ("@") == -1)
+              || (userEntry.indexOf ("@") >= (userEntry.length - 1)))) {
+        wasAnError = true;
+        if (starEle && starEle.style) {
+          starEle.style.color = "rgb(100%,0%,0%)";
+          starEle.style.fontWeight = "bold";
+        }
+        var element = document.getElementById ("emailaddrErrorMessage");
+        if (element && element.style && element.style.display)
+          element.style.display = "inline";
+      }
+
+      userEntry = "";
+      if (document.regform && document.regform.fullname)
+        userEntry = document.regform.fullname.value;
+      starEle = document.getElementById ("fullnameStar");
+      if (userEntry.length == 0) {
+        wasAnError = true;
+        if (starEle && starEle.style) {
+          starEle.style.color = "rgb(100%,0%,0%)";
+          starEle.style.fontWeight = "bold";
+        }
+      }
+
+      userEntry = "";
+      if (document.regform && document.regform.company)
+        userEntry = document.regform.company.value;
+      starEle = document.getElementById ("companyStar");
+      if (userEntry.length == 0) {
+        wasAnError = true;
+        if (starEle && starEle.style) {
+          starEle.style.color = "rgb(100%,0%,0%)";
+          starEle.style.fontWeight = "bold";
+        }
+      }
+
+      userEntry = "";
+      if (document.regform && document.regform.sector)
+        userEntry = document.regform.sector.value;
+      starEle = document.getElementById ("sectorStar");
+      if (userEntry == "Unselected") {
+        wasAnError = true;
+        if (starEle && starEle.style) {
+          starEle.style.color = "rgb(100%,0%,0%)";
+          starEle.style.fontWeight = "bold";
+        }
+      }
+
+      userEntry = "";
+      if (document.regform && document.regform.country)
+        userEntry = document.regform.country.value;
+      starEle = document.getElementById ("countryStar");
+      if (userEntry.length == 0) {
+        wasAnError = true;
+        if (starEle && starEle.style) {
+          starEle.style.color = "rgb(100%,0%,0%)";
+          starEle.style.fontWeight = "bold";
+        }
+      }
+
+      userEntry = "";
+      if (document.regform && document.regform.region)
+        userEntry = document.regform.region.value;
+      starEle = document.getElementById ("regionStar");
+      if (userEntry == "Unselected") {
+        wasAnError = true;
+        if (starEle && starEle.style) {
+          starEle.style.color = "rgb(100%,0%,0%)";
+          starEle.style.fontWeight = "bold";
+        }
+      }
+
+      if (wasAnError) {
+        var element = document.getElementById ("errorMessage");
+        if (element && element.style && element.style.display)
+          element.style.display = "inline";
+        return false;
+      }
+
+      return true;
+    }
+  // -->
+  </script>
+</head>
+
+<!-- ------------------------------------------------------------ -->
+<body text="#000000" onload="setupLoad();">
+
+<!-- sandia blue banner server-side include -->
+<!--#include file="sandia_banner_ssi.txt" -->
+
+<div style="font:normal 1.25em Verdana, Arial, Helvetica, sans-serif;
+            padding:20px; border:0;">
+
+<table>
+  <tr>
+
+    <td>
+      <!-- Left side content -->
+      <h2 style="color:rgb(0%,0%,0%)">HOPSPACK Registration</h2>
+
+      <p><br>
+      Please help us to better serve you by providing us with some information
+      about yourself.  Remember the email address you register so you can skip
+      this form the next time.  We ask for this information as a courtesy in
+      exchange for our free software.  Having accurate user data allows us to
+      better ascertain in what way HOPSPACK is used, which may influence future
+      development.  Your email address will remain strictly confidential and
+      will not be used to contact you unless you request to be on the HOPSPACK
+      Users Mailing List.
+      </p>
+
+      <p><br>
+      <center>
+      <form name="regform"
+            method="post"
+            enctype="application/x-www-form-urlencoded"
+            action="http://www.sandia.gov/cgi-bin/hopspack/hopspack_register"
+            onSubmit="return checkData();">
+      <table border="0">
+        <tr>
+          <td>Email address:</td>
+          <td><span style="color:rgb(0%,0%,0%);font-weight:normal"
+                    id="emailaddrStar">*</span></td>
+          <td><input type="text" name="emailaddr" size="40">
+              <span style="color:rgb(100%,0%,0%);font-weight:bold;display:none"
+                    id="emailaddrErrorMessage">
+              &nbsp; Bad email syntax
+              </span></td>
+        </tr>
+        <tr>
+          <td>Your full name:</td>
+          <td><span style="color:rgb(0%,0%,0%);font-weight:normal"
+                    id="fullnameStar">*</span></td>
+          <td><input type="text" name="fullname" size="60"></td>
+        </tr>
+        <tr>
+          <td>Company/Institution:</td>
+          <td><span style="color:rgb(0%,0%,0%);font-weight:normal"
+                    id="companyStar">*</span></td>
+          <td><input type="text" name="company" size="60"></td>
+        </tr>
+        <tr>
+          <td>Use Sector:</td>
+          <td><span style="color:rgb(0%,0%,0%);font-weight:normal"
+                    id="sectorStar">*</span></td>
+          <td><select name="sector" size="1">
+                <option value="Unselected" selected></option>
+                <option value="University">University</option>
+                <option value="Government">Government</option>
+                <option value="Industry">Industry</option>
+                <option value="Personal">Personal Use</option>
+                <option value="None">None of the above</option>
+              </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Country:</td>
+          <td><span style="color:rgb(0%,0%,0%);font-weight:normal"
+                    id="countryStar">*</span></td>
+          <td><input type="text" name="country" size="20"></td>
+        </tr>
+        <tr>
+          <td>Geographic Region:</td>
+          <td><span style="color:rgb(0%,0%,0%);font-weight:normal"
+                    id="regionStar">*</span></td>
+          <td><select name="region" size="1">
+                <option value="Unselected" selected></option>
+                <option value="US">United States (except Sandia)</option>
+                <option value="Sandia">Sandia National Lab</option>
+                <option value="Americas">Americas (except US)</option>
+                <option value="Europe">Europe</option>
+                <option value="Africa">Africa</option>
+                <option value="Asia">Asia</option>
+                <option value="Australia">Australia or NZ</option>
+              </select>
+          </td>
+        </tr>
+        <tr>
+          <td>Briefly describe your application:</td>
+          <td></td>
+          <td><input type="text" name="app" size="50"></td>
+        </tr>
+        <tr>
+          <td>How did you hear about HOPSPACK?</td>
+          <td></td>
+          <td><input type="text" name="how" size="60"></td>
+        </tr>
+      </table>
+
+      <table border="0">
+        <tr>
+          <td><input type="checkbox" name="userlist" value="Y" unchecked></td>
+          <td>Check to join the HOPSPACK Users Mailing List</td>
+        </tr>
+      </table>
+
+      <p><br>
+        <input type="submit" value="Submit">
+        <span style="color:rgb(100%,0%,0%);font-weight:bold;display:none"
+              id="errorMessage">
+        &nbsp;&nbsp; Please enter all required fields (marked with *)
+        </span>
+      </p>
+
+      </form>
+      </p>
+
+      <p><br></p>
+
+      If you are having problems with the download or registration process,
+      please send email to
+      <a href="mailto:tplante@sandia.gov">tplante@sandia.gov</a>.
+    </td>
+
+    <td style="padding-left:10px;vertical-align:top">
+      <!-- Right side logo and nav -->
+      <img src="HOPSPACK_Logo_120x118.png"
+           alt="HOPSPACK logo" border="0" height="120" width="118">
+      <p><br>
+         <strong>Page Contact</strong><br>
+         Principle Member Technical Staff<br>
+         <a href="mailto:tplante@sandia.gov">Todd Plantenga</a><br>
+         (925) 294-3486
+      </p>
+      <p><br>
+        <strong>Related Links</strong><br>
+        <a href="https://software.sandia.gov/trac/hopspack/">HOPSPACK Wiki</a>
+      </p>
+    </td>
+
+  </tr>
+</table>
+
+<p><br></p>
+
+</div>
+
+
+<a name="footer2"></a>
+<div id="footer2"> <p><a href="mailto:tplante@sandia.gov">Page contact</a></p>
+</div>
+
+<!-- sandia footer server-side include -->
+<!--#include file="sandia_footer_ssi.txt" -->
+
+</body>
+</html>

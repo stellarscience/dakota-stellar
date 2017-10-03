@@ -1,0 +1,43 @@
+
+NOMAD - version 3.7.2 - www.gerad.ca/nomad
+
+Copyright (C) 2001-2015 {
+	Mark A. Abramson     - The Boeing Company
+	Charles Audet        - Ecole Polytechnique de Montreal
+	Gilles Couture       - Ecole Polytechnique de Montreal
+	John E. Dennis, Jr.  - Rice University
+	Sebastien Le Digabel - Ecole Polytechnique de Montreal
+	Christophe Tribes    - Ecole Polytechnique de Montreal
+} 
+
+Funded in part by AFOSR and Exxon Mobil.
+
+License   : '$NOMAD_HOME/src/lgpl.txt'
+User guide: '$NOMAD_HOME/doc/user_guide.pdf'
+Examples  : '$NOMAD_HOME/examples'
+Tools     : '$NOMAD_HOME/tools'
+
+Please report bugs to nomad@gerad.ca
+
+MADS run {
+
+	BBE	(	SOL	)	OBJ
+
+	  2	(	0.0000000000 0.5366563146 0.5813776741 -0.2683281573 0.2683281573 )	288.7926372100 (PhaseOne)
+	  3	(	0.0000000000 2.1466252584 2.3255106966 -1.0733126292 1.0733126292 )	0.0000000000 (PhaseOne)
+	  3	(	0.0000000000 2.1466252584 2.3255106966 -1.0733126292 1.0733126292 )	1.0733100000
+	 10	(	0.4919349550 2.8174456516 2.1801662781 -0.8720665112 1.0062305899 )	1.0062300000
+	 11	(	1.9677398202 4.8299068314 1.7441330224 -0.2683281573 0.8049844719 )	0.8049840000
+	 13	(	0.0000000000 1.6099689438 2.9068883707 -0.8049844719 0.5366563146 )	0.5366560000
+	 17	(	3.5241951349 1.7067494832 0.5813776741 -0.5366563146 0.2683281573 )	0.2683280000
+	 28	(	2.0483902697 -2.5865010336 3.4882660449 1.8782971011 0.0000000000 )	0.0000000000
+	 67	(	2.0483902697 1.7067494832 2.3255106966 -0.5366563146 -2.4149534157 )	-2.4149500000
+	 86	(	3.0322601798 0.6334368540 0.0000000000 2.6832815730 -2.9516097303 )	-2.9516100000
+	 96	(	1.5564553147 1.7067494832 -0.5813776741 1.6099689438 -3.4882660449 )	-3.4882700000
+	100	(	1.5564553147 1.7067494832 -0.5813776741 1.6099689438 -3.4882660449 )	-3.4882700000
+
+} end of run (max number of blackbox evaluations)
+
+blackbox evaluations                     : 100
+best infeasible solution (min. violation): ( -0.9032194606 -0.4398757752 4.069643719 -0.2683281573 -1.878297101 ) h=0.0114496 f=-1.8783
+best feasible solution                   : ( 1.556455315 1.706749483 -0.5813776741 1.609968944 -3.488266045 ) h=0 f=-3.48827

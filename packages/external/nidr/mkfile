@@ -1,0 +1,154 @@
+BUILTINS =
+NPROC = 1
+CC = cc
+CFLAGS = -g
+DS = ../../src
+#Rpath = -Wl,-rpath,.,-rpath,/usr/local/gcc-4.4.2/lib64
+Rpath = -Wl,-rpath,/usr/local/gcc-4.4.2/lib64
+
+%.o: %.c nidr.h
+	$CC -c $CFLAGS $stem.c
+
+%.dll: %.c
+	$CC $CFLAGS -fPIC -shared -o $target $stem.c
+
+#NIDR_keywds.H: nidrgen zap
+all:N: NIDR_keywds.H $DS/dakota.input.summary
+
+NIDR_keywds.H: nidrgen dakota.input.nspec
+	./$prereq >$target
+
+$DS/dakota.input.summary: nidrgen dakota.input.nspec
+	./nidrgen -f dakota.input.nspec >$target
+#	sed 's/{[^}]*}//g' $prereq >$target
+
+zap: dakota.input.nspec
+	sed '/^##GOT_TO_HERE/q' $prereq >$target
+
+nidrgen: nidrgen.c
+	$CC $CFLAGS -I$DS -o $target $Rpath $prereq -lm -ldl
+
+test1a.c: nidrgen test1a.spec
+	./nidrgen -h- -n- test1a.spec >$target
+
+test1a: test1.c test1a.c nidr-scanner.o nidr-parser.o nidr.o avltree.o
+	$CC $CFLAGS -o $target -DINCLUDENAME='"test1a.c"' test1.c nidr-scanner.o nidr-parser.o nidr.o avltree.o
+
+test1b.c: test1b.spec
+	./nidrgen -f -h- -n- test1b.spec >$target
+
+test1b: test1.c test1b.c nidr-scanner.o nidr-parser.o nidr.o avltree.o
+	$CC $CFLAGS -o $target -DINCLUDENAME='"test1b.c"' test1.c nidr-scanner.o nidr-parser.o nidr.o avltree.o
+
+nidrgen.c: nidrgen.l0
+	sed "s/YYYYMMDD/`Dt -8 nidrgen.l0`/" $prereq >nidrgen.l
+	lex nidrgen.l
+	sed 's/lex.yy.c/nidrgen.c/;s!#line.*!/* & */!;s/yyparse/nidrparse/g' lex.yy.c >$target
+	rm lex.yy.c
+
+### The sed line above replaces YYYYMMDD with a string such as 20090212
+### derived from the current date of nidrgen.l0 .
+### nidrgen.l0 and nidrgen.l differ in one line.
+### E.g., on 20100517, diff shows
+#3719c3719
+#< 	printf("nidrgen version YYYYMMDD\n");
+#---
+#> 	printf("nidrgen version 20100517\n");
+
+test1: test1.o nidr-scanner.o nidr-parser.o nidr.o avltree.o
+	$CC -o $target $prereq
+
+#all:N: nidr-scanner.c nidr-parser.c
+
+nidr-scanner.c: nidrscan.l
+	lex $prereq
+	sed 's/lex.yy.c/nidr-scanner.c/;s!#line.*!/* & */!
+	s/yy/nidr/g;s/reset_lex_state/reset_nidrlex_state/
+	s/#include "nidr.h"/#ifndef NIDR_H\
+	&\
+	#endif/;s/#include "nidr-parser.h"/#ifndef NIDR_PARSER_H\
+	&\
+	#endif/' lex.yy.c >$target
+	rm lex.yy.c
+
+nidr-parser.c: nidrparse.y
+	bison -y -d $prereq
+	sed 's/y.tab.c/nidr-parser.c/;s!#line.*!/* & */!
+	s/yy/nidr/g;s/reset_lex_state/reset_nidrlex_state/
+	s/#include "nidr.h"/#ifndef NIDR_H\
+	&\
+	#endif/' y.tab.c >$target
+	echo  -e '#ifndef NIDR_PARSER_H\n#define NIDR_PARSER_H' >y.tab.hzap
+	sed 's/yy/nidr/' y.tab.h >>y.tab.hzap
+	echo '#endif /* NIDR_PARSER_H */' >>y.tab.hzap
+	cmp y.tab.hzap nidr-parser.h || cp y.tab.hzap nidr-parser.h
+	rm y.tab.c y.tab.h y.tab.hzap
+
+o:N: nidr-scanner.o nidr-parser.o nidr.o
+
+run_test1: test1
+	for i in t1.in*; do ./test1 $i >zap 2>&1; cmp zap out/$i; done
+
+dakreorder_preq = dakreorder.c0 nidr.c nidr.h\
+	 nidr-parser.c nidr-scanner.c avltree.c avltree.h
+
+dakreorder.c: $dakreorder_preq
+	sed "s/YYYYMMDD/`Dt -8 $prereq`/" dakreorder.c0 >$target
+
+dakreorder.o: dakreorder.c NIDR_keywds0.h
+dakreord.o: dakreorder.c
+	$CC -c -o $target $CFLAGS -DNO_NIDR_keywds0 $prereq
+
+NIDR_keywds0.h: dakota.input.nspec nidrgen
+	./nidrgen -ftn- dakota.input.nspec >$target
+	Dt -8 dakota.input.nspec $dakreorder_preq | sed 's/.*/#define NSPEC_DATE "&"/' >>$target
+
+dakreorder: dakreorder.o nidr.o nidr-parser.o nidr-scanner.o avltree.o
+	$CC -o $target $Rpath $prereq -ldl
+
+dakreord: dakreord.o nidr.o nidr-parser.o nidr-scanner.o avltree.o
+	$CC -o $target $Rpath $prereq -ldl
+
+xsum.out: \
+	NIDR_keywds0.h \
+	avltree.c \
+	avltree.h \
+	dakota.input.nspec \
+	dakreorder.c \
+	nidr-parser.c \
+	nidr-parser.h \
+	nidr-scanner.c \
+	nidr.c \
+	nidr.h \
+	nidrgen.c
+	xsum $prereq >$target
+	cmp xsum0.out xsum.out || ndiff xsum0.out xsum.out
+
+# loo4 = temporary file for testing: to be created and changed as needed
+loo4.dll: loo4
+	nidrgen -lfn- -h nidr.h loo4 >loo4.c
+	cc -g -fPIC -shared -o loo4.dll loo4.c
+	nidrgen -lefp loo4.in >zap4
+
+testall:V: nidrgen
+	cd dylib_test2; mk; mk clean; cd ..
+	cd dylib_test; make; make clean; cd ..
+	cd dylib_test3; make; make clean; cd ..
+
+# for testing "nidrgen -lp noj.nspec"
+
+nojstuff:V: dot.dll jega.dll nlpql.dll npsol.dll
+
+dot.dll: dot.c
+	$CC $CFLAGS -fPIC -shared $Rpath -o $target $prereq dakota.so
+jega.dll: jega.c
+	$CC $CFLAGS -fPIC -shared $Rpath -o $target $prereq dakota.so
+nlpql.dll: nlpql.c
+	$CC $CFLAGS -fPIC -shared $Rpath -o $target $prereq dakota.so
+npsol.dll: npsol.c
+	$CC $CFLAGS -fPIC -shared $Rpath -o $target $prereq dakota.so
+
+# for testing nidr_save_exedir() and ndir_dlopen()
+
+exedirtest: exedirtest.o nidr.o avltree.o
+	$CC -o $target $prereq -ldl

@@ -1,0 +1,114 @@
+#@ *: DakotaConfig=HAVE_NPSOL
+# DAKOTA INPUT FILE - dakota_sbo_barnes.in
+
+# Demonstrates the use of approximation models and a trust region
+# optimization environment in performing constrained minimization on
+# the textbook test function.
+
+# These tests exercise global, local, and multipoint surrogates for
+# feasible and infeasible starting points with and without constraint
+# relaxation.
+
+environment,
+#	graphics
+	method_pointer = 'SBLO'
+
+method,
+	id_method = 'SBLO'
+	surrogate_based_local
+	model_pointer = 'SURROGATE'
+	approx_method_pointer = 'NLP'
+	max_iterations = 50
+	trust_region
+	  initial_size = 0.10
+	  contraction_factor = 0.5
+#	  constraint_relax homotopy			#s0,#s1,#s6,#s7
+	  expansion_factor   = 1.50
+          acceptance_logic
+	    filter                       		#s0,#s2,#s4,#s6
+#           tr_ratio                     		#s1,#s3,#s5,#s7
+          merit_function
+	    augmented_lagrangian_merit     		#s0,#s4
+#           lagrangian_merit               		#s1,#s5
+#           adaptive_penalty               		#s2,#s6
+#           penalty_merit                  		#s3,#s7
+          approx_subproblem
+#           THE FOLLOWING COMBINATION IS ERRONEOUS AND SHOULD NOT BE USED
+#	    single_objective no_constraints
+            single_objective original_constraints                 #s0
+#           single_objective linearized_constraints               #s1
+#           lagrangian_objective no_constraints                   #s2
+#           lagrangian_objective original_constraints             #s3
+#           lagrangian_objective linearized_constraints           #s4
+#           augmented_lagrangian_objective no_constraints         #s5
+#           augmented_lagrangian_objective original_constraints   #s6
+#           augmented_lagrangian_objective linearized_constraints #s7
+
+method,
+	id_method = 'NLP'
+	npsol
+	  max_iterations = 50
+	  convergence_tolerance = 1e-4
+
+model,
+	id_model = 'SURROGATE'
+	surrogate hierarchical
+          ordered_model_fidelities = 'LOFI' 'HIFI'
+#         SECOND ORDER REQUIRES HESSIAN INFO
+#         correction additive       second_order
+#         correction multiplicative second_order
+#         correction combined       second_order
+          correction additive       first_order 	#s0,#s3,#s6
+#         correction multiplicative first_order 	#s1,#s4,#s7
+#         correction combined       first_order 	#s2,#s5
+#         ZEROTH ORDER DOES NOT WORK WITH LAGRANGIAN MERIT FUNCTIONS
+#         correction additive       zeroth_order
+#         correction multiplicative zeroth_order
+#         correction combined       zeroth_order
+
+variables,
+	continuous_design = 2
+#   Feasible starting point
+	  initial_point    30.   40.		#s0,#s1,#s2,#s3
+# Infeasible starting point
+#	  initial_point    65.    1.
+# Infeasible starting point
+#	  initial_point    10.   20.		#s4,#s5,#s6,#s7
+	  lower_bounds      0.    0.
+	  upper_bounds     80.   80.
+	  descriptors      'x1'  'x2'
+
+responses,
+	objective_functions = 1
+	nonlinear_inequality_constraints = 3
+	nonlinear_inequality_lower_bounds = 0.     0.     0.
+	nonlinear_inequality_upper_bounds = 1.e+50 1.e+50 1.e+50
+	analytic_gradients
+	no_hessians
+
+model,
+	id_model = 'LOFI'
+	single
+	  interface_pointer = 'LOFI_FN'
+
+interface,
+	system #asynchronous
+	id_interface = 'LOFI_FN'
+ 	  analysis_driver = 'barnes_lf'
+	  parameters_file = 'LOFI.params.in'
+	  results_file    = 'LOFI.results.out'
+#	  file_tag file_save
+
+model,
+	id_model = 'HIFI'
+	single
+	  interface_pointer = 'HIFI_FN'
+
+interface,
+	system #asynchronous
+	id_interface = 'HIFI_FN'
+ 	  analysis_driver = 'barnes'
+	  parameters_file = 'HIFI.params.in'
+	  results_file    = 'HIFI.results.out'
+	  file_tag
+	  file_save

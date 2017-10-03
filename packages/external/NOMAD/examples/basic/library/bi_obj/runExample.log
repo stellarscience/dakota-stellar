@@ -1,0 +1,28 @@
+
+multi-MADS run {
+
+	MADS run  1 ...... OK [bb eval= 46] [overall bb eval=   46] [# dominant pts=   3] [# new pts=   3] [f1=-6 f2=152.5555363]
+	MADS run  2 ...... OK [bb eval= 23] [overall bb eval=   69] [# dominant pts=   6] [# new pts=   3] [f1=-1.170093169 f2=-7.948136425]
+	MADS run  3 ...... OK [bb eval= 23] [overall bb eval=   92] [# dominant pts=   8] [# new pts=   2] [f1=-6 f2=27.18734544]
+	MADS run  4 ...... OK [bb eval=  8] [overall bb eval=  100] [# dominant pts=   9] [# new pts=   1] [f1=-4.390031056 f2=12.07995483]
+
+} end of run (max number of bb evaluations)
+
+
+blackbox evaluations                     : 100
+number of MADS runs                      : 4
+
+Pareto front {
+
+	-6.0000000000 27.1873454385 
+	-5.4633436854 20.4877802253 
+	-4.9266873708 17.7107260310 
+	-4.3900310562 12.0799548321 
+	-4.1217028989 4.6477802253 
+	-3.8533747416 1.3742832861 
+	-3.5850465843 -0.2031008969 
+	-3.3167184270 -3.6003194012 
+	-1.1700931686 -7.9481364246 
+} 
+
+number of Pareto points: 9

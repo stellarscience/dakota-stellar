@@ -1,0 +1,83 @@
+#@ s*: Label=FastTest
+# DAKOTA INPUT FILE : dakota_short_column.in
+
+# This file covers a test matrix of reliability index approach (RIA)
+# CDF mappings from response_levels to probability_levels and
+# performance measure approach (PMA) CDF mappings from these
+# probability_levels back to the original response_levels for six
+# different MPP search specifications:
+# (1) no MPP search (MV)
+# (2) MPP search with a single linearization in x at the means (AMV)
+# (3) MPP search with a single linearization in u at the means (transformed AMV)
+# (4) MPP search with relinearizations in x (AMV+)
+# (5) MPP search with relinearizations in u (transformed AMV+)
+# (6) MPP search with no linearizations     (traditional FORM)
+
+environment,
+	#graphics
+
+method,
+	local_reliability
+#	  mpp_search x_taylor_mean			#s1,#s7
+#	  mpp_search u_taylor_mean			#s2,#s8
+#	  mpp_search x_taylor_mpp			#s3,#s9
+#	  mpp_search u_taylor_mpp			#s4,#s10
+#	  mpp_search x_two_point
+#	  mpp_search u_two_point
+#	  mpp_search no_approx				#s5,#s11
+#	  nip
+          num_response_levels = 0 43			#s0,#s1,#s2,#s3,#s4,#s5
+	  response_levels = -9.0 -8.75 -8.5 -8.0 -7.75	#s0,#s1,#s2,#s3,#s4,#s5
+			    -7.5 -7.25 -7.0 -6.5 -6.0	#s0,#s1,#s2,#s3,#s4,#s5
+			    -5.5 -5.0 -4.5 -4.0 -3.5	#s0,#s1,#s2,#s3,#s4,#s5
+			    -3.0 -2.5 -2.0 -1.9 -1.8	#s0,#s1,#s2,#s3,#s4,#s5
+			    -1.7 -1.6 -1.5 -1.4 -1.3	#s0,#s1,#s2,#s3,#s4,#s5
+			    -1.2 -1.1 -1.0 -0.9 -0.8	#s0,#s1,#s2,#s3,#s4,#s5
+			    -0.7 -0.6 -0.5 -0.4 -0.3	#s0,#s1,#s2,#s3,#s4,#s5
+			    -0.2 -0.1 0.0 0.05 0.1	#s0,#s1,#s2,#s3,#s4,#s5
+			     0.15 0.2 0.25		#s0,#s1,#s2,#s3,#s4,#s5
+#	  num_probability_levels = 0 43			#s6,#s7,#s8,#s9,#s10,#s11
+#	  probability_levels =    .00004899503		#s6,#s7,#s8,#s9,#s10,#s11
+#	.00007160604 .00010470159 .00022402075		#s6,#s7,#s8,#s9,#s10,#s11
+#	.00032768124 .00047916205 .00070027432		#s6,#s7,#s8,#s9,#s10,#s11
+#	.00102254439 .00217172772 .00457590129		#s6,#s7,#s8,#s9,#s10,#s11
+#	.00952669549 .01949659542 .03896260999		#s6,#s7,#s8,#s9,#s10,#s11
+#	.07539007682 .13970952367 .24456790666		#s6,#s7,#s8,#s9,#s10,#s11
+#	.39764919890 .58912021904 .62917735108		#s6,#s7,#s8,#s9,#s10,#s11
+#	.66888976969 .70779413419 .74541815983		#s6,#s7,#s8,#s9,#s10,#s11
+#	.78129818021 .81499871764 .84613297566		#s6,#s7,#s8,#s9,#s10,#s11
+#	.87438282836 .89951661758 .92140293867		#s6,#s7,#s8,#s9,#s10,#s11
+#	.94001867348 .95544985771 .96788457698		#s6,#s7,#s8,#s9,#s10,#s11
+#	.97759794226 .98493021575 .99026018686		#s6,#s7,#s8,#s9,#s10,#s11
+#	.99397673448 .99645193902 .99801895910		#s6,#s7,#s8,#s9,#s10,#s11
+#	.99895710720 .99926112487 .99948525836		#s6,#s7,#s8,#s9,#s10,#s11
+#	.99964764972 .99976318712 .99984384326		#s6,#s7,#s8,#s9,#s10,#s11
+
+variables,
+        continuous_design = 2
+	  initial_point      =    5.      15.
+	  descriptors        =   'b'      'h'
+	normal_uncertain = 2
+	  means              =  500.0   2000.0
+	  std_deviations     =  100.0    400.0
+	  descriptors        =   'P'      'M'
+	lognormal_uncertain = 1
+       	  means             =    5.0
+	  std_deviations    =    0.5
+	  descriptors       =    'Y'
+	uncertain_correlation_matrix =  1   0.5 0
+					0.5 1   0
+					0   0   1
+
+interface,
+	direct
+	  analysis_driver = 'short_column'
+
+responses,
+	response_functions = 2
+	analytic_gradients
+#	numerical_gradients
+#	  method_source dakota
+#	  interval_type central
+#	  fd_gradient_step_size = 1.e-4
+	no_hessians

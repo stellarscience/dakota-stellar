@@ -1,0 +1,10 @@
+set(Bose_sources
+  akconst.c 
+  boselink.c 
+  construct.c 
+  galois.c 
+  gfields.c 
+  memory.c 
+  oa.c 
+  primes.c
+)

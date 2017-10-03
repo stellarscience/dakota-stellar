@@ -1,0 +1,65 @@
+LHS (Latin Hypercube Sampling) UNIX Library/Standalone. 
+Copyright 2004 Sandia Corporation.  Under the terms of Contract
+DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government
+retains certain rights in this software.
+
+Gregory D. Wyss
+Laura P. Swiler
+Shannon L. Brown
+Michael S. Eldred
+Sharon Daniel
+
+Sandia National Laboratories 
+P.O. Box 5800, MS 0370
+Albuquerque, NM 87185-0370
+
+License: 
+
+LHS UNIX Library/Standalone is distributed under the GNU Lesser
+General Public License.  This library is free software; you can
+redistribute it and/or modify it under the terms of the GNU Lesser
+General Public License as published by the Free Software Foundation;
+either version 2.1 of the License, or (at your option) any later
+version.
+
+This library is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library in file LICENSE; if not, write to the
+Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301 USA, or see http://www.gnu.org/licenses/lgpl.html
+
+Overview:  
+
+The LHS UNIX Library/Standalone software provides the capability to 
+draw random samples from over 30 distribution types.  It performs the 
+sampling by a stratified sampling method called Latin Hypercube 
+Sampling (LHS).  Multiple distributions can be sampled simultaneously, 
+with user-specified correlations amongst the input distributions. 
+LHS UNIX Library/Standalone provides a way to generate multivariate 
+samples.  The LHS samples can be generated either within the 
+DAKOTA software framework or as a standalone capability. 
+
+------------------------------------------------------------------------
+
+FAQ:
+
+1) Why is a full download of DAKOTA necessary if all I want to do is
+   run LHS in standalone mode?
+
+DAKOTA presently uses Cygnus configure for platform configuration.  In
+order to preserve the user capability to build and install LHS on a
+variety of platforms, it is necessary to use the fragments in the
+config/ directory in DAKOTA for creating the Makefile used for
+building LHS.  With that constraint, it isn't feasible to create a LHS
+package for download with it's own config/ directory without a massive
+rewrite.  All of DAKOTA need not be compiled however (see steps 4 and
+5 in INSTALL).
+
+NOTE: By the end of Summer 2004, a migration from using Cygnus
+configure to the GNU Autotools is planned, which should make the
+process of configuring and building individual components of DAKOTA
+simpler.

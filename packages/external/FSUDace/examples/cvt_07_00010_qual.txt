@@ -1,0 +1,26 @@
+
+07 October 2004 06:20:03 AM
+
+FSU_TABLE_QUALITY:
+  Compute measures of uniform dispersion for a pointset.
+
+  Compiled on Oct  7 2004 at 06:19:43.
+
+  Measures of uniform point dispersion.
+
+  The pointset was read from "cvt_07_00010.txt".
+
+  The spatial dimension NDIM =     7
+  The number of points N =         10
+  The number of sample points NS = 100000
+  The random number SEED_INIT =    123456789
+
+  The regularity measure         Chi = 3.26241
+  2nd moment determinant measure   D = 1.48555e-14
+  The point distribution norm      H = 1.0822
+  2nd moment trace measure       Tau = 0.0148465
+
+FSU_TABLE_QUALITY:
+  Normal end of execution.
+
+07 October 2004 06:20:08 AM

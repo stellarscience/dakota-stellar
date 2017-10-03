@@ -1,0 +1,31 @@
+#@ s*: Label=FastTest
+#@ s4: TimeoutDelay=300
+
+environment,
+	#graphics
+#	output_precision = 16
+
+method,
+	polynomial_chaos
+ 	  expansion_order = 0
+	  uniform p_refinement
+	  collocation_ratio = 2 seed = 12347
+#	  reuse_points			#s1,#s3
+#	  use_derivatives		#s2,#s3,#s5
+#	  tensor_grid			#s4,#s5
+
+variables,
+	normal_uncertain = 2			
+      	  means             =  0.  0.
+	  std_deviations    =  1.  1.		
+	  descriptors       = 'x1' 'x2'		
+
+interface,
+	direct
+	analysis_driver = 'rosenbrock'		
+
+responses,
+	response_functions = 1
+	no_gradients			#s0,#s1,#s4
+#	analytic_gradients		#s2,#s3,#s5
+	no_hessians

@@ -1,0 +1,72 @@
+90
+CORR
+-6
+dist1
+dist61
+0.8
+-1
+dist1
+normal
+2
+12.0 7.0
+-5
+NewOne 
+152.5
+-5 
+Pi
+3.14159
+-6
+dist1
+dist62
+0.6
+-4
+DistSame102 
+dist102
+-4
+DistSame1
+dist1
+-4
+DistSame61
+dist61
+-3
+dist102 
+uniform* 
+3 
+27 27 36 
+0 4 5 10
+-3
+dist109 
+loguniform* 
+2 
+45 45 
+1 3 9
+-2 
+dist61 
+discrete cumulative 
+4 
+5 .2 7 .4 11 .6 14 1
+-2
+dist62 
+discrete cumulative 
+3 
+7.8 .33 9.2 .666 11.4 1
+-2
+dist115 
+continuous linear 
+5 
+1 0 2 .5 7 .9 13 .93 20 1
+-2
+dist117 
+continuous frequency 
+4 
+11 1 23 18.6 30 7.2 38.6 2.4
+-6
+dist61
+dist62
+0.7
+-6
+dist115
+dist117
+-.7
+-99
+$  Modified for "Correlation" checking for Input-by-Call Version

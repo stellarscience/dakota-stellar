@@ -1,0 +1,98 @@
+CC = gcc
+CFLAGS = -O
+S = ../../src
+CINCLUDES = -I$S
+LDL = -ldl
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) $(CINCLUDES) $*.c
+
+all: nidrgen NIDR_keywds.H $S/dakota.input.summary $S/dakota.input.desc $S/NIDR_guikeywds.h NIDR_keywds0.h
+
+### Avoid regenerating files needlessly, which can be counterproductive on
+### systems with older versions of [f]lex and bison:  require explicit
+### "make src-scanner" invocation to update $S/nidr-scanner and $S/nidr-parser.c
+### and explicit "make nidrgen.c" to recreate nidrgen.c from nidrgen.l.
+
+src-scanner: $S/nidr-scanner.c $S/nidr-parser.c
+
+clean:
+	rm -f nidrgen dakota.input.desc
+veryclean:
+	rm -f Dt nidrgen nidrgen.c $S/nidr-scanner.c $S/nidr-parser.c $S/NIDR_keywds.H $S/dakota.input.summary
+
+
+$S/nidr-scanner.c: nidrscan.l
+	lex nidrscan.l
+	sed 's/lex.yy.c/nidr-scanner.c/;s!#line.*!/* & */!;s/yy/nidr/g;s/reset_lex_state/reset_nidrlex_state/' lex.yy.c >$S/nidr-scanner.c
+	rm lex.yy.c
+
+$S/nidr-parser.c $S/nidr-parser.h: nidrparse.y
+	bison -y -d nidrparse.y
+	sed 's/y.tab.c/nidr-parser.c/;s!#line.*!/* & */!;s/yy/nidr/g;s/reset_lex_state/reset_nidrlex_state/' y.tab.c >$S/nidr-parser.c
+	sed 's/yy/nidr/' y.tab.h >y.tab.hzap
+	cmp -s y.tab.hzap $S/nidr-parser.h && rm y.tab.hzap || mv y.tab.hzap $S/nidr-parser.h
+	rm y.tab.c y.tab.h
+
+nidrgen: nidrgen.c
+	$(CC) $(CFLAGS) $(CINCLUDES) nidrgen.c -s -o nidrgen -lm 2>/dev/null || $(CC) $(CFLAGS) $(CINCLUDES) nidrgen.c -s -o nidrgen -lm $(LDL)
+
+nidrgen.c: nidrgen.l
+	lex nidrgen.l
+	sed 's/lex.yy.c/nidrgen.c/;s!#line.*!/* & */!;s/yyparse/nidrparse/g' lex.yy.c >nidrgen.c
+	rm lex.yy.c
+
+NIDR_keywds.H: nidrgen $S/dakota.input.nspec $S/dakota.input.desc
+	./nidrgen $S/dakota.input.nspec $S/dakota.input.desc $S/NIDR_initdefs.h NIDR_keywds.H
+	cmp -s NIDR_keywds.H $S/NIDR_keywds.H || cp NIDR_keywds.H $S/NIDR_keywds.H
+
+$S/dakota.input.summary: nidrgen $S/dakota.input.nspec
+	./nidrgen -efp $S/dakota.input.nspec >$S/dakota.input.summary
+
+#	sed 's/{[^}]*}//g' $S/dakota.input.nspec >$S/dakota.input.summary
+
+$S/dakota.input.desc: nidrgen $S/dakota.input.nspec ./generate_desc.pl ../../docs/Ref_*.dox
+	./generate_desc.pl && cmp -s dakota.input.desc $S/dakota.input.desc || cp dakota.input.desc $S/dakota.input.desc
+
+$S/NIDR_guikeywds.h: nidrgen $S/dakota.input.nspec $S/dakota.input.desc
+	./nidrgen -egG $S/dakota.input.nspec $S/dakota.input.desc >$S/NIDR_guikeywds.h
+
+dakreorder_src = dakreorder.c $S/nidr.c $S/nidr-parser.c $S/nidr-scanner.c $S/avltree.c
+
+NIDR_keywds0.h: $S/dakota.input.nspec nidrgen Dt
+	./nidrgen -ftn- $S/dakota.input.nspec >NIDR_keywds0.h
+	./Dt -8 $S/dakota.input.nspec $(dakreorder_preq) | sed 's/.*/#define NSPEC_DATE "&"/' >>NIDR_keywds0.h
+
+dakreorder: $(dakreorder_src) NIDR_keywds0.h
+	$(CC) -o dakreorder -s $(CFLAGS) $(CINCLUDES) $(dakreorder_src) 2>/dev/null || $(CC) -o dakreorder -s $(CFLAGS) $(CINCLUDES) $(dakreorder_src) $(LDL)
+
+dakreord: $(dakreorder_src)
+	$(CC) -o dakreord -s -DNO_NIDR_keywds0 $(CFLAGS) $(CINCLUDES) $(dakreorder_src) 2>/dev/null || $(CC) -o dakreord -s -DNO_NIDR_keywds0 $(CFLAGS) $(CINCLUDES) $(dakreorder_src) $(LDL)
+
+Dt: Dt.c
+	$(CC) -o Dt Dt.c
+
+## static binaries for Linux...
+
+static32:
+	mkdir -p dist/linux32s
+	rm -f dakreord dakreorder nidrgen
+	make dakreord dakreorder nidrgen CC='gcc -static -s -m32'
+	for i in dakreord dakreorder nidrgen; do cmp -s $$i dist/linux32s/$$i && rm $$i || mv $$i dist/linux32s; done
+
+static64:
+	mkdir -p dist/linux64s
+	rm -f dakreord dakreorder nidrgen
+	make dakreord dakreorder nidrgen CC='gcc -static -s -m64'
+	for i in dakreord dakreorder nidrgen; do cmp -s $$i dist/linux64s/$$i && rm $$i || mv $$i dist/linux64s; done
+
+testall: nidrgen dylib_test dylib_test2
+	cd dylib_test2; make; make clean; cd ..
+	cd dylib_test; make; make clean; cd ..
+	cd dylib_test3; make; make clean; cd ..
+
+dylib_test: dylib_test.zip
+	unzip dylib_test
+
+dylib_test2: dylib_test2.zip
+	unzip dylib_test2.zip

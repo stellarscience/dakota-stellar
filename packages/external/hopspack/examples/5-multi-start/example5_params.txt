@@ -1,0 +1,56 @@
+# $Id: example5_params.txt 166 2010-03-22 19:58:07Z tplante $
+# $URL: https://software.sandia.gov/svn/hopspack/trunk/examples/5-multi-start/example5_params.txt $
+#
+# ************************************************************************
+#         HOPSPACK: Hybrid Optimization Parallel Search Package
+#                Copyright 2009-2010 Sandia Corporation
+#
+#   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#   the U.S. Government retains certain rights in this software.
+# ************************************************************************
+
+# HOPSPACK parameters for example 5
+# See multi_start.cpp for the definition of the objective function.
+
+
+#-- SUBLIST TO DEFINE THE NUMBER OF UNKNOWNS, VARIABLE BOUNDS, ETC.
+
+@ "Problem Definition"
+  "Objective Type" string "Minimize"
+  "Number Unknowns" int 2
+  "Upper Bounds" vector 2  3  2       # Upper bounds on variables
+  "Lower Bounds" vector 2 -3 -2       # Lower bounds on variables
+  "Scaling"      vector 2  1  1       # Scale the variables
+  "Initial X"    vector 2  1.1  1.2   # First initial point
+  "Display" int 2
+@@
+
+
+#-- SUBLIST TO DEFINE HOW THE OBJECTIVE FUNCTION IS EVALUATED.
+
+@ "Evaluator"
+  "Executable Name" string "multi_start"
+@@
+
+
+#-- SUBLIST OF MEDIATOR CONTROL PARAMETERS.
+
+@ "Mediator" 
+  "Citizen Count" int 1               # One citizen will be invoked
+  "Number Processors" int 2           # Used with MPI executable
+  "Number Threads" int 2              # Used with multithreaded executable
+  "Maximum Evaluations" int -1
+  "Display" int 2                     # 0 = no debug info, 5 = most detail
+@@
+
+
+#-- SUBLISTS TO DEFINE EACH CITIZEN (ONLY ONE IN THIS EXAMPLE).
+
+@ "Citizen 1"                         # Citizen name
+  "Type" string "GSS-MS"              # GSS with multi-start
+  "Point Generator" string "TBD"
+  "Total Start Points" int 20
+  "Step Length" double 0.01           # Helps stay near local minima
+  "Step Tolerance" double 0.001       # Controls solution accuracy
+  "Display" int 2                     # 0 = no debug info, 2 = most detail
+@@

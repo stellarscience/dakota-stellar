@@ -1,0 +1,186 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\label{sec:intro}
+
+HOPSPACK (Hybrid Optimization Parallel Search PACKage) is derivative-free
+optimization software for solving general optimization problems, especially
+those with noisy and expensive functions.  HOPSPACK provides an open source
+C++ framework that enables parallel operation using MPI (for distributed
+processing architectures) or multithreading (for multi-core machines).
+The software is easily interfaced with application code, builds on most
+operating systems (Linux, Windows, Mac OSX), and is designed for extension
+and customization.
+
+The basic optimization problem addressed is
+\begin{equation}  \label{eq:probdef}
+  \begin{array}{cc}
+    \mbox{minimize}   &  f(x)  \\
+    \mbox{subject to} &  A_{\cal I} \; x \geq b_{\cal I}  \\
+                      &  A_{\cal E} \; x = b_{\cal E}  \\
+                      &  c_{\cal I}(x) \geq 0  \\
+                      &  c_{\cal E}(x) = 0  \\
+                      &  l \leq x \leq u
+  \end{array}
+\end{equation}
+Here $f(x): {\cal R}^n \rightarrow {\cal R} \cup \{+ \infty \}$ is the objective
+function of $n$ unknowns.
+The first two constraints specify linear inequalities and equalities
+with coefficient matrices $A_{\cal I}$ and $A_{\cal E}$.
+The next two constraints describe nonlinear inequalities and equalities
+captured in functions $c_{\cal I}(x)$ and $c_{\cal E}(x)$.
+The final constraints denote lower and upper bounds on the variables.
+HOPSPACK allow variables to be continuous or integer-valued and has provisions
+for multi-objective optimization problems.
+In general, functions $f(x), c_{\cal I}(x), \mbox{ and } c_{\cal E}(x)$
+can be noisy and nonsmooth, although most algorithms perform best on
+determinate functions with continuous derivatives.
+
+HOPSPACK is released with two user communities in mind:  those who need an
+optimization problem solved, and those who wish to experiment with writing
+their own derivative-free solvers.
+
+\medskip
+\noindent
+Key features for users who need to solve an optimization problem are:
+\begin{itemize}
+  \item  {\bf Only function values are required for the optimization}
+         (no derivatives),
+         so it can be applied to a wide variety of problems.  Functions can
+         be nonsmooth or noisy, and take any amount of time to execute
+         (for example, complex simulations may take minutes or hours to run).
+  \item  {\bf The user simply provides a program} that can evaluate the objective
+         and nonlinear constraint functions at a given point.  The program
+         can be written in any language: Fortran, C/C++, Perl, MATLAB, etc.
+         The procedure for evaluating the objective and constraint functions
+         does not require an encapsulating subroutine wrapper or linking with
+         HOPSPACK libraries; usually the procedure is an entirely separate
+         program.
+  \item  {\bf HOPSPACK can be run in parallel} on a cluster of computers or on
+         multi-core machines, greatly
+         reducing the total solution time.  Parallelism is achieved by assigning
+         function evaluations of individual points to different processors,
+         which automatically gives good load balancing.
+         Asynchronous operation can use either MPI for distributed machine
+         parallelism, or multithreading for parallel operation on multi-core
+         machines.
+  \item  {\bf An asynchronous implementation of the Generating Set Search (GSS)
+         algorithm is supplied.}  GSS is a type of pattern search solver
+         that was available in the predecessor to HOPSPACK.  The core GSS
+         solver handles linear constraints, and is extended in HOPSPACK 2.0
+         to allow nonlinear constraints,
+         integer-valued variables, and multiple start points.
+  \item  {\bf Multiple algorithms can run simultaneously} and are easily
+         configured to share information, leading to a faster ``best'' solution.
+  \item  {\bf Binary executables are available for single machine systems.}
+         Executables are multithreaded to utilize multiple processors or cores
+         on the machine.
+  \item  {\bf Source code builds with native C++ compilers on
+         Linux, Mac OSX, and Windows.}  The source is easily configured
+         to compile with MPI implementations and third-party libraries.
+\end{itemize}
+
+\medskip
+\noindent
+Key features for users developing their own derivative-free solvers are:
+\begin{itemize}
+  \item  {\bf Parallel evaluation of trial points is managed}
+         by the HOPSPACK framework, exploiting both distributed machine
+         parallelism and multithreading.
+  \item  {\bf A simple C++ interface cleanly abstracts framework utilities}
+         and the application's problem definition.  An algorithm iterates by
+         receiving a list of newly evaluated points, and then submitting a
+         list of unevaluated trial points.  All other work is handled by
+         the HOPSPACK framework.
+  \item  {\bf Algorithms share a cache of computed function and constraint
+         evaluations} to eliminate duplicate work.
+  \item  {\bf Algorithms can initiate and control subproblems},
+         a useful technique for handling multiple start points,
+         nonlinear constraints, and integer-valued variables.
+%  \item  {\bf Solvers can request processing resources for asynchronous
+%         operation.}  This is useful if a solver requires
+%         significant computing resources that would otherwise slow down
+%         the main HOPSPACK iteration.
+  \item  {\bf Source code ports easily to compilers on most operating systems},
+         including GNU gcc, Intel C++, and Microsoft Visual Studio C++.
+  \item  The software is freely available under the terms of the GNU Lesser
+         General Public License.
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Project History}
+
+HOPSPACK is a successor to Sandia National Laboratory's APPSPACK
+(Asynchronous Parallel Pattern Search PACKage) product.  The final version
+of APPSPACK, 5.0, was released in 2007 \cite{APPS-GrKo05,APPS-Ko05}.
+The HOPSPACK software builds on APPSPACK 5.0, extending its capabilities
+in several ways:
+\begin{itemize}
+  \item {\bf Nonlinear constraints and integer-valued variables} are accepted
+        by the framework and handled by extensions to the GSS solver.
+  \item {\bf Multithreading} capability is provided on a machine with
+        multiple processors or cores.  This allows parallel processing
+        without installing MPI and compiling source code.
+  \item {\bf Multiple solvers} can run simultaneously and share information.
+  \item {\bf Solvers can initiate and control subproblem solvers}.
+  \item {\bf Windows and Mac OSX native compilers} are supported.
+\end{itemize}
+
+Both APPSPACK and HOPSPACK projects were led by Tamara G. Kolda of Sandia
+National Laboratories (SNL).  Major contributors to APPSPACK were
+Genetha Gray (SNL), Joshua Griffin (SAS Institute), Patty Hough (SNL),
+Michael Lewis (William \& Mary), and Virginia Torczon (William \& Mary).
+
+Both projects make use of source code from CDDLIB 0.94 in the GSS solver,
+generously made available by permission of Professor Komei Fukuda
+(\href{http://www.ifor.math.ethz.ch/staff/fukuda}
+      {http://www.ifor.math.ethz.ch/staff/fukuda}).
+
+An early version of HOPSPACK was developed and coded by Tamara Kolda and
+Joshua Griffin, who was then with Sandia National Laboratories.
+Work on HOPSPACK 2.0 was completed in 2009 by Todd Plantenga.
+He continues to update the package with improvements and bug fixes.
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Open Source Software}
+\label{subintro:licenses}
+
+HOPSPACK is open source software covered by the GNU Lesser General Public
+License (LGPL).  A copy of the license is provided with the source, and more
+information is available online at
+\href{http://www.gnu.org/licenses/licenses.html}
+     {http://www.gnu.org/licenses/licenses.html}.
+
+If HOPSPACK is compiled to include CDDLIB source code, then the GNU General
+Public License (GPL) applies.  This license is more restrictive than LGPL
+if HOPSPACK is bundled and redistributed with other software; consult the GNU
+web pages cited above for details.
+If you simply build HOPSPACK as provided and use it to solve optimization
+problems, then the difference between licenses does not matter.  An option
+is provided to build HOPSPACK without CDDLIB (\SECREF{subinstall:ED}).
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Citing HOPSPACK}
+
+If you find HOPSPACK useful, please cite this technical report in any
+resulting publications or reports.  The BibTex reference is as follows:
+\begin{verbatim}
+@TECHREPORT{Hops20-Sandia,
+  author = {Todd D. Plantenga},
+  title  = {HOPSPACK 2.0 User Manual},
+  institution = {Sandia National Laboratories, Albuquerque, NM and Livermore, CA},
+  month  = {October},
+  year   = {2009},
+  number = {SAND2009-6265}
+}
+\end{verbatim}
+
+We greatly appreciate hearing about applications and success stories
+using HOPSPACK.  Such information helps determine the next improvements to
+be made in the software, and helps us to continue funding this work.
+Please email the author at {\bf tplante@sandia.gov},
+or visit the Wiki page at
+\href{https://software.sandia.gov/trac/hopspack}
+     {https://software.sandia.gov/trac/hopspack}.

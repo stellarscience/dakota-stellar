@@ -1,0 +1,100 @@
+# 0 fully over-determined SVD_LEAST_SQ
+# 1 fully over-determined ELNET
+
+# 2 fully under-determined BP
+# 3 fully under-determined BPDN
+# 4 fully under-determined OMP
+# 5 fully under-determined LASSO
+# 6 fully under-determined LARS
+# 7 fully under-determined ELNET
+
+# 8 fully over-determined SVD_LEAST_SQ using_derivatives
+# 9 fully over-determined ELNET        using_derivatives
+
+# 10 fully under-determined BP         using_derivatives
+# 11 fully under-determined BPDN       using_derivatives
+# 12 fully under-determined OMP        using_derivatives
+# 13 fully under-determined LASSO      using_derivatives
+# 14 fully under-determined LARS       using_derivatives
+# 15 fully under-determined ELNET      using_derivatives
+
+# 16 partially under-determined using_derivatives EQ_CON_LEAST_SQ_REGRESSION 
+# 17 partially under-determined using_derivatives SVD_LEAST_SQ
+# 18 partially under-determined using_derivatives BP
+# 19 partially under-determined using_derivatives BPDN
+# 20 partially under-determined using_derivatives OMP
+# 21 partially under-determined using_derivatives LASSO
+# 22 partially under-determined using_derivatives LARS
+# 23 partially under-determined using_derivatives ELNET
+
+# 24 fully under-determined SVD_LEAST_SQ
+# 25 fully under-determined SVD_LEAST_SQ using_derivatives
+# 26 fully over-determined OMP
+# 27 partially under-determined using_derivatives OMP
+
+# 28 fully over-determined   DEFAULT_LEAST_SQ_REGRESSION (SVD)
+# 29 fully under-determined  DEFAULT_LEAST_SQ_REGRESSION (SVD)
+# 30 fully over-determined   DEFAULT_LEAST_SQ_REGRESSION using_derivatives (SVD)
+# 31 fully under-determined  DEFAULT_LEAST_SQ_REGRESSION using_derivatives (SVD)
+# 32 partially under-determined DEFAULT_LEAST_SQ_REGRESSION using_derivatives (EQ_CON_LEAST_SQ_REGRESSION)
+
+# 33 fully over-determined      DEFAULT_REGRESSION (SVD)
+# 34 fully under-determined     DEFAULT_REGRESSION (LASSO)
+# 35 fully over-determined      DEFAULT_REGRESSION using_derivatives (SVD)
+# 36 fully under-determined     DEFAULT_REGRESSION using_derivatives (LASSO)
+# 37 partially under-determined DEFAULT_REGRESSION using_derivatives (EQ_CON_LEAST_SQ_REGRESSION)
+
+# 38 fully under-determined EQ_CON_LEAST_SQ_REGRESSION
+# 39 fully over-determined EQ_CON_LEAST_SQ_REGRESSION
+# 40 fully over-determined BP
+# 41 fully over-determined BPDN
+# 42 fully over-determined LARS
+# 43 fully over-determined LASSO
+
+# 44 least orthogonal interpolation
+
+environment,
+	#graphics
+	output_precision = 16
+
+method,
+	polynomial_chaos 
+ 	  expansion_order   = 4		#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17,#s18,#s19,#s20,#s21,#s22,#s23,#s24,#s25,#s26,#s27,#s28,#s29,#s30,#s31,#s32,#s33,#s34,#s35,#s36,#s37,#s38,#s39,#s40,#s41,#s42,#s43,#s45,#s46,#s47,#s48
+	  collocation_ratio = 3 	#s0,#s1,#s26,#s28,#s33,#s40,#s41,#s42,#s43,#s46
+# 	  collocation_points = 15       #s44
+#	  collocation_ratio = 0.7 	#s2,#s3,#s4,#s5,#s6,#s7,#s10,#s11,#s12,#s13,#s14,#s15,#s24,#s25,#s29,#s31,#s34,#s36,#s38,#s45,#s47
+#	  collocation_ratio = 4 	#s8,#s9,#s30,#s35,#s39,#s48
+#	  collocation_ratio = 2  	#s16,#s17,#s18,#s19,#s20,#s21,#s22,#s23,#s27,#s32,#s37
+#	  least_squares	      		#s28,#s29,#s30,#s31,#s32
+	  least_squares svd 		#s0,#s8,#s17,#s24,#s25,#s48
+#	  least_squares equality_constrained #s16,#s38,#s39
+#	  basis_pursuit	  		#s2,#s10,#s18,#s40
+# 	  basis_pursuit_denoising	#s3,#s11,#s19,#s41
+#	    noise_tolerance = 1.e-3	#s3,#s11,#s19,
+#           noise_tolerance = 0. 	#s4,#s45
+#	  orthogonal_matching_pursuit	#s4,#s12,#s20,#s26,#s27,#s45,#s46,#s47
+#	  least_absolute_shrinkage	#s5,#s13,#s21,#s1,#s7,#s9,#s15,#s23,#s42
+#	  least_angle_regression	#s6,#s14,#s22,#s43
+#	    l2_penalty = 0.01		#s1,#s7,#s9,#s15,#s23
+#	  orthogonal_least_interpolation #s44
+	  variance_based_decomp #interaction_order = 1
+	  seed = 1234567
+#	  use_derivatives		#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17,#s18,#s19,#s20,#s21,#s22,#s23,#s27,#s30,#s31,#s32,#s35,#s36,#s37,#s38,#s39,#s47
+	  output verbose
+# 	  tensor_grid			#s45,#s46,#s47,#s48
+
+variables,
+	uniform_uncertain = 2
+	  lower_bounds = -2. -2.
+	  upper_bounds =  2.  2.
+	  descriptors  = 'x1' 'x2'		
+
+interface,
+	direct
+	analysis_driver = 'rosenbrock'		
+
+responses,
+	response_functions = 1
+	no_gradients			#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7,#s8,#s9,#s24,#s26,#s28,#s29,#s33,#s34,#s40,#s41,#s42,#s43,#s44,#s45,#s46
+#	analytic_gradients		#s10,#s11,#s12,#s13,#s14,#s15,#s16,#s17,#s18,#s19,#s20,#s21,#s22,#s23,#s25,#s27,#s30,#s31,#s32,#s35,#s36,#s37,#s38,#s39,#s47,#s48
+	no_hessians

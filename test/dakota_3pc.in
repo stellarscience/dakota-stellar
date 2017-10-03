@@ -1,0 +1,47 @@
+#@ s*: Label=FastTest
+#@ On Windows: abort; Unix shell; also refork
+#@ *: DakotaConfig=UNIX
+#@ *: DakotaConfig=HAVE_DOT
+# DAKOTA INPUT FILE - dakota_3pc.in
+
+# This tester populates a test matrix of fork/system vs. synch/asynch
+# for the 3 piece interface (Note: the temporary/named files testing
+# dimension is not available as it is in dakota_textbook.in due to the
+# use of tagged working directories within
+# dakota_3pc.if.sh/dakota_3pc.ac.sh/dakota_3pc.of.sh).
+
+method,
+        dot_mmfd
+	  max_iterations = 50,
+	  convergence_tolerance = 1e-4
+
+variables,
+	continuous_design = 2
+	  initial_point    0.9    1.1
+	  upper_bounds     5.8    2.9
+	  lower_bounds     0.5   -2.9
+	  descriptors      'x1'   'x2'
+
+interface,
+	fork					#s0,#s1,#s4
+#	system 					#s2,#s3,#s5
+#	  asynchronous				#s1,#s3
+	  input_filter    = 'dakota_3pc.if.sh'	#s0,#s1,#s2,#s3
+	  output_filter   = 'dakota_3pc.of.sh'	#s0,#s1,#s2,#s3
+	  analysis_driver = 'dakota_3pc.ac.sh'	#s0,#s1,#s2,#s3
+#	  input_filter    = 'dakota_3pc.if_verb.sh'	#s4,#s5
+#	  output_filter   = 'dakota_3pc.of_verb.sh'	#s4,#s5
+#	  analysis_driver = 'dakota_3pc.ac_verb.sh'	#s4,#s5
+	  parameters_file = 'tb.in'
+	  results_file    = 'tb.out'
+	  file_tag				#s0,#s1,#s2,#s3
+#	  verbatim				#s4,#s5
+
+responses,
+	objective_functions = 1
+	nonlinear_inequality_constraints = 2
+	numerical_gradients
+	  method_source dakota
+	  interval_type central
+	  fd_gradient_step_size = 1.e-4
+	no_hessians

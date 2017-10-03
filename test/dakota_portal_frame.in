@@ -1,0 +1,35 @@
+#@ s*: Label=FastTest
+# DAKOTA INPUT FILE : dakota_portal_frame.in
+
+# This file is a verification test for second-order integration.
+
+environment,
+	#graphics
+
+method,
+	local_reliability
+#	  mpp_search x_taylor_mpp
+#	  mpp_search u_taylor_mpp
+	  mpp_search no_approx
+#	  integration second_order		#s1,#s2,#s3
+          num_response_levels = 1
+	  response_levels = 0.0
+#	  complementary distribution		#s2
+
+variables,
+	lognormal_uncertain = 6
+       	  means          = 120. 120. 120. 120.  50.  40.
+	  std_deviations =  12.  12.  12.  12.  15.  12.
+	  descriptors    = 'x1' 'x2' 'x3' 'x4' 'x5' 'x6'
+
+interface,
+	system asynch
+	  analysis_driver = 'portal_frame'
+
+responses,
+	response_functions = 1
+	analytic_gradients
+	no_hessians				#s0
+#	analytic_hessians			#s1,#s2
+#	numerical_hessians			#s3
+#	quasi_hessians bfgs

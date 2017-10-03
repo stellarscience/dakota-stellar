@@ -1,0 +1,12 @@
+search      = trustpds 
+diff_option = forward
+maxiter     = 500
+pds.maxiter = 3
+maxfeval    = 1000000
+pds.maxfeval = 8
+grad_tol    = 1.e-6 
+pds.fcn_tol = .99
+max_step    = 4000.0
+fcn_accrcy  = 1.e-16
+sss         = 8
+debug       = false 

@@ -1,0 +1,54 @@
+#@ Diff in tests 7, 9, carried until we can aggregate final data recovery (fns in 1 eval, constraints in another)
+#@ *: Label=CarryDiff
+#@ s0: DakotaConfig=HAVE_NPSOL
+#@ s1: DakotaConfig=HAVE_NPSOL
+#@ s2: DakotaConfig=HAVE_NPSOL
+#@ s3: DakotaConfig=HAVE_DOT
+#@ s4: DakotaConfig=HAVE_DOT
+#@ s5: DakotaConfig=HAVE_DOT
+#@ s6: DakotaConfig=HAVE_DOT
+# DAKOTA INPUT FILE : dakota_cantilever.in
+
+# The cantilever test problem is primarily used in OUU testers.  This
+# input file computes the deterministic solution to the cantilever
+# problem when uncertainties are neglected.
+
+# This tester populates a test matrix of NPSOL/DOT/CONMIN/OPT++ vs.
+# dakota/vendor numerical gradients vs. forward/central differences.
+
+environment,
+#	  graphics
+	  tabular_data
+
+method,
+	npsol_sqp			#s0,#s1,#s2
+#	dot_sqp				#s3,#s4,#s5,#s6
+#	conmin_mfd			#s7,#s8,#s9
+#	optpp_q_newton			#s10,#s11,#s12,#s13
+	  convergence_tolerance = 1.e-8
+
+variables,
+	continuous_design = 2
+	  initial_point    4.0          4.0
+	  upper_bounds    10.0         10.0
+	  lower_bounds     1.0          1.0
+	  descriptors     'w' 't'
+        continuous_state = 4
+          initial_state   40000.  29.E+6  500.  1000.
+	  descriptors       'R'    'E'    'X'    'Y'
+
+interface,
+  direct
+#	system asynchronous evaluation_concurrency = 2
+	  analysis_driver = 'cantilever'
+
+responses,
+	objective_functions = 1
+	nonlinear_inequality_constraints = 2
+	numerical_gradients
+	  method_source dakota		#s0,#s1,#s3,#s4,#s7,#s8,#s10,#s11
+#	  method_source vendor		#s2,#s5,#s6,#s9,#s12,#s13
+	  interval_type forward		#s0,#s3,#s5,#s7,#s9,#s10,#s12
+#	  interval_type central		#s1,#s4,#s6,#s8,#s11,#s13
+	  fd_gradient_step_size = 1.e-4
+	no_hessians

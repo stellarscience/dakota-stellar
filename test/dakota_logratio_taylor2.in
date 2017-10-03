@@ -1,0 +1,56 @@
+#@ TODO REVIEW: Do all tests need NPSOL?
+#@ *: DakotaConfig=HAVE_NPSOL
+# DAKOTA INPUT FILE : dakota_logratio_taylor2.in
+
+# This file covers second-order reliability index approach (RIA) CDF
+# mappings from response_levels to probability_levels and second-order
+# performance measure approach (PMA) CDF mappings from these
+# probability_levels back to the original response_levels for MVSOSM,
+# x-/u-space AMV^2, x-/u-space AMV^2+, x-/u-space TANA, and SORM.
+
+environment,
+	graphics
+
+method,
+	local_reliability
+#	  mpp_search x_taylor_mean			#s1
+#	  mpp_search u_taylor_mean			#s2
+#	  mpp_search x_taylor_mpp			#s3,#s8,#s10,#s12
+#	  mpp_search u_taylor_mpp			#s4,#s9,#s11,#s13
+#	  mpp_search x_two_point			#s5
+#	  mpp_search u_two_point			#s6
+#	  mpp_search no_approx				#s7
+#	  nip
+#	  integration second_order #s3,#s4,#s5,#s6,#s7,#s8,#s9,#s10,#s11,#s12,#s13
+	  output verbose
+#	  response_levels = .4 .5 .55 .6 .65 .7
+#	   .75 .8 .85 .9 1. 1.05 1.15 1.2 1.25 1.3
+#	   1.35 1.4 1.5 1.55 1.6 1.65 1.7 1.75
+	  probability_levels =     .047624085968  .10346525476
+	   .13818404972 .17616275822 .21641741368 .25803428383
+	   .30020938126 .34226491011 .38365052981 .42393548231
+	   .50000004094 .53539344223 .60043460095 .63004131818
+	   .65773508977 .68356844621 .70761025526 .72994058685
+	   .76981945354 .78755158265 .80393505578 .81906005155
+	   .83301386856 .84588021936
+
+variables,
+	lognormal_uncertain = 2
+       	  means             =  1.  1
+	  std_deviations    =  0.5 0.5
+	  descriptors       =  'TF1ln'   'TF2ln'
+	uncertain_correlation_matrix =  1   0.3
+					0.3 1
+
+interface,
+	direct
+	  analysis_driver = 'log_ratio'
+
+responses,
+	response_functions = 1
+	analytic_gradients
+	analytic_hessians		#s0,#s1,#s2,#s3,#s4,#s5,#s6,#s7
+#	quasi_hessians bfgs #damped	#s12,#s13
+#	quasi_hessians sr1		#s10,#s11
+#	numerical_hessians		#s8,#s9
+#	  fd_hessian_step_size = 1.e-5	#s8,#s9

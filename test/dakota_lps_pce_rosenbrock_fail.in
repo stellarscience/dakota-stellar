@@ -1,0 +1,91 @@
+#@ s*: Label=FastTest
+environment,
+	#graphics
+	  method_pointer = 'OPTIM'
+
+###########################
+# begin opt specification #
+###########################
+method,
+	id_method = 'OPTIM'
+	model_pointer = 'OPTIM_M'
+        list_parameter_study
+#	  list_of_points = -2.0
+	  list_of_points = .9
+	  output silent
+#	npsol_sqp
+#	  convergence_tolerance = 1.e-6
+#	  output verbose
+
+model,
+	id_model = 'OPTIM_M'
+	nested
+	  variables_pointer  = 'OPTIM_V'
+	  sub_method_pointer = 'UQ'
+	  responses_pointer  = 'OPTIM_R'
+# maximize beta
+	  primary_response_mapping   = 0. 0. -1.
+
+variables,
+	id_variables = 'OPTIM_V'
+	continuous_design = 1
+#	  initial_point     = -0.75
+	  lower_bounds      = -2.
+	  upper_bounds      =  2.
+	  descriptors       = 'x1'
+
+responses,
+# NOTE: This specifies the TOTAL RESPONSE for the optimization,
+#       which is a combination of nested & interface responses.
+	id_responses = 'OPTIM_R'
+	objective_functions = 1
+	analytic_gradients
+	no_hessians
+
+##########################
+# begin UQ specification #
+##########################
+method,
+	id_method = 'UQ'
+	model_pointer = 'UQ_M'
+	polynomial_chaos
+	  quadrature_order = 5					#s0,#s1
+#	  collocation_ratio = 9 seed = 376287			#s2,#s3
+#	  expansion_order = 4			   		#s2,#s3
+#	  orthogonal_least_interpolation			#s4
+#	  collocation_points = 40				#s4
+# Inverse mapping:
+#	  reliability_levels = 3.
+# Forward mapping:
+	  response_levels = 10.
+	  compute reliabilities
+
+model,
+	id_model = 'UQ_M'
+	single
+	  variables_pointer = 'UQ_V'
+	  interface_pointer = 'UQ_I'
+	  responses_pointer = 'UQ_R'
+
+variables,
+	id_variables = 'UQ_V'
+#	active all				#s1,#s3,#s4
+	continuous_design = 1
+	normal_uncertain = 1
+      	  means             =  0.
+	  std_deviations    =  1.
+	  descriptors       = 'x2'
+
+interface,
+	id_interface = 'UQ_I'
+	direct					#s0,#s1
+	  analysis_driver = 'rosenbrock'	#s0,#s1
+#	fork		    			#s2,#s3,#s4
+#	  analysis_driver = 'rosenbrock_fail'	#s2,#s3,#s4
+
+responses,
+	id_responses = 'UQ_R'
+	response_functions = 1
+	analytic_gradients			#s0,#s2
+#	no_gradients				#s1,#s3,#s4
+	no_hessians
