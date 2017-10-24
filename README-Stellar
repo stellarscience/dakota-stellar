@@ -10,3 +10,4 @@ Users of Stellar Science Galaxy should check out the master branch and build a n
 following the instructions in the INSTALL file.  Take note of the following:
 * Ensure that the following packages are installed before running CMake: blas, blas-devel, lapack, lapack-devel, boost, boost-devel, gcc, gfortran.
 * In BuildDakotaCustom.cmake, set DAKOTA_HAVE_MPI to OFF, and give an appropriate value to CMAKE_INSTALL_PREFIX.
+* Setting LD_LIBRARY_PATH is not necessary, as the master branch includes a back-port of Dakota 6.6's RPATH support.

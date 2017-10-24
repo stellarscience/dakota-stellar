@@ -198,6 +198,14 @@ if(DAKOTA_DISTRO LESS ${DAKOTA_InternalWeb})
     "${Dakota_SOURCE_DIR}/local/packages/NPSOL")
 endif()
 
+# RPATH settings 
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH TRUE CACHE BOOL "Add @rpath to library install names")
+  set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../lib" 
+    CACHE STRING "Set the RPATH in Dakota executables and libraries")
+elseif(UNIX)
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN:\$ORIGIN/../lib")
+endif()
 
 # Manage developer convenience options (experimental)
 if(DevDebug)
