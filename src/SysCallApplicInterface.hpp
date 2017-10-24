@@ -17,6 +17,7 @@
 
 #include "ProcessApplicInterface.hpp"
 
+#include "PollingSchedule.hpp"
 
 namespace Dakota {
 
@@ -84,7 +85,10 @@ private:
   IntSet sysCallSet;
     
   /// map linking function evaluation id's to number of response read failures
-  IntShortMap failCountMap; 
+  IntShortMap failCountMap;
+
+  /// Dynamic polling schedule to use when polling for result file to appear.
+  PollingSchedule pollingSchedule;
 };
 
 
@@ -100,6 +104,7 @@ inline SysCallApplicInterface::~SysCallApplicInterface()
     evals. - and starve some servers). */
 inline void SysCallApplicInterface::wait_local_evaluations(PRPQueue& prp_queue)
 {
+  pollingSchedule.reset();
   while (completionSet.empty()) // complete at least one job
     test_local_evaluations(prp_queue);
 }

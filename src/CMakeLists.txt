@@ -485,7 +485,8 @@ set(interface_src DakotaInterface.cpp ApproximationInterface.cpp
     SharedPecosApproxData.cpp
     ApplicationInterface.cpp ProcessApplicInterface.cpp
     ProcessHandleApplicInterface.cpp SysCallApplicInterface.cpp
-    CommandShell.cpp DirectApplicInterface.cpp TestDriverInterface.cpp)
+    CommandShell.cpp DirectApplicInterface.cpp TestDriverInterface.cpp
+    PollingSchedule.cpp)
 if(HAVE_SYS_WAIT_H AND HAVE_UNISTD_H)
   list(APPEND interface_src ForkApplicInterface.cpp)
 elseif(WIN32)

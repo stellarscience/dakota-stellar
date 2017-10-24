@@ -255,6 +255,8 @@ void OutputManager::output_version(std::ostream& os) const
       + " built " + DakotaBuildInfo::get_build_date()
       + " " + DakotaBuildInfo::get_build_time() + ".";
 
+    version_info += "\nIncludes Stellar Science customizations.";
+    
     os << version_info << std::endl;
   }
 }

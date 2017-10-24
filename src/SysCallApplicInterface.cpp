@@ -34,7 +34,8 @@ namespace Dakota {
 
 SysCallApplicInterface::
 SysCallApplicInterface(const ProblemDescDB& problem_db):
-  ProcessApplicInterface(problem_db)
+  ProcessApplicInterface(problem_db),
+  pollingSchedule(100, 10, 2)
 { }
 
 
@@ -225,12 +226,7 @@ void SysCallApplicInterface::test_local_evaluations(PRPQueue& prp_queue)
 
   // reduce processor load from DAKOTA testing if jobs are not finishing
   if (completionSet.empty()) { // no jobs completed in pass through entire set
-    // Test for MinGW first, since there we have usleep as well
-#if defined(_WIN32) || defined(_MSC_VER) || defined(__MINGW32__)
-    Sleep(1);     // 1 millisecond
-#elif defined(HAVE_USLEEP)
-    usleep(1000); // 1000 microseconds = 1 millisec
-#endif // SLEEP
+    pollingSchedule.sleep();
   }
   // remove completed jobs from sysCallSet
   for (ISCIter it = completionSet.begin(); it != completionSet.end(); ++it)
@@ -320,7 +316,16 @@ void SysCallApplicInterface::spawn_evaluation_to_shell(bool block_flag)
 		s1 += wd_strlen + 1;
       shell << " " << s1;
       if (num_programs > 1)     // append program cntr to resultsFileName
-	shell << prog_num;
+          shell << prog_num;
+
+        // Stellar Science:
+        // Pass an extra argument to the analysis driver indicating whether
+        // it should execute in blocking or nonblocking mode.
+        if (block_flag) {
+          shell << " 1";
+        } else {
+          shell << " 0";
+        }
     }
     if (i != num_programs-1)
       shell << "; ";
@@ -335,10 +340,16 @@ void SysCallApplicInterface::spawn_evaluation_to_shell(bool block_flag)
   if (needparen)
   	shell << ")"; // wasteful: needless extra shell layer
 
-  // Process definition complete; now set the shell's asynchFlag and
-  // suppressOutputFlag from the incoming block_flag & the interface's
-  // suppressOutput and spawn the process.
-  shell.asynch_flag(!block_flag);
+  // // Process definition complete; now set the shell's asynchFlag and
+  // // suppressOutputFlag from the incoming block_flag & the interface's
+  // // suppressOutput and spawn the process.
+
+  // Stellar Science:
+  // Always run the dakotaClient process synchronously, so that only one
+  // point at a time is submitted to the server. The evaluation process may
+  // still be either synchronous or asynchronous, as determined by the
+  // additional flag passed to dakotaClient above.
+  shell.asynch_flag(false);
   shell.suppress_output_flag(suppressOutput);
 
   prepare_process_environment();
