@@ -104,7 +104,7 @@ public:
   MixedIntVars(const MixedIntVars& obj)
      : PackObject(obj), 
        a(0)
-   { (void)registrations_complete; *this = obj; }
+   { (void)&registrations_complete; *this = obj; }
 
   /// Destructor.
   virtual ~MixedIntVars()

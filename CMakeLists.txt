@@ -1,5 +1,5 @@
-## Dakota requires CMake 2.8.9 or newer; some TPLs may require even newer
-cmake_minimum_required(VERSION 2.8.9)
+## Dakota requires CMake 2.8.12 or newer; some TPLs may require even newer
+cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
@@ -13,7 +13,7 @@ project("Dakota" NONE)
 
 # DAKOTA versions for packaging
 set(Dakota_VERSION_MAJOR 6)
-set(Dakota_VERSION_MINOR 5)
+set(Dakota_VERSION_MINOR 6)
 set(Dakota_VERSION_PATCH 0)
 # TODO?: set(Dakota_VERSION_TWEAK SVNREV)
 set(Dakota_VERSION_PAIR
@@ -29,8 +29,8 @@ set(Dakota_VERSION_APPEND_STABLE "")   # Versioned release
 # --- Release time toggle 
 # If empty, the build date will be used as the release date (could consider 
 # using the SVN rev date); use format Mmm dd yyyy, as in asctime()
-#set(Dakota_RELEASE_DATE "May 15 2015")    # Versioned release date Mmm dd yyyy
-set(Dakota_RELEASE_DATE "")               # Stable release: empty -> build date 
+set(Dakota_RELEASE_DATE "May 15 2016")    # Versioned release date Mmm dd yyyy
+#set(Dakota_RELEASE_DATE "")               # Stable release: empty -> build date 
 
 # Dakota version to use for naming archives
 set(Dakota_VERSION_STRING "${Dakota_VERSION_MAJOR}.${Dakota_VERSION_MINOR}.${Dakota_VERSION_PATCH}${Dakota_VERSION_APPEND_STABLE}")
@@ -44,6 +44,15 @@ else()
   set(Dakota_VERSION_SRC 
     "${Dakota_VERSION_PAIR}${Dakota_VERSION_APPEND_STABLE}")
 endif()
+
+# Location for generated files
+execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory
+  "${Dakota_BINARY_DIR}/generated")
+# TODO: Consistent generated file locations and directory creation.  For now:
+execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory
+  "${Dakota_BINARY_DIR}/generated/src")
+execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory
+  "${Dakota_BINARY_DIR}/generated/VERSION")
 
 # Buiding in an SVN checkout or a source package? 
 set(DAKOTA_VERSION_file_path)
@@ -197,6 +206,16 @@ if(DAKOTA_DISTRO LESS ${DAKOTA_InternalWeb})
   file(REMOVE_RECURSE "${Dakota_SOURCE_DIR}/local/packages/NLPQL"
     "${Dakota_SOURCE_DIR}/local/packages/NPSOL")
 endif()
+
+# RPATH settings 
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH TRUE CACHE BOOL "Add @rpath to library install names")
+  set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../lib" 
+    CACHE STRING "Set the RPATH in Dakota executables and libraries")
+elseif(UNIX)
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN:\$ORIGIN/../lib")
+endif()
+
 
 
 # Manage developer convenience options (experimental)
@@ -520,7 +539,6 @@ if (ENABLE_SPEC_MAINT OR ENABLE_DAKOTA_DOCS OR DAKOTA_API_JAVA)
   endif()
   include(UseJava)
 endif()
-
 
 add_subdirectory(src)
 # Build the executables in the test directory even if BUILD_TESTING is OFF

@@ -173,6 +173,13 @@ protected:
 			 UShort2DArray& aggregated_mi,
 			 bool monotonic = true, bool save_map = true);
 
+  /// Precompute a maximal order of quadrature rules (based on a
+  /// multiIndex) when too expensive to compute on demand
+  void precompute_maximal_rules(const UShort2DArray& multi_index);
+  /// Precompute a maximal order of quadrature rules (based on an
+  /// approxOrder) when too expensive to compute on demand
+  void precompute_maximal_rules(const UShortArray& approx_order);
+
   /// allocate sobolIndexMap from multi_index
   void allocate_component_sobol(const UShort2DArray& multi_index);
   /// update sobolIndexMap using new multi_index terms (from multifidelity

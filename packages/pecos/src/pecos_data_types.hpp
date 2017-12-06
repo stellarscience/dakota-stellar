@@ -613,6 +613,26 @@ void write_data(std::ostream& s,
 }
 
 
+/// ostream insertion operator for a column vector from a SerialDenseMatrix
+template <typename OrdinalType, typename ScalarType>
+void write_data_trans(std::ostream& s, 
+  const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv,
+  bool brackets, bool row_rtn, bool final_rtn)
+{
+  OrdinalType i, num_items = sdv.length();
+  s << std::scientific << std::setprecision(WRITE_PRECISION);
+  if (brackets) s << " [ ";
+  else          s << "   ";
+  for (i=0; i<num_items; ++i) {
+    s << std::setw(WRITE_PRECISION+7) << sdv[i] << ' ';
+    if (row_rtn && (i+1)%4 == 0)
+      s << "\n   "; // Output 4 gradient components per line
+  }
+  if (brackets)  s << "] ";
+  if (final_rtn) s << '\n';
+}
+
+
 /// global std::ostream insertion operator for std::vector
 template <typename T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)

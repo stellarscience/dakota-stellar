@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -67,6 +67,12 @@ public:
   //@{
   //! Determines whether each one of the subsets m_sets (class' private attributes) contains vector \c vec.
   bool contains(const V& vec)     const;
+
+  //! Returns the set centroid in the vector \c vec.
+  virtual       void                     centroid   (V& vec)     const;
+
+  //! Returns the set moments of inertia in the matrix \c mat.
+  virtual       void                     moments (M & mat)     const;
   //@}
 
   //! @name I/O methods.

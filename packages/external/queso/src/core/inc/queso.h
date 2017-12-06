@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -29,30 +29,23 @@
 #ifndef QUESO_H_
 #define QUESO_H_
 
+#warning Header queso.h is deprecated; use config_queso.h instead.
+
+#include "config_queso.h"
+
 // Library version/build info
 
-#define QUESO_MAJOR_VERSION  0
-#define QUESO_MINOR_VERSION  54
-#define QUESO_MICRO_VERSION  0
+// Deprecated backward-compatible duplicate definitions, now derived
+// from config_queso.h
 
-#define QUESO_BUILD_USER     "briadam"
-#define QUESO_BUILD_ARCH     "x86_64-unknown-linux-gnu"
-#define QUESO_BUILD_HOST     "rem.sandia.gov"
-#define QUESO_BUILD_DATE     "2015-10-08 14:14"
-#define QUESO_BUILD_VERSION  "547efb1"
+#ifndef QUESO_LIB_VERSION
+#define QUESO_LIB_VERSION QUESO_VERSION
+#warning QUESO_LIB_VERSION is deprecated; use QUESO_VERSION instead.
+#endif
 
-#define QUESO_LIB_VERSION    "0.54.0"
-#define QUESO_LIB_RELEASE    "Development Build"
-
-#define QUESO_CXX            "mpic++"
-#define QUESO_CXXFLAGS       "-g -O2 -Wall"
-
-// External libraries
-
-#define QUESO_TRILINOS_DIR  ""
-#define QUESO_GSL_DIR       "-L/apps/gsl/1.15/lib -lgsl -lgslcblas -lm"
-#define QUESO_GRVY_DIR      ""
-#define QUESO_GLPK_DIR      ""
-#define QUESO_HDF5_DIR      ""
+#ifndef QUESO_LIB_RELEASE
+#define QUESO_LIB_RELEASE QUESO_BUILD_DEVSTATUS
+#warning QUESO_LIB_RELEASE is deprecated; use QUESO_BUILD_DEVSTATUS instead.
+#endif
 
 #endif

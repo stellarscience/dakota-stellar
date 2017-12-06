@@ -44,7 +44,11 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       UShortArray int_order(numVars);
       quadrature_order_to_integrand_order(driverRep, quad_order, int_order);
       integrand_order_to_expansion_order(int_order, approxOrder);
-      tensor_product_multi_index(approxOrder, multiIndex);
+      tensor_product_multi_index(approxOrder, multiIndex); // include upper bnd
+
+      // precomputation performed by tpqDriver prior to allocate_data()
+      //precompute_maximal_rules(approxOrder);
+
       allocate_component_sobol(multiIndex);
       quadOrderPrev = quad_order;
     }
@@ -73,6 +77,10 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
       integrand_order_to_expansion_order(integrand_order, approxOrder);
       total_order_multi_index(approxOrder, multiIndex);
+
+      // See special logic in CubatureDriver::compute_grid() for GOLUB_WELSCH
+      //precompute_maximal_rules(approxOrder);
+
       allocate_component_sobol(multiIndex);
       //cubIntOrderPrev = cub_int_order; // update reference point
     //}
@@ -96,6 +104,10 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 
     if (update_exp_form) {
       sparse_grid_multi_index(csg_driver, multiIndex);
+
+      // precomputation performed by ssgDriver prior to allocate_data()
+      //precompute_maximal_rules(multiIndex);
+
       allocate_component_sobol(multiIndex);
       ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     }

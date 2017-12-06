@@ -42,14 +42,9 @@ extern void nidr_parse(const char*, FILE*);
 extern int nidr_save_exedir(const char*, int);
 extern FILE *nidrin;
 
- static char *progname, version[];
+ static char *progname;
 
- static int
-report_version(void)
-{
-	printf("%s", version+1);
-	return 0;
-	}
+ static int report_version(void);
 
  static int
 usage(int rc)
@@ -169,6 +164,13 @@ KeyWord Dakota_Keyword_Top = {"KeywordTop"};
 #include "NIDR_keywds0.h"
  static char version[] = "\ndakreorder version " NSPEC_DATE "\n";
 #endif
+
+ static int
+report_version(void)
+{
+	printf("%s", version+1);
+	return 0;
+	}
 
  static void*
 Malloc(size_t len)

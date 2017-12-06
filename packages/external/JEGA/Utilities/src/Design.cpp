@@ -368,9 +368,9 @@ Design::DoAllocation(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    if(this->GetNDV() > 0) this->_variables = new double[this->GetNDV()];
-    if(this->GetNOF() > 0) this->_objectives = new double[this->GetNOF()];
-    if(this->GetNCN() > 0) this->_constraints = new double[this->GetNCN()];
+    if(this->GetNDV() > 0) this->_variables = new double[this->GetNDV()]();
+    	if(this->GetNOF() > 0) this->_objectives = new double[this->GetNOF()]();
+    if(this->GetNCN() > 0) this->_constraints = new double[this->GetNCN()]();
 }
 
 

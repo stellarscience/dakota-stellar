@@ -1,5 +1,3 @@
-#include <iostream>
-#include <cmath>
 #include <queso/asserts.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
@@ -10,6 +8,10 @@
 #include <queso/GenericVectorRV.h>
 #include <queso/GslOptimizer.h>
 #include <queso/StatisticalInverseProblem.h>
+
+#include <cmath>
+#include <cstdlib>
+#include <iostream>
 
 template <class V, class M>
 class Likelihood : public QUESO::BaseScalarFunction<V, M> {
@@ -22,29 +24,31 @@ public:
 
   virtual double actualValue(const V & domainVector, const V * domainDirection,
       V * gradVector, M * hessianMatrix, V * hessianEffect) const {
-    return std::exp(this->actualValue(domainVector, domainDirection,
-          gradVector, hessianMatrix, hessianEffect));
+    return std::exp(this->lnValue(domainVector));
   }
 
-  virtual double lnValue(const V & domainVector, const V * domainDirection,
-      V * gradVector, M * hessianMatrix, V * hessianEffect) const {
+  virtual double lnValue(const V & domainVector) const {
+    return -domainVector[0] * domainVector[0];
+  }
 
-    // Need to check if NULL because QUESO will somtimes call this with a
-    // NULL pointer
-    if (gradVector != NULL) {
-      (*gradVector)[0] = -2.0 * domainVector[0];
-    }
+  virtual double lnValue(const V & domainVector, V & gradVector) const {
+    gradVector[0] = -2.0 * domainVector[0];
 
-    return -(domainVector[0] * domainVector[0]);
+    return this->lnValue(domainVector);
   }
 };
 
 int main(int argc, char ** argv) {
+  std::string inputFileName = "test_optimizer/input_test_optimizer_options";
+  const char * test_srcdir = std::getenv("srcdir");
+  if (test_srcdir)
+    inputFileName = test_srcdir + ('/' + inputFileName);
+
 #ifdef QUESO_HAS_MPI
   MPI_Init(&argc, &argv);
-  QUESO::FullEnvironment env(MPI_COMM_WORLD, "test_optimizer/input_test_optimizer_options", "", NULL);
+  QUESO::FullEnvironment env(MPI_COMM_WORLD, inputFileName, "", NULL);
 #else
-  QUESO::FullEnvironment env("test_optimizer/input_test_optimizer_options", "", NULL);
+  QUESO::FullEnvironment env(inputFileName, "", NULL);
 #endif
 
   QUESO::VectorSpace<QUESO::GslVector, QUESO::GslMatrix> paramSpace(env,

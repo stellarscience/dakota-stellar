@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -22,15 +22,22 @@
 //
 //-----------------------------------------------------------------------el-
 
-#include <boost/program_options.hpp>
-
-#include <queso/queso.h>
 #include <queso/Environment.h>
+
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#include <boost/program_options.hpp>
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+
+#include <queso/getpot.h>
+
+#include <queso/config_queso.h>
 #include <queso/EnvironmentOptions.h>
 #include <queso/RngGsl.h>
 #include <queso/RngBoost.h>
+#include <queso/RngCXX11.h>
 #include <queso/BasicPdfsGsl.h>
 #include <queso/BasicPdfsBoost.h>
+#include <queso/BasicPdfsCXX11.h>
 #include <queso/Miscellaneous.h>
 #include <sys/time.h>
 #ifdef HAVE_GRVY
@@ -51,10 +58,10 @@ namespace QUESO {
     {
       os << "------------------------------------------------------------------------------------------" ;
       os << "--------------------" << std::endl;
-      os << "QUESO Library: Version = " << QUESO_LIB_VERSION;
+      os << "QUESO Library: Version = " << QUESO_VERSION;
       os << " (" << QUESO_get_numeric_version() << ")" << std::endl << std::endl;
 
-      os << QUESO_LIB_RELEASE << std::endl << std::endl;
+      os << QUESO_BUILD_DEVSTATUS << std::endl << std::endl;
 
       os << "Build Date   = " << QUESO_BUILD_DATE     << std::endl;
       os << "Build Host   = " << QUESO_BUILD_HOST     << std::endl;
@@ -112,11 +119,17 @@ FilePtrSetStruct::FilePtrSetStruct()
   :
   ofsVar(NULL),
   ifsVar(NULL)
+#ifdef QUESO_HAS_HDF5
+  ,  // lol
+  h5Var(-1)
+#endif
 {
+  queso_deprecated();
 }
 
 FilePtrSetStruct::~FilePtrSetStruct()
 {
+  queso_deprecated();
 }
 
   //
@@ -135,28 +148,76 @@ BaseEnvironment::BaseEnvironment(
   :
   m_fullEnvIsReady             (false),
   m_worldRank                  (-1),
-  m_fullComm                   (NULL),
+  m_fullComm                   (),
   m_fullRank                   (-1),
   m_fullCommSize               (1),
   m_optionsInputFileName       (""),
   m_optionsInputFileAccessState(true),
-  m_allOptionsDesc             (NULL),
-  m_allOptionsMap              (NULL),
-  m_subComm                    (NULL),
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+  m_allOptionsDesc             (),
+  m_allOptionsMap              (),
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+  m_input                      (new GetPot),
+  m_subComm                    (),
   m_subRank                    (-1),
   m_subCommSize                (1),
-  m_selfComm                   (NULL),
-  m_inter0Comm                 (NULL),
+  m_selfComm                   (),
+  m_inter0Comm                 (),
   m_inter0Rank                 (-1),
   m_inter0CommSize             (1),
-  m_subDisplayFile             (NULL),
-  m_rngObject                  (NULL),
-  m_basicPdfs                  (NULL),
+  m_subDisplayFile             (),
+  m_rngObject                  (),
+  m_basicPdfs                  (),
   m_exceptionalCircumstance    (false),
-  m_optionsObj                 (alternativeOptionsValues)
+  m_optionsObj                 ()
 {
   if (passedOptionsInputFileName) m_optionsInputFileName     = passedOptionsInputFileName;
+
+  // If the user passed in an options object pointer, we really shouldn't let
+  // ScopedPtr delete their object, so we make a copy.  That way, the dtor
+  // will kill this local copy and leave the user's object in tact.
+  if (alternativeOptionsValues != NULL) {
+    m_optionsObj.reset(new EnvOptionsValues(*alternativeOptionsValues));
+  }
 }
+
+BaseEnvironment::BaseEnvironment(
+  const std::string&             passedOptionsInputFileName,
+  EnvOptionsValues* alternativeOptionsValues)
+  :
+  m_fullEnvIsReady             (false),
+  m_worldRank                  (-1),
+  m_fullComm                   (),
+  m_fullRank                   (-1),
+  m_fullCommSize               (1),
+  m_optionsInputFileName       (passedOptionsInputFileName),
+  m_optionsInputFileAccessState(true),
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+  m_allOptionsDesc             (),
+  m_allOptionsMap              (),
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+  m_input                      (new GetPot),
+  m_subComm                    (),
+  m_subRank                    (-1),
+  m_subCommSize                (1),
+  m_selfComm                   (),
+  m_inter0Comm                 (),
+  m_inter0Rank                 (-1),
+  m_inter0CommSize             (1),
+  m_subDisplayFile             (),
+  m_rngObject                  (),
+  m_basicPdfs                  (),
+  m_exceptionalCircumstance    (false),
+  m_optionsObj                 ()
+{
+  // If the user passed in an options object pointer, we really shouldn't let
+  // ScopedPtr delete their object, so we make a copy.  That way, the dtor
+  // will kill this local copy and leave the user's object in tact.
+  if (alternativeOptionsValues != NULL) {
+    m_optionsObj.reset(new EnvOptionsValues(*alternativeOptionsValues));
+  }
+}
+
 // Destructor -------------------------------------------
 BaseEnvironment::~BaseEnvironment()
 {
@@ -169,41 +230,26 @@ BaseEnvironment::~BaseEnvironment()
   /*int iRC = 0;*/
   /*iRC = */gettimeofday(&timevalNow, NULL);
 
-  if( this->displayVerbosity() > 0 )
-    {
-     if (m_subDisplayFile) {
-	*m_subDisplayFile << "Ending run at "    << ctime(&timevalNow.tv_sec)
-			  << "Total run time = " << timevalNow.tv_sec - m_timevalBegin.tv_sec
-			  << " seconds"
-			  << std::endl;
-      }
-
-    if (m_fullRank == 0) {
-	std::cout << "Ending run at "    << ctime(&timevalNow.tv_sec)
-		  << "Total run time = " << timevalNow.tv_sec - m_timevalBegin.tv_sec
-		  << " seconds"
-		  << std::endl;
-      }
+  if (this->displayVerbosity() > 0) {
+    if (m_subDisplayFile) {
+       *m_subDisplayFile << "Ending run at "    << ctime(&timevalNow.tv_sec)
+                         << "Total run time = " << timevalNow.tv_sec - m_timevalBegin.tv_sec
+                         << " seconds"
+                         << std::endl;
     }
 
-  if (m_allOptionsMap) {
-    delete m_allOptionsMap;
-    delete m_allOptionsDesc;
-  }
-
-  if (m_basicPdfs) delete m_basicPdfs;
-  if (m_rngObject) delete m_rngObject;
+    if (m_fullRank == 0) {
+      std::cout << "Ending run at "    << ctime(&timevalNow.tv_sec)
+                << "Total run time = " << timevalNow.tv_sec - m_timevalBegin.tv_sec
+                << " seconds"
+                << std::endl;
+      }
+    }
 
   //if (m_subDisplayFile) {
   //  *m_subDisplayFile << "Leaving BaseEnvironment::destructor()"
   //                          << std::endl;
   //}
-
-  if (m_subDisplayFile) delete m_subDisplayFile;
-  if (m_inter0Comm    ) delete m_inter0Comm;
-  if (m_selfComm      ) delete m_selfComm;
-  if (m_subComm       ) delete m_subComm;
-  if (m_fullComm      ) delete m_fullComm;
 }
 // Environment, Communicator and Options Input File methods
 bool
@@ -273,7 +319,8 @@ BaseEnvironment::inter0Comm() const
 std::ofstream*
 BaseEnvironment::subDisplayFile() const
 {
-  return m_subDisplayFile;
+  // Potentially dangerous?  The user might delete it...
+  return m_subDisplayFile.get();
 }
 //-------------------------------------------------------
 std::string
@@ -322,6 +369,7 @@ BaseEnvironment::setOptionsInputFileAccessState(bool newState) const
   return;
 }
 //-------------------------------------------------------
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 #ifdef UQ_USES_COMMAND_LINE_OPTIONS
 const boost::program_options::options_description&
 BaseEnvironment::allOptionsDesc() const
@@ -331,7 +379,9 @@ BaseEnvironment::allOptionsDesc() const
   return *m_allOptionsDesc;
 }
 #endif
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 //-------------------------------------------------------
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 boost::program_options::variables_map&
 BaseEnvironment::allOptionsMap() const
 {
@@ -340,7 +390,9 @@ BaseEnvironment::allOptionsMap() const
   queso_require_msg(m_allOptionsMap, "m_allOptionsMap variable is NULL");
   return *m_allOptionsMap;
 }
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 //-------------------------------------------------------
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 void
 BaseEnvironment::scanInputFileForMyOptions(const boost::program_options::options_description& optionsDesc) const
 {
@@ -369,7 +421,8 @@ BaseEnvironment::scanInputFileForMyOptions(const boost::program_options::options
   //                    << std::endl;
   //}
 
-  queso_require_not_equal_to_msg(m_optionsInputFileName, "", "m_optionsInputFileName is 'nothing'");
+  queso_require_not_equal_to_msg(m_optionsInputFileName, std::string(""),
+                                 std::string("m_optionsInputFileName is 'nothing'"));
   //std::ifstream ifs(m_optionsInputFileName.c_str());
   std::ifstream* ifs = new std::ifstream(m_optionsInputFileName.c_str());
 #ifdef QUESO_MEMORY_DEBUGGING
@@ -391,6 +444,7 @@ BaseEnvironment::scanInputFileForMyOptions(const boost::program_options::options
 
   return;
 }
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 //-----------------------------------------------------
 unsigned int
 BaseEnvironment::displayVerbosity() const
@@ -416,7 +470,7 @@ BaseEnvironment::checkingLevel() const
 const RngBase*
 BaseEnvironment::rngObject() const
 {
-  return m_rngObject;
+  return m_rngObject.get();
 }
 //-------------------------------------------------------
 int
@@ -435,7 +489,7 @@ BaseEnvironment::resetSeed(int newSeedOption)
 const BasicPdfsBase*
 BaseEnvironment::basicPdfs() const
 {
-  return m_basicPdfs;
+  return m_basicPdfs.get();
 }
 //-------------------------------------------------------
 std::string
@@ -600,9 +654,22 @@ BaseEnvironment::openOutputFile(
           filePtrSet.ofsVar = new std::ofstream((baseFileName+"_sub"+this->subIdString()+"."+fileType).c_str(),
                                                 std::ofstream::out /*| std::ofstream::in*/ | std::ofstream::app);
         }
+#ifdef QUESO_HAS_HDF5
         else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
-          queso_error_msg("hdf file type not supported yet");
+          std::string fullFileName =
+            baseFileName+"_sub"+this->subIdString()+"."+fileType;
+
+          // Use H5F_ACC_EXCL because not overwriting, so fail on existing file
+          filePtrSet.h5Var = H5Fcreate(fullFileName.c_str(),
+                                       H5F_ACC_EXCL,
+                                       H5P_DEFAULT,
+                                       H5P_DEFAULT);
+
+          queso_require_greater_equal_msg(
+              filePtrSet.h5Var, 0,
+              "error opening file `" << fullFileName << "`");
         }
+#endif
         else {
           queso_error_msg("invalid file type");
         }
@@ -637,23 +704,14 @@ BaseEnvironment::openOutputFile(
           }
         } // only for matlab formats
       }
-      if (filePtrSet.ofsVar != NULL) {
-        if ((m_subDisplayFile) && (this->displayVerbosity() > 10)) { // output debug
-          *this->subDisplayFile() << "In BaseEnvironment::openOutputFile()"
-                                  << ", subId = "     << this->subId()
-                                  << ": succeeded on opening output file with base name '" << baseFileName << "." << fileType
-                                  << "'"
-                                  << ", writeOver = " << writeOver
-                                  << std::endl;
-        }
+
+      // Check the file actually opened
+      if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
+          (fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT)) {
+        queso_require_msg(
+            (filePtrSet.ofsVar && filePtrSet.ofsVar->is_open()),
+            "failed to open output file");
       }
-      else {
-        std::cerr << "In BaseEnvironment::openOutputFile()"
-                  << ": failed to open output file with base name '" << baseFileName << "." << fileType
-                  << "'"
-                  << std::endl;
-      }
-      queso_require_msg((filePtrSet.ofsVar && filePtrSet.ofsVar->is_open()), "failed to open output file");
     }
     else {
       returnValue = false;
@@ -1087,6 +1145,12 @@ BaseEnvironment::exceptionalCircumstance() const
   return m_exceptionalCircumstance;
 }
 
+const GetPot &
+BaseEnvironment::input() const
+{
+  return *m_input;
+}
+
 
 //*****************************************************
 // Empty Environment
@@ -1120,6 +1184,24 @@ FullEnvironment::FullEnvironment(
   :
   BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
 {
+  this->construct(inputComm, prefix);
+}
+
+FullEnvironment::FullEnvironment(
+  RawType_MPI_Comm             inputComm,
+  const std::string&           passedOptionsInputFileName,
+  const std::string&           prefix,
+  EnvOptionsValues* alternativeOptionsValues)
+  :
+  BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
+{
+  this->construct(inputComm, prefix.c_str());
+}
+
+void
+FullEnvironment::construct (RawType_MPI_Comm inputComm,
+                            const char *prefix)
+{
 #ifdef QUESO_MEMORY_DEBUGGING
   std::cout << "Entering FullEnv" << std::endl;
 #endif
@@ -1130,7 +1212,7 @@ FullEnvironment::FullEnvironment(
   int mpiRC = MPI_Comm_rank(inputComm,&m_worldRank);
   queso_require_equal_to_msg(mpiRC, MPI_SUCCESS, "failed to get world fullRank()");
 
-  m_fullComm = new MpiComm(*this,inputComm);
+  m_fullComm.reset(new MpiComm(*this,inputComm));
 
   m_fullRank     = m_fullComm->MyPID();
   m_fullCommSize = m_fullComm->NumProc();
@@ -1150,20 +1232,20 @@ FullEnvironment::FullEnvironment(
   //////////////////////////////////////////////////
   // If NULL, we create one
   if (m_optionsObj == NULL) {
-    EnvOptionsValues * tempOptions = new EnvOptionsValues(this, prefix);
-
     // If there's an input file, we grab the options from there.  Otherwise the
     // defaults are used
     if (m_optionsInputFileName != "") {
-      m_allOptionsMap  = new boost::program_options::variables_map();
-      m_allOptionsDesc = new boost::program_options::options_description("Allowed options");
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+      m_allOptionsMap.reset(new boost::program_options::variables_map());
+      m_allOptionsDesc.reset(new boost::program_options::options_description("Allowed options"));
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
       readOptionsInputFile();
+
+      m_input->parse_input_file(m_optionsInputFileName);
     }
 
-    // We did this dance because scanOptionsValues is not a const method, but
-    // m_optionsObj is a pointer to const
-    m_optionsObj = tempOptions;
+    m_optionsObj.reset(new EnvOptionsValues(this, prefix));
   }
 
   // If help option was supplied, print info
@@ -1227,14 +1309,14 @@ FullEnvironment::FullEnvironment(
   RawType_MPI_Comm subRawComm;
   mpiRC = MPI_Comm_create(m_fullComm->Comm(), m_subGroup, &subRawComm);
   queso_require_equal_to_msg(mpiRC, MPI_SUCCESS, "failed MPI_Comm_group() for a subEnvironment");
-  m_subComm = new MpiComm(*this,subRawComm);
+  m_subComm.reset(new MpiComm(*this,subRawComm));
   m_subRank     = m_subComm->MyPID();
   m_subCommSize = m_subComm->NumProc();
 
   //////////////////////////////////////////////////
   // Deal with multiple subEnvironments: create the self communicator
   //////////////////////////////////////////////////
-  m_selfComm = new MpiComm(*this,RawValue_MPI_COMM_SELF);
+  m_selfComm.reset(new MpiComm(*this,RawValue_MPI_COMM_SELF));
 
   //////////////////////////////////////////////////
   // Deal with multiple subEnvironments: create the inter0 communicator
@@ -1249,7 +1331,7 @@ FullEnvironment::FullEnvironment(
   mpiRC = MPI_Comm_create(m_fullComm->Comm(), m_inter0Group, &inter0RawComm);
   queso_require_equal_to_msg(mpiRC, MPI_SUCCESS, "failed MPI_Comm_group() for inter0");
   if (m_fullRank%numRanksPerSubEnvironment == 0) {
-    m_inter0Comm = new MpiComm(*this,inter0RawComm);
+    m_inter0Comm.reset(new MpiComm(*this,inter0RawComm));
     m_inter0Rank     = m_inter0Comm->MyPID();
     m_inter0CommSize = m_inter0Comm->NumProc();
   }
@@ -1292,8 +1374,8 @@ FullEnvironment::FullEnvironment(
     //////////////////////////////////////////////////////////////////
     // Always write over an eventual pre-existing file
     //////////////////////////////////////////////////////////////////
-    m_subDisplayFile = new std::ofstream((m_optionsObj->m_subDisplayFileName+"_sub"+m_subIdString+".txt").c_str(),
-                                         std::ofstream::out | std::ofstream::trunc);
+    m_subDisplayFile.reset(new std::ofstream((m_optionsObj->m_subDisplayFileName+"_sub"+m_subIdString+".txt").c_str(),
+                                         std::ofstream::out | std::ofstream::trunc));
     queso_require_msg((m_subDisplayFile && m_subDisplayFile->is_open()), "failed to open sub screen file");
 
     QUESO_version_print(*m_subDisplayFile);
@@ -1320,7 +1402,7 @@ FullEnvironment::FullEnvironment(
         for (unsigned int j = 0; j < fullRanksOfMySubEnvironment.size(); ++j) {
           std::cout << " " << fullRanksOfMySubEnvironment[j];
         }
-	std::cout << "\n";
+        std::cout << "\n";
 
         if (m_inter0Comm) {
           std::cout << "MPI node of worldRank " << m_worldRank
@@ -1330,9 +1412,9 @@ FullEnvironment::FullEnvironment(
           }
           std::cout << ", and has inter0Rank " << m_inter0Rank;
         }
-	std::cout << "\n";
+        std::cout << "\n";
 
-	std::cout << std::endl;
+        std::cout << std::endl;
       }
       m_fullComm->Barrier();
     }
@@ -1345,12 +1427,20 @@ FullEnvironment::FullEnvironment(
   // Deal with seed
   //////////////////////////////////////////////////
   if (m_optionsObj->m_rngType == "gsl") {
-    m_rngObject = new RngGsl(m_optionsObj->m_seed,m_worldRank);
-    m_basicPdfs = new BasicPdfsGsl(m_worldRank);
+    m_rngObject.reset(new RngGsl(m_optionsObj->m_seed,m_worldRank));
+    m_basicPdfs.reset(new BasicPdfsGsl(m_worldRank));
   }
   else if (m_optionsObj->m_rngType == "boost") {
-    m_rngObject = new RngBoost(m_optionsObj->m_seed,m_worldRank);
-    m_basicPdfs = new BasicPdfsBoost(m_worldRank);
+    m_rngObject.reset(new RngBoost(m_optionsObj->m_seed,m_worldRank));
+    m_basicPdfs.reset(new BasicPdfsBoost(m_worldRank));
+  }
+  else if (m_optionsObj->m_rngType == "cxx11") {
+#ifdef QUESO_HAVE_CXX11
+    m_rngObject.reset(new RngCXX11(m_optionsObj->m_seed, m_worldRank));
+    m_basicPdfs.reset(new BasicPdfsCXX11(m_worldRank));
+#else
+    queso_error_msg("C++11 RNGs requested, but QUESO wasn't compiled with C++11 support");
+#endif
   }
   else {
     std::cerr << "In Environment::constructor()"
@@ -1381,13 +1471,29 @@ FullEnvironment::FullEnvironment(
   :
   BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
 {
+  this->construct(prefix);
+}
+
+FullEnvironment::FullEnvironment(
+  const std::string&             passedOptionsInputFileName,
+  const std::string&             prefix,
+  EnvOptionsValues* alternativeOptionsValues)
+  :
+  BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
+{
+  this->construct(prefix.c_str());
+}
+
+void
+FullEnvironment::construct (const char *prefix)
+{
 #ifdef QUESO_MEMORY_DEBUGGING
   std::cout << "Entering FullEnv" << std::endl;
 #endif
 
   m_worldRank = 0;
 
-  m_fullComm = new MpiComm(*this);
+  m_fullComm.reset(new MpiComm(*this));
   m_fullRank     = 0;
   m_fullCommSize = 1;
 
@@ -1407,20 +1513,20 @@ FullEnvironment::FullEnvironment(
   //////////////////////////////////////////////////
   // If NULL, we create one
   if (m_optionsObj == NULL) {
-    EnvOptionsValues * tempOptions = new EnvOptionsValues(this, prefix);
-
     // If there's an input file, we grab the options from there.  Otherwise the
     // defaults are used
     if (m_optionsInputFileName != "") {
-      m_allOptionsMap  = new boost::program_options::variables_map();
-      m_allOptionsDesc = new boost::program_options::options_description("Allowed options");
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+      m_allOptionsMap.reset(new boost::program_options::variables_map());
+      m_allOptionsDesc.reset(new boost::program_options::options_description("Allowed options"));
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
       readOptionsInputFile();
+
+      m_input->parse_input_file(m_optionsInputFileName);
     }
 
-    // We did this dance because scanOptionsValues is not a const method, but
-    // m_optionsObj is a pointer to const
-    m_optionsObj = tempOptions;
+    m_optionsObj.reset(new EnvOptionsValues(this, prefix));
   }
 
   // If help option was supplied, print info
@@ -1470,14 +1576,14 @@ FullEnvironment::FullEnvironment(
   m_subGroup = 0;
 #endif
 
-  m_subComm = new MpiComm(*this);
+  m_subComm.reset(new MpiComm(*this));
   m_subRank     = 0;
   m_subCommSize = 1;
 
   //////////////////////////////////////////////////
   // Deal with multiple subEnvironments: create the self communicator
   //////////////////////////////////////////////////
-  m_selfComm = new MpiComm(*this);
+  m_selfComm.reset(new MpiComm(*this));
 
   //////////////////////////////////////////////////
   // Deal with multiple subEnvironments: create the inter0 communicator
@@ -1486,7 +1592,7 @@ FullEnvironment::FullEnvironment(
 #ifndef QUESO_HAS_MPI
   m_inter0Group = 0;
 #endif
-  m_inter0Comm = new MpiComm(*this);
+  m_inter0Comm.reset(new MpiComm(*this));
   m_inter0Rank     = 0;
   m_inter0CommSize = 1;
 
@@ -1528,8 +1634,8 @@ FullEnvironment::FullEnvironment(
     //////////////////////////////////////////////////////////////////
     // Always write over an eventual pre-existing file
     //////////////////////////////////////////////////////////////////
-    m_subDisplayFile = new std::ofstream((m_optionsObj->m_subDisplayFileName+"_sub"+m_subIdString+".txt").c_str(),
-                                         std::ofstream::out | std::ofstream::trunc);
+    m_subDisplayFile.reset(new std::ofstream((m_optionsObj->m_subDisplayFileName+"_sub"+m_subIdString+".txt").c_str(),
+                                         std::ofstream::out | std::ofstream::trunc));
     queso_require_msg((m_subDisplayFile && m_subDisplayFile->is_open()), "failed to open sub screen file");
 
     QUESO_version_print(*m_subDisplayFile);
@@ -1574,12 +1680,20 @@ FullEnvironment::FullEnvironment(
   // Deal with seed
   //////////////////////////////////////////////////
   if (m_optionsObj->m_rngType == "gsl") {
-    m_rngObject = new RngGsl(m_optionsObj->m_seed,m_worldRank);
-    m_basicPdfs = new BasicPdfsGsl(m_worldRank);
+    m_rngObject.reset(new RngGsl(m_optionsObj->m_seed,m_worldRank));
+    m_basicPdfs.reset(new BasicPdfsGsl(m_worldRank));
   }
   else if (m_optionsObj->m_rngType == "boost") {
-    m_rngObject = new RngBoost(m_optionsObj->m_seed,m_worldRank);
-    m_basicPdfs = new BasicPdfsBoost(m_worldRank);
+    m_rngObject.reset(new RngBoost(m_optionsObj->m_seed,m_worldRank));
+    m_basicPdfs.reset(new BasicPdfsBoost(m_worldRank));
+  }
+  else if (m_optionsObj->m_rngType == "cxx11") {
+#ifdef QUESO_HAVE_CXX11
+    m_rngObject.reset(new RngCXX11(m_optionsObj->m_seed, m_worldRank));
+    m_basicPdfs.reset(new BasicPdfsCXX11(m_worldRank));
+#else
+    queso_error_msg("C++11 RNGs requested, but QUESO wasn't compiled with C++11 support");
+#endif
   }
   else {
     std::cerr << "In Environment::constructor()"

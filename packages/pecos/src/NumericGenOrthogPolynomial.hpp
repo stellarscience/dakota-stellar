@@ -107,6 +107,8 @@ protected:
 
   Real length_scale() const;
 
+  void precompute_rules(unsigned short order);
+
 private:
 
   //
@@ -609,6 +611,13 @@ inline Real NumericGenOrthogPolynomial::length_scale() const
     abort_handler(-1);
   }
   return std::max(mean, stdev);
+}
+
+
+inline void NumericGenOrthogPolynomial::precompute_rules(unsigned short order)
+{
+  if (polyCoeffs.size() <= order)
+    solve_eigenproblem(order);
 }
 
 } // namespace Pecos

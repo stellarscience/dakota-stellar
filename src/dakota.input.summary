@@ -150,14 +150,6 @@ KEYWORD12 method
 	  model_pointer ALIAS approx_model_pointer STRING
 	  [ soft_convergence_limit INTEGER ]
 	  [ truth_surrogate_bypass ]
-	  [ trust_region
-	    [ initial_size REAL ]
-	    [ minimum_size REAL ]
-	    [ contract_threshold REAL ]
-	    [ expand_threshold REAL ]
-	    [ contraction_factor REAL ]
-	    [ expansion_factor REAL ]
-	    ]
 	  [ approx_subproblem
 	    original_primary
 	    | single_objective
@@ -179,6 +171,14 @@ KEYWORD12 method
 	    ]
 	  [ constraint_relax
 	    homotopy
+	    ]
+	  [ trust_region
+	    [ initial_size REALLIST ]
+	    [ minimum_size REAL ]
+	    [ contract_threshold REAL ]
+	    [ expand_threshold REAL ]
+	    [ contraction_factor REAL ]
+	    [ expansion_factor REAL ]
 	    ]
 	  [ max_iterations INTEGER >= 0 ]
 	  [ convergence_tolerance REAL ]
@@ -374,6 +374,37 @@ KEYWORD12 method
 	  [ use_surrogate
 	    inform_search
 	    | optimize
+	    ]
+	  [ max_iterations INTEGER >= 0 ]
+	  [ max_function_evaluations INTEGER >= 0 ]
+	  [ scaling ]
+	  [ model_pointer STRING ]
+	  )
+	|
+	( nowpac
+	  [ trust_region
+	    [ initial_size REALLIST ]
+	    [ minimum_size REAL ]
+	    [ contract_threshold REAL ]
+	    [ expand_threshold REAL ]
+	    [ contraction_factor REAL ]
+	    [ expansion_factor REAL ]
+	    ]
+	  [ max_iterations INTEGER >= 0 ]
+	  [ max_function_evaluations INTEGER >= 0 ]
+	  [ scaling ]
+	  [ model_pointer STRING ]
+	  )
+	|
+	( snowpac
+	  [ seed INTEGER > 0 ]
+	  [ trust_region
+	    [ initial_size REALLIST ]
+	    [ minimum_size REAL ]
+	    [ contract_threshold REAL ]
+	    [ expand_threshold REAL ]
+	    [ contraction_factor REAL ]
+	    [ expansion_factor REAL ]
 	    ]
 	  [ max_iterations INTEGER >= 0 ]
 	  [ max_function_evaluations INTEGER >= 0 ]
@@ -744,6 +775,11 @@ KEYWORD12 method
 	  [ fixed_seed ]
 	  [ max_refinement_iterations INTEGER >= 0 ]
 	  [ convergence_tolerance REAL ]
+	  [ final_moments
+	    none
+	    | standard
+	    | central
+	    ]
 	  [ p_refinement
 	    uniform
 	    |
@@ -931,6 +967,11 @@ KEYWORD12 method
 	  [ fixed_seed ]
 	  [ max_refinement_iterations INTEGER >= 0 ]
 	  [ convergence_tolerance REAL ]
+	  [ final_moments
+	    none
+	    | standard
+	    | central
+	    ]
 	  [ ( p_refinement
 	      uniform
 	      |
@@ -1064,6 +1105,11 @@ KEYWORD12 method
 	    [ one_sided_upper ]
 	    [ two_sided ]
 	    ]
+	  [ final_moments
+	    none
+	    | standard
+	    | central
+	    ]
 	  [ reliability_levels REALLIST
 	    [ num_reliability_levels INTEGERLIST ]
 	    ]
@@ -1117,6 +1163,11 @@ KEYWORD12 method
 	    ]
 	  [ max_iterations INTEGER >= 0 ]
 	  [ convergence_tolerance REAL ]
+	  [ final_moments
+	    none
+	    | standard
+	    | central
+	    ]
 	  [ distribution
 	    cumulative
 	    | complementary
@@ -1547,6 +1598,7 @@ KEYWORD12 method
 		)
 	      [ use_derivatives ]
 	      ]
+	    [ standardized_space ]
 	    [ logit_transform ]
 	    [ export_chain_points_file STRING
 	      [ annotated
@@ -1605,21 +1657,28 @@ KEYWORD12 method
 		]
 	      |
 	      ( freeform
-	      [ active_only ]
+	      ]
+	    [ standardized_space ]
+	    [ logit_transform ]
+	    [ gpmsa_normalize ]
+	    [ export_chain_points_file STRING
+	      [ annotated
+	      |
+	      ( custom_annotated
+		[ header ]
+		[ eval_id ]
+		[ interface_id ]
+		]
+	      |
+	      ( freeform
 	      ]
 	    [ dram
 	    | delayed_rejection
 	    | adaptive_metropolis
-	    | metropolis_hastings
-	    | multilevel ]
+	    | metropolis_hastings ]
 	    [ rng
 	      mt19937
 	      | rnum2
-	      ]
-	    [ pre_solve
-	      sqp
-	      | nip
-	      | none
 	      ]
 	    [ proposal_covariance
 	      ( derivatives
@@ -1637,6 +1696,7 @@ KEYWORD12 method
 		| matrix
 		)
 	      ]
+	    [ options_file STRING ]
 	    )
 	  |
 	  ( wasabi
@@ -1706,6 +1766,7 @@ KEYWORD12 method
 		)
 	      [ use_derivatives ]
 	      ]
+	    [ standardized_space ]
 	    ( data_distribution
 	      ( gaussian
 		means REALLIST
@@ -1797,6 +1858,7 @@ KEYWORD12 method
 		)
 	      [ use_derivatives ]
 	      ]
+	    [ standardized_space ]
 	    [ export_chain_points_file STRING
 	      [ annotated
 	      |
@@ -1811,7 +1873,7 @@ KEYWORD12 method
 	    )
 	  [ experimental_design
 	    initial_samples ALIAS samples INTEGER
-	    num_candidates INTEGER >= 0
+	    num_candidates INTEGER > 0
 	    [ max_hifi_evaluations INTEGER >= 0 ]
 	    [ import_candidate_points_file STRING
 	      [ annotated
@@ -1825,7 +1887,6 @@ KEYWORD12 method
 	      ( freeform
 	      ]
 	    ]
-	  [ standardized_space ]
 	  [ calibrate_error_multipliers
 	    one
 	    | per_experiment
@@ -1839,6 +1900,63 @@ KEYWORD12 method
 	  [ posterior_stats
 	    [ kl_divergence ]
 	    [ mutual_info ]
+	    ]
+	  [ model_discrepancy
+	    [ discrepancy_type
+	      gaussian_process ALIAS kriging
+	      | polynomial
+	      [ correction_order
+		constant
+		| linear
+		| quadratic
+		]
+	      ]
+	    [ num_prediction_configs INTEGER >= 0 ]
+	    [ prediction_configs REALLIST ]
+	    [ import_prediction_configs STRING
+	      [ annotated
+	      |
+	      ( custom_annotated
+		[ header ]
+		[ eval_id ]
+		[ interface_id ]
+		]
+	      |
+	      ( freeform
+	      ]
+	    [ export_discrepancy_file STRING
+	      [ annotated
+	      |
+	      ( custom_annotated
+		[ header ]
+		[ eval_id ]
+		[ interface_id ]
+		]
+	      |
+	      ( freeform
+	      ]
+	    [ export_corrected_model_file STRING
+	      [ annotated
+	      |
+	      ( custom_annotated
+		[ header ]
+		[ eval_id ]
+		[ interface_id ]
+		]
+	      |
+	      ( freeform
+	      ]
+	    [ export_corrected_variance_file STRING
+	      [ annotated
+	      |
+	      ( custom_annotated
+		[ header ]
+		[ eval_id ]
+		[ interface_id ]
+		]
+	      |
+	      ( freeform
+	      ]
 	    ]
 	  [ sub_sampling_period INTEGER ]
 	  [ probability_levels REALLIST
@@ -1969,6 +2087,11 @@ KEYWORD12 method
 	    ]
 	  [ max_iterations INTEGER >= 0 ]
 	  [ convergence_tolerance REAL ]
+	  [ final_moments
+	    none
+	    | standard
+	    | central
+	    ]
 	  [ distribution
 	    cumulative
 	    | complementary
@@ -2692,21 +2815,16 @@ KEYWORD12 variables
 
 KEYWORD12 interface
 	[ id_interface STRING ]
-	[ algebraic_mappings STRING ]
 	[ analysis_drivers STRINGLIST
-	  [ analysis_components STRINGLIST ]
 	  [ input_filter STRING ]
 	  [ output_filter STRING ]
 	  ( system
-	    | fork
 	    [ parameters_file STRING ]
 	    [ results_file STRING ]
-	    [ allow_existing_results ]
-	    [ verbatim ]
-	    [ aprepro ALIAS dprepro ]
-	    [ labeled ]
 	    [ file_tag ]
 	    [ file_save ]
+	    [ labeled ]
+	    [ aprepro ALIAS dprepro ]
 	    [ work_directory
 	      [ named STRING ]
 	      [ directory_tag ALIAS dir_tag ]
@@ -2715,6 +2833,27 @@ KEYWORD12 interface
 	      [ copy_files STRINGLIST ]
 	      [ replace ]
 	      ]
+	    [ allow_existing_results ]
+	    [ verbatim ]
+	    )
+	  |
+	  ( fork
+	    [ parameters_file STRING ]
+	    [ results_file STRING ]
+	    [ file_tag ]
+	    [ file_save ]
+	    [ labeled ]
+	    [ aprepro ALIAS dprepro ]
+	    [ work_directory
+	      [ named STRING ]
+	      [ directory_tag ALIAS dir_tag ]
+	      [ directory_save ALIAS dir_save ]
+	      [ link_files STRINGLIST ]
+	      [ copy_files STRINGLIST ]
+	      [ replace ]
+	      ]
+	    [ allow_existing_results ]
+	    [ verbatim ]
 	    )
 	  |
 	  ( direct
@@ -2727,20 +2866,22 @@ KEYWORD12 interface
 	    )
 	  | scilab
 	  | grid
-	  [ failure_capture
-	    abort
-	    | retry INTEGER
-	    | recover REALLIST
-	    | continuation
+	  [ analysis_components STRINGLIST ]
+	  ]
+	[ algebraic_mappings STRING ]
+	[ failure_capture
+	  abort
+	  | retry INTEGER
+	  | recover REALLIST
+	  | continuation
+	  ]
+	[ deactivate
+	  [ active_set_vector ]
+	  [ evaluation_cache ]
+	  [ strict_cache_equality
+	    [ cache_tolerance REAL ]
 	    ]
-	  [ deactivate
-	    [ active_set_vector ]
-	    [ evaluation_cache ]
-	    [ strict_cache_equality
-	      [ cache_tolerance REAL ]
-	      ]
-	    [ restart_file ]
-	    ]
+	  [ restart_file ]
 	  ]
 	[ asynchronous
 	  [ evaluation_concurrency INTEGER > 0 ]

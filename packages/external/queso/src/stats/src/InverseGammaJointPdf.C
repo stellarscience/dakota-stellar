@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -97,6 +97,37 @@ InverseGammaJointPdf<V,M>::lnValue(
   result += m_logOfNormalizationFactor; // [PDF-07]
 
   return result;
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+InverseGammaJointPdf<V,M>::distributionMean(V& meanVector) const
+{
+  queso_assert_equal_to(m_alpha.sizeLocal(), m_beta.sizeLocal());
+  queso_assert_equal_to(m_alpha.sizeLocal(), meanVector.sizeLocal());
+
+  for (unsigned int i = 0; i < m_alpha.sizeLocal(); ++i) {
+    queso_assert_greater(m_alpha[i], 1);
+    meanVector[i] = m_beta[i] / (m_alpha[i] - 1);
+  }
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+InverseGammaJointPdf<V,M>::distributionVariance(M & covMatrix) const
+{
+  queso_assert_equal_to(m_alpha.sizeLocal(), m_beta.sizeLocal());
+  queso_assert_equal_to(m_alpha.sizeLocal(), covMatrix.numCols());
+  queso_assert_equal_to (covMatrix.numCols(), covMatrix.numRowsGlobal());
+
+  covMatrix.zeroLower();
+  covMatrix.zeroUpper();
+
+  for (unsigned int i = 0; i < m_alpha.sizeLocal(); ++i) {
+    queso_assert_greater(m_alpha[i], 2);
+    covMatrix(i,i) = m_beta[i]*m_beta[i] / (m_alpha[i] - 1) /
+                     (m_alpha[i] - 1) / (m_alpha[i] - 2);
+  }
 }
 //--------------------------------------------------
 template<class V, class M>

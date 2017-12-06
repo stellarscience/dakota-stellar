@@ -159,7 +159,7 @@ int CubatureDriver::grid_size()
     //case 3: numPts = webbur::en_her_03_1_size(numVars);    break; // 2n
       case 3: numPts = webbur::en_her_03_xiu_size(numVars);  break; // 2n
       case 5: numPts = (numVars >=2 && numVars <= 7) ?
-	webbur::en_her_05_1_size(numVars) :                          // n^2+n+2
+	webbur::en_her_05_1_size(numVars) :                         // n^2+n+2
 	webbur::en_her_05_2_size(numVars);                   break; // 2n^2+1
       default: err_flag = true;                              break;
       }
@@ -171,7 +171,7 @@ int CubatureDriver::grid_size()
     //case 3: numPts = webbur::cn_leg_03_1_size(numVars);    break; // 2n
       case 3: numPts = webbur::cn_leg_03_xiu_size(numVars);  break; // 2n
       case 5: numPts = (numVars >=4 && numVars <= 6) ?
-	webbur::cn_leg_05_1_size(numVars) :                          // n^2+n+2
+	webbur::cn_leg_05_1_size(numVars) :                         // n^2+n+2
         webbur::cn_leg_05_2_size(numVars);                   break; // 2n^2+1
       default: err_flag = true;                              break;
       }

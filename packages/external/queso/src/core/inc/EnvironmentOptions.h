@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -29,7 +29,11 @@
 #include <set>
 #include <vector>
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 #include <queso/BoostInputOptionsParser.h>
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+
+#include <queso/ScopedPtr.h>
 
 #define UQ_ENV_FILENAME_FOR_NO_OUTPUT_FILE "."
 #define UQ_ENV_FILENAME_FOR_NO_INPUT_FILE  "."
@@ -51,12 +55,14 @@
 #define UQ_ENV_NUM_DEBUG_PARAMS_ODV         0
 #define UQ_ENV_DEBUG_PARAM_ODV              0.
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 // Forward declarations
 namespace boost {
   namespace program_options {
     class options_description;
     }
 }
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
 namespace QUESO {
 
@@ -164,7 +170,11 @@ public:
   //@}
 
 private:
-  BoostInputOptionsParser * m_parser;
+  const BaseEnvironment * m_env;
+
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+  ScopedPtr<BoostInputOptionsParser>::Type m_parser;
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   //! Input file option name for flagging helpful printing output
   std::string m_option_help;
@@ -252,11 +262,13 @@ public:
   EnvOptionsValues  m_ov;
 
 private:
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   //! Define my environment options as the default options
   void   defineMyOptions  (boost::program_options::options_description& optionsDesc) const;
 
   //! Gets the option values of the environment.
   void   getMyOptionValues(boost::program_options::options_description& optionsDesc);
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   //! Environment.
   const BaseEnvironment& m_env;
@@ -268,7 +280,9 @@ private:
   /*! Uses boost::program_options::options_description. A set of option descriptions.
    * This provides convenient interface for adding new option method, and facilities
    * to search for options by name.*/
-  boost::program_options::options_description* m_optionsDesc;
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+  ScopedPtr<boost::program_options::options_description>::Type m_optionsDesc;
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   std::string              m_option_help;
 

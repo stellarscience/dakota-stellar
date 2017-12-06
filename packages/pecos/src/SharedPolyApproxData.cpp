@@ -94,10 +94,7 @@ initialize_orthogonal_basis_type_rule(short u_type,
     basis_type = KRAWTCHOUK_DISCRETE; colloc_rule = GAUSS_KRAWTCHOUK;
     extra_dist_params = true; break;
   case NEGATIVE_BINOMIAL:
-    basis_type = MEIXNER_DISCRETE; colloc_rule = GAUSS_MEIXNER;
-    extra_dist_params = true; break;
-  case GEOMETRIC:
-    // special case of NEGATIVE_BINOMIAL
+  case GEOMETRIC: // special case of NEGATIVE_BINOMIAL
     basis_type = MEIXNER_DISCRETE; colloc_rule = GAUSS_MEIXNER;
     extra_dist_params = true; break;
   case HYPERGEOMETRIC:

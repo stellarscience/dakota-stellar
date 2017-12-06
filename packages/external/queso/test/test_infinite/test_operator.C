@@ -15,6 +15,7 @@
 #include <libmesh/numeric_vector.h>
 #include <libmesh/elem.h>
 #include <libmesh/dof_map.h>
+#include <libmesh/system_norm.h>
 #include <queso/EnvironmentOptions.h>
 #include <queso/FunctionOperatorBuilder.h>
 #include <queso/LibMeshFunction.h>
@@ -71,7 +72,7 @@ int main(int argc, char **argv)
   for (i = 0; i < builder.num_req_eigenpairs; i++) {
     eig_sys.get_eigenpair(i);
     norms[i] = eig_sys.calculate_norm(*eig_sys.solution,
-                                      libMeshEnums::L2);
+                                      libMesh::SystemNorm(libMeshEnums::L2));
     if (abs(norms[i] - 1.0) > TEST_TOL) {
       return 1;
     }
@@ -80,13 +81,13 @@ int main(int argc, char **argv)
   const unsigned int dim = mesh.mesh_dimension();
   const libMesh::DofMap & dof_map = eig_sys.get_dof_map();
   libMesh::FEType fe_type = dof_map.variable_type(0);
-  libMesh::AutoPtr<libMesh::FEBase> fe(libMesh::FEBase::build(dim, fe_type));
+  libMesh::UniquePtr<libMesh::FEBase> fe(libMesh::FEBase::build(dim, fe_type));
   libMesh::QGauss qrule(dim, libMeshEnums::FIFTH);
   fe->attach_quadrature_rule(&qrule);
   const std::vector<libMesh::Real> & JxW = fe->get_JxW();
   const std::vector<std::vector<libMesh::Real> >& phi = fe->get_phi();
 
-  libMesh::AutoPtr<libMesh::NumericVector<libMesh::Real> > u, v;
+  libMesh::UniquePtr<libMesh::NumericVector<libMesh::Real> > u, v;
   double ui = 0.0;
   double vj = 0.0;
   double ip = 0.0;

@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,7 +25,7 @@
 #ifndef QUESO_INFINITEDIMENSIONALMEASURE_BASE_H
 #define QUESO_INFINITEDIMENSIONALMEASURE_BASE_H
 
-#include <boost/shared_ptr.hpp>
+#include <queso/SharedPtr.h>
 #include <queso/FunctionBase.h>
 
 namespace QUESO {
@@ -52,7 +52,7 @@ public:
   //@}
 
   //! Draw from the measure, and then return a shared pointer to the draw
-  virtual boost::shared_ptr<FunctionBase> draw() = 0;
+  virtual SharedPtr<FunctionBase>::Type draw() = 0;
 
   //! Return coefficient \c i of the KL expansion of the current draw.  Must be called after draw()
   virtual double get_kl_coefficient(unsigned int i) const = 0;

@@ -190,6 +190,24 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 }
 
 
+void SparseGridDriver::precompute_rules()
+{
+  unsigned short l, m;
+  if (dimIsotropic)
+    for (size_t i=0; i<numVars; ++i) {
+      level_to_order(i, ssgLevel, m); // max order is full level in this dim
+      polynomialBasis[i].precompute_rules(m);
+    }
+  else
+    for (size_t i=0; i<numVars; ++i) {
+      Real& wt_i = anisoLevelWts[i];
+      l = (wt_i > 0.) ? (unsigned short)((Real)ssgLevel / wt_i) : 0;
+      level_to_order(i, l, m); // max order is full aniso level[dim]
+      polynomialBasis[i].precompute_rules(m);
+    }
+}
+
+
 void SparseGridDriver::update_sets(const UShortArray& set_star)
 {
   // set_star is passed as *cit_star from the best entry in activeMultiIndex.

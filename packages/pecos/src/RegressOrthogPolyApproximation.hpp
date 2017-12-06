@@ -144,7 +144,7 @@ private:
   void set_fault_info();
 
   /// selects the solver for L1 or L2 minimization based on user input
-  void select_solver();
+  void select_solver(bool cv_active);
 
   /// Run the regression method set in select_solver() to compute the
   /// expansion coefficients using L1 or L2 minimization
@@ -161,12 +161,16 @@ private:
   /// provides the greatest reduction in cross-validation error
   Real select_best_basis_expansion();
 
-  /// Use cross validation to choose solver hyper-parameters when solving the linear system Ax=b. e.g. if the linear solver has a epsilon tolerance internally select the best epsilon and return the corresponding solution
+  /// Use cross validation to choose solver hyper-parameters when
+  /// solving the linear system Ax=b. e.g. if the linear solver has an
+  /// epsilon tolerance internally select the best epsilon and return
+  /// the corresponding solution
   Real run_cross_validation_solver(const UShort2DArray& multi_index,
 				   RealVector& exp_coeffs,
 				   SizetSet& sparse_indices);
 
-  /// Use cross validation to find the hyper-parameters of the polynomial chaos expansion. e.g. find the 'best' total degree basis
+  /// Use cross validation to find the hyper-parameters of the polynomial
+  /// chaos expansion. e.g. find the 'best' total degree basis
   Real run_cross_validation_expansion();
 
   /// encapsulate usage of CSTool.solve() and bookkeeping of its sparse solution
@@ -300,6 +304,9 @@ private:
 
   /// store the fault info about the response data
   FaultInfo faultInfo;
+  /// tracks use of sparse solvers, indicated the need to employ
+  /// sparseIndices and sparseSobolIndexMap
+  bool sparseSoln;
 
   /// tracks sparse terms within multiIndex and expansion{Coeffs,CoeffGrads}
   /// that are retained from an original candidate set
@@ -319,7 +326,7 @@ private:
   /// PCE multi-index during the basis adaptation process.  Once complete,
   /// the shared multiIndex and sparseIndices are updated.
   UShort2DArray adaptedMultiIndex;
-  /// sparse indices idnetifying receoivered expansion coefficients within
+  /// sparse indices identifying recovered expansion coefficients within
   /// adaptedMultiIndex during the basis adaptation process.  Once complete,
   /// the shared multiIndex and sparseIndices are updated.
   SizetSet adaptedSparseIndices;
@@ -335,7 +342,7 @@ private:
 
 inline RegressOrthogPolyApproximation::
 RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
-  OrthogPolyApproximation(shared_data)
+  OrthogPolyApproximation(shared_data), sparseSoln(false)
 { }
 
 

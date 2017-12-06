@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -24,7 +24,7 @@
 
 #include <queso/Defines.h>
 
-#ifdef QUESO_HAVE_LIBMESH
+#ifdef QUESO_HAVE_LIBMESH_SLEPC
 
 #include <iostream>
 #include <queso/LibMeshFunction.h>
@@ -135,22 +135,22 @@ double LibMeshFunction::L2_norm() const {
   return norm;
 }
 
-boost::shared_ptr<FunctionBase> LibMeshFunction::zero_clone() const
+SharedPtr<FunctionBase>::Type LibMeshFunction::zero_clone() const
 {
   LibMeshFunction * clone = new LibMeshFunction(this->builder,
       this->equation_systems->get_mesh());
   clone->equation_systems->get_system<libMesh::ExplicitSystem>(
       "Function").solution->zero();
 
-  boost::shared_ptr<FunctionBase> ptr(clone);
+  SharedPtr<FunctionBase>::Type ptr(clone);
   return ptr;
 }
 
-boost::shared_ptr<libMesh::EquationSystems>
+SharedPtr<libMesh::EquationSystems>::Type
 LibMeshFunction::get_equation_systems() const {
   return this->equation_systems;
 }
 
 }  // End namespace QUESO
 
-#endif  // QUESO_HAVE_LIBMESH
+#endif  // QUESO_HAVE_LIBMESH_SLEPC

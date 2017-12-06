@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -66,6 +66,28 @@ bool BoxSubset<V,M>::contains(const V& vec) const
   //        !vec.atLeastOneComponentBiggerOrEqualThan (m_maxValues));
   return (!vec.atLeastOneComponentSmallerThan(m_minValues) &&
           !vec.atLeastOneComponentBiggerThan (m_maxValues));
+}
+
+
+template<class V, class M>
+void BoxSubset<V,M>::centroid(V& vec) const
+{
+  vec = m_minValues;
+  vec += m_maxValues;
+  vec *= 0.5;
+}
+
+
+
+template<class V, class M>
+void BoxSubset<V,M>::moments(M& mat) const
+{
+  mat.zeroLower();
+  mat.zeroUpper();
+  for (unsigned int i = 0; i < m_vectorSpace->dimLocal(); ++i) {
+    double length_i = (m_maxValues[i] - m_minValues[i]);
+    mat(i,i) = length_i*length_i*length_i/12;
+  }
 }
 
 

@@ -84,6 +84,7 @@ Includes
 // config.hpp should be the first include.
 #include "../include/config.hpp"
 
+#include <string>
 #include <stdexcept>
 
 

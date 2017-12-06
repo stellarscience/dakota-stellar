@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -32,6 +32,8 @@
 #include <queso/GaussianLikelihoodDiagonalCovariance.h>
 #include <queso/StatisticalInverseProblem.h>
 
+#include <cstdlib>
+
 #define TOL 1e-15
 
 // A Gaussian likelihood
@@ -50,9 +52,7 @@ public:
   {
   }
 
-  virtual void evaluateModel(const V & domainVector, const V * domainDirection,
-      V & modelOutput, V * gradVector, M * hessianMatrix,
-      V * hessianEffect) const
+  virtual void evaluateModel(const V & domainVector, V & modelOutput) const
   {
     for (unsigned int i = 0; i < modelOutput.sizeLocal(); i++) {
       modelOutput[i] = domainVector[i];
@@ -74,8 +74,7 @@ public:
   {
   }
 
-  virtual double lnValue(const V & domainVector, const V * domainDirection,
-      V * gradVector, M * hessianMatrix, V * hessianEffect) const
+  virtual double lnValue(const V & domainVector) const
   {
     double d1 = domainVector[0] - 1.0;
     double d2 = domainVector[1] - 1.0;
@@ -93,10 +92,10 @@ public:
     return misfit;
   }
 
-  virtual double actualValue(const V & domainVector, const V * domainDirection,
-      V * gradVector, M * hessianMatrix, V * hessianEffect) const
+  virtual double actualValue(const V & domainVector, const V * /*domainDirection*/,
+      V * /*gradVector*/, M * /*hessianMatrix*/, V * /*hessianEffect*/) const
   {
-    return this->lnValue(domainVector, domainDirection, gradVector, hessianMatrix, hessianEffect);
+    return this->lnValue(domainVector);
   }
 };
 
@@ -106,12 +105,18 @@ class BayesianInverseProblem
 public:
   BayesianInverseProblem(unsigned int likelihoodFlag)
   {
+    std::string inputFileName =
+      "test_gaussian_likelihoods/gaussian_consistency_input.txt";
+    const char * test_srcdir = std::getenv("srcdir");
+    if (test_srcdir)
+      inputFileName = test_srcdir + ('/' + inputFileName);
+
 #ifdef QUESO_HAS_MPI
-    this->env = new QUESO::FullEnvironment(MPI_COMM_WORLD,
-        "test_gaussian_likelihoods/gaussian_consistency_input.txt", "", NULL);
+    this->env = new QUESO::FullEnvironment
+      (MPI_COMM_WORLD, inputFileName, "", NULL);
 #else
-    this->env = new QUESO::FullEnvironment(
-        "test_gaussian_likelihoods/gaussian_consistency_input.txt", "", NULL);
+    this->env = new QUESO::FullEnvironment
+      (inputFileName, "", NULL);
 #endif
 
     this->paramSpace =

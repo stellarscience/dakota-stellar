@@ -193,6 +193,9 @@ public:
   /// associated with an orthogonal polynomial basis
   virtual Real length_scale() const;
 
+  /// precompute quadrature rules up to specified order
+  virtual void precompute_rules(unsigned short order);
+
   //
   //- Heading: Member functions
   //
@@ -235,7 +238,7 @@ protected:
   //
 
   /// basis polynomial type:
-  /// {HERMITE,LEGENDRE,LAGUERRE,JACOBI,GEN_LAGUERRE,NUM_GEN_ORTHOG}_ORTHOG,
+  /// {HERMITE,LEGENDRE,LAGUERRE,JACOBI,GEN_LAGUERRE,NUM_GEN}_ORTHOG,
   /// {LAGRANGE,HERMITE}_INTERP, or PIECEWISE_{LINEAR,QUADRATIC,CUBIC}_INTERP
   short basisPolyType;
 

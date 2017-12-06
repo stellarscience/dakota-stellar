@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -22,10 +22,12 @@
 //
 //-----------------------------------------------------------------------el-
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 #include <boost/program_options.hpp>
 
 #include <queso/BoostInputOptionsParser.h>
 #include <queso/Miscellaneous.h>
+#include <queso/Defines.h>
 
 namespace QUESO {
 
@@ -36,6 +38,7 @@ BoostInputOptionsParser::BoostInputOptionsParser(const std::string & filename)
     m_optionsMap(new boost::program_options::variables_map()),
     m_scannedInputFile(false)
 {
+  queso_deprecated();
 }
 
 BoostInputOptionsParser::BoostInputOptionsParser()
@@ -45,16 +48,19 @@ BoostInputOptionsParser::BoostInputOptionsParser()
     m_optionsMap(new boost::program_options::variables_map()),
     m_scannedInputFile(false)
 {
+  queso_deprecated();
 }
 
 BoostInputOptionsParser::~BoostInputOptionsParser()
 {
+  queso_deprecated();
   // Do nothing
 }
 
 void
 BoostInputOptionsParser::scanInputFile()
 {
+  queso_deprecated();
   queso_require_msg(m_optionsDescription, "m_optionsDescription variable is NULL");
 
   // If it's the empty string then the defaults are used
@@ -76,9 +82,11 @@ BoostInputOptionsParser::scanInputFile()
 
 template <typename T>
 void
-BoostInputOptionsParser::registerOption(std::string name, T defaultValue,
-    std::string description)
+BoostInputOptionsParser::registerOption(const std::string & name,
+                                        const T & defaultValue,
+                                        const std::string & description)
 {
+  queso_deprecated();
   m_optionsDescription->add_options()
     (name.c_str(),
      boost::program_options::value<T>()->default_value(defaultValue),
@@ -86,8 +94,10 @@ BoostInputOptionsParser::registerOption(std::string name, T defaultValue,
 }
 
 void
-BoostInputOptionsParser::registerOption(std::string name, std::string description)
+BoostInputOptionsParser::registerOption(const std::string & name,
+                                        const std::string & description)
 {
+  queso_deprecated();
   m_optionsDescription->add_options()
     (name.c_str(),
      description.c_str());
@@ -95,8 +105,9 @@ BoostInputOptionsParser::registerOption(std::string name, std::string descriptio
 
 template <typename T>
 void
-BoostInputOptionsParser::getOption(std::string & name, T & value)
+BoostInputOptionsParser::getOption(const std::string & name, T & value) const
 {
+  queso_deprecated();
   if (m_scannedInputFile) {
     value = (*m_optionsMap)[name].as<T>();
   }
@@ -104,8 +115,9 @@ BoostInputOptionsParser::getOption(std::string & name, T & value)
 
 template <>
 void
-BoostInputOptionsParser::getOption(std::string & name, std::set<unsigned int, std::less<unsigned int>, std::allocator<unsigned int> > & value)
+BoostInputOptionsParser::getOption(const std::string & name, std::set<unsigned int, std::less<unsigned int>, std::allocator<unsigned int> > & value) const
 {
+  queso_deprecated();
   if (m_scannedInputFile) {
     // Clear before putting things in it
     value.clear();
@@ -126,8 +138,9 @@ BoostInputOptionsParser::getOption(std::string & name, std::set<unsigned int, st
 
 template <>
 void
-BoostInputOptionsParser::getOption<std::vector<double, std::allocator<double> > >(std::string & name, std::vector<double, std::allocator<double> > & value)
+BoostInputOptionsParser::getOption<std::vector<double, std::allocator<double> > >(const std::string & name, std::vector<double, std::allocator<double> > & value) const
 {
+  queso_deprecated();
   if (m_scannedInputFile) {
     // Need to reset value?
 
@@ -142,23 +155,25 @@ BoostInputOptionsParser::getOption<std::vector<double, std::allocator<double> > 
 std::ostream &
 operator<<(std::ostream & os, const BoostInputOptionsParser & parser)
 {
+  queso_deprecated();
   os << *(parser.m_optionsDescription);
   return os;
 }
 
-template void BoostInputOptionsParser::registerOption<int>(std::string, int, std::string);
-template void BoostInputOptionsParser::registerOption<unsigned int>(std::string, unsigned int, std::string);
-template void BoostInputOptionsParser::registerOption<bool>(std::string, bool, std::string);
-template void BoostInputOptionsParser::registerOption<double>(std::string, double, std::string);
-template void BoostInputOptionsParser::registerOption<std::string>(std::string, std::string, std::string);
+template void BoostInputOptionsParser::registerOption<int>(const std::string &, const int &, const std::string &);
+template void BoostInputOptionsParser::registerOption<unsigned int>(const std::string &, const unsigned int &, const std::string &);
+template void BoostInputOptionsParser::registerOption<bool>(const std::string &, const bool &, const std::string &);
+template void BoostInputOptionsParser::registerOption<double>(const std::string &, const double &, const std::string &);
+template void BoostInputOptionsParser::registerOption<std::string>(const std::string &, const std::string &, const std::string &);
 
-template void BoostInputOptionsParser::getOption<int>(std::string&, int&);
-template void BoostInputOptionsParser::getOption<unsigned int>(std::string&, unsigned int&);
-template void BoostInputOptionsParser::getOption<double>(std::string&, double&);
-template void BoostInputOptionsParser::getOption<bool>(std::string&, bool&);
-template void BoostInputOptionsParser::getOption<std::string>(std::string&, std::string&);
-template void BoostInputOptionsParser::getOption<std::set<unsigned int, std::less<unsigned int>, std::allocator<unsigned int> > >(std::string&, std::set<unsigned int, std::less<unsigned int>, std::allocator<unsigned int> >&);
-template void BoostInputOptionsParser::getOption<std::vector<unsigned int, std::allocator<unsigned int> > >(std::string&, std::vector<unsigned int, std::allocator<unsigned int> >&);
-template void BoostInputOptionsParser::getOption<std::vector<double, std::allocator<double> > >(std::string&, std::vector<double, std::allocator<double> >&);
+template void BoostInputOptionsParser::getOption<int>(const std::string&, int&) const;
+template void BoostInputOptionsParser::getOption<unsigned int>(const std::string&, unsigned int&) const;
+template void BoostInputOptionsParser::getOption<double>(const std::string&, double&) const;
+template void BoostInputOptionsParser::getOption<bool>(const std::string&, bool&) const;
+template void BoostInputOptionsParser::getOption<std::string>(const std::string&, std::string&) const;
+template void BoostInputOptionsParser::getOption<std::set<unsigned int, std::less<unsigned int>, std::allocator<unsigned int> > >(const std::string&, std::set<unsigned int, std::less<unsigned int>, std::allocator<unsigned int> >&) const;
+template void BoostInputOptionsParser::getOption<std::vector<unsigned int, std::allocator<unsigned int> > >(const std::string&, std::vector<unsigned int, std::allocator<unsigned int> >&) const;
+template void BoostInputOptionsParser::getOption<std::vector<double, std::allocator<double> > >(const std::string&, std::vector<double, std::allocator<double> >&) const;
 
 }  // End namespace QUESO
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS

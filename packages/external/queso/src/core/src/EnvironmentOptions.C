@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -22,7 +22,13 @@
 //
 //-----------------------------------------------------------------------el-
 
+#include <queso/Defines.h>
+
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 #include <boost/program_options.hpp>
+#else
+#include <queso/getpot.h>
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
 #include <queso/EnvironmentOptions.h>
 #include <queso/Miscellaneous.h>
@@ -54,7 +60,10 @@ EnvOptionsValues::EnvOptionsValues()
     m_identifyingString(UQ_ENV_IDENTIFYING_STRING_ODV),
     m_numDebugParams(UQ_ENV_NUM_DEBUG_PARAMS_ODV),
     m_debugParams(m_numDebugParams,0.),
-    m_parser(NULL),
+    m_env(NULL),
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+    m_parser(),
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
     m_option_help(m_prefix + "help"),
     m_option_numSubEnvironments(m_prefix + "numSubEnvironments"),
     m_option_subDisplayFileName(m_prefix + "subDisplayFileName"),
@@ -90,7 +99,10 @@ EnvOptionsValues::EnvOptionsValues(const BaseEnvironment * env, const char *
     m_identifyingString(UQ_ENV_IDENTIFYING_STRING_ODV),
     m_numDebugParams(UQ_ENV_NUM_DEBUG_PARAMS_ODV),
     m_debugParams(m_numDebugParams,0.),
+    m_env(env),
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
     m_parser(new BoostInputOptionsParser(env->optionsInputFileName())),
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
     m_option_help(m_prefix + "help"),
     m_option_numSubEnvironments(m_prefix + "numSubEnvironments"),
     m_option_subDisplayFileName(m_prefix + "subDisplayFileName"),
@@ -105,6 +117,7 @@ EnvOptionsValues::EnvOptionsValues(const BaseEnvironment * env, const char *
     m_option_platformName(m_prefix + "platformName"),
     m_option_identifyingString(m_prefix + "identifyingString")
 {
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   // Register all options with parser
   m_parser->registerOption<std::string >(m_option_help, UQ_ENV_HELP, "produce help message for environment");
   m_parser->registerOption<unsigned int>(m_option_numSubEnvironments, UQ_ENV_NUM_SUB_ENVIRONMENTS_ODV, "number of subEnvironments");
@@ -136,6 +149,30 @@ EnvOptionsValues::EnvOptionsValues(const BaseEnvironment * env, const char *
   m_parser->getOption<int>(m_option_seed, m_seed);
   m_parser->getOption<std::string>(m_option_platformName, m_platformName);
   m_parser->getOption<std::string>(m_option_identifyingString, m_identifyingString);
+#else
+  m_help = m_env->input()(m_option_help, UQ_ENV_HELP);
+  m_numSubEnvironments = m_env->input()(m_option_numSubEnvironments, UQ_ENV_NUM_SUB_ENVIRONMENTS_ODV);
+  m_subDisplayFileName = m_env->input()(m_option_subDisplayFileName, UQ_ENV_SUB_DISPLAY_FILE_NAME_ODV);
+  m_subDisplayAllowAll = m_env->input()(m_option_subDisplayAllowAll, UQ_ENV_SUB_DISPLAY_ALLOW_ALL_ODV);
+  m_subDisplayAllowInter0 = m_env->input()(m_option_subDisplayAllowInter0, UQ_ENV_SUB_DISPLAY_ALLOW_INTER0_ODV);
+
+  // UQ_ENV_SUB_DISPLAY_ALLOWED_SET_ODV is the empty set (string) by default
+  unsigned int size = m_env->input().vector_variable_size(m_option_subDisplayAllowedSet);
+  for (unsigned int i = 0; i < size; i++) {
+    // We default to empty set, so the default values are actually never
+    // used here
+    unsigned int allowed = m_env->input()(m_option_subDisplayAllowedSet, i, i);
+    m_subDisplayAllowedSet.insert(allowed);
+  }
+
+  m_displayVerbosity = m_env->input()(m_option_displayVerbosity, UQ_ENV_DISPLAY_VERBOSITY_ODV);
+  m_syncVerbosity = m_env->input()(m_option_syncVerbosity, UQ_ENV_SYNC_VERBOSITY_ODV);
+  m_checkingLevel = m_env->input()(m_option_checkingLevel, UQ_ENV_CHECKING_LEVEL_ODV);
+  m_rngType = m_env->input()(m_option_rngType, UQ_ENV_RNG_TYPE_ODV);
+  m_seed = m_env->input()(m_option_seed, UQ_ENV_SEED_ODV);
+  m_platformName = m_env->input()(m_option_platformName, UQ_ENV_PLATFORM_NAME_ODV);
+  m_identifyingString = m_env->input()(m_option_identifyingString, UQ_ENV_IDENTIFYING_STRING_ODV);
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   checkOptions();
 }
@@ -164,9 +201,6 @@ EnvOptionsValues::EnvOptionsValues(const EnvOptionsValues& src)
 // Destructor ---------------------------------------
 EnvOptionsValues::~EnvOptionsValues()
 {
-  if (m_parser) {
-    delete m_parser;
-  }
 }
 
 // Set methods---------------------------------------
@@ -201,7 +235,11 @@ EnvOptionsValues::copy(const EnvOptionsValues& src)
 std::ostream& operator<<(std::ostream& os, const EnvOptionsValues & obj)
 {
   // Print the parser
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   os << (*(obj.m_parser)) << std::endl;
+#else
+  obj.m_env->input().print(os);
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   // Print the option names and current values
   os <<         obj.m_option_numSubEnvironments    << " = " << obj.m_numSubEnvironments
@@ -236,7 +274,9 @@ EnvironmentOptions::EnvironmentOptions(
   m_ov                          (),
   m_env                         (env),
   m_prefix                      ((std::string)(prefix) + "env_"),
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   m_optionsDesc                 (new boost::program_options::options_description("Environment options")),
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
   m_option_help                 (m_prefix + "help"                 ),
   m_option_numSubEnvironments   (m_prefix + "numSubEnvironments"   ),
   m_option_subDisplayFileName   (m_prefix + "subDisplayFileName"   ),
@@ -252,7 +292,7 @@ EnvironmentOptions::EnvironmentOptions(
   m_option_identifyingString    (m_prefix + "identifyingString"    )
 {
   queso_deprecated();
-  queso_require_not_equal_to_msg(m_env.optionsInputFileName(), "", "this constructor is incompatible with the abscense of an options input file");
+  queso_require_not_equal_to_msg(m_env.optionsInputFileName(), std::string(""), std::string("this constructor is incompatible with the abscense of an options input file"));
 }
 // Constructor with alternative values --------------
 EnvironmentOptions::EnvironmentOptions(
@@ -263,7 +303,9 @@ EnvironmentOptions::EnvironmentOptions(
   m_ov                          (alternativeOptionsValues),
   m_env                         (env),
   m_prefix                      ((std::string)(prefix) + "env_"),
-  m_optionsDesc                 (NULL),
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+  m_optionsDesc                 (),
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
   m_option_help                 (m_prefix + "help"                 ),
   m_option_numSubEnvironments   (m_prefix + "numSubEnvironments"   ),
   m_option_subDisplayFileName   (m_prefix + "subDisplayFileName"   ),
@@ -279,7 +321,7 @@ EnvironmentOptions::EnvironmentOptions(
   m_option_identifyingString    (m_prefix + "identifyingString"    )
 {
   queso_deprecated();
-  queso_require_equal_to_msg(m_env.optionsInputFileName(), "", "this constructor is incompatible with the existence of an options input file");
+  queso_require_equal_to_msg(m_env.optionsInputFileName(), std::string(""), std::string("this constructor is incompatible with the existence of an options input file"));
 
   if (m_env.subDisplayFile() != NULL) {
     *m_env.subDisplayFile() << "In EnvironmentOptions::constructor(2)"
@@ -293,8 +335,6 @@ EnvironmentOptions::EnvironmentOptions(
 EnvironmentOptions::~EnvironmentOptions()
 {
   queso_deprecated();
-
-  if (m_optionsDesc) delete m_optionsDesc;
 }
 
 // I/O methods---------------------------------------
@@ -302,11 +342,15 @@ void
 EnvironmentOptions::scanOptionsValues()
 {
   queso_deprecated();
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   queso_require_msg(m_optionsDesc, "m_optionsDesc variable is NULL");
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   defineMyOptions                (*m_optionsDesc);
   m_env.scanInputFileForMyOptions(*m_optionsDesc);
   getMyOptionValues              (*m_optionsDesc);
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   // 'm_subDisplayOutputFile' is still not available at this moment. Use 'std::cout'
   //if (m_env.subScreenFile() != NULL) {
@@ -347,6 +391,7 @@ EnvironmentOptions::print(std::ostream& os) const
   return;
 }
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 // Private methods ----------------------------------
 void
 EnvironmentOptions::defineMyOptions(boost::program_options::options_description& optionsDesc) const
@@ -482,6 +527,7 @@ EnvironmentOptions::getMyOptionValues(boost::program_options::options_descriptio
 
   return;
 }
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
 // Operator outside class definition ----------------
 std::ostream& operator<<(std::ostream& os, const EnvironmentOptions& obj)

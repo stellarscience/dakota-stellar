@@ -36,6 +36,7 @@ void SharedOrthogPolyApproxData::allocate_data()
     case TENSOR_PRODUCT_BASIS:
       tensor_product_multi_index(approxOrder, multiIndex); break;
     }
+    precompute_maximal_rules(approxOrder);
     allocate_component_sobol(multiIndex);
     // Note: defer this if update_exp_form is needed downstream
     approxOrderPrev = approxOrder;
@@ -95,6 +96,47 @@ allocate_component_sobol(const UShort2DArray& multi_index)
       */
     }
   }
+}
+
+
+void SharedOrthogPolyApproxData::
+precompute_maximal_rules(const UShort2DArray& multi_index)
+{
+  // This version scans the multiIndex for maximal order per variable.
+  // Due to the overhead of processing multiIndex, protect this processing
+  // according to polynomial basis type (would be better to encapsulate
+  // within the BasisPolynomial hierarchy).
+
+  size_t i, num_mi_terms = multi_index.size();
+  for (i=0; i<numVars; ++i)
+    switch (polynomialBasis[i].basis_type()) {
+    case NUM_GEN_ORTHOG: {
+      unsigned short max_order = multi_index[0][i];
+      for (size_t j=1; j<num_mi_terms; ++j)
+	if (multi_index[j][i] > max_order)
+	  max_order = multi_index[j][i];
+      polynomialBasis[i].precompute_rules(max_order);
+      break;
+    }
+    // default is no-op
+    }
+}
+
+
+void SharedOrthogPolyApproxData::
+precompute_maximal_rules(const UShortArray& approx_order)
+{
+  // This version employs an incoming approx order, eliminating the overhead
+  // of scanning the multiIndex contents.  Since the over head is reduced,
+  // can call for each basis polynomial and rely on virtual precompute_rules()
+  // to target polynomials that support precomputation optimizations.
+
+  for (size_t i=0; i<numVars; ++i)
+    //switch (polynomialBasis[i].basis_type()) {
+    //case NUM_GEN_ORTHOG:
+    polynomialBasis[i].precompute_rules(approx_order[i]); //break;
+    // default is no-op
+    //}
 }
 
 

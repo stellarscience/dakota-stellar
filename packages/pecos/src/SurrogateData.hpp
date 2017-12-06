@@ -640,11 +640,14 @@ inline bool SurrogateDataResp::is_null() const
 inline void SurrogateDataResp::write(std::ostream& s) const
 {
   if (sdrRep->activeBits & 1)
-    s << "function value = " << sdrRep->responseFn << '\n';
-  if (sdrRep->activeBits & 2)
-    { s << "function gradient =\n"; write_data(s, sdrRep->responseGrad); }
+    s << "function value    =  " << std::setw(WRITE_PRECISION+7)
+      << sdrRep->responseFn << '\n';
+  if (sdrRep->activeBits & 2) {
+    s << "function gradient =\n";
+    write_data_trans(s, sdrRep->responseGrad, true, true, true);
+  }
   if (sdrRep->activeBits & 4) {
-    s << "function Hessian =\n";
+    s << "function Hessian  =\n";
     write_data(s, sdrRep->responseHess, true, true, true);
   }
 }

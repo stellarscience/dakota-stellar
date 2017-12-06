@@ -297,6 +297,11 @@ Real OrthogPolyApproximation::value(const RealVector& x)
     abort_handler(-1);
   }
 
+  // Implement value caching here:
+  // > sweep over multiIndex to find max orders per dim
+  // > pre-compute for x along each dimension
+  // > loop over num_exp_terms with fast lookups
+
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;

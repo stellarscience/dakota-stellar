@@ -43,40 +43,125 @@ int RegressOrthogPolyApproximation::min_coefficients() const
 }
 
 
-void RegressOrthogPolyApproximation::allocate_arrays()
+/** In this case, regression is used in place of spectral projection.  That
+    is, instead of calculating the PCE coefficients using inner products, 
+    linear least squares is used to estimate the PCE coefficients which
+    best match a set of response samples.  The least squares estimation is
+    performed using DGELSS (SVD) or DGGLSE (equality-constrained) from
+    LAPACK, based on anchor point and derivative data availability. */
+void RegressOrthogPolyApproximation::select_solver(bool cv_active)
 {
-  allocate_total_sobol(); // no dependencies
-
-  // multiIndex size (from Shared allocate_data()) used to set
-  // faultInfo.under_determined
-  // Note: OLI's multiIndex is empty, but does not use under_determined flag
-  set_fault_info();
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  if (faultInfo.under_determined || data_rep->
-      expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
-    // defer allocations until sparsity is known
+  bool fn_constrained_lls
+    = (data_rep->basisConfigOptions.useDerivs && faultInfo.constr_eqns &&
+       faultInfo.constr_eqns < data_rep->multiIndex.size()); // candidate exp
+  bool eq_con
+    = (fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad);
 
+  // **************************
+  // Algorithm selection logic:
+  // **************************
+
+  // Assign defaults:
+  short ec_options_solver = data_rep->expConfigOptions.expCoeffsSolnApproach;
+  if (ec_options_solver == DEFAULT_REGRESSION) {
+    if (faultInfo.under_determined)
+      CSOpts.solver = LASSO_REGRESSION;
+    else
+      CSOpts.solver = (eq_con && !cv_active) ? EQ_CON_LEAST_SQ_REGRESSION :
+	SVD_LEAST_SQ_REGRESSION;
+  }
+  else if (ec_options_solver == DEFAULT_LEAST_SQ_REGRESSION)
+    CSOpts.solver = (eq_con && !faultInfo.under_determined && !cv_active) ?
+      EQ_CON_LEAST_SQ_REGRESSION : SVD_LEAST_SQ_REGRESSION;
+  else // Assign user's selection (not a default)
+    CSOpts.solver = ec_options_solver;
+
+  // Special case error traps (Note: only an error for user request, as CV
+  // solver may select EQ_CON_LEAST_SQ_REGRESSION on the fly...)
+  if ( cv_active && ( ec_options_solver == EQ_CON_LEAST_SQ_REGRESSION ||
+		      ec_options_solver == ORTHOG_LEAST_INTERPOLATION ) )
+    throw( std::runtime_error("Cross validation does not currently support equality constrained least squares or orthogonal least interpolation") );
+
+  // Manage overrides/settings for BP, BPDN, equality-constrained least sq:
+  switch (CSOpts.solver) {
+  case BASIS_PURSUIT: case BASIS_PURSUIT_DENOISING:
+    if ( !faultInfo.under_determined ) {  // no BP/BPDN for over-determined
+      PCerr << "Warning: Could not perform BP/BPDN for over-determined system."
+	    << "\n         Using SVD least squares regression instead.\n";
+      CSOpts.solver = SVD_LEAST_SQ_REGRESSION; // force override to least sq
+    }
+    break;
+  case EQ_CON_LEAST_SQ_REGRESSION:
+    if ( faultInfo.under_determined ) {
+      PCerr << "Warning: Could not perform equality constrained least-squares."
+	    << "\n         Using LASSO regression instead.\n";
+      CSOpts.solver = LASSO_REGRESSION;
+    }
+    else if ( !eq_con ) {
+      PCerr << "Warning: Could not perform equality constrained least-squares."
+	    << "\n         Using SVD least squares regression instead.\n";
+      CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
+    }
+    break;
+  }
+
+  // Set solver parameters
+  RealVector noise_tols = data_rep->regressConfigOptions.noiseTols; // copy
+  if ( CSOpts.solver == EQ_CON_LEAST_SQ_REGRESSION )
+    CSOpts.numFunctionSamples = surrData.points();
+  if ( CSOpts.solver == LASSO_REGRESSION )
+    CSOpts.delta = data_rep->regressConfigOptions.l2Penalty;
+  if ( noise_tols.empty() ) {
+    noise_tols.size( 1 );
+    noise_tols[0] = (CSOpts.solver == BASIS_PURSUIT_DENOISING) ? 1.e-3 :
+      CSOpts.epsilon;
+  }
+  else
+    CSOpts.epsilon = noise_tols[0];
+  CSOpts.solverTolerance = (CSOpts.solver == SVD_LEAST_SQ_REGRESSION) ? -1. :
+    data_rep->expConfigOptions.convergenceTol;
+  CSOpts.verbosity = std::max(0, data_rep->expConfigOptions.outputLevel - 1);
+  if ( data_rep->expConfigOptions.maxSolverIterations > 0 )
+    CSOpts.maxNumIterations = data_rep->expConfigOptions.maxSolverIterations;
+
+  // define global flags
+  // Previous default assignments + method overrides simplifies this logic
+  switch (CSOpts.solver) {
+  case ORTHOG_LEAST_INTERPOLATION: case ORTHOG_MATCH_PURSUIT:
+  case LASSO_REGRESSION:           case LEAST_ANGLE_REGRESSION:
+  case BASIS_PURSUIT:              case BASIS_PURSUIT_DENOISING:
+    sparseSoln =  true; break;
+  //case BASIS_PURSUIT: case BASIS_PURSUIT_DENOISING:
+  //  sparseSoln = faultInfo.under_determined; break; // handled by override
+  default:
+    sparseSoln = false; break;
+  }
+}
+
+
+void RegressOrthogPolyApproximation::allocate_arrays()
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  if (sparseSoln) {
+    allocate_total_sobol(); // no dependencies
+
+    // defer allocations until sparsity is known
     if (data_rep->expConfigOptions.vbdFlag && 
 	data_rep->expConfigOptions.vbdOrderLimit == 1)
       allocate_component_sobol(); // no dependence on multiIndex for order 1
     // else defer until sparse recovery
 
     //size_expansion(); // defer until sparse recovery
+
+    if (expansionMoments.empty())
+      expansionMoments.sizeUninitialized(2);
   }
-  else { // pre-allocate total-order expansion
-    // uniquely/over-determined regression: perform allocations now
-
-    allocate_component_sobol();
-
-    // size expansion even if !update_exp_form due to possibility of change
-    // to expansion{Coeff,GradFlag} settings
-    size_expansion();
-  }
-
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
+  else // pre-allocate total-order expansion
+    OrthogPolyApproximation::allocate_arrays();
 }
 
 
@@ -114,21 +199,26 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   gradient_check();
 #endif // DEBUG
 
-  // check data set for gradients/constraints/faults to determine settings
-  surrData.data_checks();
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // check data set for gradients/constraints/faults to determine settings
+  surrData.data_checks();
+  // multiIndex size (from Shared allocate_data()) used to set
+  // faultInfo.under_determined.  Note: OLI's multiIndex is empty,
+  // but does not use under_determined flag.
+  set_fault_info();
+  // initial solver settings (may be updated for CV folds)
+  select_solver(data_rep->regressConfigOptions.crossValidation);
+  // array allocations dependent on solver type
+  allocate_arrays();
+
   switch (data_rep->expConfigOptions.expBasisType) {
   case DEFAULT_BASIS: // least interpolation case
   case TOTAL_ORDER_BASIS: case TENSOR_PRODUCT_BASIS:
-    allocate_arrays();
-    //select_solver();
     run_regression(); // solve for PCE coefficients, optionally with cross valid
     break;
   case ADAPTED_BASIS_GENERALIZED: case ADAPTED_BASIS_EXPANDING_FRONT:
-    allocate_arrays();
-    select_solver();
     adapt_regression(); // adapt for the best multiIndex for a fixed data set
     break;
   }
@@ -139,6 +229,61 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 
 void RegressOrthogPolyApproximation::increment_coefficients()
 { compute_coefficients(); } // sufficient for now
+
+
+void RegressOrthogPolyApproximation::run_regression()
+{
+  // Assume all function values are stored in top block of matrix in rows
+  // 0 to num_surr_data_pts-1. Gradient information will be stored
+  // in the bottom block of the matrix in rows num_surr_data_pts to
+  // num_surr_data_pts + num_data_pts_grad * num_v. All the gradient 
+  // information of point 0 will be stored consecutively then all the gradient
+  // data of point 1, and so on.
+
+  // Currently nothing is done  to modify the regression linear system matrices
+  // A and B if surrData.anchor() is true, as currently surrData.anchor()
+  // is always false. If in the future surrData.anchor() is enabled then
+  // A must be adjusted to include the extra constraint information associated
+  // with the anchor data. That is, if using EQ_CON_LEAST_SQUARES C matrix 
+  // (top block of A ) must contain the fn and grad data of anchor point.
+  // This will violate the first assumption discussed above and effect cross
+  // validation. For this reason no modification is made as yet.
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // Perform cross validation loop over degrees here.
+  // Current cross validation will not work for equality 
+  // constrained least squares
+  if (data_rep->regressConfigOptions.crossValidation) // CV: MULTIPLE CS SOLVES
+    run_cross_validation_expansion(); // updates all global bookkeeping
+                                      // multiple RHS not currently supported
+  else {
+    RealMatrix A, B, points;
+    build_linear_system( A, B, points );
+    IntVector index_mapping;
+    if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
+	 ORTHOG_LEAST_INTERPOLATION ) { // SINGLE OLI SOLVE
+      remove_faulty_data( A, B, points, index_mapping, faultInfo,
+			  surrData.failed_response_data() );
+      //faultInfo.under_determined = false;
+      PCout << "Forming least interpolant for " << points.numCols()
+	    << " points.\n";
+      least_interpolation( points, B ); // updates all global bookkeeping
+                                        // multiple RHS not currently supported
+    }
+    else { // SINGLE CS SOLVE
+      RealMatrix points_dummy;
+      remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
+			  surrData.failed_response_data() );
+      //faultInfo.under_determined = A.numRows() < A.numCols();
+      PCout << "Applying regression to compute " << data_rep->multiIndex.size()
+	    << " chaos coefficients using " << A.numRows() << " equations.\n";
+      compressed_sensing(A, B); // updates all global bookkeeping
+                                // includes support for multiple RHS
+    }
+  }
+}
 
 
 void RegressOrthogPolyApproximation::adapt_regression()
@@ -1430,88 +1575,6 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 }
 
 
-/** In this case, regression is used in place of spectral projection.  That
-    is, instead of calculating the PCE coefficients using inner products, 
-    linear least squares is used to estimate the PCE coefficients which
-    best match a set of response samples.  The least squares estimation is
-    performed using DGELSS (SVD) or DGGLSE (equality-constrained) from
-    LAPACK, based on anchor point and derivative data availability. */
-void RegressOrthogPolyApproximation::select_solver()
-{
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  CSOpts.solver = data_rep->expConfigOptions.expCoeffsSolnApproach;
-  bool fn_constrained_lls
-    = (data_rep->basisConfigOptions.useDerivs && faultInfo.constr_eqns &&
-       faultInfo.constr_eqns < data_rep->multiIndex.size()); // candidate exp
-  bool eq_con
-    = (fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad);
-  if (CSOpts.solver==DEFAULT_REGRESSION) {
-    if (faultInfo.under_determined)
-      CSOpts.solver = LASSO_REGRESSION;
-    else
-      CSOpts.solver = (eq_con) ? EQ_CON_LEAST_SQ_REGRESSION :
-	SVD_LEAST_SQ_REGRESSION;
-  }
-  else if (CSOpts.solver==DEFAULT_LEAST_SQ_REGRESSION)
-    CSOpts.solver = (eq_con && !faultInfo.under_determined) ?
-      EQ_CON_LEAST_SQ_REGRESSION : SVD_LEAST_SQ_REGRESSION;
-
-  if ( ( !faultInfo.under_determined ) && 
-       ( ( CSOpts.solver == BASIS_PURSUIT ) || 
-	 ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) ) )
-    {
-      CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
-      CSOpts.solverTolerance = -1.;
-    }
-
-  // Set solver parameters
-  RealVector noise_tols = data_rep->regressConfigOptions.noiseTols; // copy
-  /*
-  if ( data_rep->noiseTols.length() > 0 )
-    {
-      // data_rep->noiseTols is being set will very long length. This must
-      // be a bug
-      noise_tols.sizeUninitialized( data_rep->noiseTols.length() );
-      noise_tols.assign( data_rep->noiseTols );
-    }
-  */
-  if ( CSOpts.solver == LASSO_REGRESSION )
-    CSOpts.delta = data_rep->regressConfigOptions.l2Penalty;
-  if ( noise_tols.length() > 0 )
-      CSOpts.epsilon = noise_tols[0];
-  else {
-    noise_tols.size( 1 );
-    noise_tols[0] = CSOpts.epsilon;
-    if ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) noise_tols[0] = 1e-3;
-  }
-  CSOpts.solverTolerance = (CSOpts.solver == SVD_LEAST_SQ_REGRESSION)
-    ? -1.0 : data_rep->expConfigOptions.convergenceTol;
-  CSOpts.verbosity = std::max(0, data_rep->expConfigOptions.outputLevel - 1);
-  if ( data_rep->expConfigOptions.maxSolverIterations > 0 )
-    CSOpts.maxNumIterations = data_rep->expConfigOptions.maxSolverIterations;
-
-  // Solve the regression problem using L1 or L2 minimization approaches
-  //bool regression_err = 0;
-  if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION &&
-      !data_rep->regressConfigOptions.crossValidation){
-    if ( eq_con && !faultInfo.under_determined )
-      CSOpts.numFunctionSamples = surrData.points();
-    else {
-      PCout << "Could not perform equality constrained least-squares. ";
-      if (faultInfo.under_determined) {
-	CSOpts.solver = LASSO_REGRESSION;
-	PCout << "Using LASSO regression instead\n";
-      }
-      else {
-	CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
-	PCout << "Using SVD least squares regression instead\n";
-      }
-    }
-  }
-}
-
-
 void RegressOrthogPolyApproximation::set_fault_info()
 {
   size_t constr_eqns, anchor_fn, anchor_grad, num_data_pts_fn,
@@ -1806,75 +1869,6 @@ augment_linear_system( const RealVectorArray& samples, RealMatrix &A,
 }
 
 
-void RegressOrthogPolyApproximation::run_regression()
-{
-  // Assume all function values are stored in top block of matrix in rows
-  // 0 to num_surr_data_pts-1. Gradient information will be stored
-  // in the bottom block of the matrix in rows num_surr_data_pts to
-  // num_surr_data_pts + num_data_pts_grad * num_v. All the gradient 
-  // information of point 0 will be stored consecutively then all the gradient
-  // data of point 1, and so on.
-
-  // Currently nothing is done  to modify the regression linear system matrices
-  // A and B if surrData.anchor() is true, as currently surrData.anchor()
-  // is always false. If in the future surrData.anchor() is enabled then
-  // A must be adjusted to include the extra constraint information associated
-  // with the anchor data. That is, if using EQ_CON_LEAST_SQUARES C matrix 
-  // (top block of A ) must contain the fn and grad data of anchor point.
-  // This will violate the first assumption discussed above and effect cross
-  // validation. For this reason no modification is made as yet.
-
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-
-  // Perform cross validation loop over degrees here.
-  // Current cross validation will not work for equality 
-  // constrained least squares
-  if (data_rep->regressConfigOptions.crossValidation) {// CV: MULTIPLE CS SOLVES
-    if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
-	 ORTHOG_LEAST_INTERPOLATION )
-      throw( std::runtime_error(
-	"Cannot use cross validation with least interpolation") );
-    if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
-	 EQ_CON_LEAST_SQ_REGRESSION )
-      throw( std::runtime_error(
-	"Cannot use cross validation with equality constrained least squares regression") );
-	  
-    select_solver();
-    run_cross_validation_expansion(); // updates all global bookkeeping
-                                      // multiple RHS not currently supported
-  }
-  else {
-
-    RealMatrix A, B, points;
-    build_linear_system( A, B, points );
-    if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
-	 ORTHOG_LEAST_INTERPOLATION ) { // SINGLE OLI SOLVE
-      IntVector index_mapping; 
-      remove_faulty_data( A, B, points, index_mapping, faultInfo,
-			  surrData.failed_response_data() );
-      faultInfo.under_determined = false;
-      PCout << "Forming least interpolant for " << points.numCols()
-	    << " points.\n";
-      least_interpolation( points, B ); // updates all global bookkeeping
-                                        // multiple RHS not currently supported
-    }
-    else { // SINGLE CS SOLVE
-      IntVector index_mapping; 
-      RealMatrix points_dummy;
-      remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
-			  surrData.failed_response_data() );
-      faultInfo.under_determined = A.numRows() < A.numCols();
-      PCout << "Applying regression to compute " << data_rep->multiIndex.size()
-	    << " chaos coefficients using " << A.numRows() << " equations.\n";
-
-      compressed_sensing(A, B); // updates all global bookkeeping
-                                // includes support for multiple RHS
-    }
-  }
-}
-
-
 Real RegressOrthogPolyApproximation::
 run_cross_validation_solver(const UShort2DArray& multi_index,
 			    RealVector& best_exp_coeffs,
@@ -1913,7 +1907,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   int num_folds = std::min(10, num_data_pts_fn);
   //int num_folds = num_data_pts_fn; //HACK
   int max_num_pts_per_fold = num_data_pts_fn / num_folds;
-  if ( num_data_pts_fn % num_folds != 0 ); max_num_pts_per_fold++;
+  if ( num_data_pts_fn % num_folds ) ++max_num_pts_per_fold;
   if ( CSOpts.solver != ORTHOG_MATCH_PURSUIT   &&
        CSOpts.solver != LASSO_REGRESSION       &&
        CSOpts.solver != LEAST_ANGLE_REGRESSION &&
@@ -1943,23 +1937,19 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   Real best_tolerance = cv_iterator.get_best_residual_tolerance();
 
   if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
-    {
-      PCout << "Cross validation score: " << score << "\n";
-      PCout << "Best tolerance chosen by cross validation: " << 
-	best_tolerance << "\n";
-    }
+    PCout << "Cross validation score: " << score << "\nBest tolerance chosen "
+	  << "by cross validation: " << best_tolerance << "\n";
 
   // CV is complete, now compute final solution with all data points:
   IntVector index_mapping;
   RealMatrix points_dummy;
   remove_faulty_data( A, b, points_dummy, index_mapping,
 		      faultInfo, surrData.failed_response_data() );
-  int num_rows_V = A.numRows(),
-    num_cols_V = A.numCols();
+  int num_rows_V = A.numRows(), num_cols_V = A.numCols();
   faultInfo.under_determined = num_rows_V < num_cols_V;
+  select_solver(false); // CV no longer active for final soln
   PCout << "Applying regression to compute " << num_cols_V
 	<< " chaos coefficients using " << num_rows_V << " equations.\n";
-  select_solver();
   RealMatrix solutions, metrics;
   linear_solver->set_residual_tolerance( best_tolerance );
   linear_solver->solve( A, b, solutions, metrics );
@@ -2087,39 +2077,31 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
 				  bestApproxOrder[0] );
   if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
-    {
-      PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
-      PCout << "Best cross validation error: " << best_score << "\n";
-    }
+    PCout << "Best approximation order: " << bestApproxOrder[0]
+	  << "\nBest cross validation error: " << best_score << "\n";
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
-  RealMatrix vandermonde_submatrix( Teuchos::View, 
-				    A,
-				    A.numRows(),
+  RealMatrix vandermonde_submatrix( Teuchos::View, A, A.numRows(),
 				    num_basis_terms, 0, 0 );
   IntVector index_mapping;
   RealMatrix points_dummy;
   remove_faulty_data( vandermonde_submatrix, b, points_dummy, index_mapping,
 		      faultInfo, surrData.failed_response_data() );
   int num_rows_V = vandermonde_submatrix.numRows(),
-    num_cols_V = vandermonde_submatrix.numCols();
+      num_cols_V = vandermonde_submatrix.numCols();
   faultInfo.under_determined = num_rows_V < num_cols_V;
   PCout << "Applying regression to compute " << num_cols_V
 	<< " chaos coefficients using " << num_rows_V << " equations.\n";
-  select_solver();
+  select_solver(false); // CV no longer active for final soln
   RealMatrix solutions, metrics;
   linear_solver->set_residual_tolerance( best_tolerance );
   linear_solver->solve( vandermonde_submatrix, b, solutions, metrics );
 
   int last_index = solutions.numCols() - 1;
-  if (faultInfo.under_determined) // exploit CS sparsity
+  // exploit CS sparsity for OMP,LASSO,LARS regardless of data size and for
+  // BP,BPDN if under-determined (these revert to least sq for over determined)
+  if (sparseSoln)
     update_sparse(solutions[last_index], num_basis_terms);
   else {
-    // JDJ: Mike this means if we try to force omp for over-determined system
-    // then sparse indices will not be taken full advantage of. Should we 
-    // modify the logic here so that this section is only entered if using
-    // least squares or BP or BPDN ( the later revert to least squares for
-    // over determinde systems. Same argument for line 1935 and 1945 in 
-    //compresed_sensing() function
     copy_data(solutions[last_index], num_basis_terms, expansionCoeffs);
     // if best expansion order is less than maximum candidate, define
     // sparseIndices to define active subset within data_rep->multiIndex.
@@ -2145,8 +2127,6 @@ compressed_sensing( RealMatrix &A, RealMatrix &B )
 
   CSOpts.standardizeInputs = false;// false essential when using derivatives
 
-  select_solver();
-
   CompressedSensingOptionsList opts_list;
   RealMatrixArray solutions;
   data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
@@ -2155,7 +2135,7 @@ compressed_sensing( RealMatrix &A, RealMatrix &B )
   bool multiple_rhs = (expansionCoeffFlag && expansionCoeffGradFlag);
   int num_expansion_terms = data_rep->multiIndex.size();
   if ( expansionCoeffFlag && !multiple_rhs ) {
-    if (faultInfo.under_determined) // exploit CS sparsity
+    if (sparseSoln) // exploit CS sparsity
       update_sparse(solutions[0][0], num_expansion_terms);
     else {                          // retain full solution
       copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
@@ -2165,7 +2145,7 @@ compressed_sensing( RealMatrix &A, RealMatrix &B )
   else {
     int i, j, num_grad_rhs = surrData.num_derivative_variables(),
       num_coeff_rhs = ( !multiple_rhs && expansionCoeffGradFlag ) ? 0 : 1;
-    if (faultInfo.under_determined) { // exploit CS sparsity
+    if (sparseSoln) { // exploit CS sparsity
       // overlay sparse solutions into an aggregated set of sparse indices
       sparseIndices.clear();
       if (multiple_rhs)
@@ -2203,12 +2183,11 @@ void RegressOrthogPolyApproximation::
 least_interpolation( RealMatrix &pts, RealMatrix &vals )
 {
 #ifdef DEBUG
-  if ( pts.numCols() != vals.numRows() ) 
-    {
-      std::string msg = "least_interpolation() dimensions of pts and vals ";
-      msg += "are inconsistent";
-      throw( std::runtime_error( msg ) );
-    }
+  if ( pts.numCols() != vals.numRows() ) {
+    std::string msg
+      = "least_interpolation() dimensions of pts and vals are inconsistent";
+    throw( std::runtime_error( msg ) );
+  }
 #endif
 
   SharedRegressOrthogPolyApproxData* data_rep
@@ -2597,12 +2576,16 @@ update_sparse_sobol(const SizetSet& sparse_indices,
     // define map from shared index to sparse index
     cit = shared_sobol_map.find(set);
     if (cit == shared_sobol_map.end()) {
-      PCerr << "Error: sobolIndexMap lookup failure in RegressOrthogPoly"
-	    << "Approximation::update_sparse_sobol()" << std::endl;
-      abort_handler(-1);
+      if (set.count() <= data_rep->expConfigOptions.vbdOrderLimit) {
+	PCerr << "Error: sobolIndexMap lookup failure in RegressOrthogPoly"
+	      << "Approximation::update_sparse_sobol() for multi-index\n"
+	      << sparse_mi << std::endl;
+	abort_handler(-1);
+      }
+      // else contributions to this set are not tracked
     }
-    // key = shared index, value = sparse index (init to 0, to be updated below)
-    sparseSobolIndexMap[cit->second] = 0;
+    else // {key,val} = {shared,sparse} index: init sparse to 0 (updated below)
+      sparseSobolIndexMap[cit->second] = 0;
   }
   // now that keys are complete, assign new sequence for sparse Sobol indices
   unsigned long sobol_len = 0; ULULMIter mit;

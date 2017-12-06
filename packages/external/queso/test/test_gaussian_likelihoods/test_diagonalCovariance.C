@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -28,6 +28,8 @@
 #include <queso/BoxSubset.h>
 #include <queso/GaussianLikelihoodDiagonalCovariance.h>
 
+#include <cstdlib>
+
 #define TOL 1e-8
 
 template<class V, class M>
@@ -46,9 +48,7 @@ public:
   {
   }
 
-  virtual void evaluateModel(const V & domainVector, const V * domainDirection,
-      V & modelOutput, V * gradVector, M * hessianMatrix,
-      V * hessianEffect) const
+  virtual void evaluateModel(const V & domainVector, V & modelOutput) const
   {
     // Model is a map from R to R^2
 
@@ -60,11 +60,16 @@ public:
 };
 
 int main(int argc, char ** argv) {
+  std::string inputFileName = "test_gaussian_likelihoods/queso_input.txt";
+  const char * test_srcdir = std::getenv("srcdir");
+  if (test_srcdir)
+    inputFileName = test_srcdir + ('/' + inputFileName);
+
 #ifdef QUESO_HAS_MPI
   MPI_Init(&argc, &argv);
-  QUESO::FullEnvironment env(MPI_COMM_WORLD, "test_gaussian_likelihoods/queso_input.txt", "", NULL);
+  QUESO::FullEnvironment env(MPI_COMM_WORLD, inputFileName, "", NULL);
 #else
-  QUESO::FullEnvironment env("test_gaussian_likelihoods/queso_input.txt", "", NULL);
+  QUESO::FullEnvironment env(inputFileName, "", NULL);
 #endif
 
   QUESO::VectorSpace<QUESO::GslVector, QUESO::GslMatrix> paramSpace(env,
@@ -130,4 +135,3 @@ int main(int argc, char ** argv) {
 
   return 0;
 }
-

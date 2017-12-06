@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -26,9 +26,7 @@
 #define UQ_BAYESIAN_JOINT_PROB_DENSITY_H
 
 #include <cmath>
-
-#include <boost/math/special_functions.hpp> // for Boost isnan. Note parentheses are important in function call.
-
+#include <queso/math_macros.h>
 #include <queso/JointPdf.h>
 #include <queso/Environment.h>
 #include <queso/ScalarFunction.h>
@@ -76,12 +74,18 @@ public:
    * (likelihoodExponent) is zero then the Logarithm of the value of the function is the logarithm of
    * the value of the prior PDF; otherwise, the value is scaled (added) by a power of the value of the
    * likelihood function.*/
-  double lnValue                  (const V& domainVector, const V* domainDirection, V* gradVector, M* hessianMatrix, V* hessianEffect) const;
+  virtual double lnValue(const V & domainVector) const;
+  virtual double lnValue(const V & domainVector, V & gradVector) const;
+
+  //! Mean value of the underlying random variable.
+  virtual void   distributionMean (V & meanVector) const { queso_not_implemented(); }
+
+  //! Covariance matrix of the underlying random variable.
+  virtual void   distributionVariance (M & covMatrix) const { queso_not_implemented(); };
 
   //! TODO: Computes the logarithm of the normalization factor.
   /*! \todo: implement me!*/
   double computeLogOfNormalizationFactor(unsigned int numSamples, bool updateFactorInternally) const;
-
 
   //! Sets a value to be used in the normalization style of the prior density PDF (ie, protected attribute m_priorDensity).
   void   setNormalizationStyle    (unsigned int value) const;
@@ -92,6 +96,11 @@ public:
   //! Returns the logarithm of the last computed likelihood value.  Access to protected attribute m_lastComputedLogLikelihood.
   double lastComputedLogLikelihood() const;
 
+  //@}
+
+  //! @name Using declarations
+  //@{
+  using BaseScalarFunction<V, M>::lnValue;
   //@}
 
 protected:

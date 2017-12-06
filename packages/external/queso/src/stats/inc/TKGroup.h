@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -72,6 +72,9 @@ public:
 
   //! Gaussian increment property to construct a transition kernel. See template specialization.
   virtual const BaseVectorRV<V,M>& rv                        (const std::vector<unsigned int>& stageIds) = 0;
+
+  //! Constructs transition kernel pdf based on internal \c m_stageId variable
+  virtual const BaseVectorRV<V, M> & rv(const V & position) const = 0;
   //@}
 
   //! @name Misc methods
@@ -87,6 +90,31 @@ public:
 
   //! Clears the pre-computing positions \c m_preComputingPositions[stageId]
   virtual       void                          clearPreComputingPositions();
+
+  //! Does nothing.  Subclasses may re-implement.  Returns the current stage id.
+  virtual unsigned int set_dr_stage(unsigned int stageId);
+
+  //! The user can override this method to implement state-dependent
+  //! transition kernel behaviour.
+  /*!
+   * Default behaviour is a no-op.
+   */
+  virtual void updateTK() { };
+
+  //! This method determines whether or not the user has 'dirtied' the
+  //! covariance matrix, thereby necessitating an AM reset.
+  /*!
+   * Should return true if the cov matrix was modified in such a way to affect
+   * the Adaptive Metropolis sample covariance calculation.
+   */
+  virtual bool covMatrixIsDirty() = 0;
+
+  //! Performs whatever cleanup is needed (usually just resetting an internal
+  //! bool flag) after the covariance matrix was modified.
+  /*!
+   * After this method is called, covMatrixIsDirty should return \c true.
+   */
+  virtual void cleanCovMatrix() = 0;
   //@}
 
   //! @name I/O methods
@@ -96,13 +124,14 @@ public:
   virtual       void                          print                     (std::ostream& os) const;
   //@}
 protected:
-  const   EmptyEnvironment*                    m_emptyEnv;
-  const   BaseEnvironment&                     m_env;
-          std::string                                 m_prefix;
-  const   VectorSpace<V,M>*                    m_vectorSpace;
-          std::vector<double>                         m_scales;
-          std::vector<const V*>                       m_preComputingPositions;
-          std::vector<BaseVectorRV<V,M>* > m_rvs; // Gaussian, not Base... And nothing const...
+  const EmptyEnvironment*                m_emptyEnv;
+  const BaseEnvironment&                 m_env;
+        std::string                      m_prefix;
+  const VectorSpace<V,M>*                m_vectorSpace;
+        std::vector<double>              m_scales;
+        std::vector<const V*>            m_preComputingPositions;
+        std::vector<BaseVectorRV<V,M>* > m_rvs; // Gaussian, not Base... And nothing const...
+  unsigned int m_stageId;
 };
 
 }  // End namespace QUESO

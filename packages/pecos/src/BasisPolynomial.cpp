@@ -609,4 +609,16 @@ Real BasisPolynomial::length_scale() const
   return polyRep->length_scale();
 }
 
+
+void BasisPolynomial::precompute_rules(unsigned short order)
+{
+  if (polyRep)
+    polyRep->precompute_rules(order); // else no-op
+  //else {
+  //  PCerr << "Error: precompute_rules() not available for this basis "
+  //	    << "polynomial type." << std::endl;
+  //  abort_handler(-1);
+  //}
+}
+
 } // namespace Pecos

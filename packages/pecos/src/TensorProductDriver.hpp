@@ -104,6 +104,10 @@ public:
   /// helper initializer of tensor grid settings (except distribution params)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
+  /// precompute quadrature rules to the maximum current order for each basis
+  /// polynomial (efficiency optimization when rules are expensive to compute)
+  void precompute_rules();
+
 private:
 
   //

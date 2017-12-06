@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -22,7 +22,10 @@
 //
 //-----------------------------------------------------------------------el-
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 #include <queso/BoostInputOptionsParser.h>
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+
 #include <queso/Environment.h>
 
 #ifndef UQ_SFP_OPTIONS_H
@@ -43,15 +46,17 @@
 #define UQ_SFP_SOLVER_ODV                  "mc" // Monte Carlo
 #endif
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
 namespace boost {
   namespace program_options {
     class options_description;
   }
 }
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
 namespace QUESO {
 
-/*! \file uqStatisticalForwardProblemOptions.h
+/*! \file StatisticalForwardProblemOptions.h
     \brief Classes to allow options to be passed to a Statistical Forward Problem.
 */
 
@@ -102,7 +107,9 @@ public:
   //McOptionsValues m_mcOptionsValues;
 
 private:
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   BoostInputOptionsParser * m_parser;
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   // The input options as strings so we can parse the input file later
   std::string                   m_option_help;
@@ -165,15 +172,19 @@ public:
   std::string                   m_prefix;
 
 private:
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   //! Define my SFP options as the default options.
   void   defineMyOptions  (boost::program_options::options_description& optionsDesc) const;
 
   //! Gets the option values of the SFP.
   void   getMyOptionValues(boost::program_options::options_description& optionsDesc);
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
 
   const BaseEnvironment& m_env;
 
+#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
   boost::program_options::options_description*      m_optionsDesc;
+#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
   std::string                   m_option_help;
   std::string                   m_option_computeSolution;
   std::string                   m_option_computeCovariances;

@@ -4,7 +4,7 @@
 #   from sources (which may be checked into the repo)
 #   nidr-scanner.c nidr-parser.c avltree.c nidr.c
 #
-# * If ENABLE_SPEC_MAINT, build nidrgen and Dt binaries
+# * If NIDR_NIDRGEN, build nidrgen and Dt binaries
 #   not currently installed, but perhaps should be for JAGUAR benefit
 #
 # * If NIDR_REGENERATE_YACCLEX and have lex/yacc
@@ -31,8 +31,7 @@ function(file_replace input output find replace)
     VERBATIM)
 endfunction()
 
-OPTION(NIDR_REGENERATE_YACCLEX
-  "Regenerate YACC and LEXX files" OFF)
+OPTION(NIDR_REGENERATE_YACCLEX "Regenerate YACC and LEX files" OFF)
 IF(NIDR_REGENERATE_YACCLEX)
   FIND_PROGRAM(YACC_EXECUTABLE
     NAMES yacc bison
@@ -125,8 +124,9 @@ include(CheckIncludeFile)
 option(NIDR_DL_SOLVER "Toggle NIDR DL Solvers, default is disabled." OFF)
 add_definitions("-DNO_NIDR_DYNLIB")
 
-# Build the nidrgen and Dt binaries if in specification maintenance mode
-if (ENABLE_SPEC_MAINT)
+# Build the nidrgen and Dt binaries if requested
+OPTION(NIDR_NIDRGEN "Build nidrgen utilities" ON)
+if (NIDR_NIDRGEN)
 
   if(CMAKE_SYSTEM_NAME MATCHES Darwin)
     set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
@@ -156,9 +156,11 @@ if (ENABLE_SPEC_MAINT)
   if(nidrgen-libs)
     target_link_libraries(nidrgen ${nidrgen-libs})
   endif()
-  add_executable(Dt Dt.c)
 
-endif(ENABLE_SPEC_MAINT)
+  # Not building Dt for now due to need for localtime_r alternative on Windows
+  #add_executable(Dt Dt.c)
+
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 

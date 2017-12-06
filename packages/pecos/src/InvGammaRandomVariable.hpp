@@ -170,6 +170,7 @@ inline Real InvGammaRandomVariable::pdf_gradient(Real x) const
   PCerr << "Error: InvGammaRandomVariable::pdf_gradient() not implemented."
 	<< std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -189,6 +190,7 @@ inline Real InvGammaRandomVariable::pdf_hessian(Real x) const
   PCerr << "Error: InvGammaRandomVariable::pdf_hessian() not implemented."
 	<< std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -319,6 +321,7 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   PCerr << "Error: InvGammaRandomVariable::correlation_warping_factor() not "
 	<< "implemented." << std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -328,6 +331,7 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   // hide ExponentialRandomVariable implementation
   PCerr << "Error: InvGammaRandomVariable::dx_ds() not implemented."<<std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -338,6 +342,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
   PCerr << "Error: InvGammaRandomVariable::dz_ds_factor() not implemented."
 	<< std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 

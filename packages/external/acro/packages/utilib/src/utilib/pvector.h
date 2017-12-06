@@ -106,7 +106,7 @@ public:
 
   /// Copy constructor
   pvector(const pvector<_Tp>& __x)
-	: std::vector<_Tp>(__x) { (void)registrations_complete; }
+	: std::vector<_Tp>(__x) { (void)&registrations_complete; }
 
   /// Constructor
 #ifdef UTILIB_HAVE_MEMBER_TEMPLATES

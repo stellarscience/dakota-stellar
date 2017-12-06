@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,12 +23,11 @@
 //-----------------------------------------------------------------------el-
 
 #include <cmath>
-
+#include <limits>
 #include <queso/InvLogitGaussianVectorRealizer.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
-
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <queso/math_macros.h>
 
 namespace QUESO {
 
@@ -127,19 +126,19 @@ InvLogitGaussianVectorRealizer<V, M>::realization(V & nextValues) const
     double min_val = min_domain_bounds[i];
     double max_val = max_domain_bounds[i];
 
-    if (boost::math::isfinite(min_val) &&
-        boost::math::isfinite(max_val)) {
+    if (queso_isfinite(min_val) &&
+        queso_isfinite(max_val)) {
         // Left- and right-hand sides are finite.  Do full transform.
         nextValues[i] = (max_val * temp + min_val) / (1.0 + temp);
       }
-    else if (boost::math::isfinite(min_val) &&
-             !boost::math::isfinite(max_val)) {
+    else if (queso_isfinite(min_val) &&
+             !queso_isfinite(max_val)) {
       // Left-hand side finite, but right-hand side is not.
       // Do only left-hand transform.
       nextValues[i] = temp + min_val;
     }
-    else if (!boost::math::isfinite(min_val) &&
-             boost::math::isfinite(max_val)) {
+    else if (!queso_isfinite(min_val) &&
+             queso_isfinite(max_val)) {
       // Right-hand side is finite, but left-hand side is not.
       // Do only right-hand transform.
       nextValues[i] = (max_val * temp - 1.0) / temp;

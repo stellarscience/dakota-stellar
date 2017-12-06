@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -65,6 +65,12 @@ public:
   /*! It checks if both statements are true: 1) all components in \c vec are larger than
    * m_minValues, and 2) all all components in \c vec are smaller than m_maxValues. */
   bool contains (const V& vec)     const;
+
+  //! Returns the centroid of this box subset in the vector \c vec.
+  void centroid (V& vec)     const;
+
+  //! Returns the moments of inertia of this box subset in the matrix \c mat.
+  void moments (M & mat)     const;
 
   //! Vector of the minimum values of the box subset.
   const V&   minValues()                 const;

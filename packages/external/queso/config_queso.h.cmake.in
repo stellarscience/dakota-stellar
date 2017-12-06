@@ -1,0 +1,176 @@
+#ifndef _CONFIG_QUESO_H
+#define _CONFIG_QUESO_H 1
+
+/* config_queso.h.cmake.in.  Mirrors autotools-generated config_queso.h */
+
+/* BMA TODO:
+   * ifndef?
+   * Make sure #define to 1 vs. missing, not 0 or empty (MSVC++?)
+*/
+
+/* Define this to an absolute name of <Trilinos_version.h>. */
+// QUESO_ABSOLUTE_TRILINOS_VERSION_H
+
+/* Architecture of the build host */
+#define QUESO_BUILD_ARCH "@BUILD_ARCH@"
+
+/* Build date: may get updated after queso.h is included --> needs ifndef */
+#ifndef QUESO_BUILD_DATE
+#define QUESO_BUILD_DATE __DATE__ " " __TIME__
+#endif
+
+/* Dev/Release build */
+#define QUESO_BUILD_DEVSTATUS "@BUILD_DEVSTATUS@"
+
+/* Build host name */
+#define QUESO_BUILD_HOST "@BUILD_HOST@"
+
+/* The fine user who built the package */
+#define QUESO_BUILD_USER "@BUILD_USER@"
+
+/* git revision */
+#define QUESO_BUILD_VERSION "@BUILD_VERSION@"
+
+/* Define if ANN is available */
+// QUESO_HAVE_ANN
+
+/* Defined if the requested minimum BOOST version is satisfied */
+#cmakedefine QUESO_HAVE_BOOST
+
+/* Define to 1 if you have <boost/math/special_functions.hpp> */
+#define QUESO_HAVE_BOOST_MATH_SPECIAL_FUNCTIONS_HPP @QUESO_HAVE_BOOST@
+
+/* Define to 1 if you have <boost/program_options.hpp> */
+/* No longer using: #define QUESO_HAVE_BOOST_PROGRAM_OPTIONS_HPP @QUESO_HAVE_BOOST@ */
+
+/* Always prefer Getpot over Boost, which is deprecated */
+#define DISABLE_BOOST_PROGRAM_OPTIONS 1
+
+/* Define to 1 if you have <boost/scoped_ptr.hpp> */
+#define QUESO_HAVE_BOOST_SCOPED_PTR_HPP @QUESO_HAVE_BOOST@
+
+/* Define to 1 if you have <boost/shared_ptr.hpp> */
+#define QUESO_HAVE_BOOST_SHARED_PTR_HPP @QUESO_HAVE_BOOST@
+
+/* define if the compiler supports basic C++11 syntax */
+#cmakedefine QUESO_HAVE_CXX11
+
+/* Flag indicating whether compiler supports std::isfinite; */
+#ifdef QUESO_HAVE_CXX11
+#define QUESO_HAVE_CXX11_ISFINITE @QUESO_HAVE_CXX11@
+#endif
+
+/* Flag indicating whether compiler supports std::isnan; */
+#ifdef QUESO_HAVE_CXX11
+#define QUESO_HAVE_CXX11_ISNAN @QUESO_HAVE_CXX11@
+#endif
+
+/* Flag indicating whether compiler supports std::shared_ptr */
+#ifdef QUESO_HAVE_CXX11
+#define QUESO_HAVE_CXX11_SHARED_PTR @QUESO_HAVE_CXX11@
+#endif
+
+/* Flag indicating whether compiler supports std::unique_ptr */
+#ifdef QUESO_HAVE_CXX11
+#define QUESO_HAVE_CXX11_UNIQUE_PTR @QUESO_HAVE_CXX11@
+#endif
+
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#cmakedefine QUESO_HAVE_DLFCN_H
+
+/* GLPK info - required for now */
+#define QUESO_GLPK_DIR "N/A"
+
+/* GRVY info - required for now */
+#define QUESO_GRVY_DIR "N/A"
+
+/* HDF5 info - required for now */
+#define QUESO_HDF5_DIR "N/A"
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#cmakedefine QUESO_HAVE_INTTYPES_H
+
+/* Define if LIBMESH is available */
+// QUESO_HAVE_LIBMESH
+
+/* Define if libMesh with SLEPc support is available */
+// QUESO_HAVE_LIBMESH_SLEPC
+
+/* Define to 1 if you have the <memory.h> header file. */
+#cmakedefine QUESO_HAVE_MEMORY_H
+
+/* Define if you have the MPI library. */
+#cmakedefine QUESO_HAVE_MPI
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#cmakedefine QUESO_HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#cmakedefine QUESO_HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#cmakedefine QUESO_HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#cmakedefine QUESO_HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#cmakedefine QUESO_HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#cmakedefine QUESO_HAVE_SYS_TYPES_H
+
+/* Define if Trilinos is available */
+// QUESO_HAVE_TRILINOS
+
+/* Define to 1 if you have the <Trilinos_version.h> header file. */
+// QUESO_HAVE_TRILINOS_VERSION_H
+
+/* Need to satisfy this: TODO - propagate info from Dakota */
+#define QUESO_TRILINOS_DIR "N/A"
+
+/* GSL info - required for now */
+#define QUESO_GSL_DIR "@GSL_PATH@"
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#cmakedefine QUESO_HAVE_UNISTD_H
+
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
+// LT_OBJDIR
+
+/* Name of package */
+#define QUESO_PACKAGE "queso"
+
+/* Define to the address where bug reports for this package should be sent. */
+#define QUESO_PACKAGE_BUGREPORT "queso-users@googlegroups.com"
+
+/* Define to the full name of this package. */
+#define QUESO_PACKAGE_NAME "queso"
+
+/* Define to the full name and version of this package. */
+#define QUESO_PACKAGE_STRING "queso @VERSION@"
+
+/* Define to the one symbol short name of this package. */
+#define QUESO_PACKAGE_TARNAME "queso"
+
+/* Define to the home page for this package. */
+#define QUESO_PACKAGE_URL ""
+
+/* Define to the version of this package. */
+#define QUESO_PACKAGE_VERSION "@VERSION@"
+
+/* Define to 1 if you have the ANSI C header files. */
+// QUESO_STDC_HEADERS
+
+/* C++ Compiler */
+#define QUESO_CXX "@CXX@"
+
+/* C++ Compiler flags */
+#define QUESO_CXXFLAGS "@CXX_FLAGS@"
+
+/* Version number of package */
+#define QUESO_VERSION "@VERSION@"
+
+
+#endif  /* _CONFIG_QUESO_H */

@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -24,14 +24,14 @@
 
 #include <memory>
 #include <vector>
-
-#include <boost/shared_ptr.hpp>
+#include <cmath>
 
 #include <queso/InfiniteDimensionalMeasureBase.h>
 #include <queso/InfiniteDimensionalGaussian.h>
 #include <queso/Environment.h>
 #include <queso/FunctionBase.h>
 #include <queso/OperatorBase.h>
+#include <queso/RngBase.h>
 
 namespace QUESO {
 
@@ -55,7 +55,7 @@ InfiniteDimensionalGaussian::~InfiniteDimensionalGaussian()
 {
 }
 
-boost::shared_ptr<FunctionBase> InfiniteDimensionalGaussian::draw()
+SharedPtr<FunctionBase>::Type InfiniteDimensionalGaussian::draw()
 {
   unsigned int i;
 
@@ -63,9 +63,11 @@ boost::shared_ptr<FunctionBase> InfiniteDimensionalGaussian::draw()
     (this->coeffs)[i] = env.rngObject()->gaussianSample(this->beta);
   }
 
-#warning We never use the mean?
+  SharedPtr<FunctionBase>::Type f(this->precision.inverse_kl_transform(this->coeffs, this->alpha));
 
-  boost::shared_ptr<FunctionBase> f(this->precision.inverse_kl_transform(this->coeffs, this->alpha));
+  // Add on the mean
+  f->add(1.0, mean);
+
   return f;
 }
 
@@ -73,7 +75,7 @@ double InfiniteDimensionalGaussian::get_kl_coefficient(unsigned int i) const
 {
   // This is code repetition, but I'm not quite sure this belongs
   // in the operator class, because it's useful in the measure
-  return (this->coeffs)[i] / pow(this->precision.get_eigenvalue(i), this->alpha / 2.0);
+  return (this->coeffs)[i] / std::pow(this->precision.get_eigenvalue(i), this->alpha / 2.0);
 }
 
 }  // End namespace QUESO

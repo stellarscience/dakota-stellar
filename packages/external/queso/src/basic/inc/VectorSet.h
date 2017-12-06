@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -33,7 +33,7 @@ namespace QUESO {
 class GslVector;
 class GslMatrix;
 
-/*! \file uqVectorSet.h
+/*! \file VectorSet.h
  * \brief A templated class for handling sets.
  *
  * \class VectorSet
@@ -81,6 +81,12 @@ public:
 
   //! Checks whether a set contains vector \c vec. See template specialization.
   virtual       bool                     contains   (const V& vec)     const = 0;
+
+  //! Returns the set centroid in the vector \c vec. See template specialization.
+  virtual       void                     centroid   (V& vec)     const = 0;
+
+  //! Returns the set moments of inertia in the matrix \c mat. See template specialization.
+  virtual       void                     moments    (M& mat)     const = 0;
   //@}
 
   //! @name I/O methods.

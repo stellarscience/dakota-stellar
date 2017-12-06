@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -32,31 +32,34 @@
 #include <queso/VectorCdf.h>
 #include <queso/VectorMdf.h>
 #include <queso/SequenceOfVectors.h>
-#include <queso/InfoTheory.h>
 
 namespace QUESO {
 
 class GslVector;
 class GslMatrix;
 
-//*****************************************************
-// Gamma class [RV-06]
-//*****************************************************
 /*!
  * \class GammaVectorRV
  * \brief A class representing a vector RV constructed via Gamma distribution.
  *
- * This class allows the user to compute the value of a Gamma PDF and to generate realizations
- * (samples) from it.\n
+ * This class allows the user to compute the value of a Gamma PDF and to
+ * generate realizations (samples) from it.
  *
- * The gamma probability density function for a given value x and given pair of parameters
- * \b a and \b b is:
- *  \f[ y=f(x|a,b)= \frac{1}{b^{a}\Gamma(a)} x^{a-1} e^{\frac{x}{b}}, \f]
+ * The gamma probability density function for a given value x and given pair of
+ * parameters \b a and \b b is:
+ * \f[
+ *   y = f(x|a,b) = \frac{1}{b^{a}\Gamma(a)} x^{a-1} e^{\frac{x}{b}},
+ * \f]
+ *
  * where \f$ \Gamma(.) \f$ is the Gamma function:
- * \f[  B(a,b)=\frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}=\frac{(a-1)!(b-1)!}{(a+b-1)!}.\f]
- * The parameters \b a and \b b must all be positive, and the values \c x  must lie on the
- * interval \f$ (0, \infty)\f$. */
-
+ * \f[
+ *   B(a,b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}
+ *          = \frac{(a-1)!(b-1)!}{(a+b-1)!}.
+ * \f]
+ *
+ * The parameters \b a and \b b are shape and scale parameters and must all be
+ * positive, and the values \c x must lie on the interval \f$ (0, \infty)\f$.
+ */
 template <class V = GslVector, class M = GslMatrix>
 class GammaVectorRV : public BaseVectorRV<V,M> {
 public:

@@ -35,12 +35,7 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 {
   // SharedProjectOrthogPolyApproxData::allocate_data() has already executed
 
-  allocate_total_sobol();
-  allocate_component_sobol();
-
-  // size expansion even if !update_exp_form due to possibility of
-  // change to expansion{Coeff,GradFlag} settings
-  size_expansion();
+  OrthogPolyApproximation::allocate_arrays();
 
   // integration-specific allocations:
   SharedProjectOrthogPolyApproxData* data_rep
@@ -56,9 +51,6 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
     }
     break;
   }
-
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
 }
 
 

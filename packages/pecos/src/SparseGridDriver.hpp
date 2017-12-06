@@ -95,6 +95,10 @@ public:
     const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
     short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
+  /// precompute quadrature rules to the maximum current order for each basis
+  /// polynomial (efficiency optimization when rules are expensive to compute)
+  void precompute_rules();
+
   /// initialize collocPts1D and type{1,2}CollocWts1D
   void assign_1d_collocation_points_weights();
 

@@ -211,19 +211,24 @@ private:
   /// cubature integrand
   unsigned short cubIntSpec;
 
-  /// user specified import approx. points file
+  /// user specified import build points file
   String importBuildPointsFile;
-  /// user specified import file format
+  /// user specified import build file format
   unsigned short importBuildFormat;
   /// user specified import build active only
   bool importBuildActiveOnly;
 
-  /// local flag to signal a resizing occurred
-  bool resizedFlag;
+  /// user specified import approx. points file
+  String importApproxPointsFile;
+  /// user specified import approx. file format
+  unsigned short importApproxFormat;
+  /// user specified import approx. active only
+  bool importApproxActiveOnly;
 
-  /// local flag to signal an explicit call to resize
-  /// is necessary if resizedFlag is false
-  bool callResize;
+  // local flag to signal a resizing occurred
+  //bool resizedFlag;
+  // local flag to signal an explicit call to resize() is necessary
+  //bool callResize;
 
   /// number of samples allocated to each level of a discretization
   /// hierarchy within multilevel regression

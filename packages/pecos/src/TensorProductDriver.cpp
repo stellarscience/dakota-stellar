@@ -41,6 +41,13 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
+void TensorProductDriver::precompute_rules()
+{
+  for (size_t i=0; i<numVars; ++i)
+    polynomialBasis[i].precompute_rules(quadOrder[i]);
+}
+
+
 void TensorProductDriver::store_grid(size_t index)
 {
   size_t stored_len = storedType1WeightSets.size();

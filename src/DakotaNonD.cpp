@@ -64,7 +64,9 @@ NonD::NonD(ProblemDescDB& problem_db, Model& model):
     probDescDB.get_rva("method.nond.gen_reliability_levels")),
   totalLevelRequests(0),
   cdfFlag(probDescDB.get_short("method.nond.distribution") != COMPLEMENTARY),
-  pdfOutput(false), distParamDerivs(false)
+  pdfOutput(false),
+  finalMomentsType(probDescDB.get_short("method.nond.final_moments")),
+  distParamDerivs(false)
 {
   bool err_flag = false;
   const Variables& vars = iteratedModel.current_variables();
@@ -225,7 +227,7 @@ NonD::NonD(unsigned short method_name, Model& model):
   numAleatoryUncVars(0), numContEpistUncVars(0), numDiscIntEpistUncVars(0),
   numDiscStringEpistUncVars(0), numDiscRealEpistUncVars(0),
   numEpistemicUncVars(0), totalLevelRequests(0), cdfFlag(true),
-  pdfOutput(false), distParamDerivs(false)
+  pdfOutput(false), finalMomentsType(STANDARD_MOMENTS), distParamDerivs(false)
 {
   // NonDEvidence and NonDAdaptImpSampling use this ctor
 
@@ -258,7 +260,7 @@ NonD::NonD(unsigned short method_name, const RealVector& lower_bnds,
   numDiscStringEpistUncVars(0), numDiscRealEpistUncVars(0),
   numEpistemicUncVars(0), numUncertainVars(numUniformVars),
   epistemicStats(false), totalLevelRequests(0), cdfFlag(true), pdfOutput(false),
-  distParamDerivs(false)
+  finalMomentsType(STANDARD_MOMENTS), distParamDerivs(false)
 {
   // ConcurrentStrategy uses this ctor for design opt, either for multi-start
   // initial points or multibjective weight sets.
@@ -1801,9 +1803,12 @@ void NonD::initialize_response_covariance()
     results to include means, standard deviations, and level mappings. */
 void NonD::initialize_final_statistics()
 {
-  size_t i, j, num_levels, cntr = 0, rl_len = 0,
-    num_final_stats = 2*numFunctions, num_active_vars = iteratedModel.cv();
-  if (!epistemicStats) { // aleatory UQ
+  size_t i, j, num_levels, cntr = 0, rl_len = 0, num_final_stats,
+    num_active_vars = iteratedModel.cv();
+  if (epistemicStats)
+    num_final_stats = 2*numFunctions;
+  else { // aleatory UQ
+    num_final_stats  = (finalMomentsType) ? 2*numFunctions : 0;
     num_final_stats += totalLevelRequests;
     if (respLevelTargetReduce) {
       rl_len = requestedRespLevels[0].length();
@@ -1838,8 +1843,12 @@ void NonD::initialize_final_statistics()
     String dist_tag = (cdfFlag) ? String("cdf") : String("ccdf");
     for (i=0; i<numFunctions; ++i) {
       std::sprintf(resp_tag, "_r%i", i+1);
-      stats_labels[cntr++] = String("mean")    + String(resp_tag);
-      stats_labels[cntr++] = String("std_dev") + String(resp_tag);
+      if (finalMomentsType) {
+	stats_labels[cntr++] = String("mean") + String(resp_tag);
+	stats_labels[cntr++] = (finalMomentsType == CENTRAL_MOMENTS) ?
+	  String("variance") + String(resp_tag) :
+	  String("std_dev")  + String(resp_tag);
+      }
       num_levels = requestedRespLevels[i].length();
       for (j=0; j<num_levels; ++j, ++cntr) {
 	switch (respLevelTarget) {
@@ -1890,13 +1899,16 @@ void NonD::initialize_final_statistics_gradients()
 
 void NonD::update_final_statistics()
 {
-  //if (finalStatistics.is_null())
-  //  initialize_final_statistics();
+  if (finalStatistics.is_null()) // some ctor chains do not track final stats
+    return;  
 
   // this default implementation gets overridden/augmented in derived classes
   update_aleatory_final_statistics();
-  update_system_final_statistics();
-  update_system_final_statistics_gradients();
+
+  if (respLevelTargetReduce) {
+    update_system_final_statistics();
+    update_system_final_statistics_gradients();
+  }
 }
 
 
@@ -1906,12 +1918,15 @@ void NonD::update_aleatory_final_statistics()
   size_t i, j, cntr = 0, rl_len, pl_bl_gl_len;
   for (i=0; i<numFunctions; ++i) {
     // final stats from compute_moments()
-    if (!momentStats.empty()) {
-      finalStatistics.function_value(momentStats(0,i), cntr++); // mean
-      finalStatistics.function_value(momentStats(1,i), cntr++); // std dev
+    if (finalMomentsType) {
+      if (finalMomentStats.empty())
+	cntr += 2;
+      else {
+	const Real* mom_i = finalMomentStats[i];
+	finalStatistics.function_value(mom_i[0], cntr++); // mean
+	finalStatistics.function_value(mom_i[1], cntr++); // stdev or var
+      }
     }
-    else
-      cntr += 2;
     // final stats from compute_level_mappings()
     rl_len = requestedRespLevels[i].length();
     switch (respLevelTarget) { // individual component p/beta/beta*
@@ -1938,39 +1953,38 @@ void NonD::update_aleatory_final_statistics()
 
 void NonD::update_system_final_statistics()
 {
-  if (respLevelTargetReduce) {
-    // same rl_len enforced for all resp fns in initialize_final_statistics()
-    size_t i, j, rl_len = requestedRespLevels[0].length(),
-      cntr = 2*numFunctions + totalLevelRequests;
-    for (j=0; j<rl_len; ++j, ++cntr) {
-      // compute system probability
-      Real system_p = 1.;
-      switch (respLevelTargetReduce) {
-      case SYSTEM_SERIES: // system p_success = product of component p_success
-	for (i=0; i<numFunctions; ++i)
-	  system_p *= (1.-computedProbLevels[i][j]);
-	system_p = 1. - system_p; // convert back to p_fail
-	break;
-      case SYSTEM_PARALLEL: // system p_fail = product of component p_fail
-	for (i=0; i<numFunctions; ++i)
-	  system_p *= computedProbLevels[i][j];
-	break;
-      }
-#ifdef DEBUG
-      Cout << "\nSystem p = " << system_p << " from component p:\n";
+  // same rl_len enforced for all resp fns in initialize_final_statistics()
+  size_t i, j, rl_len = requestedRespLevels[0].length(),
+    cntr = totalLevelRequests;
+  if (finalMomentsType) cntr += 2*numFunctions;
+  for (j=0; j<rl_len; ++j, ++cntr) {
+    // compute system probability
+    Real system_p = 1.;
+    switch (respLevelTargetReduce) {
+    case SYSTEM_SERIES: // system p_success = product of component p_success
       for (i=0; i<numFunctions; ++i)
-	Cout << "  " << computedProbLevels[i][j] << '\n';
-      Cout << '\n';
+	system_p *= (1.-computedProbLevels[i][j]);
+      system_p = 1. - system_p; // convert back to p_fail
+      break;
+    case SYSTEM_PARALLEL: // system p_fail = product of component p_fail
+      for (i=0; i<numFunctions; ++i)
+	system_p *= computedProbLevels[i][j];
+      break;
+    }
+#ifdef DEBUG
+    Cout << "\nSystem p = " << system_p << " from component p:\n";
+    for (i=0; i<numFunctions; ++i)
+      Cout << "  " << computedProbLevels[i][j] << '\n';
+    Cout << '\n';
 #endif // DEBUG
-      // convert system probability to desired system metric
-      switch (respLevelTarget) {
-      case PROBABILITIES:
-	finalStatistics.function_value(system_p, cntr); break;
-      case RELIABILITIES: case GEN_RELIABILITIES:
-	finalStatistics.function_value(
-	  -Pecos::NormalRandomVariable::inverse_std_cdf(system_p), cntr);
-	break;
-      }
+    // convert system probability to desired system metric
+    switch (respLevelTarget) {
+    case PROBABILITIES:
+      finalStatistics.function_value(system_p, cntr); break;
+    case RELIABILITIES: case GEN_RELIABILITIES:
+      finalStatistics.function_value(
+	-Pecos::NormalRandomVariable::inverse_std_cdf(system_p), cntr);
+      break;
     }
   }
 }
@@ -1978,72 +1992,70 @@ void NonD::update_system_final_statistics()
 
 void NonD::update_system_final_statistics_gradients()
 {
-  if (respLevelTargetReduce) {
-    const ShortArray& final_asv = finalStatistics.active_set_request_vector();
-    const SizetArray& final_dvv
-      = finalStatistics.active_set_derivative_vector();
-    // same rl_len enforced for all resp fns in initialize_final_statistics()
-    size_t l, v, s, p, rl_len = requestedRespLevels[0].length(),
-      num_deriv_vars = final_dvv.size(),
-      cntr = 2*numFunctions + totalLevelRequests;
-    RealVector final_stat_grad(num_deriv_vars, false);
-    RealVectorArray component_grad(numFunctions);
-    Real prod;
-    for (l=0; l<rl_len; ++l, ++cntr) {
-      if (final_asv[cntr] & 2) {
-	// Retrieve component probability gradients from finalStatistics
-	size_t index = 0;
-	for (s=0; s<numFunctions; ++s) {
-	  index += 2;
-	  if (respLevelTarget == PROBABILITIES)
-	    component_grad[s] = finalStatistics.function_gradient_view(index+l);
-	  else {
-	    component_grad[s] = finalStatistics.function_gradient_copy(index+l);
-	    Real component_beta = finalStatistics.function_value(index+l);
-	    component_grad[s].scale(
-	      -Pecos::NormalRandomVariable::std_pdf(-component_beta));
-	  }
-	  index += rl_len + requestedProbLevels[s].length() +
-	    requestedRelLevels[s].length() + requestedGenRelLevels[s].length();
+  const ShortArray& final_asv = finalStatistics.active_set_request_vector();
+  const SizetArray& final_dvv = finalStatistics.active_set_derivative_vector();
+  // same rl_len enforced for all resp fns in initialize_final_statistics()
+  size_t l, v, s, p, rl_len = requestedRespLevels[0].length(),
+    num_deriv_vars = final_dvv.size(), cntr = totalLevelRequests,
+    moment_offset = (finalMomentsType) ? 2 : 0;
+  if (finalMomentsType) cntr += 2*numFunctions;
+  RealVector final_stat_grad(num_deriv_vars, false);
+  RealVectorArray component_grad(numFunctions);
+  Real prod;
+  for (l=0; l<rl_len; ++l, ++cntr) {
+    if (final_asv[cntr] & 2) {
+      // Retrieve component probability gradients from finalStatistics
+      size_t index = 0;
+      for (s=0; s<numFunctions; ++s) {
+	index += moment_offset;
+	if (respLevelTarget == PROBABILITIES)
+	  component_grad[s] = finalStatistics.function_gradient_view(index+l);
+	else {
+	  component_grad[s] = finalStatistics.function_gradient_copy(index+l);
+	  Real component_beta = finalStatistics.function_value(index+l);
+	  component_grad[s].scale(
+	    -Pecos::NormalRandomVariable::std_pdf(-component_beta));
+	}
+	index += rl_len + requestedProbLevels[s].length() +
+	  requestedRelLevels[s].length() + requestedGenRelLevels[s].length();
 #ifdef DEBUG
-	  Cout << "component gradient " << s+1 << ":\n";
-	  write_data(Cout, component_grad[s]); Cout << '\n';
+	Cout << "component gradient " << s+1 << ":\n";
+	write_data(Cout, component_grad[s]); Cout << '\n';
 #endif // DEBUG
-	}
-	// Compute system probability
-	for (v=0; v<num_deriv_vars; ++v) {
-	  // apply product rule over n factors
-	  Real& sum = final_stat_grad[v]; sum = 0.;
-	  for (s=0; s<numFunctions; ++s) {
-	    prod = 1.;
-	    switch (respLevelTargetReduce) {
-	    case SYSTEM_SERIES:// system p_success = prod of component p_success
-	      for (p=0; p<numFunctions; ++p)
-		prod *= (p == s) ? -component_grad[p][v] :
-		  1.-computedProbLevels[p][l];
-	      break;
-	    case SYSTEM_PARALLEL: // system p_fail = product of component p_fail
-	      for (p=0; p<numFunctions; ++p)
-		prod *= (p == s) ? component_grad[p][v] :
-		  computedProbLevels[p][l];
-	      break;
-	    }
-	    sum += prod;
-	  }
-	}
-	Real factor = 1.; bool scale = false;
-	// negate gradient if converting system p_success to system p_fail
-	if (respLevelTargetReduce == SYSTEM_SERIES)
-	  { factor *= -1.; scale = true; }
-	// define any scaling for system metric type
-	if (respLevelTarget != PROBABILITIES) {
-	  Real sys_beta = finalStatistics.function_value(cntr);
-	  factor /= -Pecos::NormalRandomVariable::std_pdf(-sys_beta);
-	  scale = true;
-	}
-	if (scale) final_stat_grad.scale(factor);
-	finalStatistics.function_gradient(final_stat_grad, cntr);
       }
+      // Compute system probability
+      for (v=0; v<num_deriv_vars; ++v) {
+	// apply product rule over n factors
+	Real& sum = final_stat_grad[v]; sum = 0.;
+	for (s=0; s<numFunctions; ++s) {
+	  prod = 1.;
+	  switch (respLevelTargetReduce) {
+	  case SYSTEM_SERIES:// system p_success = prod of component p_success
+	    for (p=0; p<numFunctions; ++p)
+	      prod *= (p == s) ? -component_grad[p][v] :
+		1.-computedProbLevels[p][l];
+	    break;
+	  case SYSTEM_PARALLEL: // system p_fail = product of component p_fail
+	    for (p=0; p<numFunctions; ++p)
+	      prod *= (p == s) ? component_grad[p][v] :
+		computedProbLevels[p][l];
+	    break;
+	  }
+	  sum += prod;
+	}
+      }
+      Real factor = 1.; bool scale = false;
+      // negate gradient if converting system p_success to system p_fail
+      if (respLevelTargetReduce == SYSTEM_SERIES)
+	{ factor *= -1.; scale = true; }
+      // define any scaling for system metric type
+      if (respLevelTarget != PROBABILITIES) {
+	Real sys_beta = finalStatistics.function_value(cntr);
+	factor /= -Pecos::NormalRandomVariable::std_pdf(-sys_beta);
+	scale = true;
+      }
+      if (scale) final_stat_grad.scale(factor);
+      finalStatistics.function_gradient(final_stat_grad, cntr);
     }
   }
 }
@@ -2317,7 +2329,8 @@ void NonD::print_system_mappings(std::ostream& s) const
   size_t rl_len = requestedRespLevels[0].length();
   if (respLevelTargetReduce && rl_len) {
     size_t i, width = write_precision+7, g_width = 2*width+2,
-      cntr = 2*numFunctions + totalLevelRequests;
+      cntr = totalLevelRequests;
+    if (finalMomentsType) cntr += 2*numFunctions;
     const RealVector& final_stats = finalStatistics.function_values();
     s << std::scientific << std::setprecision(write_precision)
       << "\nSystem response level mappings:\n";

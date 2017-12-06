@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -26,8 +26,6 @@
 #define UQ_CONCAT_JOINT_PROB_DENSITY_H
 
 #include <cmath>
-
-#include <boost/math/special_functions.hpp> // for Boost isnan. Note parentheses are important in function call.
 
 #include <queso/JointPdf.h>
 #include <queso/Environment.h>
@@ -84,6 +82,12 @@ public:
   //! Calculates the logarithm of the values of each density.
   /*! The final logarithm value is the addition of all values calculated.*/
   double lnValue              (const V& domainVector, const V* domainDirection, V* gradVector, M* hessianMatrix, V* hessianEffect) const;
+
+  //! Mean value of the underlying random variable.
+  virtual void   distributionMean (V & meanVector) const;
+
+  //! Covariance matrix of the underlying random variable.
+  virtual void   distributionVariance (M & covMatrix) const;
 
   //! Sets the normalization style of all densities to \c value.
   void   setNormalizationStyle(unsigned int value) const;

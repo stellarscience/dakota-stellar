@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -90,6 +90,39 @@ bool ConcatenationSubset<V,M>::contains(const V& vec) const
   }
 
   return (result);
+}
+
+template<class V, class M>
+void ConcatenationSubset<V,M>::centroid(V& vec) const
+{
+  unsigned int cumulativeSize = 0;
+  for (unsigned int i = 0; i < m_sets.size(); ++i) {
+    V subvec(m_sets[i]->vectorSpace().zeroVector());
+    m_sets[i]->centroid(subvec);
+    vec.cwSet(cumulativeSize,subvec);
+
+    cumulativeSize += subvec.sizeLocal();
+  }
+
+  queso_require_equal_to_msg(vec.sizeLocal(), cumulativeSize, "incompatible vector sizes");
+}
+
+template<class V, class M>
+void ConcatenationSubset<V,M>::moments(M& mat) const
+{
+  unsigned int cumulativeSize = 0;
+  for (unsigned int i = 0; i < m_sets.size(); ++i) {
+    const Map & map = m_sets[i]->vectorSpace().map();
+    const unsigned int n_columns = map.NumGlobalElements();
+    M submat(m_sets[i]->vectorSpace().env(),
+             map, n_columns);
+    m_sets[i]->moments(submat);
+    mat.cwSet(cumulativeSize,cumulativeSize,submat);
+
+    cumulativeSize += n_columns;
+  }
+
+  queso_require_equal_to_msg(mat.numCols(), cumulativeSize, "incompatible vector sizes");
 }
 
 // I/O methods

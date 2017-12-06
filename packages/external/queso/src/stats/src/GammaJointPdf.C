@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,6 +25,7 @@
 #include <queso/GammaJointPdf.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
+#include <queso/BasicPdfsBase.h>
 
 namespace QUESO {
 
@@ -90,7 +91,6 @@ GammaJointPdf<V,M>::lnValue(
   double result = 0.;
   for (unsigned int i = 0; i < domainVector.sizeLocal(); ++i) {
     if (m_normalizationStyle == 0) {
-      //aux = log(gsl_ran_gamma_pdf(domainVector[i],m_a[i],m_b[i]));
       aux = log(m_env.basicPdfs()->gammaPdfActualValue(domainVector[i],m_a[i],m_b[i]));
     }
     else {
@@ -110,6 +110,34 @@ GammaJointPdf<V,M>::lnValue(
   result += m_logOfNormalizationFactor; // [PDF-06]
 
   return result;
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+GammaJointPdf<V,M>::distributionMean(V& meanVector) const
+{
+  queso_assert_equal_to(m_a.sizeLocal(), m_b.sizeLocal());
+  queso_assert_equal_to(m_a.sizeLocal(), meanVector.sizeLocal());
+
+  for (unsigned int i = 0; i < m_a.sizeLocal(); ++i) {
+    meanVector[i] = m_a[i] * m_b[i];
+  }
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+GammaJointPdf<V,M>::distributionVariance(M & covMatrix) const
+{
+  queso_assert_equal_to(m_a.sizeLocal(), m_b.sizeLocal());
+  queso_assert_equal_to(m_a.sizeLocal(), covMatrix.numRowsGlobal());
+  queso_assert_equal_to(covMatrix.numCols(), covMatrix.numRowsGlobal());
+
+  covMatrix.zeroLower();
+  covMatrix.zeroUpper();
+
+  for (unsigned int i = 0; i < m_a.sizeLocal(); ++i) {
+    covMatrix(i,i) = m_a[i] * m_b[i] * m_b[i];
+  }
 }
 //--------------------------------------------------
 template<class V, class M>

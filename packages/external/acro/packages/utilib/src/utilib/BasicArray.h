@@ -362,7 +362,7 @@ public:
      : ArrayBase<T,BasicArray<T> >(array), 
        BasicArrayBounds<size_type>(array)
   {
-     (void)registrations_complete;
+     (void)&registrations_complete;
      this->construct(array.size(), array.data(), DataOwned); 
   }
 

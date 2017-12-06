@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <limits>
+#include <queso/math_macros.h>
 #include <queso/UniformVectorRealizer.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
@@ -62,9 +63,9 @@ UniformVectorRealizer<V,M>::realization(V& nextValues) const
   const BoxSubset<V,M>* imageBox = dynamic_cast<const BoxSubset<V,M>* >(&m_unifiedImageSet);
 
   queso_require_msg(imageBox, "only box images are supported right now");
+  queso_require_msg(queso_isfinite(imageBox->volume()), "drawing realisations from an improper uniform is not supported");
 
   nextValues.cwSetUniform(imageBox->minValues(),imageBox->maxValues());
-  return;
 }
 
 }  // End namespace QUESO
