@@ -1043,17 +1043,17 @@ estimate_derivatives(const ShortArray& map_asv, const ShortArray& fd_grad_asv,
   bool initial_map = false, augmented_data_flag = false, db_capture = false,
     fd_grad_flag = false, fd_hess_flag = false, fd_hess_by_fn_flag = false,
     fd_hess_by_grad_flag = false;
-  const ShortArray& original_asv = original_set.request_vector();
-  const SizetArray& original_dvv = original_set.derivative_vector();
-  size_t i, j, k, map_counter = 0, num_deriv_vars = original_dvv.size();
+  const ShortArray& orig_asv = original_set.request_vector();
+  const SizetArray& orig_dvv = original_set.derivative_vector();
+  size_t i, j, k, map_counter = 0, num_deriv_vars = orig_dvv.size();
   size_t ifg, nfg = 0;
 
   for (i=0; i<numFns; i++) {
     if (map_asv[i]) {
       initial_map = true;
-      if ( ( (map_asv[i] & 1) && !(original_asv[i] & 1) ) ||
-           ( (map_asv[i] & 2) && !(original_asv[i] & 2) ) )
-        augmented_data_flag = true; // original_asv val/grad requests augmented
+      if ( ( (map_asv[i] & 1) && !(orig_asv[i] & 1) ) ||
+           ( (map_asv[i] & 2) && !(orig_asv[i] & 2) ) )
+        augmented_data_flag = true; // orig_asv val/grad requests augmented
     }
     if (fd_grad_asv[i])
       fd_grad_flag = true;           // gradient finite differencing needed
@@ -1068,13 +1068,13 @@ estimate_derivatives(const ShortArray& map_asv, const ShortArray& fd_grad_asv,
   if (nfg)
     fd_hess_by_grad_flag = true;
 
-  ActiveSet new_set(map_asv, original_set.derivative_vector());
+  ActiveSet new_set(map_asv, orig_dvv);
   Response initial_map_response(currentResponse.shared_data(), new_set);
 
   // The logic for incurring an additional data_pairs search (beyond the
   // existing duplicate detection) is that a data request contained in
-  // original_asv is most likely not a duplicate, but there is a good chance
-  // that an augmented data reqmt (appears in map_asv but not in original_asv)
+  // orig_asv is most likely not a duplicate, but there is a good chance
+  // that an augmented data reqmt (appears in map_asv but not in orig_asv)
   // has been evaluated previously.  The additional search allows us to trap
   // this common case more gracefully (special header, no evaluation echo).
   if (augmented_data_flag) {
@@ -1151,8 +1151,8 @@ estimate_derivatives(const ShortArray& map_asv, const ShortArray& fd_grad_asv,
     // define lower/upper bounds for finite differencing and cv_ids
     RealVector fd_lb(num_deriv_vars), fd_ub(num_deriv_vars);
     SizetMultiArrayConstView cv_ids = 
-      initialize_x0_bounds(original_dvv, active_derivs, inactive_derivs, 
-                           x0, fd_lb, fd_ub);
+      initialize_x0_bounds(orig_dvv, active_derivs, inactive_derivs, x0,
+			   fd_lb, fd_ub);
 
     const RealVector& fn_vals_x0  = initial_map_response.function_values();
     const RealMatrix& fn_grads_x0 = initial_map_response.function_gradients();
@@ -1163,7 +1163,7 @@ estimate_derivatives(const ShortArray& map_asv, const ShortArray& fd_grad_asv,
     RealVector x = x0; 
     for (j=0; j<num_deriv_vars; j++) { // difference the 1st num_deriv_vars vars
 
-      size_t xj_index = find_index(cv_ids, original_dvv[j]);
+      size_t xj_index = find_index(cv_ids, orig_dvv[j]);
       Real x0_j = x0[xj_index], lb_j = fd_lb[j], ub_j = fd_ub[j];
 
       if (fd_grad_flag) {
@@ -1351,7 +1351,7 @@ estimate_derivatives(const ShortArray& map_asv, const ShortArray& fd_grad_asv,
             // evaluate off-diagonal terms
 
             for (k=j+1; k<num_deriv_vars; k++) {
-              size_t xk_index = find_index(cv_ids, original_dvv[k]);
+              size_t xk_index = find_index(cv_ids, orig_dvv[k]);
               RealVector fn_vals_x_plus_h_plus_h,  fn_vals_x_plus_h_minus_h,
                 fn_vals_x_minus_h_plus_h, fn_vals_x_minus_h_minus_h;
 
@@ -1556,7 +1556,7 @@ estimate_derivatives(const ShortArray& map_asv, const ShortArray& fd_grad_asv,
             // evaluate off-diagonal terms
 
             for (k = 0; k < j; k++) {
-              size_t xk_index = find_index(cv_ids, original_dvv[k]);
+              size_t xk_index = find_index(cv_ids, orig_dvv[k]);
 
               // --------------------------------
               // Evaluate fn_vals_x12
@@ -1695,8 +1695,8 @@ synchronize_derivatives(const Variables& vars,
 			const ShortArray& quasi_hess_asv,
 			const ActiveSet& original_set)
 {
-  const SizetArray& original_dvv = original_set.derivative_vector();
-  size_t i, j, k, num_deriv_vars = original_dvv.size();
+  const SizetArray& orig_dvv = original_set.derivative_vector();
+  size_t i, j, k, num_deriv_vars = orig_dvv.size();
   bool fd_grad_flag = false, fd_hess_flag = false, fd_hess_by_fn_flag = false,
     fd_hess_by_grad_flag = false;
   RealVector dx;
@@ -1753,7 +1753,7 @@ synchronize_derivatives(const Variables& vars,
   }
   else { // construct an empty initial_map_response
     ShortArray asv(numFns, 0);
-    ActiveSet initial_map_set(asv, original_dvv);
+    ActiveSet initial_map_set(asv, orig_dvv);
     initial_map_response
       = Response(currentResponse.shared_data(), initial_map_set);
   }
@@ -1766,12 +1766,11 @@ synchronize_derivatives(const Variables& vars,
   // Postprocess the finite difference responses
   if (fd_grad_flag || fd_hess_flag) {
     SizetMultiArray cv_ids;
-    if (original_dvv == currentVariables.continuous_variable_ids()) {
+    if (orig_dvv == currentVariables.continuous_variable_ids()) {
       cv_ids.resize(boost::extents[cv()]);
       cv_ids = currentVariables.continuous_variable_ids();
     }
-    else if (original_dvv ==
-             currentVariables.inactive_continuous_variable_ids()) {
+    else if (orig_dvv == currentVariables.inactive_continuous_variable_ids()) {
       cv_ids.resize(boost::extents[icv()]);
       cv_ids = currentVariables.inactive_continuous_variable_ids();
     }
@@ -1782,7 +1781,7 @@ synchronize_derivatives(const Variables& vars,
     const RealVector& fn_vals_x0  = initial_map_response.function_values();
     const RealMatrix& fn_grads_x0 = initial_map_response.function_gradients();
     for (j=0; j<num_deriv_vars; j++) {
-      size_t xj_index = find_index(cv_ids, original_dvv[j]);
+      size_t xj_index = find_index(cv_ids, orig_dvv[j]);
 
       if (fd_grad_flag) { // numerical gradients
         Real h = deltaList.front(); deltaList.pop_front();// first in, first out
@@ -1852,7 +1851,7 @@ synchronize_derivatives(const Variables& vars,
             // off-diagonal terms
 
             for (k=j+1; k<num_deriv_vars; k++) {
-              size_t xk_index = find_index(cv_ids, original_dvv[k]);
+              size_t xk_index = find_index(cv_ids, orig_dvv[k]);
               const RealVector& fn_vals_x_plus_h_plus_h
                 = fd_resp_cit->second.function_values();
               ++fd_resp_cit;
@@ -1904,7 +1903,7 @@ synchronize_derivatives(const Variables& vars,
             // off-diagonal terms
 
             for(k = 0; k < j; ++k) {
-              size_t xk_index = find_index(cv_ids, original_dvv[k]);
+              size_t xk_index = find_index(cv_ids, orig_dvv[k]);
               h2 = dx[k];
               denom = h1*h2;
               fx2 = fx[k];
@@ -2112,9 +2111,9 @@ update_quasi_hessians(const Variables& vars, Response& new_response,
 		      const ActiveSet& original_set)
 {
   size_t i, j, k;
-  const RealVector& x       = vars.continuous_variables(); // view
-  const ShortArray& original_asv = original_set.request_vector();
-  const RealMatrix& fn_grads     = new_response.function_gradients();
+  const RealVector& x        = vars.continuous_variables(); // view
+  const ShortArray& orig_asv = original_set.request_vector();
+  const RealMatrix& fn_grads = new_response.function_gradients();
 
   // if necessary, initialize quasi-Hessians before populating
   if ( numQuasiUpdates.empty() ) {
@@ -2143,7 +2142,7 @@ update_quasi_hessians(const Variables& vars, Response& new_response,
 
     // perform i-th quasi-Hessian update if a new grad vector is present,
     // regardless of whether the quasi-Hessian is active on this eval.
-    if ( !quasiHessians[i].empty() && (original_asv[i] & 2) ) {
+    if ( !quasiHessians[i].empty() && (orig_asv[i] & 2) ) {
 
       // quasi-Hessian updates require a history of at least 2 gradient evals
       Real norm_s = 0.;
@@ -2375,8 +2374,8 @@ bool Model::manage_asv(const ActiveSet& original_set, ShortArray& map_asv_out,
 		       ShortArray& fd_grad_asv_out, ShortArray& fd_hess_asv_out,
 		       ShortArray& quasi_hess_asv_out)
 {
-  const ShortArray& asv_in = original_set.request_vector();
-  const SizetArray& original_dvv = original_set.derivative_vector();
+  const ShortArray& asv_in   = original_set.request_vector();
+  const SizetArray& orig_dvv = original_set.derivative_vector();
   
   // *_asv_out[i] have all been initialized to zero
 
@@ -2411,8 +2410,9 @@ bool Model::manage_asv(const ActiveSet& original_set, ShortArray& map_asv_out,
       else { // could happen if an iterator requiring gradients is selected
         // with no_gradients or unsupported vendor numerical gradients
         // and lacks a separate error check.
-        Cerr << "Error: unsupported asv gradient request in Model::manage_asv."
-             << std::endl;
+        Cerr << "Error: Model '" << model_id()
+             << "' received unsupported gradient request from ASV in "
+             << "Model::manage_asv." << std::endl;
         abort_handler(MODEL_ERROR);
       }
       if ( surrogate_response_mode() != AUTO_CORRECTED_SURROGATE &&
@@ -2447,8 +2447,9 @@ bool Model::manage_asv(const ActiveSet& original_set, ShortArray& map_asv_out,
       }
       else { // could happen if an iterator requiring Hessians is selected
         // with no_hessians and it lacks a separate error check.
-        Cerr << "Error: unsupported asv Hessian request in Model::manage_asv."
-             << std::endl;
+        Cerr << "Error: Model '" << model_id()
+             << "' received unsupported Hessian request from ASV in "
+             << "Model::manage_asv." << std::endl;
         abort_handler(MODEL_ERROR);
       }
     }
@@ -2457,7 +2458,7 @@ bool Model::manage_asv(const ActiveSet& original_set, ShortArray& map_asv_out,
   // Depending on bounds-respecting differencing, finite difference gradients
   // may require f(x0).  The following computes the step and updates shortStep.
   if (fd_grad_flag && !ignoreBounds) { // protect call to forward_grad_step
-    size_t num_deriv_vars = original_dvv.size();
+    size_t num_deriv_vars = orig_dvv.size();
 
     // define x0 and mode flags
     bool active_derivs = false;    // derivatives w.r.t. active vars
@@ -2467,13 +2468,13 @@ bool Model::manage_asv(const ActiveSet& original_set, ShortArray& map_asv_out,
     // define lower/upper bounds for finite differencing and cv_ids
     RealVector fd_lb(num_deriv_vars), fd_ub(num_deriv_vars);
     SizetMultiArrayConstView cv_ids = 
-      initialize_x0_bounds(original_dvv, active_derivs, inactive_derivs,
-                           x0, fd_lb, fd_ub);
+      initialize_x0_bounds(orig_dvv, active_derivs, inactive_derivs, x0,
+			   fd_lb, fd_ub);
 
     // Accumulate short step over all derivative variables
     bool short_step = false;
     for (size_t j=0; j<num_deriv_vars; j++) {
-      size_t xj_index = find_index(cv_ids, original_dvv[j]);
+      size_t xj_index = find_index(cv_ids, orig_dvv[j]);
       Real x0_j = x0[xj_index], lb_j = fd_lb[j], ub_j = fd_ub[j];
       
       // NOTE: resets shortStep to false for each variable
@@ -2536,7 +2537,8 @@ user_space_to_iterator_space(const Variables& user_vars,
 						  iter_vars, iter_resp);
   else { // letter lacking redefinition of virtual fn.
 
-    iter_vars = user_vars; iter_resp = user_resp; // shallow copies
+    iter_vars = user_vars.copy(); // deep copy to preserve inactive in source
+    iter_resp = user_resp;//.copy(); // shallow copy currently sufficient
 
     // apply recastings bottom up (e.g., for data import)
     // modelList assigned in manage_data_recastings() -> subordinate_models()
@@ -2548,16 +2550,22 @@ user_space_to_iterator_space(const Variables& user_vars,
 	// utilize RecastModel::current{Variables,Response} to xform data
 	Variables recast_vars = ml_rit->current_variables(); // shallow copy
 	Response  recast_resp = ml_rit->current_response();  // shallow copy
+	ActiveSet recast_set  = recast_resp.active_set();    // copy
 	// to propagate vars bottom up, inverse of std transform is reqd
 	RecastModel* recast_model_rep = (RecastModel*)ml_rit->model_rep();
 	recast_model_rep->inverse_transform_variables(iter_vars, recast_vars);
-	//recast_model_rep->
-	//  inverse_transform_set(iter_vars, iter_set, recast_set);
+	recast_model_rep->
+	  inverse_transform_set(iter_vars, iter_resp.active_set(), recast_set);
 	// to propagate response bottom up, std transform is used
+	recast_resp.active_set(recast_set);
 	recast_model_rep->
 	  transform_response(recast_vars, iter_vars, iter_resp, recast_resp);
-	// reassign rep pointers (no actual data copying)
-	iter_vars = recast_vars; iter_resp = recast_resp;// iter_set=recast_set;
+	// update active in iter_vars
+	iter_vars.active_variables(recast_vars);
+	// reassign resp rep pointer (no actual data copying)
+	iter_resp = recast_resp; // sufficient for now...
+	//iter_resp.active_set(recast_set);
+	//iter_resp.update(recast_resp);
       }
   }
 }
@@ -2573,7 +2581,8 @@ iterator_space_to_user_space(const Variables& iter_vars,
 						  user_vars, user_resp);
   else { // letter lacking redefinition of virtual fn.
 
-    user_vars = iter_vars; user_resp = iter_resp; // shallow copies
+    user_vars = iter_vars.copy(); // deep copy to preserve inactive in source
+    user_resp = iter_resp;//.copy(); // shallow copy currently sufficient
 
     // apply recastings top down (e.g., for data export)
     // modelList assigned in manage_data_recastings() -> subordinate_models()
@@ -2584,16 +2593,23 @@ iterator_space_to_user_space(const Variables& iter_vars,
 	// utilize RecastModel::current{Variables,Response} to xform data
 	Variables recast_vars = ml_it->current_variables(); // shallow copy
 	Response  recast_resp = ml_it->current_response();  // shallow copy
+	ActiveSet recast_set  = recast_resp.active_set();   // copy
 	// to propagate vars top down, forward transform is reqd
 	RecastModel* recast_model_rep = (RecastModel*)ml_it->model_rep();
 	recast_model_rep->transform_variables(user_vars, recast_vars);
-	//recast_model_rep->transform_set(user_vars, user_set, recast_set);
+	recast_model_rep->
+	  transform_set(user_vars, user_resp.active_set(), recast_set);
 	// to propagate response top down, inverse transform is used.  Note:
 	// derivatives are not currently exported --> a no-op for Nataf.
+	recast_resp.active_set(recast_set);
 	recast_model_rep->inverse_transform_response(recast_vars, user_vars,
 						     user_resp, recast_resp);
-	// reassign rep pointers (no actual data copying)
-	user_vars = recast_vars; user_resp = recast_resp;// user_set=recast_set;
+	// update active in iter_vars
+	user_vars.active_variables(recast_vars);
+	// reassign resp rep pointer (no actual data copying)
+	user_resp = recast_resp; // sufficient for now...
+	//user_resp.active_set(recast_set);
+	//user_resp.update(recast_resp);
       }
   }
 }
@@ -2842,17 +2858,16 @@ Interface& Model::derived_interface()
 
 
 /** return the number of levels within a solution / discretization hierarchy. */
-size_t Model::solution_levels() const
+size_t Model::solution_levels(bool lwr_bnd) const
 {
   if (modelRep)
-    return modelRep->solution_levels(); // envelope fwd to letter
+    return modelRep->solution_levels(lwr_bnd); // envelope fwd to letter
   else // letter lacking redefinition of virtual fn.
-    return 1;
+    return (lwr_bnd) ? 1 : 0;
 }
 
 
-/** activate a particular level within a solution / discretization
-    hierarchy and return the cost estimate. */
+/** activate a particular level within a solution / discretization hierarchy. */
 void Model::solution_level_index(size_t index)
 {
   if (modelRep)
@@ -2866,7 +2881,33 @@ void Model::solution_level_index(size_t index)
 }
 
 
-RealVector Model::solution_level_cost() const
+size_t Model::solution_level_index() const
+{
+  if (!modelRep) { // letter lacking redefinition of virtual fn.
+    Cerr << "Error: Letter lacking redefinition of virtual solution_level_index"
+         << "() function.\n       solution_level_index is not supported by this"
+	 << " Model class." << std::endl;
+    abort_handler(MODEL_ERROR);
+  }
+
+  return modelRep->solution_level_index(); // envelope fwd to letter
+}
+
+
+RealVector Model::solution_level_costs() const
+{
+  if (!modelRep) { // letter lacking redefinition of virtual fn.
+    Cerr << "Error: Letter lacking redefinition of virtual solution_level_costs"
+         << "() function.\n       solution_level_costs is not supported by "
+	 << "this Model class." << std::endl;
+    abort_handler(MODEL_ERROR);
+  }
+
+  return modelRep->solution_level_costs(); // envelope fwd to letter
+}
+
+
+Real Model::solution_level_cost() const
 {
   if (!modelRep) { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual solution_level_cost"
@@ -3003,10 +3044,10 @@ bool Model::resize_pending() const
 }
 
 
-void Model::build_approximation()
+void Model::build_approximation(size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->build_approximation();
+    modelRep->build_approximation(index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual build_approximation"
          << "() function.\nThis model does not support approximation "
@@ -3017,7 +3058,8 @@ void Model::build_approximation()
 
 
 bool Model::
-build_approximation(const Variables& vars, const IntResponsePair& response_pr)
+build_approximation(const Variables& vars, const IntResponsePair& response_pr,
+		    size_t index)
 {
   if (!modelRep) { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual build_approximation"
@@ -3027,14 +3069,14 @@ build_approximation(const Variables& vars, const IntResponsePair& response_pr)
   }
 
   // envelope fwd to letter
-  return modelRep->build_approximation(vars, response_pr);
+  return modelRep->build_approximation(vars, response_pr, index);
 }
 
 
-void Model::update_approximation(bool rebuild_flag)
+void Model::update_approximation(bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->update_approximation(rebuild_flag);
+    modelRep->update_approximation(rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual update_"
 	 << "approximation(bool) function.\nThis model does not support "
@@ -3046,10 +3088,10 @@ void Model::update_approximation(bool rebuild_flag)
 
 void Model::
 update_approximation(const Variables& vars, const IntResponsePair& response_pr,
-		     bool rebuild_flag)
+		     bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->update_approximation(vars, response_pr, rebuild_flag);
+    modelRep->update_approximation(vars, response_pr, rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual update_approximation"
          << "(Variables, IntResponsePair) function.\nThis model does not "
@@ -3061,10 +3103,11 @@ update_approximation(const Variables& vars, const IntResponsePair& response_pr,
 
 void Model::
 update_approximation(const VariablesArray& vars_array,
-		     const IntResponseMap& resp_map, bool rebuild_flag)
+		     const IntResponseMap& resp_map,
+		     bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->update_approximation(vars_array, resp_map, rebuild_flag);
+    modelRep->update_approximation(vars_array, resp_map, rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual update_approximation"
          << "(VariablesArray, IntResponseMap) function.\nThis model does not "
@@ -3076,10 +3119,10 @@ update_approximation(const VariablesArray& vars_array,
 
 void Model::
 update_approximation(const RealMatrix& samples, const IntResponseMap& resp_map,
-		     bool rebuild_flag)
+		     bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->update_approximation(samples, resp_map, rebuild_flag);
+    modelRep->update_approximation(samples, resp_map, rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual update_approximation"
          << "(RealMatrix, IntResponseMap) function.\nThis model does not "
@@ -3089,10 +3132,10 @@ update_approximation(const RealMatrix& samples, const IntResponseMap& resp_map,
 }
 
 
-void Model::append_approximation(bool rebuild_flag)
+void Model::append_approximation(bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->append_approximation(rebuild_flag);
+    modelRep->append_approximation(rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual append_"
 	 << "approximation(bool) function.\nThis model does not support "
@@ -3104,10 +3147,10 @@ void Model::append_approximation(bool rebuild_flag)
 
 void Model::
 append_approximation(const Variables& vars, const IntResponsePair& response_pr,
-		     bool rebuild_flag)
+		     bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->append_approximation(vars, response_pr, rebuild_flag);
+    modelRep->append_approximation(vars, response_pr, rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual append_approximation"
          << "(Variables, IntResponsePair) function.\nThis model does not "
@@ -3119,10 +3162,11 @@ append_approximation(const Variables& vars, const IntResponsePair& response_pr,
 
 void Model::
 append_approximation(const VariablesArray& vars_array,
-		     const IntResponseMap& resp_map, bool rebuild_flag)
+		     const IntResponseMap& resp_map,
+		     bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->append_approximation(vars_array, resp_map, rebuild_flag);
+    modelRep->append_approximation(vars_array, resp_map, rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual append_approximation"
          << "(VariablesArray, IntResponseMap) function.\nThis model does not "
@@ -3134,10 +3178,10 @@ append_approximation(const VariablesArray& vars_array,
 
 void Model::
 append_approximation(const RealMatrix& samples, const IntResponseMap& resp_map,
-		     bool rebuild_flag)
+		     bool rebuild_flag, size_t index)
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->append_approximation(samples, resp_map, rebuild_flag);
+    modelRep->append_approximation(samples, resp_map, rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual append_approximation"
          << "(RealMatrix, IntResponseMap) function.\nThis model does not "
@@ -3237,10 +3281,10 @@ void Model::remove_stored_approximation(size_t index)
 }
 
 
-void Model::combine_approximation(short corr_type)
+void Model::combine_approximation()
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->combine_approximation(corr_type);
+    modelRep->combine_approximation();
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual combine_"
 	 << "approximation() function.\n       This model does not support "
@@ -3250,10 +3294,19 @@ void Model::combine_approximation(short corr_type)
 }
 
 
-void Model::run_dace_iterator(bool rebuild_flag)
+void Model::clear_stored()
 {
   if (modelRep) // envelope fwd to letter
-    modelRep->run_dace_iterator(rebuild_flag);
+    modelRep->clear_stored();
+  //else // letter lacking redefinition of virtual fn.
+  //  default: no stored data to clear
+}
+
+
+void Model::run_dace_iterator(bool rebuild_flag, size_t index)
+{
+  if (modelRep) // envelope fwd to letter
+    modelRep->run_dace_iterator(rebuild_flag, index);
   else { // letter lacking redefinition of virtual fn.
     Cerr << "Error: Letter lacking redefinition of virtual run_dace_iterator()"
 	 << "function.\n       This model does not support DACE executions."
@@ -3427,6 +3480,15 @@ DiscrepancyCorrection& Model::discrepancy_correction()
 
   // envelope fwd to letter
   return modelRep->discrepancy_correction();
+}
+
+
+short Model::correction_type()
+{
+  if (modelRep) // envelope fwd to letter
+    return modelRep->correction_type();
+  else
+    return NO_CORRECTION; // default for non-surrogate models
 }
 
 
@@ -4578,6 +4640,7 @@ bool Model::db_lookup(const Variables& search_vars, const ActiveSet& search_set,
     PRPCacheHIter cache_it
       = lookup_by_val(data_pairs, interface_id(), search_vars, search_set);
     if (cache_it != data_pairs.get<hashed>().end()) {
+      found_resp.active_set(search_set);
       found_resp.update(cache_it->response());
       return true;
     }

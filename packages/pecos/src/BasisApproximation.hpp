@@ -56,21 +56,23 @@ public:
   /// retrieve the approximate function Hessian for a given parameter vector
   virtual const RealSymMatrix& hessian(const RealVector& x);
 
-  /// set PolynomialApproximation::surrData
+  /// set PolynomialApproximation::origSurrData
   virtual void surrogate_data(const SurrogateData& data);
-  /// get PolynomialApproximation::surrData
+  /// get PolynomialApproximation::surrData (const)
   virtual const SurrogateData& surrogate_data() const;
+  /// get PolynomialApproximation::surrData (non-const)
+  virtual SurrogateData& surrogate_data();
 
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;
-  /// calculate the approximation coefficients using the SurrogateData
-  virtual void compute_coefficients();
-  /// recalculate the approximation coefficients following SurrogateData update
-  virtual void increment_coefficients();
+  /// calculate the approximation coefficients using a set of surrogate data
+  virtual void compute_coefficients(size_t index = _NPOS);
+  /// recalculate approximation coefficients following a surrogate data update
+  virtual void increment_coefficients(size_t index = _NPOS);
   /// restore the approximation coefficients to the state preceding the last
   /// increment
-  virtual void decrement_coefficients();
+  virtual void decrement_coefficients(bool save_data);
   /// restore the approximation coefficients to a previously incremented state
   /// as identified by the current data increment
   virtual void push_coefficients();
@@ -86,9 +88,11 @@ public:
   /// remove a redundant stored entry prior to combine_coefficients
   /// (default is pop_back)
   virtual void remove_stored_coefficients(size_t index = _NPOS);
+  /// clear stored approximation data
+  virtual void clear_stored();
 
   /// combine the current coefficients with a previously stored set
-  virtual void combine_coefficients(short combine_type, size_t swap_index);
+  virtual void combine_coefficients(size_t swap_index);
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s, bool normalized);

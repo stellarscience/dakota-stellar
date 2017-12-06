@@ -166,19 +166,17 @@ public:
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration
-  virtual void compute_moments() = 0;
+  virtual void compute_moments(bool full_stats = true) = 0;
   /// compute central response moments in all-variables mode using some
   /// combination of expansion post-processing and numerical integration
-  virtual void compute_moments(const RealVector& x) = 0;
+  virtual void compute_moments(const RealVector& x, bool full_stats = true) = 0;
 
   //
   //- Heading: Member functions
   //
 
-  /// set surrData (shared representation)
-  void surrogate_data(const SurrogateData& data);
-  /// get surrData
-  const SurrogateData& surrogate_data() const;
+  /// returns true if surrData is a deep copy of origSurrData
+  bool deep_copied_surrogate_data() const;
 
   /// return expansionMoments
   const RealVector& expansion_moments() const;
@@ -192,8 +190,7 @@ public:
   void standardize_moments(const RealVector& central_moments,
 			   RealVector& std_moments);
 
-  // number of data points to remove in a decrement (implemented at this
-  // intermediate level since surrData not defined at base level)
+  // number of data points to remove in a decrement
   //size_t pop_count();
 
   /// set ExpansionConfigOptions::expansionCoeffFlag
@@ -217,6 +214,12 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void surrogate_data(const SurrogateData& data);
+  const SurrogateData& surrogate_data() const;
+  SurrogateData& surrogate_data();
+
+  void compute_coefficients(size_t index = _NPOS);
+
   /// generic base class function mapped to gradient_basis_variables(x)
   const RealVector& gradient(const RealVector& x);
   /// generic base class function mapped to hessian_basis_variables(x)
@@ -225,6 +228,12 @@ protected:
   //
   //- Heading: Member functions
   //
+
+  /// update surrData from origSurrData based on deep or shallow copy
+  void synchronize_surrogate_data(size_t index);
+  /// modify origSurrData to create hierarchical surplus response data
+  /// within surrData
+  void response_data_to_surplus_data(size_t index);
 
   /// compute central moments of response using type1 numerical integration
   void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
@@ -241,8 +250,13 @@ protected:
   //- Heading: Data
   //
 
-  /// instance containing the variables (shared) and response (unique) data
-  /// arrays for constructing a surrogate of a single response function
+  /// SurrogateData instance containing the variables (shared) and response
+  /// (unique) data arrays for constructing a surrogate of a single response
+  /// function; this is the original unmodified data set, prior to any
+  /// potential manipulations by the approximation classes
+  SurrogateData origSurrData;
+  /// SurrogateData instance used in current approximation builds, potentially
+  /// reflecting data modifications relative to origSurrData
   SurrogateData surrData;
 
   /// flag for calculation of expansion coefficients from response values
@@ -264,7 +278,7 @@ protected:
 
   /// gradient of the polynomial approximation returned by gradient()
   RealVector approxGradient;
-  /// gradient of the polynomial approximation returned by gradient()
+  /// Hessian of the polynomial approximation returned by hessian()
   RealSymMatrix approxHessian;
   /// gradient of the primary mean (expansion mean for OrthogPoly,
   /// numerical integration mean for InterpPoly)
@@ -320,8 +334,19 @@ inline const SurrogateData& PolynomialApproximation::surrogate_data() const
 { return surrData; }
 
 
+inline SurrogateData& PolynomialApproximation::surrogate_data()
+{ return surrData; }
+
+
 inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
-{ surrData = data; /* shared representation */ }
+{ surrData = origSurrData = data; /* shared representations */ }
+
+
+inline bool PolynomialApproximation::deep_copied_surrogate_data() const
+{ 
+  //return (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP);
+  return (surrData.data_rep() != origSurrData.data_rep());
+}
 
 
 inline const RealVector& PolynomialApproximation::expansion_moments() const

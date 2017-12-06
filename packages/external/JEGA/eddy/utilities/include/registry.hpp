@@ -168,7 +168,7 @@ class registry
         typename container::value_type
         value_type;
 
-        /// Type that can be used as a contant iterator over this container
+        /// Type that can be used as a constant iterator over this container
         typedef
         typename container::const_iterator
         const_iterator;
@@ -183,7 +183,7 @@ class registry
         /// Type that can be used as an iterator over this container
         /**
          * This type is protected because it is not permitted to modify
-         * this container except throught the provided methods.
+         * this container except through the provided methods.
          */
         typedef
         typename container::iterator
@@ -259,7 +259,7 @@ class registry
          * This method allows mutable subclass access to the underlying
          * container.
          *
-         * \return A reference to the container used to store registrees.
+         * \return A reference to the container used to store registerees.
          */
         container&
         get_container(
@@ -272,7 +272,7 @@ class registry
     */
     public:
 
-        /// Checks for a logically equivolent entry to value
+        /// Checks for a logically equivalent entry to value
         /**
          * \param value The value to check for registration in this.
          * \return True if \a value is registered here and false otherwise.
@@ -337,7 +337,7 @@ class registry
         empty(
             ) const;
 
-        /// Assimilates the registrees of \a other into this.
+        /// Assimilates the registerees of \a other into this.
         /**
          * Recall that duplicates are not permitted and so the return
          * is the number of successful assimilations.
@@ -368,7 +368,7 @@ class registry
          *        end if not found (non-const).
          *
          * This method allows subclass access to mutable iterators describing
-         * the locations of registrees.
+         * the locations of registerees.
          *
          * \param value The registree to find in this registry.
          * \return An iterator to \a value's location in this registry or end

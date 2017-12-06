@@ -165,45 +165,20 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 }
 
 
-void RegressOrthogPolyApproximation::compute_coefficients()
+void RegressOrthogPolyApproximation::compute_coefficients(size_t index)
 {
-  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
-    PCerr << "Warning: neither expansion coefficients nor expansion "
-	  << "coefficient gradients\n         are active in "
-	  << "RegressOrthogPolyApproximation::compute_coefficients().\n"
-	  << "         Bypassing approximation construction." << std::endl;
+  PolynomialApproximation::compute_coefficients(index);
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
-  }
-
-  // For testing of anchor point logic:
-  //size_t index = surrData.points() - 1;
-  //surrData.anchor_point(surrData.variables_data()[index],
-  //                      surrData.response_data()[index]);
-  //surrData.pop(1);
-
-  // anchor point, if present, is handled differently for different
-  // expCoeffsSolnApproach settings:
-  //   SAMPLING:   treat it as another data point
-  //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
-  //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  size_t i, j, num_total_pts = surrData.points();
-  if (surrData.anchor())
-    ++num_total_pts;
-  if (!num_total_pts) {
-    PCerr << "Error: nonzero number of sample points required in RegressOrthog"
-	  << "PolyApproximation::compute_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-
-#ifdef DEBUG
-  gradient_check();
-#endif // DEBUG
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
   // check data set for gradients/constraints/faults to determine settings
   surrData.data_checks();
+#ifdef DEBUG
+  data_rep->gradient_check();
+#endif // DEBUG
   // multiIndex size (from Shared allocate_data()) used to set
   // faultInfo.under_determined.  Note: OLI's multiIndex is empty,
   // but does not use under_determined flag.
@@ -227,8 +202,8 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 }
 
 
-void RegressOrthogPolyApproximation::increment_coefficients()
-{ compute_coefficients(); } // sufficient for now
+void RegressOrthogPolyApproximation::increment_coefficients(size_t index)
+{ compute_coefficients(index); } // sufficient for now
 
 
 void RegressOrthogPolyApproximation::run_regression()
@@ -292,7 +267,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   Real rel_delta_star, abs_conv_tol = DBL_EPSILON, // for now
     rel_conv_tol = data_rep->expConfigOptions.convergenceTol;
-  short basis_type  = data_rep->expConfigOptions.expBasisType;
+  short basis_type = data_rep->expConfigOptions.expBasisType;
 
   // For a level 0 reference multi-index, we could safely omit evaluating the
   // initial CV error and always perform one cycle of select_best_active_mi(),
@@ -587,13 +562,6 @@ void RegressOrthogPolyApproximation::restore_coefficients(size_t index)
 }
 
 
-void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
-{
-  std::swap(sparseIndices, storedSparseIndices[index]);
-  OrthogPolyApproximation::swap_coefficients(index); // expansion coeff{s,Grads}
-}
-
-
 void RegressOrthogPolyApproximation::remove_stored_coefficients(size_t index)
 {
   size_t stored_len = storedSparseIndices.size();
@@ -608,11 +576,16 @@ void RegressOrthogPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void RegressOrthogPolyApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
 {
-  // based on incoming combine_type, combine the data stored previously
-  // by store_coefficients()
+  std::swap(sparseIndices, storedSparseIndices[index]);
+  OrthogPolyApproximation::swap_coefficients(index); // expansion coeff{s,Grads}
+}
+
+
+void RegressOrthogPolyApproximation::combine_coefficients(size_t swap_index)
+{
+  // Combine the data stored previously by store_coefficients()
 
   size_t i, num_stored = storedExpCoeffs.size();
   bool stored_sparse_empty = true;
@@ -620,10 +593,8 @@ combine_coefficients(short combine_type, size_t swap_index)
     if (!storedSparseIndices[i].empty())
       { stored_sparse_empty = false; break; }
 
-  if (sparseIndices.empty() && stored_sparse_empty) {
-    OrthogPolyApproximation::combine_coefficients(combine_type, swap_index);
-    // augment base implementation with clear of storedExpCoeff{s,Grads}
-  }
+  if (sparseIndices.empty() && stored_sparse_empty)
+    OrthogPolyApproximation::combine_coefficients(swap_index);
   else {
     if (swap_index != _NPOS) {
       swap_coefficients(swap_index);
@@ -642,7 +613,7 @@ combine_coefficients(short combine_type, size_t swap_index)
       if (storedSparseIndices[i].empty())
 	inflate(storedSparseIndices[i], data_rep->storedMultiIndex[i].size());
 
-    switch (combine_type) {
+    switch (data_rep->expConfigOptions.combineType) {
     case ADD_COMBINE: {
       // update sparseIndices and expansionCoeff{s,Grads}
       for (i=0; i<num_stored; ++i)
@@ -682,9 +653,6 @@ combine_coefficients(short combine_type, size_t swap_index)
 
     computedMean = computedVariance = 0;
   }
-
-  if (expansionCoeffFlag)     storedExpCoeffs.clear();
-  if (expansionCoeffGradFlag) storedExpCoeffGrads.clear();
 }
 
 

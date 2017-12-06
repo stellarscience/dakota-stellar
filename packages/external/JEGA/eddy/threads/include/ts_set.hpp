@@ -158,7 +158,7 @@ Class Definition
 /// A set class implementation with mutex protection.
 /**
  * All methods lock for their duration.  To lock over multiple method
- * calls, use the lock and unlock methodsor the scoped_lock.
+ * calls, use the lock and unlock methods or the scoped_lock.
  *
  * A note on iterating this container.  To do so, you should lock and unlock
  * or use the scoped_lock.  There is no iterator level mutex protection.
@@ -295,7 +295,7 @@ class EDDY_SL_IEDECL ts_set
 
         /// A pair of const_iterators.
         /**
-         * This is the return type fo the const version of the equal_range
+         * This is the return type for the const version of the equal_range
          * method.
          */
         typedef
@@ -304,7 +304,7 @@ class EDDY_SL_IEDECL ts_set
 
         /// A pair of iterators.
         /**
-         * This is the return type fo the non-const version of the equal_range
+         * This is the return type for the non-const version of the equal_range
          * method.
          */
         typedef
@@ -370,8 +370,7 @@ class EDDY_SL_IEDECL ts_set
         /// Locks this set until an unlock is issued.
         /**
          * All methods lock the set for their duration.
-         * Use this method if you need to lock the set over
-         * multiple actions.
+         * Use this method if you need to lock the set over multiple actions.
          *
          * The set may be locked recursively.
          */
@@ -531,7 +530,7 @@ class EDDY_SL_IEDECL ts_set
          *        matches \a key or end() if no such element can be found.
          *
          * \param key The key sought in this set.
-         * \return An iterator to the first occurance of a match to \a key
+         * \return An iterator to the first occurrence of a match to \a key
          *         or end if not found.
          */
         inline
@@ -545,7 +544,7 @@ class EDDY_SL_IEDECL ts_set
          *        matches \a key or end() if no such element can be found.
          *
          * \param key The key sought in this set.
-         * \return An iterator to the first occurance of a match to \a key
+         * \return An iterator to the first occurrence of a match to \a key
          *         or end if not found.
          */
         inline
@@ -609,8 +608,8 @@ class EDDY_SL_IEDECL ts_set
             InputIterator last
             )
         {
-            mutex_lock lock(_mutex);
-            _container.insert(first, last);
+            mutex_lock lock(this->_mutex);
+            this->_container.insert(first, last);
         }
 
         /**

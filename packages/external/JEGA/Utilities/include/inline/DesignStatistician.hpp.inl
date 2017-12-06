@@ -424,10 +424,10 @@ DesignStatistician::FindLeastViolateDesigns(
     typename DesignContainer::const_iterator it(cont.begin());
     for(; it!=cont.end(); ++it)
     {
-        // ignore designs that are not evalauted.
+        // ignore designs that are not evaluated.
         if(!(*it)->IsEvaluated()) continue;
 
-        double viol = ComputeTotalPercentageViolation(**it);
+        const double viol = ComputeTotalPercentageViolation(**it);
         if(viol < minViol)
         {
             minViol = viol;
@@ -455,7 +455,7 @@ DesignStatistician::CountDesigns(
 }
 
 template <typename Set_T>
-eddy::utilities::DoubleExtremes
+eddy::utilities::extremes<obj_val_t>
 DesignStatistician::GetObjectiveFunctionExtremes(
     const Set_T& from
     )
@@ -463,13 +463,17 @@ DesignStatistician::GetObjectiveFunctionExtremes(
     EDDY_FUNC_DEBUGSCOPE
 
     // If from is emtpy, we cannot return anything sensible.
-    if(from.empty()) return eddy::utilities::DoubleExtremes();
+    if(from.empty()) return eddy::utilities::extremes<obj_val_t>();
 
     // retrieve the number of objective functions.
     const std::size_t nof = from.front()->GetNOF();
 
     // prepare a return object.
-    eddy::utilities::DoubleExtremes ret(nof, DBL_MAX, -DBL_MAX);
+    eddy::utilities::extremes<obj_val_t> ret(
+		nof,
+		std::numeric_limits<obj_val_t>::max(),
+		-std::numeric_limits<obj_val_t>::max()
+		);
 
     // Iterate through and find the maxs/mins for each of the objectives.
     typename Set_T::const_iterator it(from.begin());
@@ -482,11 +486,60 @@ DesignStatistician::GetObjectiveFunctionExtremes(
             ret.take_if_either(of, (*it)->GetObjective(of));
 
     return ret;
-
 }
 
 template <typename Set_T>
-eddy::utilities::DoubleExtremes
+std::vector<const typename Set_T::value_type>
+DesignStatistician::GetObjectiveFunctionExtremeDesigns(
+    const Set_T& from
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+
+    typedef std::vector<const typename Set_T::value_type> ret_vec;
+
+    // If from is emtpy, we cannot return anything sensible.
+    if(from.empty()) return ret_vec();
+
+    const DesignTarget& target = from.front()->GetDesignTarget();
+    const ObjectiveFunctionInfoVector& ofInfos =
+        target.GetObjectiveFunctionInfos();
+    const std::size_t nof = target.GetNOF();
+
+    // Iterate through and find the maxs/mins for each of the objectives.
+    // We will consider any solution that has the current optimal value for any
+    // given dimension to be an extreme design.
+    typename Set_T::const_iterator it(from.begin());
+    const typename Set_T::const_iterator e(from.end());
+
+    // prepare a return object.
+    ret_vec ret(nof, *from.begin());
+
+    for(++it; it!=e; ++it)
+    {
+        for(std::size_t of=0; of<nof; ++of)
+        {
+            typename Set_T::value_type des = *it;
+
+            const Design* pref =
+                ofInfos[of]->GetPreferredDesign(*ret[of], *des);
+
+            if(pref == des)
+            {
+                ret[of] = des;
+            }
+            else if((pref == 0x0) && ((rand() % 2) == 0))
+            {
+                ret[of] = des;
+            }
+        }
+    }
+
+    return ret;
+}
+
+template <typename Set_T>
+eddy::utilities::extremes<var_rep_t>
 DesignStatistician::GetDesignVariableExtremes(
     const Set_T& from
     )
@@ -494,13 +547,17 @@ DesignStatistician::GetDesignVariableExtremes(
     EDDY_FUNC_DEBUGSCOPE
 
     // If from is emtpy, we cannot return anything sensible.
-    if(from.empty()) return eddy::utilities::DoubleExtremes();
+    if(from.empty()) return eddy::utilities::extremes<var_rep_t>();
 
     // retrieve the number of objective functions.
     const std::size_t ndv = from.front()->GetNDV();
 
     // prepare a return object.
-    eddy::utilities::DoubleExtremes ret(ndv, DBL_MAX, -DBL_MAX);
+    eddy::utilities::extremes<var_rep_t> ret(
+		ndv,
+		std::numeric_limits<var_rep_t>::max(),
+		-std::numeric_limits<var_rep_t>::max()
+		);
 
     // Iterate through and find the maxs/mins for each of the objectives.
     const typename Set_T::const_iterator e(from.end());
@@ -596,7 +653,7 @@ DesignStatistician::CountIf(
     }
     else
     {
-        std::size_t uc = static_cast<std::size_t>(cutoff);
+        const std::size_t uc = static_cast<std::size_t>(cutoff);
         for(; first!=end; ++first)
             if(predicate(*first) && (++ret >= uc)) return ret;
     }

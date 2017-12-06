@@ -122,7 +122,7 @@ SingleObjectiveStatistician::FindMinSumDesigns(
     typename DesignContainer::const_iterator it(cont.begin());
     for(; it!=cont.end(); ++it)
     {
-        // ignore designs that are not evalauted.
+        // ignore designs that are not evaluated.
         if(!(*it)->IsEvaluated()) continue;
 
         double cws = ComputeWeightedSum(**it, weights);
@@ -156,7 +156,7 @@ SingleObjectiveStatistician::FindMinSumFeasibleDesigns(
 
     for(; it!=cont.end(); ++it)
     {
-        // ignore designs that are not evalauted.
+        // ignore designs that are not evaluated.
         if(!(*it)->IsFeasible()) continue;
 
         double cws = ComputeWeightedSum(**it, weights);

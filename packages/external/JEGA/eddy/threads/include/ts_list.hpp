@@ -124,8 +124,8 @@ In-Namespace Forward Declares
 ================================================================================
 */
 template<
-            typename ValueType,
-            typename AllocType
+        typename ValueType,
+        typename AllocType
         >
 class ts_list;
 
@@ -155,11 +155,11 @@ Class Definition
  * All methods lock for their duration.  To lock over multiple method
  * calls, use the lock and unlock methods or the scoped_lock.
  *
- * A note on iterating this container.  To do so, you should lock and unlock
- * or use the scoped_lock.  There is no iterator level mutex protection.
- * The begin and end methods will lock for their duration but to be sure
- * that it is not modified by another thread for the entire time you are
- * iterating it, lock, and when you are done, unlock.
+ * A note on iterating this container.  To do so, you should lock and unlock or
+ * use the scoped_lock.  There is no iterator level mutex protection. The begin
+ * and end methods will lock for their duration but to be sure that it is not
+ * modified by another thread for the entire time you are iterating it, lock,
+ * and when you are done, unlock.
  *
  * Certain operations, such as assignment, are defined for both a
  * right-hand-side of this type as well as for one of type
@@ -589,8 +589,8 @@ class EDDY_SL_IEDECL ts_list
             Iter last
             )
         {
-            mutex_lock lock(_mutex);
-            _container.assign(first, last);
+            mutex_lock lock(this->_mutex);
+            this->_container.assign(first, last);
         }
 
         /// Assigns the contents of this list to \a cnt copies of \a val.
@@ -642,8 +642,8 @@ class EDDY_SL_IEDECL ts_list
             Iter last
             )
         {
-            mutex_lock lock(_mutex);
-            _container.insert(where, first, last);
+            mutex_lock lock(this->_mutex);
+            this->_container.insert(where, first, last);
         }
 
         /// Removes the element pointed to by \a where from the list.
@@ -685,8 +685,8 @@ class EDDY_SL_IEDECL ts_list
             Predicate pred
             )
         {
-            mutex_lock lock(_mutex);
-            _container.remove_if(pred);
+            mutex_lock lock(this->_mutex);
+            this->_container.remove_if(pred);
         }
 
         /// Removes the elements of \a right and puts them into this list.
@@ -712,7 +712,7 @@ class EDDY_SL_IEDECL ts_list
         /// Removes the elements of \a right and puts them into this list.
         /**
          * The elements are then put in order according to the supplied
-         * comparitor.
+         * comparator.
          */
         template<typename Traits>
         void
@@ -721,14 +721,14 @@ class EDDY_SL_IEDECL ts_list
             Traits comp
             )
         {
-            mutex_lock lock(_mutex);
-            _container.merge(right._container, comp);
+            mutex_lock lock(this->_mutex);
+            this->_container.merge(right._container, comp);
         }
 
         /// Removes the elements of \a right and puts them into this list.
         /**
          * The elements are then put in order according to the supplied
-         * comparitor.
+         * comparator.
          */
         template<typename Traits>
         void
@@ -737,8 +737,8 @@ class EDDY_SL_IEDECL ts_list
             Traits comp
             )
         {
-            mutex_lock lock(_mutex);
-            _container.merge(right, comp);
+            mutex_lock lock(this->_mutex);
+            this->_container.merge(right, comp);
         }
 
         /// Trades contents with \a right.
@@ -771,8 +771,8 @@ class EDDY_SL_IEDECL ts_list
             Traits comp
             )
         {
-            mutex_lock lock(_mutex);
-            _container.sort(comp);
+            mutex_lock lock(this->_mutex);
+            this->_container.sort(comp);
         }
 
         /// Trades contents between \a left and \a right.
@@ -913,8 +913,8 @@ class EDDY_SL_IEDECL ts_list
             BinaryPredicate pred
             )
         {
-            mutex_lock lock(_mutex);
-            _container.unique(pred);
+            mutex_lock lock(this->_mutex);
+            this->_container.unique(pred);
         }
 
     /*

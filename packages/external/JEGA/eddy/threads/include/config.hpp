@@ -77,7 +77,7 @@ Version Information
 #define EDDY_THREADS_VERSION "1.0.0"
 
 /// The name of the project complete with version number.
-#define EDDY_THREADS_PACKAGE "Eddy Threadsafe Project v"EDDY_THREADS_VERSION
+#define EDDY_THREADS_PACKAGE "Eddy Threadsafe Project v" EDDY_THREADS_VERSION
 
 
 
@@ -91,7 +91,7 @@ Macros
 
     /**
      * \brief This is useful in constructor initialization lists when things
-     *        like mutexes only appear if threadsafe is on.
+     *        like mutexes only appear if thread safe is on.
      */
 #   define EDDY_COMMA_IF_THREADSAFE ,
 
@@ -154,8 +154,7 @@ Macros
 
 /// A macro to create a scoped lock instance named (l) on a mutex (m).
 /**
- * This macro expands to nothing if EDDY_THREADSAFE is
- * not defined.
+ * This macro expands to nothing if EDDY_THREADSAFE is not defined.
  *
  * \param l The name to give to the created lock object.
  * \param m The mutex to be locked by (l).
@@ -166,8 +165,7 @@ Macros
 
 /// A macro to declare a mutex named (m).
 /**
- * This macro expands to nothing if EDDY_THREADSAFE is
- * not defined.
+ * This macro expands to nothing if EDDY_THREADSAFE is not defined.
  *
  * \param m The name of the mutex to be declared.
  */
@@ -176,8 +174,7 @@ Macros
 
 /// A macro to declare a mutable mutex named (m).
 /**
- * This should only be used to declare class member data instances
- * of mutexes.
+ * This should only be used to declare class member data instances of mutexes.
  *
  * This macro expands to nothing if EDDY_THREADSAFE is
  * not defined.
@@ -189,10 +186,9 @@ Macros
 
 /// A macro to initialize a mutex in a constructor initialization list.
 /**
- * This macro expands to nothing if EDDY_THREADSAFE is
- * not defined.
+ * This macro expands to nothing if EDDY_THREADSAFE is not defined.
  *
- * The delcaration will not be followed by a comma.  Use the
+ * The declaration will not be followed by a comma.  Use the
  * EDDY_COMMA_IF_THREADSAFE macro to put one if desired.
  *
  * \param m The name of the mutex to be initialized in a constructor

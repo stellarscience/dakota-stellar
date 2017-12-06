@@ -115,7 +115,7 @@ RandomNumberGenerator::UniformInt(
     const INT_T& hi
     )
 {
-    return Rand() % (hi-lo+1) + lo;
+    return (Rand() % (hi-lo+1)) + lo;
 }
 
 inline

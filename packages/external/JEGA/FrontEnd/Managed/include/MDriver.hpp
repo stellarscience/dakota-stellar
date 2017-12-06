@@ -128,9 +128,9 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MSolution);
-MANAGED_CLASS_FORWARD_DECLARE(public, MAlgorithmConfig);
-MANAGED_CLASS_FORWARD_DECLARE(public, MGeneticAlgorithm);
+ref class MSolution;
+ref class MAlgorithmConfig;
+ref class MGeneticAlgorithm;
 
 
 
@@ -161,7 +161,7 @@ Class Definition
  * work along to it.  It will also provide a reference to that instance if
  * so desired with a call to the Manifest method.
  */
-MANAGED_CLASS(public, MDriver) :
+public ref class MDriver :
     public System::IDisposable
 {
     /*
@@ -244,8 +244,23 @@ MANAGED_CLASS(public, MDriver) :
          *         file logging is enabled.
          */
         static
-        System::String MOH
+        System::String^
         GetGlobalLogFilename(
+            );
+        
+        static
+        System::String^
+        GetXType(
+            );
+        
+        static
+        System::String^
+        GetGType(
+            );
+        
+        static
+        System::String^
+        GetFType(
             );
 
     protected:
@@ -314,7 +329,7 @@ MANAGED_CLASS(public, MDriver) :
         static
         bool
         InitializeJEGA(
-            System::String MOH globalLogFilename,
+            System::String^ globalLogFilename,
             JEGA::Logging::LogLevel globalLogDefLevel,
             System::UInt32 rSeed,
             MAlgorithmConfig::FatalBehavior fatalBehavior
@@ -359,24 +374,24 @@ MANAGED_CLASS(public, MDriver) :
          *               run.
          * \return A collection of the final solutions found by the algorithm.
          */
-        SolutionVector MOH
+        SolutionVector^
         ExecuteAlgorithm(
-            MAlgorithmConfig MOH config
+            MAlgorithmConfig^ config
             );
 
-        MGeneticAlgorithm MOH
+        MGeneticAlgorithm^
         InitializeAlgorithm(
-            MAlgorithmConfig MOH config
+            MAlgorithmConfig^ config
             );
 
         bool
         PerformNextIteration(
-            MGeneticAlgorithm MOH theGA
+            MGeneticAlgorithm^ theGA
             );
 
-        SolutionVector MOH
+        SolutionVector^
         FinalizeAlgorithm(
-            MGeneticAlgorithm MOH theGA
+            MGeneticAlgorithm^ theGA
             );
 
         /**
@@ -395,7 +410,7 @@ MANAGED_CLASS(public, MDriver) :
          */
         void
         DestroyAlgorithm(
-            MGeneticAlgorithm MOH theGA
+            MGeneticAlgorithm^ theGA
             );
 
 
@@ -427,7 +442,7 @@ MANAGED_CLASS(public, MDriver) :
          */
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
 
@@ -460,7 +475,7 @@ MANAGED_CLASS(public, MDriver) :
          *                   to be solved by this driver.
          */
         MDriver(
-            MProblemConfig MOH probConfig
+            MProblemConfig^ probConfig
             );
 
         /// Destructs an MDriver.

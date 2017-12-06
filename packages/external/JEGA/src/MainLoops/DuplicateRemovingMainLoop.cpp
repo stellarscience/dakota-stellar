@@ -60,6 +60,7 @@ Includes
 #include <GeneticAlgorithm.hpp>
 #include <GeneticAlgorithmCrosser.hpp>
 #include <GeneticAlgorithmMutator.hpp>
+#include <../Utilities/include/LRUDesignCache.hpp>
 #include <GeneticAlgorithmNichePressureApplicator.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
@@ -282,7 +283,7 @@ DuplicateRemovingMainLoop::RunGeneration(
             // the generated Designs
             const size_t numIll = algorithm.ValidateVariableValues(cldrn);
 
-            // ValidateVariableValues may mark Designs illconditioned if it
+            // ValidateVariableValues may mark Designs ill-conditioned if it
             // cannot fix the variable values so we should flush any of those.
             if(numIll > 0)
             {                
@@ -333,7 +334,7 @@ DuplicateRemovingMainLoop::RunGeneration(
             cldrn.GetDVSortContainer()
             ) == 0);
 
-        const DesignDVSortSet& discards =
+        const LRUDesignCache& discards =
             this->GetDesignTarget().CheckoutDiscards();
         nrem = discards.test_for_clones(cldrn.GetDVSortContainer());
         this->GetDesignTarget().CheckinDiscards();
@@ -359,7 +360,7 @@ DuplicateRemovingMainLoop::RunGeneration(
                 "while evaluating the offspring designs")
             )
 
-        // any children that could not be evaluated (are illconditioned) must
+        // any children that could not be evaluated (are ill-conditioned) must
         // be removed.  Issue a log entry about any removed.
         if(!evald)
         {
@@ -372,7 +373,7 @@ DuplicateRemovingMainLoop::RunGeneration(
                 lquiet(), this->GetName() + ": encountered and flushed "
                 )
                     << nrem
-                    << " illconditioned designs after evaluation of children."
+                    << " ill-conditioned designs after evaluation of children."
                     )
         }
     }

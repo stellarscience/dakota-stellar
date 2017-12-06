@@ -95,7 +95,7 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 }
 
 
-void SharedInterpPolyApproxData::allocate_data()
+void SharedInterpPolyApproxData::allocate_data(size_t index)
 {
   // use barycentric formulation for global Lagrange basis polynomials.
   // Note: flag needed below in update_{tensor,sparse}_interpolation_basis().
@@ -149,7 +149,7 @@ void SharedInterpPolyApproxData::allocate_data()
 }
 
 
-void SharedInterpPolyApproxData::increment_data()
+void SharedInterpPolyApproxData::increment_data(size_t index)
 {
   unsigned short max_set_index = 0;
   switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -251,7 +251,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
 }
 
 
-size_t SharedInterpPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedInterpPolyApproxData::pre_combine_data()
 {
   // Sufficient for two grids: if not currently the maximal grid, then swap
   // with the stored grid (only one is stored)
@@ -272,10 +272,6 @@ size_t SharedInterpPolyApproxData::pre_combine_data(short combine_type)
 
   return max_index;
 }
-
-
-void SharedInterpPolyApproxData::post_combine_data(short combine_type)
-{ driverRep->clear_stored(); }
 
 
 void SharedInterpPolyApproxData::

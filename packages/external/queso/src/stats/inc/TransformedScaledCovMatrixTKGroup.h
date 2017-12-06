@@ -51,7 +51,7 @@ public:
   //@{
   //! Default constructor.
   TransformedScaledCovMatrixTKGroup(const char * prefix,
-      const BoxSubset<V, M> & boxSubset, const std::vector<double> & scales,
+      const VectorSet<V, M> & domainSet, const std::vector<double> & scales,
       const M & covMatrix);
 
   //! Destructor.
@@ -74,7 +74,7 @@ public:
 
   //! Scales the covariance matrix of the underlying Gaussian distribution.
   /*! The covariance matrix is scaled by a factor of \f$ 1/scales^2 \f$.*/
-  void updateLawCovMatrix(const M & covMatrix);
+  virtual void updateLawCovMatrix(const M & covMatrix);
   //@}
 
   //! @name Misc methods
@@ -113,6 +113,8 @@ private:
   //! Sets the mean of the underlying Gaussian RVs to zero.
   void setRVsWithZeroMean();
 
+  void transformCovMatrixToGaussianSpace(M & covMatrix);
+
   using BaseTKGroup<V, M>::m_env;
   using BaseTKGroup<V, M>::m_prefix;
   using BaseTKGroup<V, M>::m_vectorSpace;
@@ -120,9 +122,8 @@ private:
   using BaseTKGroup<V, M>::m_preComputingPositions;
   using BaseTKGroup<V, M>::m_rvs;
 
-  const BoxSubset<V, M> & m_boxSubset;
+  const VectorSet<V, M> & m_domainSet;
   M m_originalCovMatrix;
-
 };
 
 }  // End namespace QUESO

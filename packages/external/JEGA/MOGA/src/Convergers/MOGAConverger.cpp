@@ -201,7 +201,7 @@ Subclass Visible Methods
 
 double
 MOGAConverger::GetMaxRangeChange(
-    const eddy::utilities::DoubleExtremes& newParExtremes
+    const eddy::utilities::extremes<obj_val_t>& newParExtremes
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -241,10 +241,10 @@ MOGAConverger::GetMaxRangeChange(
     // difference in the ranges divided by the old range.  Return the maximum
     // of them.
     double maxChng = 0.0;
-    DoubleExtremes::size_type of = 0;
-    DoubleExtremes::size_type size = newParExtremes.size();
+    extremes<obj_val_t>::size_type of = 0;
+    const extremes<obj_val_t>::size_type size = newParExtremes.size();
 
-    for(DoubleExtremes::size_type i=0; i<size; ++i)
+    for(extremes<obj_val_t>::size_type i=0; i<size; ++i)
     {
         const double overallRange = this->_prevParExtremes.get_range(i);
         const double currChng = overallRange == 0.0 ?
@@ -274,7 +274,7 @@ MOGAConverger::GetMaxRangeChange(
 
     JEGAIFLOG_CF_II(maxChng == 0.0, this->GetLogger(), lverbose(), this,
         text_entry(lverbose(), this->GetName() + ": No \"best fitness\" "
-            "expansion or contraction occured this generation.")
+            "expansion or contraction occurred this generation.")
         )
 
     return maxChng;
@@ -283,7 +283,7 @@ MOGAConverger::GetMaxRangeChange(
 double
 MOGAConverger::GetDensityChange(
     const JEGA::Utilities::DesignOFSortSet& newPop,
-    const eddy::utilities::DoubleExtremes& newPopExtremes
+    const eddy::utilities::extremes<obj_val_t>& newPopExtremes
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -405,8 +405,8 @@ MOGAConverger::GetBest(
 
     for(DesignOFSortSet::const_iterator it(of.begin()); it!=of.end(); ++it)
     {
-        double currFit = fitnesses.GetFitness(**it);
-        if(currFit == -DBL_MAX) continue;
+        const double currFit = fitnesses.GetFitness(**it);
+        if(currFit == -std::numeric_limits<double>::max()) continue;
 
         if(currFit > bestFit)
         {
@@ -464,10 +464,10 @@ MOGAConverger::GetMetricValue(
     // is the "best" (most improvement).  We only care about our
     // best designs as defined by the fitnesses so start by extracting
     // those.  Ideally, they are the non-dominated so we will call them
-    // the pareto here.
+    // the Pareto here.
     const DesignOFSortSet& popByOF = group.GetOFSortContainer();
 
-    DesignOFSortSet pareto(this->GetBest(popByOF, fitnesses));
+    const DesignOFSortSet pareto(this->GetBest(popByOF, fitnesses));
 
     JEGALOG_II(this->GetLogger(), lverbose(), this,
         ostream_entry(lverbose(), this->GetName() + ": Operating on ")
@@ -475,14 +475,14 @@ MOGAConverger::GetMetricValue(
             << pareto.size() << " \"best fitness\" designs."
         )
 
-    // Start by getting our newest pareto extremes.  We don't have to
+    // Start by getting our newest Pareto extremes.  We don't have to
     // use the multi objective statistician because we know all our
     // designs are non dominated.
-    DoubleExtremes newParExt(
+    const extremes<obj_val_t> newParExt(
         DesignStatistician::GetObjectiveFunctionExtremes(pareto)
         );
 
-    DoubleExtremes newPopExt(
+    const extremes<obj_val_t> newPopExt(
         DesignStatistician::GetObjectiveFunctionExtremes(popByOF)
         );
 
@@ -588,16 +588,16 @@ Private Methods
 */
 double
 MOGAConverger::ComputeVolume(
-    const DoubleExtremes& extremes
+    const extremes<obj_val_t>& exts
     )
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    DoubleExtremes::size_type size = extremes.size();
+    const extremes<obj_val_t>::size_type size = exts.size();
     double vol = 1.0;
-    for(DoubleExtremes::size_type i=0; i<size; ++i)
+    for(extremes<obj_val_t>::size_type i=0; i<size; ++i)
     {
-        const double r = extremes.get_range(i);
+        const double r = exts.get_range(i);
         if(r != 0.0) vol *= r;
     }
 
@@ -624,10 +624,14 @@ MOGAConverger::MOGAConverger(
         MetricTrackerConvergerBase(algorithm, true),
         _prevParSet(),
         _prevParExtremes(
-            algorithm.GetDesignTarget().GetNOF(), DBL_MAX, -DBL_MAX
+			algorithm.GetDesignTarget().GetNOF(),
+			std::numeric_limits<obj_val_t>::max(),
+			-std::numeric_limits<obj_val_t>::max()
             ),
         _prevPopExtremes(
-            algorithm.GetDesignTarget().GetNOF(), DBL_MAX, -DBL_MAX
+            algorithm.GetDesignTarget().GetNOF(),
+			std::numeric_limits<obj_val_t>::max(),
+			-std::numeric_limits<obj_val_t>::max()
             ),
         _prevPopSize(0)
 #ifdef JEGA_MESSAGE_BOARD

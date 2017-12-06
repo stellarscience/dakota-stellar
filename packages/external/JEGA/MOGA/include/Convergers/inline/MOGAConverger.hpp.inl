@@ -124,7 +124,7 @@ Inline Subclass Visible Methods
 inline
 void
 MOGAConverger::UpdateParetoExtremes(
-    const eddy::utilities::DoubleExtremes& newParExtremes
+    const eddy::utilities::extremes<obj_val_t>& newParExtremes
     )
 {
     this->_prevParExtremes = newParExtremes;
@@ -133,7 +133,7 @@ MOGAConverger::UpdateParetoExtremes(
 inline
 void
 MOGAConverger::UpdatePopulationExtremes(
-    const eddy::utilities::DoubleExtremes& newPopExtremes
+    const eddy::utilities::extremes<obj_val_t>& newPopExtremes
     )
 {
     this->_prevPopExtremes = newPopExtremes;

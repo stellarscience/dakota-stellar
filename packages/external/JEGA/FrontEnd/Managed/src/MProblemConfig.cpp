@@ -177,9 +177,28 @@ MProblemConfig::GetMaxGuffSize(
 	return static_cast<System::UInt32>(this->_theConfig->GetMaxGuffSize());
 }
 
+void
+MProblemConfig::SetMaxDiscardCacheSize(
+    System::UInt32 maxSize
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    this->_theConfig->SetMaxDiscardCacheSize(maxSize);
+}
+
+System::UInt32
+MProblemConfig::GetMaxDiscardCacheSize(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+	return static_cast<System::UInt32>(
+        this->_theConfig->GetMaxDiscardCacheSize()
+        );
+}
+
 bool
 MProblemConfig::AddContinuumRealVariable(
-    System::String MOH label,
+    System::String^ label,
     double lowerBound,
     double upperBound,
     int precision
@@ -193,8 +212,8 @@ MProblemConfig::AddContinuumRealVariable(
 
 bool
 MProblemConfig::AddDiscreteRealVariable(
-    System::String MOH label,
-    DoubleVector MOH values
+    System::String^ label,
+    DoubleVector^ values
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -205,7 +224,7 @@ MProblemConfig::AddDiscreteRealVariable(
 
 bool
 MProblemConfig::AddContinuumIntegerVariable(
-    System::String MOH label,
+    System::String^ label,
     int lowerBound,
     int upperBound
     )
@@ -218,8 +237,8 @@ MProblemConfig::AddContinuumIntegerVariable(
 
 bool
 MProblemConfig::AddDiscreteIntegerVariable(
-    System::String MOH label,
-    IntVector MOH values
+    System::String^ label,
+    IntVector^ values
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -230,7 +249,7 @@ MProblemConfig::AddDiscreteIntegerVariable(
 
 bool
 MProblemConfig::AddBooleanVariable(
-    System::String MOH label
+    System::String^ label
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -239,8 +258,8 @@ MProblemConfig::AddBooleanVariable(
 
 bool
 MProblemConfig::AddLinearMinimizeObjective(
-    System::String MOH label,
-    DoubleVector MOH coeffs
+    System::String^ label,
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -251,8 +270,8 @@ MProblemConfig::AddLinearMinimizeObjective(
 
 bool
 MProblemConfig::AddLinearMaximizeObjective(
-    System::String MOH label,
-    DoubleVector MOH coeffs
+    System::String^ label,
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -263,9 +282,9 @@ MProblemConfig::AddLinearMaximizeObjective(
 
 bool
 MProblemConfig::AddLinearSeekValueObjective(
-    System::String MOH label,
+    System::String^ label,
     double value,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -276,10 +295,10 @@ MProblemConfig::AddLinearSeekValueObjective(
 
 bool
 MProblemConfig::AddLinearSeekRangeObjective(
-    System::String MOH label,
+    System::String^ label,
     double lowerBound,
     double upperBound,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -291,7 +310,7 @@ MProblemConfig::AddLinearSeekRangeObjective(
 
 bool
 MProblemConfig::AddNonlinearMinimizeObjective(
-    System::String MOH label
+    System::String^ label
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -300,7 +319,7 @@ MProblemConfig::AddNonlinearMinimizeObjective(
 
 bool
 MProblemConfig::AddNonlinearMaximizeObjective(
-    System::String MOH label
+    System::String^ label
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -309,7 +328,7 @@ MProblemConfig::AddNonlinearMaximizeObjective(
 
 bool
 MProblemConfig::AddNonlinearSeekValueObjective(
-    System::String MOH label,
+    System::String^ label,
     double value
     )
 {
@@ -319,7 +338,7 @@ MProblemConfig::AddNonlinearSeekValueObjective(
 
 bool
 MProblemConfig::AddNonlinearSeekRangeObjective(
-    System::String MOH label,
+    System::String^ label,
     double lowerBound,
     double upperBound
     )
@@ -332,9 +351,9 @@ MProblemConfig::AddNonlinearSeekRangeObjective(
 
 bool
 MProblemConfig::AddLinearInequalityConstraint(
-    System::String MOH label,
-    double upperLimit,
-    DoubleVector MOH coeffs
+    System::String^ label,
+    con_val_t upperLimit,
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -345,10 +364,10 @@ MProblemConfig::AddLinearInequalityConstraint(
 
 bool
 MProblemConfig::AddLinearEqualityConstraint(
-    System::String MOH label,
-    double target,
+    System::String^ label,
+    con_val_t target,
     double allowedViol,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -359,10 +378,10 @@ MProblemConfig::AddLinearEqualityConstraint(
 
 bool
 MProblemConfig::AddLinearTwoSidedInequalityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double lowerLimit,
     double upperLimit,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -373,7 +392,7 @@ MProblemConfig::AddLinearTwoSidedInequalityConstraint(
 
 bool
 MProblemConfig::AddNonlinearInequalityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double upperLimit
     )
 {
@@ -385,7 +404,7 @@ MProblemConfig::AddNonlinearInequalityConstraint(
 
 bool
 MProblemConfig::AddNonlinearEqualityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double target,
     double allowedViol
     )
@@ -398,7 +417,7 @@ MProblemConfig::AddNonlinearEqualityConstraint(
 
 bool
 MProblemConfig::AddNonlinearTwoSidedInequalityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double lowerLimit,
     double upperLimit
     )
@@ -433,7 +452,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 void
-MProblemConfig::MANAGED_DISPOSE(
+MProblemConfig::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -474,7 +493,7 @@ MProblemConfig::~MProblemConfig(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    MANAGED_DISPOSE();
+    DoDispose();
 }
 
 

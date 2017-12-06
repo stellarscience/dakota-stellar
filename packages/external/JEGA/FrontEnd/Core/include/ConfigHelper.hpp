@@ -407,7 +407,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddLinearSeekValueObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double value,
+            obj_val_t value,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -432,8 +432,8 @@ class JEGA_SL_IEDECL ConfigHelper
         AddLinearSeekRangeObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerBound,
-            double upperBound,
+            obj_val_t lowerBound,
+            obj_val_t upperBound,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -490,7 +490,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddNonlinearSeekValueObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double value
+            obj_val_t value
             );
 
         /**
@@ -511,8 +511,8 @@ class JEGA_SL_IEDECL ConfigHelper
         AddNonlinearSeekRangeObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerBound,
-            double upperBound
+            obj_val_t lowerBound,
+            obj_val_t upperBound
             );
 
         /**
@@ -536,7 +536,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddLinearInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double upperLimit = 0.0,
+            con_val_t upperLimit = 0.0,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -563,7 +563,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddLinearEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double targetValue,
+            con_val_t targetValue,
             double allowedViol = 0.0,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
@@ -589,7 +589,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddLinearNotEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double tabooValue,
+            con_val_t tabooValue,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -616,8 +616,8 @@ class JEGA_SL_IEDECL ConfigHelper
         AddLinearTwoSidedInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerLimit,
-            double upperLimit,
+            con_val_t lowerLimit,
+            con_val_t upperLimit,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -639,7 +639,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddNonlinearInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double upperLimit = 0.0
+            con_val_t upperLimit = 0.0
             );
 
         /**
@@ -662,7 +662,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddNonlinearEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double targetValue,
+            con_val_t targetValue,
             double allowedViol = 0.0
             );
 
@@ -684,7 +684,7 @@ class JEGA_SL_IEDECL ConfigHelper
         AddNonlinearNotEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double tabooValue
+            con_val_t tabooValue
             );
 
         /**
@@ -707,8 +707,8 @@ class JEGA_SL_IEDECL ConfigHelper
         AddNonlinearTwoSidedInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerLimit,
-            double upperLimit
+            con_val_t lowerLimit,
+            con_val_t upperLimit
             );
 
         /**
@@ -900,7 +900,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetLinearSeekValueObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double value,
+            obj_val_t value,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -927,8 +927,8 @@ class JEGA_SL_IEDECL ConfigHelper
         GetLinearSeekRangeObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerBound,
-            double upperBound,
+            obj_val_t lowerBound,
+            obj_val_t upperBound,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -991,7 +991,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetNonlinearSeekValueObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double value
+            obj_val_t value
             );
 
         /**
@@ -1014,8 +1014,8 @@ class JEGA_SL_IEDECL ConfigHelper
         GetNonlinearSeekRangeObjective(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerBound,
-            double upperBound
+            obj_val_t lowerBound,
+            obj_val_t upperBound
             );
 
         /**
@@ -1041,7 +1041,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetLinearInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double upperLimit = 0.0,
+            con_val_t upperLimit = 0.0,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -1070,7 +1070,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetLinearEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double targetValue,
+            con_val_t targetValue,
             double allowedViol = 0.0,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
@@ -1098,7 +1098,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetLinearNotEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double tabooValue,
+            con_val_t tabooValue,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -1127,8 +1127,8 @@ class JEGA_SL_IEDECL ConfigHelper
         GetLinearTwoSidedInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerLimit,
-            double upperLimit,
+            con_val_t lowerLimit,
+            con_val_t upperLimit,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -1153,7 +1153,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetNonlinearInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double upperLimit = 0.0
+            con_val_t upperLimit = 0.0
             );
 
         /**
@@ -1178,7 +1178,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetNonlinearEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double targetValue,
+            con_val_t targetValue,
             double allowedViol = 0.0
             );
 
@@ -1202,7 +1202,7 @@ class JEGA_SL_IEDECL ConfigHelper
         GetNonlinearNotEqualityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double tabooValue
+            con_val_t tabooValue
             );
 
         /**
@@ -1227,8 +1227,8 @@ class JEGA_SL_IEDECL ConfigHelper
         GetNonlinearTwoSidedInequalityConstraint(
             JEGA::Utilities::DesignTarget& target,
             const std::string& label,
-            double lowerLimit,
-            double upperLimit
+            con_val_t lowerLimit,
+            con_val_t upperLimit
             );
 
         /**
@@ -1249,8 +1249,8 @@ class JEGA_SL_IEDECL ConfigHelper
         JEGA::Utilities::SeekRangeObjectiveFunctionType*
         GetSeekRangeOFType(
             JEGA::Utilities::ObjectiveFunctionInfo& ofInfo,
-            double lowerBound,
-            double upperBound
+            obj_val_t lowerBound,
+            obj_val_t upperBound
             );
 
         /**
@@ -1270,7 +1270,7 @@ class JEGA_SL_IEDECL ConfigHelper
         JEGA::Utilities::SeekValueObjectiveFunctionType*
         GetSeekValueOFType(
             JEGA::Utilities::ObjectiveFunctionInfo& ofInfo,
-            double value
+            obj_val_t value
             );
 
         /**
@@ -1314,7 +1314,7 @@ class JEGA_SL_IEDECL ConfigHelper
         JEGA::Utilities::EqualityConstraintType*
         GetEqualityConstraintType(
             JEGA::Utilities::ConstraintInfo& cnInfo,
-            double targetValue,
+            con_val_t targetValue,
             double allowedViol = 0.0
             );
 
@@ -1335,7 +1335,7 @@ class JEGA_SL_IEDECL ConfigHelper
         JEGA::Utilities::NotEqualityConstraintType*
         GetNotEqualityConstraintType(
             JEGA::Utilities::ConstraintInfo& cnInfo,
-            double tabooValue
+            con_val_t tabooValue
             );
 
         /**
@@ -1356,7 +1356,7 @@ class JEGA_SL_IEDECL ConfigHelper
         JEGA::Utilities::InequalityConstraintType*
         GetInequalityConstraintType(
             JEGA::Utilities::ConstraintInfo& cnInfo,
-            double upperLimit
+            con_val_t upperLimit
             );
 
         /**
@@ -1379,8 +1379,8 @@ class JEGA_SL_IEDECL ConfigHelper
         JEGA::Utilities::TwoSidedInequalityConstraintType*
         GetTwoSidedInequalityConstraintType(
             JEGA::Utilities::ConstraintInfo& cnInfo,
-            double lowerLimit,
-            double upperLimit
+            con_val_t lowerLimit,
+            con_val_t upperLimit
             );
 
         /**

@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class FavorFeasibleSelector.
+        Implementation of class FavorFeasibleSelector.
 
     NOTES:
 

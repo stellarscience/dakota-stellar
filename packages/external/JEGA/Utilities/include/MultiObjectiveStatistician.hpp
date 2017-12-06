@@ -93,8 +93,6 @@ namespace eddy
     {
         template <typename T>
         class extremes;
-
-        typedef extremes<double> DoubleExtremes;
     }
 }
 
@@ -237,7 +235,7 @@ class DominationPredicate
         /// Constructs a predicate using \a des and \a value.
         /**
          * \param des The Design against which to test all that come into this
-         *            prediate.
+         *            predicate.
          * \param value The result of the comparison that causes a return of
          *              true by this predicate.
          */
@@ -275,7 +273,7 @@ class DominatesPredicate :
         /// Constructs a DominatesPredicate to compare Designs to \a des
         /**
          * \param des The Design against which to test all that come into this
-         *            prediate.
+         *            predicate.
          */
         inline
         DominatesPredicate(
@@ -306,7 +304,7 @@ class DominatedPredicate :
         /// Constructs a DominatedPredicate to compare Designs to \a des
         /**
          * \param des The Design against which to test all that come into this
-         *            prediate.
+         *            predicate.
          */
         inline
         DominatedPredicate(
@@ -332,7 +330,7 @@ Class Definition
 
 /// A class that computes multi-objective statistics about DesignGroups.
 /**
- * This class has the capabilities to compute various mulit-objective
+ * This class has the capabilities to compute various multi-objective
  * statistics about collections of Designs such as DesignGroups.  Examples are:
  *
  * -Calculating the domination counts which computes for each Design the
@@ -473,7 +471,7 @@ class MultiObjectiveStatistician
             );
 
         /**
-         * \brief Finds the first occurance of a Design dominated by \a des in
+         * \brief Finds the first occurrence of a Design dominated by \a des in
          *        \a in and returns the iterator to the found Design.
          *
          * \param des The Design to compare to the Designs of \a in.
@@ -489,7 +487,7 @@ class MultiObjectiveStatistician
             );
 
         /**
-         * \brief Finds the first occurance of a Design dominated by \a des in
+         * \brief Finds the first occurrence of a Design dominated by \a des in
          *        \a in and returns the iterator to the found Design.
          *
          * This version is good if you know that there are or are not
@@ -512,7 +510,7 @@ class MultiObjectiveStatistician
             );
 
         /**
-         * \brief Finds the first occurance of a Design dominated by \a des in
+         * \brief Finds the first occurrence of a Design dominated by \a des in
          *        \a in and returns the iterator to the found Design.
          *
          * The iterator argument is for the case where the proper location for
@@ -537,7 +535,7 @@ class MultiObjectiveStatistician
             );
 
         /**
-         * \brief Finds the first occurance of a Design dominated by \a des in
+         * \brief Finds the first occurrence of a Design dominated by \a des in
          *        \a in and returns the iterator to the found Design.
          *
          * The iterator argument is for the case where the proper location for
@@ -655,7 +653,7 @@ class MultiObjectiveStatistician
             );
 
         /**
-         * \brief Finds the first occurance of a Design that dominates \a des
+         * \brief Finds the first occurrence of a Design that dominates \a des
          *        in \a in and returns the iterator to the found Design.
          *
          * \param des The Design to compare to the Designs of \a in.
@@ -670,7 +668,7 @@ class MultiObjectiveStatistician
             );
 
         /**
-         * \brief Finds the first occurance of a Design that dominates \a des
+         * \brief Finds the first occurrence of a Design that dominates \a des
          *        in \a in and returns the iterator to the found Design.
          *
          * The iterator argument is for the case where the proper location for
@@ -703,7 +701,7 @@ class MultiObjectiveStatistician
          *
          * \param des1 The first Design to compare.
          * \param des2 The second Design to compare.
-         * \return -1 if \a des1 domiantes \a des2, 1 if \a des2 dominates
+         * \return -1 if \a des1 dominates \a des2, 1 if \a des2 dominates
          *         \a des1 and 0 if neither dominates the other.
          */
         static inline
@@ -725,7 +723,7 @@ class MultiObjectiveStatistician
          * \param des2 The second Design to compare.
          * \param infos The ObjectiveFunctionInfos used to determine which
          *              Design has preferred objective values.
-         * \return -1 if \a des1 domiantes \a des2, 1 if \a des2 dominates
+         * \return -1 if \a des1 dominates \a des2, 1 if \a des2 dominates
          *         \a des1 and 0 if neither dominates the other.
          */
         static
@@ -744,7 +742,7 @@ class MultiObjectiveStatistician
          *
          * \param by The Design to compare to the Designs of \a in.
          * \param in The set of Designs to compare to \a by.
-         * \return The Design in \a in that is most domianted by \a by.
+         * \return The Design in \a in that is most dominated by \a by.
          */
         static
         DesignOFSortSet::const_iterator
@@ -761,7 +759,7 @@ class MultiObjectiveStatistician
          *
          * DesignOFSortSet must be an associative container, must hold
          * SolT*'s, be forward iteratable in STL style, be default
-         * constructable, support the begin, end, erase, and insert
+         * constructible, support the begin, end, erase, and insert
          * methods, and be sorted by objective function.
          *
          * Finds the extreme values for each objective function
@@ -773,7 +771,7 @@ class MultiObjectiveStatistician
          *         non-dominated subset of \a of.
          */
         static
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<obj_val_t>
         FindParetoExtremes(
             const DesignOFSortSet& of
             );
@@ -861,6 +859,14 @@ class MultiObjectiveStatistician
             DesignOFSortSet::const_iterator where,
             bool hasInfeasible,
             int cutoff = -1
+            );
+
+        template <typename DesContT>
+        static
+        std::size_t
+        TagParetoExtremeDesigns(
+            const DesContT& designs,
+            const std::size_t& tag
             );
 
         /**
@@ -1068,7 +1074,9 @@ class MultiObjectiveStatistician
          *
          * \param designs The set of Designs for which to compute the
          *                "dominated-by" counts.
-         * \param cutoff The limit after which to stop counting.
+         * \param cutoff The limit after which to stop counting.  A value of -1
+         *               indicates that a full count should be performed (no
+         *               cutoff).
          * \return A map of Designs to count values where the Designs are those
          *         contained in \a designs and the counts are the
          *         "dominated-by" counts.
@@ -1145,33 +1153,6 @@ class MultiObjectiveStatistician
             const DesignOFSortSet& designs
             );
 
-        /**
-         * \brief Tests \a des to see if it is at an extreme according to the
-         *        supplied set of extremes.
-         *
-         * This is intended for use in testing to see if a Design exists at
-         * some extreme of the Pareto frontier.  This is the case if the
-         * Design has an extreme value (either max or min) for at least all but
-         * one of its objective functions.  Of course, if it is extreme for
-         * all objectives, it will be considered an extreme Design.
-         *
-         * \param des The Design to test as an extreme Design.
-         * \param paretoExtremes The set of extremes to test \a des against.
-         * \return true if \a des is at an extreme according to
-         *         \a paretoExtremes and false otherwise.
-         */
-        static
-        bool
-        IsExtremeDesign(
-            const JEGA::Utilities::Design& des,
-            const eddy::utilities::DoubleExtremes& paretoExtremes
-            );
-
-
-
-
-
-
     /*
     ============================================================================
     Subclass Visible Methods
@@ -1208,6 +1189,22 @@ class MultiObjectiveStatistician
     */
     private:
 
+        template <typename DesContT>
+        static
+        std::size_t
+        MarkOneOfBestDesigns(
+            const DesContT& designs,
+            const ObjectiveFunctionInfo& ofInfo,
+            const std::size_t& tag
+            );
+
+        template <typename DesContT>
+        static
+        std::vector<JEGA::Utilities::Design*>
+        GetBestDesigns(
+            const DesContT& designs,
+            const ObjectiveFunctionInfo& ofInfo
+            );
 
 
     /*

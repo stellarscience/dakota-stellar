@@ -167,7 +167,7 @@ Class Definition
  * The selectors is responsible for choosing the next population from the
  * groups of designs passed into it.  Chosen designs should be removed
  * from the groups they are taken from and inserted into the group passed
- * in to recieve them.
+ * in to receive them.
  *
  * It is not necessary to do anything with the remaining Designs
  * in the passed in groups.  The GA will handle them.

@@ -267,7 +267,7 @@ class JEGA_SL_IEDECL ObjectiveFunctionInfo :
          * \return The corresponding objective value of the supplied Design.
          */
         inline
-        double
+        obj_val_t
         Which(
             const Design& des
             ) const;
@@ -283,9 +283,21 @@ class JEGA_SL_IEDECL ObjectiveFunctionInfo :
          *         minimization of the supplied Design.
          */
         inline
-        double
+        obj_val_t
         WhichForMinimization(
             const Design& des
+            ) const;
+
+        inline
+        obj_val_t
+        GetValueForMinimization(
+            const Design& des
+            ) const;
+
+        inline
+        obj_val_t
+        GetValueForMinimization(
+            const obj_val_t& objVal
             ) const;
 
         /**
@@ -301,8 +313,8 @@ class JEGA_SL_IEDECL ObjectiveFunctionInfo :
          */
         int
         PreferComp(
-            double val1,
-            double val2
+            obj_val_t val1,
+            obj_val_t val2
             ) const;
 
         /**

@@ -275,12 +275,12 @@ RandomDesignVariableMutator::Mutate(
         Design* chosen = **it;
 
         // perform the mutation.
-        double oldRep = chosen->GetVariableRep(dv);
-        double newRep = dvis[dv]->GetRandomDoubleRep();
+        var_rep_t oldRep = chosen->GetVariableRep(dv);
+        var_rep_t newRep = dvis[dv]->GetRandomRep();
 
         // See to it that the old and new reps are not the same if possible.
         for(int i=0; i<100 && oldRep == newRep; ++i)
-            newRep = dvis[dv]->GetRandomDoubleRep();
+            newRep = dvis[dv]->GetRandomRep();
 
         // If we could not find a new value different from the old, don't bother
         // with the rest of this loop.
@@ -289,7 +289,7 @@ RandomDesignVariableMutator::Mutate(
         chosen = target.GetNewDesign(*chosen);
         chosen->SetEvaluated(false);
         chosen->SetIllconditioned(false);
-        chosen->SetVariableRep(dv, dvis[dv]->GetRandomDoubleRep());
+        chosen->SetVariableRep(dv, dvis[dv]->GetRandomRep());
         chosen->RemoveAsClone();
         cldrn.Insert(chosen);
     }

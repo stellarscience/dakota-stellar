@@ -162,7 +162,7 @@ UniformOffsetMutator::Description(
     static const string ret(
         "This mutator does mutation by first randomly selecting a Design.  "
         "It then chooses a random design variable and adds a uniform random "
-        "amount to it.  The offset amount is detemined by the offset range "
+        "amount to it.  The offset amount is determined by the offset range "
         "and the total range of the variable being mutated.  The mean is 0.  "
         "The number of mutations is the rate times the size of the group "
         "passed in rounded to the nearest whole number."
@@ -214,7 +214,7 @@ UniformOffsetMutator::GetOffsetAmount(
     EDDY_FUNC_DEBUGSCOPE
 
     // compute the actual allowable range
-    double halfrange = this->GetOffsetRange()*varInfo.GetDoubleRepRange() / 2;
+    double halfrange = this->GetOffsetRange()*varInfo.GetRepRange() / 2;
 
     // now return a uniform random number in the range [-halfrange, halfrange].
     double ret = RandomNumberGenerator::UniformReal(-halfrange, halfrange);

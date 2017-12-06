@@ -560,12 +560,12 @@ GeneticAlgorithmEvaluator::SetEvaluationConcurrency(
     JEGAIFLOG_II(ec < 1, this->GetLogger(), lquiet(), this,
         text_entry(lquiet(), this->GetName() + ": Attempt to assign the "
             "evaluation concurrency to 0.  1 is the minimum evaluation "
-            "concurency.  Using the value of 1 instead.")
+            "concurrency.  Using the value of 1 instead.")
         )
 
     JEGAIFLOG_II(ec > MAX_EVAL_CONCUR, this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(), this->GetName() + ": Attempt to assign the "
-            "evalauation concurrency to a value of ") << ec << " which is "
+            "evaluation concurrency to a value of ") << ec << " which is "
             "greater than the maximum allowable value of " << MAX_EVAL_CONCUR
             << ". Using the max value."
         )

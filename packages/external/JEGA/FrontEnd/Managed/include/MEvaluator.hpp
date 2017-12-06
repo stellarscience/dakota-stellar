@@ -139,7 +139,8 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MDesign);
+ref class MDesign;
+
 class BaseEvaluator;
 class BaseEvaluatorCreator;
 
@@ -171,7 +172,7 @@ Class Definition
  * a JEGA::Algorithms::GeneticAlgorithmEvaluator such that ultimately, a call
  * to an implementation of an MEvaluationFunctor::Evaluate method is issued.
  */
-MANAGED_CLASS(public, MEvaluator) :
+public ref class MEvaluator :
     public System::IDisposable
 {
     /*
@@ -207,7 +208,7 @@ MANAGED_CLASS(public, MEvaluator) :
          * type that further calls ahead to a function delegate to get
          * evaluations performed.  This is the delegate that is called.
          */
-        MEvaluationFunctor MOH _theDelegate;
+        MEvaluationFunctor^ _theDelegate;
 
         BaseEvaluator* _evaler;
 
@@ -226,7 +227,7 @@ MANAGED_CLASS(public, MEvaluator) :
          */
         void
         SetEvaluationDelegate(
-            MEvaluationFunctor MOH del
+            MEvaluationFunctor^ del
             );
 
         void
@@ -253,7 +254,7 @@ MANAGED_CLASS(public, MEvaluator) :
          *
          * \param del The new delegate functor for performing evaluations.
          */
-        MEvaluationFunctor MOH
+        MEvaluationFunctor^
         GetEvaluationDelegate(
             );
 
@@ -301,16 +302,16 @@ MANAGED_CLASS(public, MEvaluator) :
         GetTheEvaluatorCreator(
             );
 
-        MDesign MOH
+        MDesign^
         InjectDesign(
-            DoubleVector MOH X,
-            DoubleVector MOH F,
-            DoubleVector MOH G
+            DoubleVector^ X,
+            DoubleVector^ F,
+            DoubleVector^ G
             );
 
         void
         InjectDesign(
-            MDesign MOH mDes
+            MDesign^ mDes
             );
 
     /*
@@ -341,7 +342,7 @@ MANAGED_CLASS(public, MEvaluator) :
          */
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
         ///**
@@ -353,9 +354,9 @@ MANAGED_CLASS(public, MEvaluator) :
         //virtual
         //bool
         //PerformEvaluation(
-        //    DoubleVector MOH X,
-        //    DoubleVector MOH F,
-        //    DoubleVector MOH G
+        //    DoubleVector^ X,
+        //    DoubleVector^ F,
+        //    DoubleVector^ G
         //    );
 
     protected:
@@ -396,7 +397,7 @@ MANAGED_CLASS(public, MEvaluator) :
          *                    evaluation.
          */
         MEvaluator(
-            MEvaluationFunctor MOH theDelegate
+            MEvaluationFunctor^ theDelegate
             );
 
         //MEvaluator(
@@ -404,7 +405,7 @@ MANAGED_CLASS(public, MEvaluator) :
         //    );
 
         //MEvaluator(
-        //    MEvaluationFunctor MOH theDelegate,
+        //    MEvaluationFunctor^ theDelegate,
         //    JEGA::Algorithms::GeneticAlgorithmEvaluator* evaler
         //    );
 

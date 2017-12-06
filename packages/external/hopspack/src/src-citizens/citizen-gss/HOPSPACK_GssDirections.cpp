@@ -38,6 +38,7 @@
 
 #include <stdlib.h>    //-- FOR free()
 #include <iomanip>
+#include <algorithm>
 
 #include "HOPSPACK_common.hpp"
 #ifdef HAVE_CDDLIB

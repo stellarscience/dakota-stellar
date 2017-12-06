@@ -39,6 +39,7 @@ add_test(pecos_ifft_g pecos_ifft_g)
 add_executable(pecos_ifft_sd pecos_ifft_sd.cpp)
 target_link_libraries(pecos_ifft_sd ${pecos_libs})
 add_test(pecos_ifft_sd pecos_ifft_sd)
+set_tests_properties(pecos_ifft_sd PROPERTIES DEPENDS pecos_ifft_g)
 
 # Complete these for each specific test.
 add_executable(boost_test_dist boost_test_dist.cpp)

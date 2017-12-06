@@ -247,7 +247,8 @@ MaxGenEvalConverger::CheckConvergence(
     // convergence depends only on the maximum allowable number
     // of generations and maximum allowable number of evaluations.
     // If either has been reached or exceeded, we've converged.
-    bool converged = this->IsMaxGensReached() || this->IsMaxEvalsReached();
+    const bool converged =
+		this->IsMaxGensReached() || this->IsMaxEvalsReached();
 
     JEGAIFLOG_CF_II(this->IsMaxGensReached(), this->GetLogger(), lverbose(),
         this,

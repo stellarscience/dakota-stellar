@@ -126,8 +126,8 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MSolution);
-MANAGED_CLASS_FORWARD_DECLARE(public, MDesign);
+ref class MSolution;
+ref class MDesign;
 
 
 
@@ -159,7 +159,7 @@ Class Definition
  * a JEGA core Design class object and the interface to this class is similar
  * to that of a JEGA Design.
  */
-MANAGED_CLASS(public, MSolution)
+public ref class MSolution
 {
     /*
     ============================================================================
@@ -197,13 +197,13 @@ MANAGED_CLASS(public, MSolution)
     private:
 
         /// The list of design variable values of this solution.
-        DoubleVector MOH _X;
+        DoubleVector^ _X;
 
         /// The list of objective function values of this solution.
-        DoubleVector MOH _F;
+        DoubleVector^ _F;
 
         /// The list of constraint values of this solution.
-        DoubleVector MOH _G;
+        DoubleVector^ _G;
 
         /// A bitmask of attributes used to eliminate the need for many bools.
         eddy::utilities::bitmask8_t _attributes;
@@ -247,6 +247,22 @@ MANAGED_CLASS(public, MSolution)
          */
         double
         GetVariable(
+            eddy::utilities::uint64_t num
+            );
+		
+        /// Retrieves the requested design variable representation.
+        /**
+         * It is up to you to make sure that \a num is in bounds
+		 * (less than ndv).
+         *
+         * In terms of the way the Design class works, this method is akin
+         * to the GetVariableRep method.
+         *
+         * \param num The index of the variable whose representation is sought.
+         * \return The design variable representation stored in location \a num.
+         */
+        double
+        GetVariableRep(
             eddy::utilities::uint64_t num
             );
 
@@ -462,7 +478,7 @@ MANAGED_CLASS(public, MSolution)
             );
 
         MSolution(
-            MDesign MOH des
+            MDesign^ des
             );
 
 }; // class MSolution

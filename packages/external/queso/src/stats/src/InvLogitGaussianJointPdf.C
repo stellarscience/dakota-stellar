@@ -23,6 +23,8 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/InvLogitGaussianJointPdf.h>
+#include <queso/VectorSet.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -32,17 +34,15 @@ namespace QUESO {
 template<class V,class M>
 InvLogitGaussianJointPdf<V,M>::InvLogitGaussianJointPdf(
   const char*                  prefix,
-  const BoxSubset<V,M>& domainBoxSubset,
+  const VectorSet<V,M>& domainSet,
   const V&                     lawExpVector,
   const V&                     lawVarVector)
   :
-  BaseJointPdf<V,M>(((std::string)(prefix)+"invlogit_gau").c_str(),
-      domainBoxSubset),
+  BaseJointPdf<V,M>(((std::string)(prefix)+"invlogit_gau").c_str(), domainSet),
   m_lawExpVector(new V(lawExpVector)),
   m_lawVarVector(new V(lawVarVector)),
   m_diagonalCovMatrix(true),
-  m_lawCovMatrix(m_domainSet.vectorSpace().newDiagMatrix(lawVarVector)),
-  m_domainBoxSubset(domainBoxSubset)
+  m_lawCovMatrix(m_domainSet.vectorSpace().newDiagMatrix(lawVarVector))
 {
 }
 
@@ -50,17 +50,15 @@ InvLogitGaussianJointPdf<V,M>::InvLogitGaussianJointPdf(
 template<class V,class M>
 InvLogitGaussianJointPdf<V,M>::InvLogitGaussianJointPdf(
   const char*                  prefix,
-  const BoxSubset<V,M>& domainBoxSubset,
+  const VectorSet<V,M>& domainSet,
   const V&                     lawExpVector,
   const M&                     lawCovMatrix)
   :
-  BaseJointPdf<V,M>(((std::string)(prefix)+"invlogit_gau").c_str(),
-      domainBoxSubset),
+  BaseJointPdf<V,M>(((std::string)(prefix)+"invlogit_gau").c_str(), domainSet),
   m_lawExpVector(new V(lawExpVector)),
-  m_lawVarVector(domainBoxSubset.vectorSpace().newVector(INFINITY)), // FIX ME
+  m_lawVarVector(domainSet.vectorSpace().newVector(INFINITY)), // FIX ME
   m_diagonalCovMatrix(false),
-  m_lawCovMatrix(new M(lawCovMatrix)),
-  m_domainBoxSubset(domainBoxSubset)
+  m_lawCovMatrix(new M(lawCovMatrix))
 {
 }
 
@@ -96,7 +94,7 @@ InvLogitGaussianJointPdf<V, M>::print(std::ostream & os) const
   os << "m_prefix:" << std::endl;
   os << this->m_prefix << std::endl;
   os << "m_domainSet:" << std::endl;
-  os << this->m_domainBoxSubset << std::endl;
+  os << this->m_domainSet << std::endl;
   os << "m_normalizationStyle:" << std::endl;
   os << this->m_normalizationStyle << std::endl;
   os << "m_logOfNormalizationFactor:" << std::endl;
@@ -132,17 +130,17 @@ template<class V, class M>
 double
 InvLogitGaussianJointPdf<V,M>::lnValue(
   const V& domainVector,
-  const V* domainDirection,
-        V* gradVector,
-        M* hessianMatrix,
-        V* hessianEffect) const
+  const V* /* domainDirection */,
+        V* /* gradVector */,
+        M* /* hessianMatrix */,
+        V* /* hessianEffect */) const
 {
   double returnValue;
   double lnDeterminant = 0.0;
   V transformedDomainVector(domainVector);
 
-  V min_domain_bounds(this->m_domainBoxSubset.minValues());
-  V max_domain_bounds(this->m_domainBoxSubset.maxValues());
+  V min_domain_bounds(this->m_domainSet.minValues());
+  V max_domain_bounds(this->m_domainSet.maxValues());
 
   double lnjacobian = 0.0;
   for (unsigned int i = 0; i < domainVector.sizeLocal(); i++) {
@@ -230,7 +228,7 @@ InvLogitGaussianJointPdf<V,M>::lnValue(
 
 template<class V, class M>
 void
-InvLogitGaussianJointPdf<V,M>::distributionMean(V& meanVector) const
+InvLogitGaussianJointPdf<V,M>::distributionMean(V& /* meanVector */) const
 {
   // AFAIK there's no simple closed form here, and taking the inverse
   // transformation of the mean in the transformed space probably
@@ -242,7 +240,7 @@ InvLogitGaussianJointPdf<V,M>::distributionMean(V& meanVector) const
 //---------------------------------------------------
 template<class V,class M>
 void
-InvLogitGaussianJointPdf<V,M>::distributionVariance(M & covMatrix) const
+InvLogitGaussianJointPdf<V,M>::distributionVariance(M & /* covMatrix */) const
 {
   // AFAIK there's no simple closed form here, and taking the inverse
   // transformation of the variance in the transformed space probably

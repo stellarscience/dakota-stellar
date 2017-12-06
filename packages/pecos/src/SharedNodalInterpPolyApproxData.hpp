@@ -61,7 +61,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void allocate_data();
+  void allocate_data(size_t index = _NPOS);
   void allocate_component_sobol();
   void increment_component_sobol();
 

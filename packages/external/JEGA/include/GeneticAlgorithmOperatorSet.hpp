@@ -180,7 +180,7 @@ Class Definition
  * operator obtained from an operator set as it may be a default operator
  * and thus should not be deleted external to this class.  Instead use
  * the methods provided to destroy the operators which will account for the
- * possiblility of having default operators.
+ * possibility of having default operators.
  *
  * If you do delete an operator external to a set containing it, be sure to set
  * the operator appropriately either to another new operator or to null in
@@ -713,7 +713,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
     */
     public:
 
-        /// Assignement operator.
+        /// Assignment operator.
         /**
          * Assignment is carried out by direct pointer duplication of the
          * operators in \a rhs to \a this.  The only exception is the case

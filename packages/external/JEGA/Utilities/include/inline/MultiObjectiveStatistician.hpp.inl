@@ -444,6 +444,46 @@ MultiObjectiveStatistician::CountNumDominating(
         );
 }
 
+template <typename DesContT>
+std::size_t
+MultiObjectiveStatistician::TagParetoExtremeDesigns(
+    const DesContT& designs,
+    const std::size_t& tag
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+
+    if(designs.empty()) return 0;
+
+    // The algorithm is as follows:
+    //
+    // For each objective dimension, find the set of all designs that share
+    // the "best" objective function values.  From that subset, visit each
+    // other objective function and find the one that has the lowest value in
+    // that objective.  It is protected.  If more than one has that best lowest
+    // value, then take whatever one, doesn't matter.
+    const Design* des = *(designs.begin());
+    const DesignTarget& target = des->GetDesignTarget();
+    const std::size_t nof = target.GetNOF();
+
+    const ObjectiveFunctionInfoVector& ofInfos =
+        target.GetObjectiveFunctionInfos();
+
+    std::size_t nMarked = 0;
+
+    for(size_t oof=0; oof<nof; ++oof)
+    {
+        std::vector<Design*> bests(GetBestDesigns(designs, *ofInfos[oof]));
+
+        for(size_t iof=0; iof<nof; ++iof)
+        {
+            if(iof == oof) continue;
+            nMarked += MarkOneOfBestDesigns(bests, *ofInfos[iof], tag);
+        }
+    }
+
+    return nMarked;
+}
 
 /*
 ================================================================================
@@ -464,6 +504,61 @@ Inline Private Methods
 ================================================================================
 */
 
+
+template <typename DesContT>
+std::size_t
+MultiObjectiveStatistician::MarkOneOfBestDesigns(
+    const DesContT& designs,
+    const ObjectiveFunctionInfo& ofInfo,
+    const std::size_t& tag
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+
+    const typename DesContT::const_iterator e(designs.end());
+    typename DesContT::const_iterator it(designs.begin());
+    Design* best = *it;
+
+    for(++it; it!=e; ++it)
+        if(ofInfo.GetPreferredDesign(*best, **it) == *it) best = *it;
+
+    best->ModifyAttribute(tag, true);
+
+    return 1;
+}
+
+template <typename DesContT>
+std::vector<JEGA::Utilities::Design*>
+MultiObjectiveStatistician::GetBestDesigns(
+    const DesContT& designs,
+    const ObjectiveFunctionInfo& ofInfo
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+
+    std::vector<JEGA::Utilities::Design*> ret;
+    ret.reserve(4);
+
+    const typename DesContT::const_iterator e(designs.end());
+    typename DesContT::const_iterator it(designs.begin());
+    ret.push_back(*it);
+
+    for(++it; it!=e; ++it)
+    {
+        const Design* prefDes = ofInfo.GetPreferredDesign(*ret[0], **it);
+        if(prefDes == *it)
+        {
+            ret.clear();
+            ret.push_back(*it);
+        }
+        else if(prefDes == 0x0)
+        {
+            ret.push_back(*it);
+        }
+    }
+
+    return ret;
+}
 
 
 

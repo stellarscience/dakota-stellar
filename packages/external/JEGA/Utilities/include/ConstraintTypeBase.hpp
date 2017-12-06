@@ -71,6 +71,7 @@ Includes
 */
 // JEGAConfig.hpp should be the first include in all JEGA files.
 #include <../Utilities/include/JEGAConfig.hpp>
+#include <../Utilities/include/JEGATypes.hpp>
 
 #include <string>
 
@@ -345,7 +346,7 @@ class JEGA_SL_IEDECL ConstraintTypeBase
         virtual
         double
         GetViolationAmount(
-            double of
+            con_val_t of
             ) const = 0;
 
         /// Returns the amount by which "des1" is preferred to "des2".

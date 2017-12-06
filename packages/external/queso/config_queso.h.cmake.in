@@ -44,7 +44,7 @@
 /* No longer using: #define QUESO_HAVE_BOOST_PROGRAM_OPTIONS_HPP @QUESO_HAVE_BOOST@ */
 
 /* Always prefer Getpot over Boost, which is deprecated */
-#define DISABLE_BOOST_PROGRAM_OPTIONS 1
+#define QUESO_DISABLE_BOOST_PROGRAM_OPTIONS 1
 
 /* Define to 1 if you have <boost/scoped_ptr.hpp> */
 #define QUESO_HAVE_BOOST_SCOPED_PTR_HPP @QUESO_HAVE_BOOST@

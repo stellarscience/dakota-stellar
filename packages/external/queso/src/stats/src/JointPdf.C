@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/JointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -59,7 +60,7 @@ BaseJointPdf<V,M>::~BaseJointPdf()
 //---------------------------------------------------
 template<class V,class M>
 void
-BaseJointPdf<V,M>::distributionMean(V & meanVector) const
+BaseJointPdf<V,M>::distributionMean(V & /* meanVector */) const
 {
   queso_not_implemented();
 }
@@ -67,7 +68,7 @@ BaseJointPdf<V,M>::distributionMean(V & meanVector) const
 //---------------------------------------------------
 template<class V,class M>
 void
-BaseJointPdf<V,M>::distributionVariance(M & covMatrix) const
+BaseJointPdf<V,M>::distributionVariance(M & /* covMatrix */) const
 {
   queso_not_implemented();
 }

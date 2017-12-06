@@ -131,7 +131,7 @@ class mutexed_variable;
 File Scope Typedefs
 ================================================================================
 */
-/// A mutex protected boolean type integer variable.
+/// A mutex protected Boolean type integer variable.
 typedef
 mutexed_variable<bool>
 MutexedBool;

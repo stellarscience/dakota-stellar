@@ -136,7 +136,7 @@ MDriver::GetRandomSeed(
     return Driver::GetRandomSeed();
 }
 
-System::String MOH
+System::String^
 MDriver::GetGlobalLogFilename(
     )
 {
@@ -167,9 +167,33 @@ MDriver::IsJEGAInitialized(
     return Driver::IsJEGAInitialized();
 }
 
+System::String^
+MDriver::GetXType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return ManagedUtils::ToSysString(Driver::GetXType());
+}
+
+System::String^
+MDriver::GetGType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return ManagedUtils::ToSysString(Driver::GetGType());
+}
+
+System::String^
+MDriver::GetFType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return ManagedUtils::ToSysString(Driver::GetFType());
+}
+
 bool
 MDriver::InitializeJEGA(
-    System::String MOH globalLogFilename,
+    System::String^ globalLogFilename,
     JEGA::Logging::LogLevel globalLogDefLevel,
     System::UInt32 rSeed,
     MAlgorithmConfig::FatalBehavior fatalBehavior
@@ -185,7 +209,7 @@ MDriver::InitializeJEGA(
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
@@ -211,7 +235,7 @@ MDriver::ResetGlobalLoggingLevel(
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
@@ -227,14 +251,14 @@ MDriver::FlushGlobalLogStreams(
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
 
-SolutionVector MOH
+SolutionVector^
 MDriver::ExecuteAlgorithm(
-    MAlgorithmConfig MOH config
+    MAlgorithmConfig^ config
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -245,12 +269,12 @@ MDriver::ExecuteAlgorithm(
             this->_theApp->ExecuteAlgorithm(config->Manifest())
             );
 
-        SolutionVector MOH ret =
-            MANAGED_GCNEW SolutionVector(static_cast<int>(solutions.size()));
+        SolutionVector^ ret =
+            gcnew SolutionVector(static_cast<int>(solutions.size()));
 
         for(DesignOFSortSet::const_iterator it(solutions.begin());
             it!=solutions.end(); ++it)
-                ret->Add(MANAGED_GCNEW MSolution(**it));
+                ret->Add(gcnew MSolution(**it));
 
         // As per the Driver instructions, we must flush the solution
         // set now that we are done with it.
@@ -262,32 +286,32 @@ MDriver::ExecuteAlgorithm(
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
 
-MGeneticAlgorithm MOH
+MGeneticAlgorithm^
 MDriver::InitializeAlgorithm(
-    MAlgorithmConfig MOH config
+    MAlgorithmConfig^ config
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     try {
-        return MANAGED_GCNEW MGeneticAlgorithm(
+        return gcnew MGeneticAlgorithm(
             this->_theApp->InitializeAlgorithm(config->Manifest())
             );
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
 
 bool
 MDriver::PerformNextIteration(
-    MGeneticAlgorithm MOH theGA
+    MGeneticAlgorithm^ theGA
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -296,14 +320,14 @@ MDriver::PerformNextIteration(
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
 
-SolutionVector MOH
+SolutionVector^
 MDriver::FinalizeAlgorithm(
-    MGeneticAlgorithm MOH theGA
+    MGeneticAlgorithm^ theGA
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -316,12 +340,12 @@ MDriver::FinalizeAlgorithm(
         // finalize will delete the GA.  So we will dissociate from it.
         theGA->DissociateGA();
 
-        SolutionVector MOH ret =
-            MANAGED_GCNEW SolutionVector(static_cast<int>(solutions.size()));
+        SolutionVector^ ret =
+            gcnew SolutionVector(static_cast<int>(solutions.size()));
 
         for(DesignOFSortSet::const_iterator it(solutions.begin());
             it!=solutions.end(); ++it)
-                ret->Add(MANAGED_GCNEW MSolution(**it));
+                ret->Add(gcnew MSolution(**it));
 
         // As per the Driver instructions, we must flush the solution
         // set now that we are done with it.
@@ -331,14 +355,14 @@ MDriver::FinalizeAlgorithm(
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
 
 void
 MDriver::DestroyAlgorithm(
-    MGeneticAlgorithm MOH theGA
+    MGeneticAlgorithm^ theGA
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -348,7 +372,7 @@ MDriver::DestroyAlgorithm(
     }
     catch(const std::exception& ex)
     {
-        throw MANAGED_GCNEW
+        throw gcnew
             System::Exception(ManagedUtils::ToSysString(ex.what()));
     }
 }
@@ -375,7 +399,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 void
-MDriver::MANAGED_DISPOSE(
+MDriver::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -411,7 +435,7 @@ Structors
 
 
 MDriver::MDriver(
-    MProblemConfig MOH probConfig
+    MProblemConfig^ probConfig
     ) :
         _theApp(new Driver(probConfig->Manifest()))
 {
@@ -422,7 +446,7 @@ MDriver::~MDriver(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    MANAGED_DISPOSE();
+    DoDispose();
 }
 
 

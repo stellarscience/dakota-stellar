@@ -71,6 +71,7 @@ Includes
 */
 // JEGAConfig.hpp should be the first include in all JEGA files.
 #include <../Utilities/include/JEGAConfig.hpp>
+#include <../Utilities/include/JEGATypes.hpp>
 
 #include <string>
 
@@ -316,9 +317,9 @@ class JEGA_SL_IEDECL ObjectiveFunctionTypeBase
          *         techniques.
          */
         virtual
-        double
+        obj_val_t
         GetValueForMinimization(
-            double val
+            obj_val_t val
             ) const = 0;
 
         /// Returns the string name of this type.
@@ -344,8 +345,8 @@ class JEGA_SL_IEDECL ObjectiveFunctionTypeBase
         virtual
         double
         GetPreferredAmount(
-            double val1,
-            double val2
+            obj_val_t val1,
+            obj_val_t val2
             ) const;
 
         /// Returns an exact duplicate of this type object.

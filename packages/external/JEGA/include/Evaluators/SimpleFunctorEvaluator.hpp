@@ -224,7 +224,8 @@ class SimpleFunctorEvaluator :
                  *
                  * \param X The vector of design variables.  This vector has
                  *          as many elements as there are design variables in
-                 *          the problem.
+                 *          the problem.  Note that these are values and not
+                 *          representations and thus are always type double.
                  * \param F The vector of objective functions.  This vector
                  *          typically has nonsense for values.  Install
                  *          sensible values as a result of the evaluations.
@@ -235,9 +236,9 @@ class SimpleFunctorEvaluator :
                 virtual
                 bool
                 Evaluate(
-                    const JEGA::DoubleVector& X,
-                    JEGA::DoubleVector& F,
-                    JEGA::DoubleVector& G
+                    const std::vector<double>& X,
+                    const std::vector<obj_val_t>& F,
+                    const std::vector<con_val_t>& G
                     ) = 0;
 
             /*

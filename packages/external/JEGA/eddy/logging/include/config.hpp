@@ -88,7 +88,7 @@ Version Information
 #define EDDY_LOGGING_VERSION "1.0.0"
 
 /// Expands to a string identifying the loggin package.
-#define EDDY_LOGGING_PACKAGE "Eddy Logging v"EDDY_LOGGING_VERSION
+#define EDDY_LOGGING_PACKAGE "Eddy Logging v" EDDY_LOGGING_VERSION
 
 
 

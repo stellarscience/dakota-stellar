@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class WeightedSumOnlyFitnessAssessor.
+        Implementation of class WeightedSumOnlyFitnessAssessor.
 
     NOTES:
 

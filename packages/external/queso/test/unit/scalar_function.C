@@ -34,7 +34,10 @@
 #include <queso/GslVector.h>
 #include <queso/BoxSubset.h>
 #include <queso/VectorSet.h>
+#include <queso/VectorSpace.h>
 #include <queso/ScalarFunction.h>
+
+#include <cmath>
 
 namespace QUESOTesting
 {
@@ -53,8 +56,8 @@ public:
     return domainVector[0] * domainVector[0];
   }
 
-  virtual double actualValue(const V & domainVector, const V * domainDirection,
-      V * gradVector, M * hessianMatrix, V * hessianEffect) const
+  virtual double actualValue(const V & domainVector, const V * /* domainDirection */,
+      V * /* gradVector */, M * /* hessianMatrix */, V * /* hessianEffect */) const
   {
     return std::exp(this->lnValue(domainVector, NULL, NULL, NULL, NULL));
   }

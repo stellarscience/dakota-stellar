@@ -93,7 +93,6 @@ namespace eddy
     namespace utilities
     {
         template <typename T> class extremes;
-        typedef extremes<double> DoubleExtremes;
     }
 }
 namespace JEGA
@@ -186,7 +185,7 @@ Class Definition
  * controlled by the user.
  *
  * The cache flag value is extracted from the parameter database using the name
- * "method.jega.cache_niched_designs".  It is extracted as a boolean parameter.
+ * "method.jega.cache_niched_designs".  It is extracted as a Boolean parameter.
  * If it is not supplied in the parameter database, the default value as
  * defined by DEFAULT_CACHE_FLAG will be used. This is required in addition to
  * any requirements of the base class.
@@ -218,6 +217,13 @@ class JEGA_SL_IEDECL GeneticAlgorithmNichePressureApplicator :
         /// The default value for the "caching designs" flag.
         static const bool DEFAULT_CACHE_FLAG;
 
+        /// The default maximum size for the cache of niched designs.
+        static const std::size_t DEFAULT_MAX_CACHE_SIZE;
+
+    protected:
+        
+        static const std::size_t TABOO_MARK;
+
     private:
 
         /**
@@ -230,35 +236,11 @@ class JEGA_SL_IEDECL GeneticAlgorithmNichePressureApplicator :
         /// The temporary storage for removed designs.
         JEGA::Utilities::DesignDVSortSet _desBuffer;
 
-
+        std::size_t _maxBufSize;
 
     /*
     ============================================================================
     Mutators
-    ============================================================================
-    */
-    public:
-
-        /// Indicates whether or not this nicher will cache niched designs.
-        /**
-         * \return True if the niched designs should be cached and false
-         *         otherwise.
-         */
-        inline
-        bool
-        GetCacheDesigns(
-            );
-
-
-    protected:
-
-
-    private:
-
-
-    /*
-    ============================================================================
-    Accessors
     ============================================================================
     */
     public:
@@ -276,6 +258,40 @@ class JEGA_SL_IEDECL GeneticAlgorithmNichePressureApplicator :
         SetCacheDesigns(
             bool cache
             );
+
+        void
+        SetMaxDesignCacheSize(
+            std::size_t maxSize
+            );
+
+    protected:
+
+
+    private:
+
+
+    /*
+    ============================================================================
+    Accessors
+    ============================================================================
+    */
+    public:
+
+        /// Indicates whether or not this nicher will cache niched designs.
+        /**
+         * \return True if the niched designs should be cached and false
+         *         otherwise.
+         */
+        inline
+        bool
+        GetCacheDesigns(
+            ) const;
+
+        inline
+        std::size_t
+        GetMaxDesignCacheSize(
+            ) const;
+
 
     protected:
 
@@ -302,10 +318,6 @@ class JEGA_SL_IEDECL GeneticAlgorithmNichePressureApplicator :
             const DesContT& against
             );
             
-
-
-
-
     /*
     ============================================================================
     Subclass Visible Methods
@@ -343,7 +355,11 @@ class JEGA_SL_IEDECL GeneticAlgorithmNichePressureApplicator :
             const JEGA::Utilities::Design* des
             );
 
-
+        std::size_t
+        TagTabooNicheDesigns(
+            const JEGA::Utilities::DesignOFSortSet& designs,
+            const std::size_t tag = TABOO_MARK
+            ) const;
 
     /*
     ============================================================================
@@ -412,7 +428,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmNichePressureApplicator :
          * \brief Called prior to deletion of this operator to do any necessary
          *        finalization.
          *
-         * This implementation passes all bufferred designs along to the
+         * This implementation passes all buffered designs along to the
          * target.  The GA may retrieve any of them that are optimal from the
          * target upon finalization.
          *
@@ -460,6 +476,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmNichePressureApplicator :
     ============================================================================
     */
     private:
+
 
 
 

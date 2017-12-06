@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/JeffreysJointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -150,7 +151,7 @@ JeffreysJointPdf<V,M>::distributionMean(V& meanVector) const
 //--------------------------------------------------
 template<class V, class M>
 void
-JeffreysJointPdf<V,M>::distributionVariance (M & covMatrix) const
+JeffreysJointPdf<V,M>::distributionVariance (M & /* covMatrix */) const
 {
   // There's no way this is anything like well-defined
   queso_not_implemented();

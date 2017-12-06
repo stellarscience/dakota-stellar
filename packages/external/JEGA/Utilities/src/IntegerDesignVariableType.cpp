@@ -58,6 +58,7 @@ Includes
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <cfloat>
+#include <limits>
 #include <utilities/include/Math.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
@@ -208,13 +209,13 @@ IntegerDesignVariableType::IsNatureLocked(
 }
 
 bool
-IntegerDesignVariableType::IsValidDoubleRep(
-    double rep
+IntegerDesignVariableType::IsValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     return Math::IsWhole(rep) &&
-        this->DesignVariableTypeBase::IsValidDoubleRep(rep);
+        this->DesignVariableTypeBase::IsValidRep(rep);
 }
 
 DesignVariableTypeBase*
@@ -228,11 +229,13 @@ IntegerDesignVariableType::Clone(
 
 double
 IntegerDesignVariableType::GetValueOf(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return Math::IsWhole(rep) ? this->GetNature().GetValueOf(rep) : -DBL_MAX;
+    return Math::IsWhole(rep) ?
+		this->GetNature().GetValueOf(rep) :
+		-std::numeric_limits<double>::max();
 }
 
 double
@@ -244,7 +247,7 @@ IntegerDesignVariableType::GetNearestValidValue(
     EDDY_ASSERT(Math::IsWhole(GetMinValue()));
     EDDY_ASSERT(Math::IsWhole(GetMaxValue()));
 
-    if(value == -DBL_MAX) return value;
+    if(value == -std::numeric_limits<double>::max()) return value;
 
     double temp = this->GetNature().GetNearestValidValue(value);
 
@@ -252,17 +255,20 @@ IntegerDesignVariableType::GetNearestValidValue(
     return this->GetNearestValidValue(Math::Round(temp));
 }
 
-double
-IntegerDesignVariableType::GetNearestValidDoubleRep(
-    double rep
+var_rep_t
+IntegerDesignVariableType::GetNearestValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    if(rep == -DBL_MAX) return rep;
+	if(rep == -std::numeric_limits<var_rep_t>::max())
+		return -std::numeric_limits<var_rep_t>::max();
 
-    return this->GetNature().GetNearestValidDoubleRep(
-        this->ubround(rep, this->GetMinDoubleRep(), this->GetMaxDoubleRep())
+    return this->GetNature().GetNearestValidRep(
+        static_cast<var_rep_t>(
+            this->ubround(rep, this->GetMinRep(), this->GetMaxRep())
+            )
         );
 }
 
@@ -282,37 +288,37 @@ IntegerDesignVariableType::GetRandomValue(
         );
 }
 
-double
-IntegerDesignVariableType::GetDoubleRepOf(
+var_rep_t
+IntegerDesignVariableType::GetRepOf(
     double value
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(Math::IsWhole(value));
 
-    if(!Math::IsWhole(value)) return -DBL_MAX;
-    return this->GetNature().GetDoubleRepOf(value);
+    if(!Math::IsWhole(value)) return -std::numeric_limits<var_rep_t>::max();
+    return this->GetNature().GetRepOf(value);
 }
 
-double
-IntegerDesignVariableType::GetRandomDoubleRep(
+var_rep_t
+IntegerDesignVariableType::GetRandomRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    double temp = this->GetNature().GetRandomDoubleRep();
-    return this->GetNearestValidDoubleRep(temp);
+    var_rep_t temp = this->GetNature().GetRandomRep();
+    return this->GetNearestValidRep(temp);
 }
 
-double
-IntegerDesignVariableType::GetRandomDoubleRep(
+var_rep_t
+IntegerDesignVariableType::GetRandomRep(
     const RegionOfSpace& within
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    double temp = this->GetNature().GetRandomDoubleRep(within);
-    return this->GetNearestValidDoubleRep(temp);
+    var_rep_t temp = this->GetNature().GetRandomRep(within);
+    return this->GetNearestValidRep(temp);
 }
 
 void

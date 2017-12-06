@@ -221,6 +221,22 @@ std::vector<IntVector>
 IntMatrix;
 
 
+#ifndef X_TYPE
+#	define X_TYPE double
+#endif
+
+#ifndef F_TYPE
+#	define F_TYPE double
+#endif
+
+#ifndef G_TYPE
+#	define G_TYPE double
+#endif
+
+typedef X_TYPE var_rep_t;
+typedef F_TYPE obj_val_t;
+typedef G_TYPE con_val_t;
+
 
 /*
 ================================================================================

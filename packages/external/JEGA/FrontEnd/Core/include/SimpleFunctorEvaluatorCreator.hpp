@@ -244,7 +244,7 @@ class SimpleFunctorEvaluatorCreator :
     */
     public:
 
-        /// Overriden to return a newly created SimpleFunctorEvaluator.
+        /// Overridden to return a newly created SimpleFunctorEvaluator.
         /**
          * The GA will assume ownership of the evaluator so you needn't worry
          * about keeping track of it for destruction.

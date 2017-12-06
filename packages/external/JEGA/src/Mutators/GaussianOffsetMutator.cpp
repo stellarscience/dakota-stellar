@@ -212,9 +212,9 @@ GaussianOffsetMutator::GetOffsetAmount(
     EDDY_FUNC_DEBUGSCOPE
 
     // compute the actual std deviation
-    double sigma = this->GetOffsetRange()*varInfo.GetDoubleRepRange();
+    double sigma = this->GetOffsetRange()*varInfo.GetRepRange();
 
-    // now return a gaussian number with mean 0.0 and stddev
+    // now return a Gaussian number with mean 0.0 and stddev
     // of sigma.
     double ret = RandomNumberGenerator::GaussianReal(0.0, sigma);
     for(size_t i=0; i<100 && ret == 0.0; ++i)

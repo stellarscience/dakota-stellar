@@ -12,10 +12,10 @@
     NOTES:
 
         This project is modeled heavily after the boost thread library.  Some
-        Serious shortcommings of the boost thread library make this one
+        Serious shortcomings of the boost thread library make this one
         necessary such as the lack of ability to cancel threads.
 
-        Hopefully, the shortcommings of the boost library will be taken care of
+        Hopefully, the shortcomings of the boost library will be taken care of
         at which time this library will likely be changed to use it.
 
         This file contains a number of exception derivative classes to be

@@ -59,17 +59,18 @@ Includes
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <../Utilities/include/Design.hpp>
+#include <../Utilities/include/Logging.hpp>
 #include <../Utilities/include/DesignVariableInfo.hpp>
 #include <../Utilities/include/RealDesignVariableType.hpp>
 
-
+//#include <boost/math/special_functions/round.hpp>
 /*
 ================================================================================
 Namespace Using Directives
 ================================================================================
 */
 using namespace std;
-
+//using namespace JEGA::Logging;
 
 
 
@@ -164,8 +165,8 @@ DesignVariableInfo::GetRepBoundViolation(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return (rep < this->GetMinDoubleRep()) ? this->GetMinDoubleRep() - rep :
-           (rep > this->GetMaxDoubleRep()) ? rep - this->GetMaxDoubleRep() :
+    return (rep < this->GetMinRep()) ? this->GetMinRep() - rep :
+           (rep > this->GetMaxRep()) ? rep - this->GetMaxRep() :
            0.0;
 }
 
@@ -202,13 +203,13 @@ DesignVariableInfo::GetNearestValidValue(
     return this->GetType().GetNearestValidValue(value);
 }
 
-double
-DesignVariableInfo::GetNearestValidDoubleRep(
-    double rep
+var_rep_t
+DesignVariableInfo::GetNearestValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetNearestValidDoubleRep(rep);
+    return this->GetType().GetNearestValidRep(rep);
 }
 
 double
@@ -220,8 +221,8 @@ DesignVariableInfo::WhichValue(
     return des.GetVariableValue(this->GetNumber());
 }
 
-double
-DesignVariableInfo::WhichDoubleRep(
+var_rep_t
+DesignVariableInfo::WhichRep(
     const Design& des
     ) const
 {

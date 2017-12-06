@@ -199,7 +199,7 @@ NonLinearConstraintNature::EvaluateConstraint(
 
     JEGALOG_II_G(lquiet(), this,
         text_entry(lquiet(), "Attempt to evaluate a non-linear constraint "
-                    "using ConstraintInfo Heirarchy failed.")
+                    "using ConstraintInfo Hierarchy failed.")
         )
     return false;
 }

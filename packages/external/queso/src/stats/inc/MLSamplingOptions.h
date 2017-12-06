@@ -28,9 +28,9 @@
 #include <queso/Environment.h>
 #include <queso/MLSamplingLevelOptions.h>
 
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 #include <queso/BoostInputOptionsParser.h>
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
 #define UQ_ML_SAMPLING_FILENAME_FOR_NO_FILE "."
 
@@ -76,7 +76,19 @@ public:
   //@{
   //! Default constructor.
   /*! Assigns the default suite of options to the Multilevel sequence generator.*/
+  MLSamplingOptions();
+
+  //! Parsing constructor.
   MLSamplingOptions(const BaseEnvironment& env, const char* prefix);
+
+  //! Set default values for parameter options
+  void set_defaults();
+
+  //! Set parameter option names to begin with prefix
+  void set_prefix(const std::string& prefix);
+
+  //! Given prefix, read the input file for parameters named "prefix"+*
+  void parse(const BaseEnvironment& env, const std::string& prefix);
 
   //! Destructor
   virtual ~MLSamplingOptions();
@@ -127,11 +139,11 @@ public:
   std::set<unsigned int> m_dataOutputAllowedSet;
 
 private:
-  const BaseEnvironment& m_env;
+  const BaseEnvironment* m_env;
 
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
-  BoostInputOptionsParser * m_parser;
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
+  ScopedPtr<BoostInputOptionsParser>::Type m_parser;
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
   std::string                   m_option_help;
 #ifdef ML_CODE_HAS_NEW_RESTART_CAPABILITY
@@ -149,7 +161,7 @@ private:
   std::string                   m_option_dataOutputAllowAll;
   std::string                   m_option_dataOutputAllowedSet;
 
-  void checkOptions(const BaseEnvironment * env);
+  void checkOptions();
 
   friend std::ostream & operator<<(std::ostream & os,
       const MLSamplingOptions & obj);

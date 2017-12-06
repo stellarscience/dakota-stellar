@@ -117,7 +117,7 @@ class BaseEvaluator :
     */
     private:
 
-        gcroot<MEvaluator MOH> _managedEvaluator;
+        gcroot<MEvaluator^> _managedEvaluator;
 
 
     /*
@@ -169,7 +169,7 @@ class BaseEvaluator :
                 // If the functor is a batch evaluator, then we have to do
                 // post evaluation now b/c the overload will not have been
                 // used.
-                MEvaluationFunctor MOH del =
+                MEvaluationFunctor^ del =
                     this->_managedEvaluator->GetEvaluationDelegate();
 
                 if(del->IsBatchEvaluator())
@@ -257,7 +257,7 @@ class BaseEvaluator :
 
         BaseEvaluator(
             GeneticAlgorithm& algorithm,
-            gcroot<MEvaluator MOH> managedEvaluator
+            gcroot<MEvaluator^> managedEvaluator
             ) :
                 GeneticAlgorithmEvaluator(algorithm),
                 _managedEvaluator(managedEvaluator)
@@ -278,7 +278,7 @@ class BaseEvaluatorCreator :
     */
     private:
 
-        gcroot<MEvaluator MOH> _managedEvaluator;
+        gcroot<MEvaluator^> _managedEvaluator;
 
         BaseEvaluator* _theEvaler;
 
@@ -331,7 +331,7 @@ class BaseEvaluatorCreator :
     public:
 
         BaseEvaluatorCreator(
-            gcroot<MEvaluator MOH> managedEvaluator
+            gcroot<MEvaluator^> managedEvaluator
             ) :
                 _managedEvaluator(managedEvaluator),
                 _theEvaler(0x0)
@@ -363,7 +363,7 @@ Mutators
 
 void
 MEvaluator::SetEvaluationDelegate(
-    MEvaluationFunctor MOH del
+    MEvaluationFunctor^ del
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -389,7 +389,7 @@ Accessors
 ================================================================================
 */
 
-MEvaluationFunctor MOH
+MEvaluationFunctor^
 MEvaluator::GetEvaluationDelegate(
     )
 {
@@ -418,19 +418,19 @@ MEvaluator::PerformEvaluation(
     {
         const bool needInjs = this->_theDelegate->MayInjectDesigns();
 
-        List<MDesign MOH> MOH injections =
-            needInjs ? MANAGED_GCNEW List<MDesign MOH>(10) : MANAGED_NULL_HANDLE;
+        List<MDesign^>^ injections =
+            needInjs ? gcnew List<MDesign^>(10) : nullptr;
 
-        MDesign MOH toEval = MANAGED_GCNEW MDesign(&des);
+        MDesign^ toEval = gcnew MDesign(&des);
         bool ret = this->_theDelegate->Evaluate(toEval, injections);
 
-        if(needInjs) for each(MDesign MOH mDes in injections)
+        if(needInjs) for each(MDesign^ mDes in injections)
             this->InjectDesign(mDes);
 
         delete toEval;
         return ret;
     }
-    catch(System::Exception MOH JEGA_LOGGING_IF_ON(ex))
+    catch(System::Exception^ JEGA_LOGGING_IF_ON(ex))
     {
         JEGALOG_G(lquiet(),
             text_entry(lverbose(),
@@ -457,23 +457,23 @@ MEvaluator::PerformEvaluation(
         {
             // Create a design vector from the designs in "toEval" and send
             // them off for evaluation.
-            DesignVector MOH mdv = MANAGED_GCNEW DesignVector(
+            DesignVector^ mdv = gcnew DesignVector(
 				static_cast<int>(toEval.SizeDV())
 				);
             for(DesignDVSortSet::const_iterator it=toEval.BeginDV();
-                it!=toEval.EndDV(); ++it) mdv->Add(MANAGED_GCNEW MDesign(*it));
+                it!=toEval.EndDV(); ++it) mdv->Add(gcnew MDesign(*it));
 
             const bool needInjs = this->_theDelegate->MayInjectDesigns();
 
-            List<MDesign MOH> MOH injections =
-                needInjs ? MANAGED_GCNEW List<MDesign MOH>(10) : MANAGED_NULL_HANDLE;
+            List<MDesign^>^ injections =
+                needInjs ? gcnew List<MDesign^>(10) : nullptr;
 
             bool ret = this->_theDelegate->Evaluate(mdv, injections);
 
-            if(needInjs) for each(MDesign MOH mDes in injections)
+            if(needInjs) for each(MDesign^ mDes in injections)
                 this->InjectDesign(mDes);
 
-            for(int i=0; i<mdv->Count; ++i) delete MANAGED_LIST_ITEM(mdv, i);
+            for(int i=0; i<mdv->Count; ++i) delete mdv[i];
             delete mdv;
 
             return ret;
@@ -483,7 +483,7 @@ MEvaluator::PerformEvaluation(
             return this->_evaler->GeneticAlgorithmEvaluator::Evaluate(toEval);
         }
     }
-    catch(System::Exception MOH JEGA_LOGGING_IF_ON(ex))
+    catch(System::Exception^ JEGA_LOGGING_IF_ON(ex))
     {
         JEGALOG_G(lquiet(),
             text_entry(lverbose(),
@@ -508,7 +508,7 @@ MEvaluator::GetTheEvaluatorCreator(
 
 void
 MEvaluator::InjectDesign(
-    MDesign MOH mDes
+    MDesign^ mDes
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -520,45 +520,47 @@ MEvaluator::InjectDesign(
     this->_evaler->InjectDesign(des);
 }
 
-MDesign MOH
+MDesign^
 MEvaluator::InjectDesign(
-    DoubleVector MOH X,
-    DoubleVector MOH F,
-    DoubleVector MOH G
+    DoubleVector^ X,
+    DoubleVector^ F,
+    DoubleVector^ G
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     const GeneticAlgorithmEvaluator& cevaler = *this->_evaler;
     const DesignTarget& target = cevaler.GetDesignTarget();
     Design* des = target.GetNewDesign();
-    MDesign MOH ret = MANAGED_GCNEW MDesign(des);
+    MDesign^ ret = gcnew MDesign(des);
     const size_t xct = static_cast<std::size_t>(X->Count);
     const size_t fct = static_cast<std::size_t>(F->Count);
     const size_t gct = static_cast<std::size_t>(G->Count);
 
-    if(xct != target.GetNDV()) throw MANAGED_GCNEW System::Exception(
+    if(xct != target.GetNDV()) throw gcnew System::Exception(
         "Injection design has incorrect number of design variables (" +
         xct.ToString() + "). expected " + target.GetNDV().ToString() + '.'
         );
 
-    if(fct != target.GetNOF()) throw MANAGED_GCNEW System::Exception(
+    if(fct != target.GetNOF()) throw gcnew System::Exception(
         "Injection design has incorrect number of objective functions (" +
         fct.ToString() + "). expected " + target.GetNOF().ToString() + '.'
         );
 
-    if(gct != target.GetNCN()) throw MANAGED_GCNEW System::Exception(
+    if(gct != target.GetNCN()) throw gcnew System::Exception(
         "Injection design has incorrect number of constraints (" +
         gct.ToString() + "). expected " + target.GetNCN().ToString() + '.'
         );
 
     for(size_t i=0; i<xct; ++i)
-        des->SetVariableValue(i, MANAGED_LIST_ITEM(X, static_cast<int>(i)));
+        des->SetVariableValue(i, X[static_cast<int>(i)]);
 
-    for(size_t i=0; i<fct; ++i)
-        des->SetObjective(i, MANAGED_LIST_ITEM(F, static_cast<int>(i)));
+    for(size_t i=0; i<fct; ++i) des->SetObjective(
+        i, static_cast<obj_val_t>(F[static_cast<int>(i)])
+        );
 
-    for(size_t i=0; i<gct; ++i)
-        des->SetConstraint(i, MANAGED_LIST_ITEM(G, static_cast<int>(i)));
+    for(size_t i=0; i<gct; ++i) des->SetConstraint(
+        i, static_cast<con_val_t>(G[static_cast<int>(i)])
+        );
 
     this->_evaler->PostEvaluate(*des);
     //target.CheckFeasibility(*des);
@@ -590,7 +592,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 void
-MEvaluator::MANAGED_DISPOSE(
+MEvaluator::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -623,8 +625,8 @@ Structors
 
 MEvaluator::MEvaluator(
     ) :
-        _theDelegate(MANAGED_NULL_HANDLE),
-        _theEvalCreator(MANAGED_NULL_HANDLE),
+        _theDelegate(nullptr),
+        _theEvalCreator(nullptr),
         _evaler(0x0)
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -633,10 +635,10 @@ MEvaluator::MEvaluator(
 
 
 MEvaluator::MEvaluator(
-    MEvaluationFunctor MOH theDelegate
+    MEvaluationFunctor^ theDelegate
     ) :
         _theDelegate(theDelegate),
-        _theEvalCreator(MANAGED_NULL_HANDLE),
+        _theEvalCreator(nullptr),
         _evaler(0x0)
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -646,8 +648,8 @@ MEvaluator::MEvaluator(
 //MEvaluator::MEvaluator(
 //    JEGA::Algorithms::GeneticAlgorithmEvaluator* evaler
 //    ) :
-//        _theDelegate(MANAGED_NULL_HANDLE),
-//        _theEvalCreator(MANAGED_NULL_HANDLE),
+//        _theDelegate(nullptr),
+//        _theEvalCreator(nullptr),
 //        _evaler(evaler)
 //{
 //    EDDY_FUNC_DEBUGSCOPE
@@ -656,11 +658,11 @@ MEvaluator::MEvaluator(
 //
 //
 //MEvaluator::MEvaluator(
-//    MEvaluationFunctor MOH theDelegate,
+//    MEvaluationFunctor^ theDelegate,
 //    JEGA::Algorithms::GeneticAlgorithmEvaluator* evaler
 //    ) :
 //        _theDelegate(theDelegate),
-//        _theEvalCreator(MANAGED_NULL_HANDLE),
+//        _theEvalCreator(nullptr),
 //        _evaler(evaler)
 //{
 //    EDDY_FUNC_DEBUGSCOPE
@@ -671,7 +673,7 @@ MEvaluator::~MEvaluator(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    this->MANAGED_DISPOSE();
+    this->DoDispose();
 }
 
 

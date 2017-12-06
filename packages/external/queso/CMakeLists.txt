@@ -2,7 +2,8 @@
 # examples, etc.).  Does not properly manage all QUESO
 # build/conditional compile settings.
 
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 3.1)
+
 project(Queso CXX)
 
 # -----
@@ -18,6 +19,7 @@ project(Queso CXX)
 if(NOT Boost_FOUND)
   # We no longer use Boost program options, instead Getpot
   ##find_package(Boost 1.44 REQUIRED COMPONENTS program_options)
+  # Boost shouldn't be required any longer, but being conservative
   find_package(Boost 1.44 REQUIRED)
 endif()
 
@@ -43,21 +45,8 @@ endif()
 #  QUESO_HAVE_BOOST_SHARED_PTR_HPP
 set(QUESO_HAVE_BOOST 1)
 
-
-# TODO: Check for C++11 support once using CMake 3.x (CXX_STANDARD)
-
-# For now, a user can force use of C++11 features in QUESO by setting
-# these variables: CMAKE_CXX_STANDARD=11, CMAKE_STANDARD_REQUIRED. And
-# setting any necessary flags in CMAKE_CXX_FLAGS, e.g., -std=c++11
-#
-# We assume:
-#  * If the standard is set and isn't C++98, that it's C++11 or newer
-#  * That CMake didn't fall back to C++98 in its configuration
-#    (CXX_STANDARD_REQUIRED).
-#  * That all needed features are working if the standard is 11
-if(CMAKE_CXX_STANDARD AND NOT CMAKE_CXX_STANDARD EQUAL 98)
-  set(QUESO_HAVE_CXX11 1)
-endif()
+# Dakota/QUESO now requires C++11 at a minimum, but allows newer standards
+set(QUESO_HAVE_CXX11 1)
 
 # Check for include files
 include(CheckIncludeFile)

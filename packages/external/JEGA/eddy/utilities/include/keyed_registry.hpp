@@ -167,7 +167,7 @@ class keyed_registry
         typename container::value_type
         value_type;
 
-        /// Type that can be used as a contant iterator over this container
+        /// Type that can be used as a constant iterator over this container
         typedef
         typename container::const_iterator
         const_iterator;
@@ -182,7 +182,7 @@ class keyed_registry
         /// Type that can be used as an iterator over this container
         /**
          * This type is protected because it is not permitted to modify
-         * this container except throught the provided methods.
+         * this container except through the provided methods.
          */
         typedef
         typename container::iterator
@@ -254,7 +254,7 @@ class keyed_registry
          * This method allows mutable subclass access to the underlying
          * container.
          *
-         * \return A reference to the container used to store registrees.
+         * \return A reference to the container used to store registerees.
          */
         container&
         get_container(
@@ -270,11 +270,11 @@ class keyed_registry
     */
     public:
 
-        /// Checks for a logically equivolent entry to key
+        /// Checks for a logically equivalent entry to key
         /**
          * \param key The key to check for registration in this.
-         * \return True if \a key is associated with a registree here and false
-         *         otherwise.
+         * \return True if \a key is associated with a registeree here and
+         *         false otherwise.
          */
         bool
         is_registered(
@@ -286,7 +286,7 @@ class keyed_registry
          *        already present.
          *
          * \param key The key by which to register \a value.
-         * \param value The value to be registred and retrievable by \a key.
+         * \param value The value to be registered and retrievable by \a key.
          * \return True if \a value is successfully registered and false
          *         otherwise.  Failure occurs if \a key is already used.
          */
@@ -342,7 +342,7 @@ class keyed_registry
         empty(
             ) const;
 
-        /// Assimilates the registrees of \a other into this.
+        /// Assimilates the registerees of \a other into this.
         /**
          * Recall that duplicates are not permitted and so the return
          * is the number of successful assimilations.
@@ -374,7 +374,7 @@ class keyed_registry
          *        or end() if not found (non-const).
          *
          * This method allows subclass access to mutable iterators describing
-         * the locations of registrees.
+         * the locations of registerees.
          *
          * \param key The key whose key,value pair is to be found in this
          *            registry.

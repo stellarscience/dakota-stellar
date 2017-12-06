@@ -230,8 +230,8 @@ NullCrosser::Crossover(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    JEGALOG_II(GetLogger(), ldebug(), this, text_entry(ldebug(),
-        GetName() + ": in use."))
+    JEGALOG_II(this->GetLogger(), ldebug(), this, text_entry(ldebug(),
+        this->GetName() + ": in use."))
 }
 
 bool

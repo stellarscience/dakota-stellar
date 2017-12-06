@@ -156,7 +156,9 @@ MDesign::SetObjective(
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_design != 0x0)
-    this->_design->SetObjective(static_cast<size_t>(num), val);
+    this->_design->SetObjective(
+        static_cast<size_t>(num), static_cast<obj_val_t>(val)
+        );
 }
 
 void
@@ -167,12 +169,14 @@ MDesign::SetConstraint(
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_design != 0x0)
-    this->_design->SetConstraint(static_cast<size_t>(num), val);
+    this->_design->SetConstraint(
+        static_cast<size_t>(num), static_cast<con_val_t>(val)
+        );
 }
 
 void
 MDesign::SetTag(
-    Object MOH tag
+    Object^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -197,6 +201,16 @@ MDesign::GetVariable(
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_design != 0x0)
     return this->_design->GetVariableValue(static_cast<size_t>(num));
+}
+
+double
+MDesign::GetVariableRep(
+    eddy::utilities::uint64_t num
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    EDDY_ASSERT(this->_design != 0x0)
+    return this->_design->GetVariableRep(static_cast<size_t>(num));
 }
 
 double
@@ -235,7 +249,7 @@ MDesign::GetTag(
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_design != 0x0)
     GCHandle gch = GetGCHandle(this->_design);
-    return gch.IsAllocated::get() ? gch.Target::get() : MANAGED_NULL_HANDLE;
+    return gch.IsAllocated::get() ? gch.Target::get() : nullptr;
 }
 
 /*
@@ -338,15 +352,15 @@ MDesign::ResetDesign(
     EDDY_ASSERT(this->_design != 0x0)
 }
 
-MDesign MOH
+MDesign^
 MDesign::Create(
-    MDesign MOH hint
+    MDesign^ hint
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     const DesignTarget& target = hint->Manifest().GetDesignTarget();
     Design* des = target.GetNewDesign();
-    MDesign MOH ret = MANAGED_GCNEW MDesign(des);
+    MDesign^ ret = gcnew MDesign(des);
     return ret;
 }
 

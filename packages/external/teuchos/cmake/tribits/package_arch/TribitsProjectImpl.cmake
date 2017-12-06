@@ -343,7 +343,7 @@ MACRO(TRIBITS_PROJECT_IMPL)
     MESSAGE("")
     MESSAGE("Exporting library dependencies ...")
     MESSAGE("")
-    EXPORT_LIBRARY_DEPENDENCIES( ${${PROJECT_NAME}_BINARY_DIR}/${PROJECT_NAME}LibraryDepends.cmake )
+##    EXPORT_LIBRARY_DEPENDENCIES( ${${PROJECT_NAME}_BINARY_DIR}/${PROJECT_NAME}LibraryDepends.cmake )
   ENDIF()
 
   

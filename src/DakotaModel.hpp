@@ -168,12 +168,18 @@ public:
   virtual Interface& derived_interface();
 
   /// number of discrete levels within solution control (SimulationModel)
-  virtual size_t solution_levels() const;
+  virtual size_t solution_levels(bool lwr_bnd = true) const;
   /// activate a particular level within the solution level control
   /// and return the cost estimate (SimulationModel)
   virtual void solution_level_index(size_t index);
+  /// return currently active level within the solution level control
+  /// (SimulationModel)
+  virtual size_t solution_level_index() const;
   /// return ordered cost estimates across solution levels (SimulationModel)
-  virtual RealVector solution_level_cost() const;
+  virtual RealVector solution_level_costs() const;
+  /// return currently active cost estimate from solution level
+  /// control (SimulationModel)
+  virtual Real solution_level_cost() const;
 
   /// set the relative weightings for multiple objective functions or least
   /// squares terms
@@ -194,44 +200,45 @@ public:
   virtual bool resize_pending() const;
 
   /// build a new SurrogateModel approximation
-  virtual void build_approximation();
+  virtual void build_approximation(size_t index = _NPOS);
   /// build a new SurrogateModel approximation using/enforcing
   /// anchor response at vars; rebuild if needed
   virtual bool build_approximation(const Variables& vars,
-				   const IntResponsePair& response_pr);
+				   const IntResponsePair& response_pr,
+				   size_t index = _NPOS);
 
 
   /// replace the approximation data within an existing surrogate
   /// based on data updates propagated elsewhere
-  virtual void update_approximation(bool rebuild_flag);
+  virtual void update_approximation(bool rebuild_flag, size_t index = _NPOS);
   /// replace the anchor point data within an existing surrogate
   virtual void update_approximation(const Variables& vars, 
 				    const IntResponsePair& response_pr,
-				    bool rebuild_flag);
+				    bool rebuild_flag, size_t index = _NPOS);
   /// replace the data points within an existing surrogate
   virtual void update_approximation(const VariablesArray& vars_array,
 				    const IntResponseMap& resp_map,
-				    bool rebuild_flag);
+				    bool rebuild_flag, size_t index = _NPOS);
   /// replace the data points within an existing surrogate
   virtual void update_approximation(const RealMatrix& samples,
 				    const IntResponseMap& resp_map,
-				    bool rebuild_flag);
+				    bool rebuild_flag, size_t index = _NPOS);
 
   /// append to the existing approximation data within a surrogate
   /// based on data updates propagated elsewhere
-  virtual void append_approximation(bool rebuild_flag);
+  virtual void append_approximation(bool rebuild_flag, size_t index = _NPOS);
   /// append a single point to an existing surrogate's data
   virtual void append_approximation(const Variables& vars, 
 				    const IntResponsePair& response_pr,
-				    bool rebuild_flag);
+				    bool rebuild_flag, size_t index = _NPOS);
   /// append multiple points to an existing surrogate's data
   virtual void append_approximation(const VariablesArray& vars_array,
 				    const IntResponseMap& resp_map,
-				    bool rebuild_flag);
+				    bool rebuild_flag, size_t index = _NPOS);
   /// append multiple points to an existing surrogate's data
   virtual void append_approximation(const RealMatrix& samples,
 				    const IntResponseMap& resp_map,
-				    bool rebuild_flag);
+				    bool rebuild_flag, size_t index = _NPOS);
 
   /// remove the previous data set addition to a surrogate (e.g., due
   /// to a previous append_approximation() call); flag manages storing
@@ -258,11 +265,13 @@ public:
   /// approximation, prior to combination (default for no index is pop_back)
   virtual void remove_stored_approximation(size_t index = _NPOS);
   /// combine the current approximation with previously stored data sets
-  virtual void combine_approximation(short corr_type);
+  virtual void combine_approximation();
+  /// clear stored approximations
+  virtual void clear_stored();
 
   /// execute the DACE iterator, append the approximation data, and
   /// rebuild the approximation if indicated
-  virtual void run_dace_iterator(bool rebuild_flag);
+  virtual void run_dace_iterator(bool rebuild_flag, size_t index = _NPOS);
 
   // retrieve the variables used to build a surrogate model
   //virtual const VariablesArray build_variables() const;
@@ -311,6 +320,9 @@ public:
 
   /// return the DiscrepancyCorrection object used by SurrogateModels
   virtual DiscrepancyCorrection& discrepancy_correction();
+  /// return the correction type from the DiscrepancyCorrection object
+  /// used by SurrogateModels
+  virtual short correction_type();
   /// apply the DiscrepancyCorrection object to correct an approximation
   /// within a SurrogateModel
   virtual void single_apply(const Variables& vars, Response& resp,

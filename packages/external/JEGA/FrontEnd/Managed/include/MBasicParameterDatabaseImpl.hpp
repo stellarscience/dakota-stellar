@@ -159,7 +159,7 @@ Class Definition
  * and exposes the necessary methods in a managed compliant manner for use with
  * all .NET languages.
  */
-MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
+public ref class MBasicParameterDatabaseImpl :
     public MParameterDatabase
 {
     /*
@@ -269,7 +269,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasIntegralParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Tests the short param map for a value mapped to the supplied tag.
@@ -280,7 +280,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasShortParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Tests the double param map for a value mapped to the supplied tag.
@@ -291,7 +291,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasDoubleParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Tests the size_t param map for a value mapped to the supplied tag.
@@ -302,18 +302,18 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasSizeTypeParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
-        /// Tests the boolean param map for a value mapped to the supplied tag.
+        /// Tests the Boolean param map for a value mapped to the supplied tag.
         /**
-         * \param tag The key to search for in the boolean param map.
+         * \param tag The key to search for in the Boolean param map.
          * \return true if \a tag is found as a key and false otherwise.
          */
         virtual
         bool
         HasBooleanParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Tests the string param map for a value mapped to the supplied tag.
@@ -324,7 +324,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasStringParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /**
@@ -337,7 +337,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasDoubleVectorParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /**
@@ -350,7 +350,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasIntVectorParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /**
@@ -363,7 +363,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasDoubleMatrixParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /**
@@ -376,7 +376,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         HasStringVectorParam(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as an integer from this DB.
@@ -389,7 +389,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         int
         GetIntegral(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a short from this DB.
@@ -402,7 +402,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         short
         GetShort(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a double from this DB.
@@ -415,7 +415,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         double
         GetDouble(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a size_t from this DB.
@@ -428,7 +428,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         eddy::utilities::uint64_t
         GetSizeType(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a bool from this DB.
@@ -441,7 +441,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         GetBoolean(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a string from this DB.
@@ -452,9 +452,9 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
          *                                 string value.
          */
         virtual
-        System::String MOH
+        System::String^
         GetString(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a DoubleVector from this DB.
@@ -465,9 +465,9 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
          *                                 DoubleVector value.
          */
         virtual
-        JEGA::FrontEnd::Managed::DoubleVector MOH
+        JEGA::FrontEnd::Managed::DoubleVector^
         GetDoubleVector(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as an IntVector from this DB.
@@ -478,9 +478,9 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
          *                                 IntVector value.
          */
         virtual
-        JEGA::FrontEnd::Managed::IntVector MOH
+        JEGA::FrontEnd::Managed::IntVector^
         GetIntVector(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a DoubleMatrix from this DB.
@@ -491,9 +491,9 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
          *                                 DoubleMatrix value.
          */
         virtual
-        JEGA::FrontEnd::Managed::DoubleMatrix MOH
+        JEGA::FrontEnd::Managed::DoubleMatrix^
         GetDoubleMatrix(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Supplies the requested parameter as a StringVector from this DB.
@@ -504,9 +504,9 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
          *                                 StringVector value.
          */
         virtual
-        JEGA::FrontEnd::Managed::StringVector MOH
+        JEGA::FrontEnd::Managed::StringVector^
         GetStringVector(
-            System::String MOH tag
+            System::String^ tag
             );
 
         /// Maps the supplied integer value to the supplied tag.
@@ -521,7 +521,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddIntegralParam(
-            System::String MOH tag,
+            System::String^ tag,
             int value
             );
 
@@ -537,7 +537,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddDoubleParam(
-            System::String MOH tag,
+            System::String^ tag,
             double value
             );
 
@@ -553,14 +553,14 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddSizeTypeParam(
-            System::String MOH tag,
+            System::String^ tag,
             eddy::utilities::uint64_t value
             );
 
-        /// Maps the supplied boolean value to the supplied tag.
+        /// Maps the supplied Boolean value to the supplied tag.
         /**
          * The mapping will only succeed if \a tag is not already the key for
-         * some other boolean value.
+         * some other Boolean value.
          *
          * \param tag The key to which the requested value is to be mapped.
          * \param value The value that is to be mapped by key.
@@ -569,7 +569,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddBooleanParam(
-            System::String MOH tag,
+            System::String^ tag,
             bool value
             );
 
@@ -585,8 +585,8 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddStringParam(
-            System::String MOH tag,
-            System::String MOH value
+            System::String^ tag,
+            System::String^ value
             );
 
         /// Maps the supplied vector of doubles value to the supplied tag.
@@ -601,8 +601,8 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddDoubleVectorParam(
-            System::String MOH tag,
-            JEGA::FrontEnd::Managed::DoubleVector MOH value
+            System::String^ tag,
+            JEGA::FrontEnd::Managed::DoubleVector^ value
             );
 
         /// Maps the supplied vector of ints value to the supplied tag.
@@ -617,8 +617,8 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddIntVectorParam(
-            System::String MOH tag,
-            JEGA::FrontEnd::Managed::IntVector MOH value
+            System::String^ tag,
+            JEGA::FrontEnd::Managed::IntVector^ value
             );
 
         /// Maps the supplied matrix of doubles value to the supplied tag.
@@ -633,8 +633,8 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddDoubleMatrixParam(
-            System::String MOH tag,
-            JEGA::FrontEnd::Managed::DoubleMatrix MOH value
+            System::String^ tag,
+            JEGA::FrontEnd::Managed::DoubleMatrix^ value
             );
 
         /// Maps the supplied vector of strings value to the supplied tag.
@@ -649,8 +649,8 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
         virtual
         bool
         AddStringVectorParam(
-            System::String MOH tag,
-            JEGA::FrontEnd::Managed::StringVector MOH value
+            System::String^ tag,
+            JEGA::FrontEnd::Managed::StringVector^ value
             );
 
         /// Implementation of the Dispose method for the IDisposable interface.
@@ -663,7 +663,7 @@ MANAGED_CLASS(public, MBasicParameterDatabaseImpl) :
          */
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
 

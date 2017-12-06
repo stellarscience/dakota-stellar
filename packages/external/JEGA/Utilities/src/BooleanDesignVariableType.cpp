@@ -228,8 +228,8 @@ BooleanDesignVariableType::IsNatureLocked(
 }
 
 bool
-BooleanDesignVariableType::IsValidDoubleRep(
-    double rep
+BooleanDesignVariableType::IsValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -247,11 +247,11 @@ BooleanDesignVariableType::Clone(
 
 double
 BooleanDesignVariableType::GetValueOf(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return rep == 0.0 ? 0.0 : 1.0;
+    return rep == var_rep_t(0) ? 0.0 : 1.0;
 }
 
 double
@@ -265,13 +265,13 @@ BooleanDesignVariableType::GetNearestValidValue(
     return value == 0.0 ? 0.0 : 1.0;
 }
 
-double
-BooleanDesignVariableType::GetNearestValidDoubleRep(
-    double rep
+var_rep_t
+BooleanDesignVariableType::GetNearestValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return rep == 0.0 ? 0.0 : 1.0;
+    return rep == 0.0 ? var_rep_t(0) : var_rep_t(1);
 }
 
 double
@@ -282,25 +282,25 @@ BooleanDesignVariableType::GetRandomValue(
     return RandomNumberGenerator::RandomBoolean();
 }
 
-double
-BooleanDesignVariableType::GetDoubleRepOf(
+var_rep_t
+BooleanDesignVariableType::GetRepOf(
     double value
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return value == 0.0 ? 0.0 : 1.0;
+    return value == 0.0 ? var_rep_t(0) : var_rep_t(1);
 }
 
-double
-BooleanDesignVariableType::GetRandomDoubleRep(
+var_rep_t
+BooleanDesignVariableType::GetRandomRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return RandomNumberGenerator::RandomBoolean();
+    return static_cast<var_rep_t>(RandomNumberGenerator::RandomBoolean());
 }
 
-double
-BooleanDesignVariableType::GetRandomDoubleRep(
+var_rep_t
+BooleanDesignVariableType::GetRandomRep(
     const RegionOfSpace& within
     ) const
 {
@@ -308,12 +308,12 @@ BooleanDesignVariableType::GetRandomDoubleRep(
 
     const size_t index = this->GetDesignVariableInfo().GetNumber();
 
-    bool lb = this->GetNearestValidDoubleRep(
+    bool lb = this->GetNearestValidRep(
         within.GetLowerLimit(index)
-        ) == 0.0;
-    bool ub = this->GetNearestValidDoubleRep(
+        ) == var_rep_t(0);
+    bool ub = this->GetNearestValidRep(
         within.GetUpperLimit(index)
-        ) == 0.0;
+        ) == var_rep_t(0);
 
     return RandomNumberGenerator::RandomBoolean() ? lb : ub;
 }

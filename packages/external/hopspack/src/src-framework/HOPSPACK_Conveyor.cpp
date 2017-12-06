@@ -36,6 +36,8 @@
   \brief Implement HOPSPACK::Conveyor
 */
 
+#include <algorithm>
+
 #include "HOPSPACK_common.hpp"
 #include "HOPSPACK_Conveyor.hpp"
 #include "HOPSPACK_float.hpp"

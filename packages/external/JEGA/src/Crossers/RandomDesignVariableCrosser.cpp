@@ -77,8 +77,8 @@ Namespace Using Directives
 */
 using namespace std;
 using namespace JEGA;
-using namespace JEGA::Utilities;
 using namespace JEGA::Logging;
+using namespace JEGA::Utilities;
 using namespace eddy::utilities;
 
 
@@ -399,12 +399,6 @@ RandomDesignVariableCrosser::CanProduceInvalidVariableValues(
     return false;
 }
 
-
-
-
-
-
-
 /*
 ================================================================================
 Private Methods
@@ -454,14 +448,6 @@ RandomDesignVariableCrosser::RandomDesignVariableCrosser(
 {
     EDDY_FUNC_DEBUGSCOPE
 }
-
-
-
-
-
-
-
-
 
 /*
 ================================================================================

@@ -39,6 +39,7 @@
 #include <queso/TransitionKernelFactory.h>
 #include <queso/AlgorithmFactoryInitializer.h>
 #include <queso/AlgorithmFactory.h>
+#include <queso/FilePtr.h>
 
 namespace QUESO {
 
@@ -331,15 +332,7 @@ MetropolisHastingsSG<P_V,P_M>::MetropolisHastingsSG(
   m_userDidNotProvideOptions(true),
   m_latestDirtyCovMatrixIteration(0)
 {
-  // We do this dance because one of the MetropolisHastingsSGOptions
-  // constructors takes one of the old-style MLSamplingLevelOptions options
-  // objects.
-  //
-  // We do a copy and then pull out the raw values from m_ov.  We also need it
-  // as a member (m_oldOptions) because otherwise m_ov will die when the
-  // MetropolisHastingsSGOptions instance dies.
-  m_oldOptions.reset(new MetropolisHastingsSGOptions(mlOptions));
-  m_optionsObj.reset(new MhOptionsValues(m_oldOptions->m_ov));
+  m_optionsObj.reset(new MhOptionsValues(mlOptions));
 
   if (inputProposalCovMatrix != NULL) {
     m_initialProposalCovMatrix = *inputProposalCovMatrix;
@@ -399,15 +392,7 @@ MetropolisHastingsSG<P_V,P_M>::MetropolisHastingsSG(
   m_userDidNotProvideOptions(true),
   m_latestDirtyCovMatrixIteration(0)
 {
-  // We do this dance because one of the MetropolisHastingsSGOptions
-  // constructors takes one of the old-style MLSamplingLevelOptions options
-  // objects.
-  //
-  // We do a copy and then pull out the raw values from m_ov.  We also need it
-  // as a member (m_oldOptions) because otherwise m_ov will die when the
-  // MetropolisHastingsSGOptions instance dies.
-  m_oldOptions.reset(new MetropolisHastingsSGOptions(mlOptions));
-  m_optionsObj.reset(new MhOptionsValues(m_oldOptions->m_ov));
+  m_optionsObj.reset(new MhOptionsValues(mlOptions));
 
   if (inputProposalCovMatrix != NULL) {
     m_initialProposalCovMatrix = *inputProposalCovMatrix;
@@ -523,17 +508,6 @@ MetropolisHastingsSG<P_V,P_M>::commonConstructor()
   }
   else {
     queso_require_msg(!(m_nullInputProposalCovMatrix), "proposal cov matrix should have been passed by user, since, according to the input algorithm options, local Hessians will not be used in the proposal");
-  }
-
-  // Only transform prop cov matrix if we're doing a logit random walk.
-  // Also note we're transforming *after* we potentially read it from the input
-  // file.
-  if ((m_optionsObj->m_algorithm == "logit_random_walk") &&
-      (m_optionsObj->m_tk        == "logit_random_walk") &&
-      m_optionsObj->m_doLogitTransform) {
-    // Variable transform initial proposal cov matrix
-    transformInitialCovMatrixToGaussianSpace(
-        dynamic_cast<const BoxSubset<P_V, P_M> & >(m_targetPdf.domainSet()));
   }
 
   // This instantiates all the transition kernels with their associated
@@ -2243,20 +2217,7 @@ MetropolisHastingsSG<P_V, P_M>::adapt(unsigned int positionId,
       }
     }
 
-    // Transform the proposal covariance matrix if we have Logit transforms
-    // turned on.
-    //
-    // This logic should really be done inside the kernel itself
-    if (this->m_optionsObj->m_tk == "logit_random_walk") {
-      (dynamic_cast<TransformedScaledCovMatrixTKGroup<P_V,P_M>* >(m_tk.get()))
-        ->updateLawCovMatrix(tmpMatrix);
-    }
-    else {
-      // Assume that if we're not doing a logit transform, we're doing a random
-      // something sensible
-      (dynamic_cast<ScaledCovMatrixTKGroup<P_V,P_M>* >(m_tk.get()))
-        ->updateLawCovMatrix(tmpMatrix);
-    }
+    m_tk->updateLawCovMatrix(tmpMatrix);
 
 #ifdef UQ_DRAM_MCG_REQUIRES_INVERTED_COV_MATRICES
     queso_require_msg(!(UQ_INCOMPLETE_IMPLEMENTATION_RC), "need to code the update of m_upperCholProposalPrecMatrices");
@@ -2525,51 +2486,6 @@ MetropolisHastingsSG<P_V,P_M>::updateAdaptedCovMatrix(
   }
 
   return;
-}
-
-template <class P_V, class P_M>
-void
-MetropolisHastingsSG<P_V, P_M>::transformInitialCovMatrixToGaussianSpace(
-    const BoxSubset<P_V, P_M> & boxSubset)
-{
-  P_V min_domain_bounds(boxSubset.minValues());
-  P_V max_domain_bounds(boxSubset.maxValues());
-
-  for (unsigned int i = 0; i < min_domain_bounds.sizeLocal(); i++) {
-    double min_val = min_domain_bounds[i];
-    double max_val = max_domain_bounds[i];
-
-    if (queso_isfinite(min_val) && queso_isfinite(max_val)) {
-      if (m_initialProposalCovMatrix(i, i) >= max_val - min_val) {
-        // User is trying to specify a uniform proposal distribution, which
-        // is unsupported.  Throw an error for now.
-        std::cerr << "Proposal variance element "
-                  << i
-                  << " is "
-                  << m_initialProposalCovMatrix(i, i)
-                  << " but domain is of size "
-                  << max_val - min_val
-                  << std::endl;
-        std::cerr << "QUESO does not support uniform-like proposal "
-                  << "distributions.  Try making the proposal variance smaller"
-                  << std::endl;
-      }
-
-      // The jacobian at the midpoint of the domain
-      double transformJacobian = 4.0 / (max_val - min_val);
-
-      // Just do the multiplication by hand for now.  There's no method in
-      // Gsl(Vector|Matrix) to do this for me.
-      for (unsigned int j = 0; j < min_domain_bounds.sizeLocal(); j++) {
-        // Multiply column j by element j
-        m_initialProposalCovMatrix(j, i) *= transformJacobian;
-      }
-      for (unsigned int j = 0; j < min_domain_bounds.sizeLocal(); j++) {
-        // Multiply row j by element j
-        m_initialProposalCovMatrix(i, j) *= transformJacobian;
-      }
-    }
-  }
 }
 
 template class MetropolisHastingsSG<GslVector, GslMatrix>;

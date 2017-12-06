@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class DoubleMatrixInitializer.
+        Implementation of class DoubleMatrixInitializer.
 
     NOTES:
 

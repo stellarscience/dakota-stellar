@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implementaion of class DominationCountOperatorGroup.
+        Implementation of class DominationCountOperatorGroup.
 
     NOTES:
 

@@ -26,10 +26,12 @@
 #include <queso/GslMatrix.h>
 #include <queso/GslBlockMatrix.h>
 #include <queso/VectorSet.h>
+#include <queso/VectorSpace.h>
 #include <queso/BoxSubset.h>
 #include <queso/GaussianLikelihoodBlockDiagonalCovarianceRandomCoefficients.h>
 
 #include <cstdlib>
+#include <cmath>
 
 #define TOL 1e-8
 
@@ -56,6 +58,8 @@ public:
       modelOutput[i] = domainVector[0] + 3.0;
     }
   }
+
+  using QUESO::GaussianLikelihoodBlockDiagonalCovarianceRandomCoefficients<V, M>::evaluateModel;
 };
 
 int main(int argc, char ** argv) {

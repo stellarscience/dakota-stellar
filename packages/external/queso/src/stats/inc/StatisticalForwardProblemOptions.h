@@ -22,9 +22,10 @@
 //
 //-----------------------------------------------------------------------el-
 
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#include <queso/config_queso.h>
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 #include <queso/BoostInputOptionsParser.h>
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
 #include <queso/Environment.h>
 
@@ -46,13 +47,13 @@
 #define UQ_SFP_SOLVER_ODV                  "mc" // Monte Carlo
 #endif
 
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 namespace boost {
   namespace program_options {
     class options_description;
   }
 }
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
 namespace QUESO {
 
@@ -79,6 +80,15 @@ public:
   //! Copy constructor.
   /*! It assigns the same options values from  \c src to \c this.*/
   SfpOptionsValues            (const SfpOptionsValues& src);
+
+  //! Set parameter option names to begin with prefix
+  void set_prefix(const std::string& prefix);
+
+  //! Set default values for parameter options
+  void set_defaults();
+
+  //! Given prefix, read the input file for parameters named "prefix"+*
+  void parse(const BaseEnvironment& env, const std::string& prefix);
 
   //! Destructor
   virtual ~SfpOptionsValues            ();
@@ -107,9 +117,9 @@ public:
   //McOptionsValues m_mcOptionsValues;
 
 private:
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
-  BoostInputOptionsParser * m_parser;
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
+  ScopedPtr<BoostInputOptionsParser>::Type m_parser;
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
   // The input options as strings so we can parse the input file later
   std::string                   m_option_help;
@@ -130,73 +140,6 @@ private:
   friend std::ostream & operator<<(std::ostream & os,
       const SfpOptionsValues & obj);
 };
-
-/*! \class StatisticalForwardProblemOptions
- *  \brief This class reads option values for a Statistical Forward Problem from an input file.
- *
- *  This class reads the option values for the Statistical Forward Problem (SFP) from an input file
- * provided by the user. The class expects the prefix '\<prefix\>_fp_'. For instance, if 'prefix'
- * is 'foo_775_', then the constructor will read all options that begin with 'foo_775_fp_'. If the
- * options request data to be written in the output file (MATLAB .m format only, for now), the user
- * can run 'grep zeros \<OUTPUT FILE NAME\>' after the solution procedure ends in order to check
- * which MATLAB variables are defined and set. The names of the variables are self explanatory.
-*/
-
-class StatisticalForwardProblemOptions
-{
-public:
-  //! @name Constructor/Destructor methods
-  //@{
-  //! Constructor: reads options from the input file.
-  StatisticalForwardProblemOptions(const BaseEnvironment& env, const char* prefix);
-
-  //! Constructor: with alternative option values.
-  /*! In this constructor, the input options are given by \c alternativeOptionsValues, rather than the
-   * options input file*/
-  StatisticalForwardProblemOptions(const BaseEnvironment& env, const char* prefix, const SfpOptionsValues& alternativeOptionsValues);
-
-  //! Destructor
-  ~StatisticalForwardProblemOptions();
-  //@}
-
-  //! @name I/O methods
-  //@{
-  //! It scans the option values from the options input file.
-  void scanOptionsValues();
-
-  //!  It prints the option values.
-  void print            (std::ostream& os) const;
-  //@}
-
-  SfpOptionsValues       m_ov;
-  std::string                   m_prefix;
-
-private:
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
-  //! Define my SFP options as the default options.
-  void   defineMyOptions  (boost::program_options::options_description& optionsDesc) const;
-
-  //! Gets the option values of the SFP.
-  void   getMyOptionValues(boost::program_options::options_description& optionsDesc);
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
-
-  const BaseEnvironment& m_env;
-
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
-  boost::program_options::options_description*      m_optionsDesc;
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
-  std::string                   m_option_help;
-  std::string                   m_option_computeSolution;
-  std::string                   m_option_computeCovariances;
-  std::string                   m_option_computeCorrelations;
-  std::string                   m_option_dataOutputFileName;
-  std::string                   m_option_dataOutputAllowedSet;
-#ifdef UQ_SFP_READS_SOLVER_OPTION
-  std::string                   m_option_solver;
-#endif
-};
-//! Prints the object \c obj, overloading an operator.
-std::ostream& operator<<(std::ostream& os, const StatisticalForwardProblemOptions& obj);
 
 }  // End namespace QUESO
 

@@ -95,7 +95,7 @@ namespace detail
     {
         private:
 
-            gcroot<MStreamHijacker MOH> _managed;
+            gcroot<MStreamHijacker^> _managed;
 
         public:
 
@@ -110,9 +110,9 @@ namespace detail
             }
 
             StreamHijackerImpl(
-                gcroot<MStreamHijacker MOH> managed,
+                gcroot<MStreamHijacker^> managed,
                 std::ostream& toHijack,
-                gcroot<System::IO::TextWriter MOH> hijackStr
+                gcroot<System::IO::TextWriter^> hijackStr
                 ) :
                     StreamHijacker(toHijack, hijackStr),
                     _managed(managed)
@@ -186,7 +186,7 @@ MStreamHijacker::reattach(
     this->_guts->reattach();
 }
 
-System::IO::TextWriter MOH
+System::IO::TextWriter^
 MStreamHijacker::text_writer(
     )
 {
@@ -268,7 +268,7 @@ Structors
 
 StreamHijacker::StreamHijacker(
     std::ostream& toHijack,
-    gcroot<System::IO::TextWriter MOH> hijackStr
+    gcroot<System::IO::TextWriter^> hijackStr
     ) :
         _hijacked(toHijack),
         _out(hijackStr),
@@ -287,7 +287,7 @@ StreamHijacker::~StreamHijacker(
 
 MStreamHijacker::MStreamHijacker(
     std::ostream& toHijack,
-    System::IO::TextWriter MOH hijackStr
+    System::IO::TextWriter^ hijackStr
     ) :
         _guts(0x0)
 {
@@ -304,7 +304,7 @@ MStreamHijacker::~MStreamHijacker(
 
 
 MCoutHijacker::MCoutHijacker(
-    System::IO::TextWriter MOH hijackStr
+    System::IO::TextWriter^ hijackStr
     ) :
         MStreamHijacker(std::cout, hijackStr)
 {
@@ -312,7 +312,7 @@ MCoutHijacker::MCoutHijacker(
 }
 
 MCerrHijacker::MCerrHijacker(
-    System::IO::TextWriter MOH hijackStr
+    System::IO::TextWriter^ hijackStr
     ) :
         MStreamHijacker(std::cerr, hijackStr)
 {

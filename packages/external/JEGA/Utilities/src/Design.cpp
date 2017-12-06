@@ -150,15 +150,15 @@ Design::operator = (
     // equate the variables and responses.
     ::memcpy(
         this->_variables, right._variables,
-        this->GetNDV() * sizeof(double)
+        this->GetNDV() * sizeof(var_rep_t)
         );
     ::memcpy(
         this->_objectives, right._objectives,
-        this->GetNOF() * sizeof(double)
+        this->GetNOF() * sizeof(obj_val_t)
         );
     ::memcpy(
         this->_constraints, right._constraints,
-        this->GetNCN() * sizeof(double)
+        this->GetNCN() * sizeof(con_val_t)
         );
 
     // equate the attributes.
@@ -295,12 +295,12 @@ Design::CopyResponses(
 
     if(this->GetNOF() > 0) ::memcpy(
         this->_objectives, from._objectives,
-        this->GetNOF() * sizeof(double)
+        this->GetNOF() * sizeof(obj_val_t)
         );
 
     if(this->GetNCN() > 0) ::memcpy(
         this->_constraints, from._constraints,
-        this->GetNCN() * sizeof(double)
+        this->GetNCN() * sizeof(con_val_t)
         );
 }
 
@@ -317,13 +317,13 @@ Design::Dispose(
     this->RemoveAsClone();
 
     EDDY_DEBUGEXEC(
-        ::memset(this->_objectives, 0, this->GetNOF() * sizeof(double));
+        ::memset(this->_objectives, 0, this->GetNOF() * sizeof(obj_val_t));
         )
     EDDY_DEBUGEXEC(
-        ::memset(this->_variables, 0, this->GetNDV() * sizeof(double));
+        ::memset(this->_variables, 0, this->GetNDV() * sizeof(var_rep_t));
         )
     EDDY_DEBUGEXEC(
-        ::memset(this->_constraints, 0, this->GetNCN() * sizeof(double));
+        ::memset(this->_constraints, 0, this->GetNCN() * sizeof(con_val_t));
         )
 }
 
@@ -368,9 +368,9 @@ Design::DoAllocation(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    if(this->GetNDV() > 0) this->_variables = new double[this->GetNDV()]();
-    	if(this->GetNOF() > 0) this->_objectives = new double[this->GetNOF()]();
-    if(this->GetNCN() > 0) this->_constraints = new double[this->GetNCN()]();
+    if(this->GetNDV() > 0) this->_variables = new var_rep_t[this->GetNDV()]();
+	if(this->GetNOF() > 0) this->_objectives = new obj_val_t[this->GetNOF()]();
+    if(this->GetNCN() > 0) this->_constraints = new con_val_t[this->GetNCN()]();
 }
 
 

@@ -896,14 +896,18 @@ inline AleatoryDistParams::~AleatoryDistParams()
 inline AleatoryDistParams& AleatoryDistParams::
 operator=(const AleatoryDistParams& adp)
 {
-  // Decrement old
-  if (adpRep) // Check for NULL
-    if ( --adpRep->referenceCount == 0 ) 
-      delete adpRep;
-  // Increment new
-  adpRep = adp.adpRep;
-  if (adpRep) // Check for an assignment of NULL
-    adpRep->referenceCount++;
+  if (adpRep != adp.adpRep) { // prevent re-assignment of same rep
+    // Decrement old
+    if (adpRep) // Check for NULL
+      if ( --adpRep->referenceCount == 0 ) 
+	delete adpRep;
+    // Increment new
+    adpRep = adp.adpRep;
+    if (adpRep) // Check for an assignment of NULL
+      adpRep->referenceCount++;
+  }
+  // else if assigning same rep, then leave referenceCount as is
+
   return *this;
 }
 
@@ -2229,14 +2233,18 @@ inline EpistemicDistParams::~EpistemicDistParams()
 inline EpistemicDistParams& EpistemicDistParams::
 operator=(const EpistemicDistParams& edp)
 {
-  // Decrement old
-  if (edpRep) // Check for NULL
-    if ( --edpRep->referenceCount == 0 ) 
-      delete edpRep;
-  // Increment new
-  edpRep = edp.edpRep;
-  if (edpRep) // Check for an assignment of NULL
-    edpRep->referenceCount++;
+  if (edpRep != edp.edpRep) { // prevent re-assignment of same rep
+    // Decrement old
+    if (edpRep) // Check for NULL
+      if ( --edpRep->referenceCount == 0 ) 
+	delete edpRep;
+    // Increment new
+    edpRep = edp.edpRep;
+    if (edpRep) // Check for an assignment of NULL
+      edpRep->referenceCount++;
+  }
+  // else if assigning same rep, then leave referenceCount as is
+
   return *this;
 }
 

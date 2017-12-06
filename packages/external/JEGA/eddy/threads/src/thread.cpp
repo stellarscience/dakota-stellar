@@ -229,7 +229,7 @@ thread::operator =(
     )
 {
     if(this == &other) return other;
-    _thread = other._thread;
+    this->_thread = other._thread;
     return *this;
 }
 
@@ -237,7 +237,7 @@ bool
 thread::is_this_thread(
     ) const
 {
-    return pthread_equal(_thread, pthread_self()) != 0;
+    return pthread_equal(this->_thread, pthread_self()) != 0;
 
 } // thread::is_this_thread
 
@@ -246,7 +246,7 @@ thread::operator ==(
     const thread& other
     ) const
 {
-    return pthread_equal(_thread, other._thread ) != 0;
+    return pthread_equal(this->_thread, other._thread ) != 0;
 }
 
 bool
@@ -330,13 +330,13 @@ thread::thread(
         _thread()
 {
 
-    _thread = pthread_self();
+    this->_thread = pthread_self();
 
     // This thread may or may not already be in the map but that's not a
-    // problem.  It willnot be let in again b/c of the workings of the map.
-    old_cancel_types().insert(
-        old_cancel_state_map::value_type(&_thread, PTHREAD_CANCEL_DEFERRED)
-        );
+    // problem.  It will not be let in again b/c of the workings of the map.
+    old_cancel_types().insert(old_cancel_state_map::value_type(
+		&(this->_thread), PTHREAD_CANCEL_DEFERRED
+		));
 
 } // thread::thread
 
@@ -363,11 +363,11 @@ thread::thread(
     if(pthread_attr_init(&attributes) != 0)
         throw resource_error("thread::thread failed to init attributes.");
 
-    // if the seting of attributes fails, it means sharing is invalid
+    // if the setting of attributes fails, it means sharing is invalid
     if(pthread_attr_setdetachstate(&attributes, detachstate) != 0)
         throw logical_error("thread::thread invalid detachstate argument");
 
-    // if the seting of attributes fails, it means sharing is invalid
+    // if the setting of attributes fails, it means sharing is invalid
     if(pthread_attr_setinheritsched(&attributes, inheritsched) != 0)
         throw logical_error("thread::thread invalid inheritsched argument");
 
@@ -376,9 +376,9 @@ thread::thread(
         throw resource_error("thread::thread failed to create thread.");
 
     // The new thread was created so account for it in our cancel state map.
-    old_cancel_types().insert(
-        old_cancel_state_map::value_type(&_thread, PTHREAD_CANCEL_DEFERRED)
-        );
+    old_cancel_types().insert(old_cancel_state_map::value_type(
+		&(this->_thread), PTHREAD_CANCEL_DEFERRED
+		));
 
     // destroy the attributes object b/c it is not needed anymore.
     pthread_attr_destroy(&attributes);

@@ -11,10 +11,10 @@
     NOTES:
 
         This project is modeled heavily after the boost thread library.  Some
-        Serious shortcommings of the boost thread library make this one
+        Serious shortcomings of the boost thread library make this one
         necessary such as the lack of ability to cancel threads.
 
-        Hopefully, the shortcommings of the boost library will be taken care of
+        Hopefully, the shortcomings of the boost library will be taken care of
         at which time this library will likely be changed to use it.
 
         Also, see notes under Class Definition section of this file.
@@ -292,7 +292,7 @@ class EDDY_SL_IEDECL thread
 
         /// Sets the current thread cancelation type to asynchronous.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
+         * This does not cancel the thread.  Only sets the cancelation type.
          * The cancelation type prior to this call can be restored by calling
          * restore_cancelation_state.
          */
@@ -303,7 +303,7 @@ class EDDY_SL_IEDECL thread
 
         /// Sets the current thread cancelation type to deferred.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
+         * This does not cancel the thread.  Only sets the cancelation type.
          * The cancelation type prior to this call can be restored by calling
          * restore_cancelation_state.
          */
@@ -314,7 +314,7 @@ class EDDY_SL_IEDECL thread
 
         /// Sets the current thread cancelation type to disabled.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
+         * This does not cancel the thread.  Only sets the cancelation type.
          * The cancelation type prior to this call can be restored by calling
          * restore_cancelation_state.
          */
@@ -325,7 +325,7 @@ class EDDY_SL_IEDECL thread
 
         /// Sets the current thread cancelation type to enable.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
+         * This does not cancel the thread.  Only sets the cancelation type.
          * The cancelation type prior to this call can be restored by calling
          * restore_cancelation_state.
          */
@@ -335,7 +335,7 @@ class EDDY_SL_IEDECL thread
             );
 
         /**
-         * \brief Restores the thread cancelization state to what it was prior
+         * \brief Restores the thread cancelation state to what it was prior
          *        to a call to set_deferred_cancelation, disable_cancelation,
          *        set_asynch_cancelation, etc.
          *

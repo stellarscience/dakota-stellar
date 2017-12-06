@@ -97,12 +97,19 @@ Inline Accessors
 inline
 bool
 GeneticAlgorithmNichePressureApplicator::GetCacheDesigns(
-    )
+    ) const
 {
     return this->_cacheDesigns;
 }
 
 
+inline
+std::size_t
+GeneticAlgorithmNichePressureApplicator::GetMaxDesignCacheSize(
+    ) const
+{
+    return this->_maxBufSize;
+}
 
 
 

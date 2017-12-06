@@ -221,7 +221,7 @@ BasicParameterDatabaseImpl::PostDump(
 
 /*
 ================================================================================
-In Namesapce File Scope Utility Class Implementations
+In Namespace File Scope Utility Class Implementations
 ================================================================================
 */
 
@@ -270,19 +270,19 @@ Public Methods
         ) const \
     { \
         EDDY_FUNC_DEBUGSCOPE \
-        return HasParam(tag, mapname); \
+        return this->HasParam(tag, mapname); \
     }
 
-HAS_PARAM_METHOD(Integral, _intParams)
-HAS_PARAM_METHOD(Short, _shortParams)
-HAS_PARAM_METHOD(Double, _doubleParams)
-HAS_PARAM_METHOD(SizeType, _sizeTParams)
-HAS_PARAM_METHOD(Boolean, _boolParams)
-HAS_PARAM_METHOD(String, _stringParams)
-HAS_PARAM_METHOD(DoubleVector, _doubleVectorParams)
-HAS_PARAM_METHOD(IntVector, _intVectorParams)
-HAS_PARAM_METHOD(DoubleMatrix, _doubleMatrixParams)
-HAS_PARAM_METHOD(StringVector, _stringVectorParams)
+HAS_PARAM_METHOD(Integral, this->_intParams)
+HAS_PARAM_METHOD(Short, this->_shortParams)
+HAS_PARAM_METHOD(Double, this->_doubleParams)
+HAS_PARAM_METHOD(SizeType, this->_sizeTParams)
+HAS_PARAM_METHOD(Boolean, this->_boolParams)
+HAS_PARAM_METHOD(String, this->_stringParams)
+HAS_PARAM_METHOD(DoubleVector, this->_doubleVectorParams)
+HAS_PARAM_METHOD(IntVector, this->_intVectorParams)
+HAS_PARAM_METHOD(DoubleMatrix, this->_doubleMatrixParams)
+HAS_PARAM_METHOD(StringVector, this->_stringVectorParams)
 
 
 /*
@@ -310,19 +310,19 @@ Subclass Overridable Methods
         ) const \
     { \
         EDDY_FUNC_DEBUGSCOPE \
-        return GetParamValue<cpptype>(tag, mapname); \
+        return this->GetParamValue<cpptype>(tag, mapname); \
     }
 
-GET_PARAM_METHOD(Integral, int, _intParams)
-GET_PARAM_METHOD(Short, short, _shortParams)
-GET_PARAM_METHOD(Double, double, _doubleParams)
-GET_PARAM_METHOD(SizeType, size_t, _sizeTParams)
-GET_PARAM_METHOD(Boolean, bool, _boolParams)
-GET_PARAM_METHOD(String, string, _stringParams)
-GET_PARAM_METHOD(DoubleVector, JEGA::DoubleVector, _doubleVectorParams)
-GET_PARAM_METHOD(IntVector, JEGA::IntVector, _intVectorParams)
-GET_PARAM_METHOD(DoubleMatrix, JEGA::DoubleMatrix, _doubleMatrixParams)
-GET_PARAM_METHOD(StringVector, JEGA::StringVector, _stringVectorParams)
+GET_PARAM_METHOD(Integral, int, this->_intParams)
+GET_PARAM_METHOD(Short, short, this->_shortParams)
+GET_PARAM_METHOD(Double, double, this->_doubleParams)
+GET_PARAM_METHOD(SizeType, size_t, this->_sizeTParams)
+GET_PARAM_METHOD(Boolean, bool, this->_boolParams)
+GET_PARAM_METHOD(String, string, this->_stringParams)
+GET_PARAM_METHOD(DoubleVector, JEGA::DoubleVector, this->_doubleVectorParams)
+GET_PARAM_METHOD(IntVector, JEGA::IntVector, this->_intVectorParams)
+GET_PARAM_METHOD(DoubleMatrix, JEGA::DoubleMatrix, this->_doubleMatrixParams)
+GET_PARAM_METHOD(StringVector, JEGA::StringVector, this->_stringVectorParams)
 
 
 #define ADD_PARAM_METHOD(partype, cpptype, mapname) \
@@ -333,20 +333,20 @@ GET_PARAM_METHOD(StringVector, JEGA::StringVector, _stringVectorParams)
         ) \
     { \
         EDDY_FUNC_DEBUGSCOPE \
-        return AddParamValue(tag, value, mapname); \
+        return this->AddParamValue(tag, value, mapname); \
     }
 
 
-ADD_PARAM_METHOD(Integral, int, _intParams)
-ADD_PARAM_METHOD(Short, short, _shortParams)
-ADD_PARAM_METHOD(Double, double, _doubleParams)
-ADD_PARAM_METHOD(SizeType, size_t, _sizeTParams)
-ADD_PARAM_METHOD(Boolean, bool, _boolParams)
-ADD_PARAM_METHOD(String, string, _stringParams)
-ADD_PARAM_METHOD(DoubleVector, JEGA::DoubleVector, _doubleVectorParams)
-ADD_PARAM_METHOD(IntVector, JEGA::IntVector, _intVectorParams)
-ADD_PARAM_METHOD(DoubleMatrix, JEGA::DoubleMatrix, _doubleMatrixParams)
-ADD_PARAM_METHOD(StringVector, JEGA::StringVector, _stringVectorParams)
+ADD_PARAM_METHOD(Integral, int, this->_intParams)
+ADD_PARAM_METHOD(Short, short, this->_shortParams)
+ADD_PARAM_METHOD(Double, double, this->_doubleParams)
+ADD_PARAM_METHOD(SizeType, size_t, this->_sizeTParams)
+ADD_PARAM_METHOD(Boolean, bool, this->_boolParams)
+ADD_PARAM_METHOD(String, string, this->_stringParams)
+ADD_PARAM_METHOD(DoubleVector, JEGA::DoubleVector, this->_doubleVectorParams)
+ADD_PARAM_METHOD(IntVector, JEGA::IntVector, this->_intVectorParams)
+ADD_PARAM_METHOD(DoubleMatrix, JEGA::DoubleMatrix, this->_doubleMatrixParams)
+ADD_PARAM_METHOD(StringVector, JEGA::StringVector, this->_stringVectorParams)
 
 string
 BasicParameterDatabaseImpl::Dump(
@@ -354,7 +354,7 @@ BasicParameterDatabaseImpl::Dump(
 {
     EDDY_FUNC_DEBUGSCOPE
     ostringstream ostr;
-    Dump(ostr);
+    this->Dump(ostr);
     return ostr.str();
 }
 
@@ -364,19 +364,24 @@ BasicParameterDatabaseImpl::Dump(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    DumpValueMap(_intParams, "Integer Parameters", stream);
-    DumpValueMap(_shortParams, "Short Parameters", stream);
-    DumpValueMap(_doubleParams, "Double Parameters", stream);
-    DumpValueMap(_sizeTParams, "Size Type Parameters", stream);
-    DumpValueMap(_boolParams, "Boolean Parameters", stream);
-    DumpValueMap(_stringParams, "String Parameters", stream);
-    DumpContainerMap(_doubleVectorParams, "Double Vector Parameters", stream);
-    DumpContainerMap(_intVectorParams, "Integer  Vector Parameters", stream);
-    DumpMatrixMap<DoubleMatrixParamMap, JEGA::DoubleMatrix >(
-        _doubleMatrixParams, "Double Matrix Parameters", stream
+    DumpValueMap(this->_intParams, "Integer Parameters", stream);
+    DumpValueMap(this->_shortParams, "Short Parameters", stream);
+    DumpValueMap(this->_doubleParams, "Double Parameters", stream);
+    DumpValueMap(this->_sizeTParams, "Size Type Parameters", stream);
+    DumpValueMap(this->_boolParams, "Boolean Parameters", stream);
+    DumpValueMap(this->_stringParams, "String Parameters", stream);
+    DumpContainerMap(
+		this->_doubleVectorParams, "Double Vector Parameters", stream
+		);
+    DumpContainerMap(
+		this->_intVectorParams, "Integer  Vector Parameters", stream
+		);
+    DumpMatrixMap<DoubleMatrixParamMap, JEGA::DoubleMatrix>(
+        this->_doubleMatrixParams, "Double Matrix Parameters", stream
         );
-    DumpContainerMap(_stringVectorParams, "String Vector Parameters", stream);
-
+    DumpContainerMap(
+		this->_stringVectorParams, "String Vector Parameters", stream
+		);
 }
 
 

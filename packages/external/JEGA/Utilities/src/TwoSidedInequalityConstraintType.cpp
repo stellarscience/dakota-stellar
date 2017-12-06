@@ -59,6 +59,7 @@ Includes
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <cfloat>
+#include <limits>
 #include <utilities/include/Math.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
@@ -220,7 +221,7 @@ TwoSidedInequalityConstraintType::ToString(
 
 double
 TwoSidedInequalityConstraintType::GetViolationAmount(
-    double of
+    con_val_t of
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -278,10 +279,10 @@ TwoSidedInequalityConstraintType::TwoSidedInequalityConstraintType(
     ConstraintInfo& info
     ) :
         InequalityConstraintType(info),
-        _lowerValue(-DBL_MAX)
+        _lowerValue(-std::numeric_limits<double>::max())
 {
     EDDY_FUNC_DEBUGSCOPE
-    SetUpperValue(DBL_MAX);
+    SetUpperValue(std::numeric_limits<double>::max());
 }
 
 TwoSidedInequalityConstraintType::TwoSidedInequalityConstraintType(
@@ -289,10 +290,9 @@ TwoSidedInequalityConstraintType::TwoSidedInequalityConstraintType(
     ConstraintInfo& info
     ) :
         InequalityConstraintType(copy, info),
-        _lowerValue(-DBL_MAX)
+        _lowerValue(copy._lowerValue)
 {
     EDDY_FUNC_DEBUGSCOPE
-    SetUpperValue(DBL_MAX);
 }
 
 

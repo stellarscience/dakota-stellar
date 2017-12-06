@@ -22,6 +22,128 @@
 
 namespace Pecos {
 
+void PolynomialApproximation::compute_coefficients(size_t index)
+{
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
+    PCerr << "Warning: neither expansion coefficients nor expansion "
+	  << "coefficient gradients\n         are active in Polynomial"
+	  << "Approximation::compute_coefficients().\n         Bypassing "
+	  << "approximation construction." << std::endl;
+    return;
+  }
+
+  // update surrData from origSurrData
+  synchronize_surrogate_data(index);
+
+  // For testing of anchor point logic:
+  //size_t last_index = surrData.points() - 1;
+  //surrData.anchor_point(surrData.variables_data()[last_index],
+  //                      surrData.response_data()[last_index]);
+  //surrData.pop(1);
+
+  // anchor point, if present, is handled differently for different
+  // expCoeffsSolnApproach settings:
+  //   SAMPLING:   treat it as another data point
+  //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
+  //   LEAST_SQ_REGRESSION: use equality-constrained least squares
+  size_t num_total_pts = surrData.points();
+  if (surrData.anchor()) ++num_total_pts;
+  if (!num_total_pts) {
+    PCerr << "Error: nonzero number of sample points required in OrthogPoly"
+	  << "Approximation::compute_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void PolynomialApproximation::synchronize_surrogate_data(size_t index)
+{
+  // when using a recursive approximation, subtract current PCE prediction
+  // from the surrData so that we form a PCE on the surplus
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
+    response_data_to_surplus_data(index);
+  else surrData = origSurrData; // shared rep
+}
+
+
+void PolynomialApproximation::response_data_to_surplus_data(size_t index)
+{
+  if (index == 0 || index == _NPOS) {
+    surrData = origSurrData; // shared rep
+    return;
+  }
+
+  // We will only modify the response to reflect hierarchical surpluses,
+  // so initialize surrData with shared vars and unique resp instances
+  surrData = origSurrData.copy(SHALLOW_COPY, DEEP_COPY);
+
+  // More efficient to roll up contributions from each level expansion than
+  // to combine expansions and then eval once.  Approaches are equivalent for
+  // linear addition.
+
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+
+  size_t i, j, num_pts = origSurrData.points();
+  Real delta_val; RealVector delta_grad;
+  switch (data_rep->expConfigOptions.combineType) {
+  case ADD_COMBINE:
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = origSurrData.continuous_variables(i);
+      if (expansionCoeffFlag) {
+	delta_val = origSurrData.response_function(i);
+	for (j=0; j<index; ++j)
+	  delta_val -= stored_value(c_vars, j);
+	surrData.response_function(delta_val, i);
+      }
+      if (expansionCoeffGradFlag) {
+	copy_data(origSurrData.response_gradient(i), delta_grad);
+	for (j=0; j<index; ++j)
+	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, j);
+	surrData.response_gradient(delta_grad, i);
+      }
+    }
+    break;
+  case MULT_COMBINE: {
+    Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
+    RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
+    size_t k, num_deriv_vars = origSurrData.response_gradient(0).length();
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = origSurrData.continuous_variables(i);
+      delta_val = orig_fn_val = origSurrData.response_function(i);
+      if (expansionCoeffGradFlag)
+	copy_data(origSurrData.response_gradient(i), orig_fn_grad);
+      for (j=0; j<index; ++j) {
+	stored_val = stored_value(c_vars, j);
+	delta_val /= stored_val;
+	if (expansionCoeffGradFlag) { // recurse using levels j and j-1
+	  const RealVector& stored_grad
+	    = stored_gradient_nonbasis_variables(c_vars, j);
+	  if (j == 0)
+	    { fn_val_j = stored_val; fn_grad_j = stored_grad; }
+	  else {
+	    fn_val_j = fn_val_jm1 * stored_val;
+	    for (k=0; k<num_deriv_vars; ++k)
+	      fn_grad_j[k]  = ( fn_grad_jm1[k] * stored_val +
+				fn_val_jm1 * stored_grad[j] );
+	  }
+	  if (j < index - 1)
+	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
+	  else
+	    for (k=0; k<num_deriv_vars; ++k)
+	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
+	                    / fn_val_j;
+	}
+      }
+      if (expansionCoeffFlag)     surrData.response_function(delta_val,  i);
+      if (expansionCoeffGradFlag) surrData.response_gradient(delta_grad, i);
+    }
+    break;
+  }
+  }
+}
+
+
 void PolynomialApproximation::
 integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
 		  RealVector& moments)

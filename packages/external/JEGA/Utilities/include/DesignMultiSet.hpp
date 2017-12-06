@@ -162,7 +162,7 @@ Class Definition
  *
  * This class also provides various methods specific to manipulating a grouping
  * of Design 's.  For example, since it is holding pointers and the predicate
- * searches will look for logical equivolence, methods are available to find
+ * searches will look for logical equivalence, methods are available to find
  * exact instances by searching for pointers instead of values.
  */
 template <typename Pred>
@@ -393,11 +393,11 @@ class JEGA_SL_IEDECL DesignMultiSet :
             ) const;
 
         /**
-         * \brief Finds a logical equivolent to the passed in Design but
+         * \brief Finds a logical equivalent to the passed in Design but
          *        disregards the Design itself.
          *
          * The pointer value of the returned iterator (if not end()) will not
-         * be equal to key. If no equivolent matches other than an exact match
+         * be equal to key. If no equivalent matches other than an exact match
          * of key are present, the return is end().  This is just like the
          * regular find method except that a return of the exact same object as
          * is pointed to by "key" is not allowed.
@@ -506,14 +506,14 @@ class JEGA_SL_IEDECL DesignMultiSet :
             const key_type key
             );
 
-        /// Erases all occurences of the exact key specified.
+        /// Erases all occurrences of the exact key specified.
         /**
-         * This does not mean logically equivolent according to the predicate.
-         * This erases all occurances of the design pointer specified.  Clones
+         * This does not mean logically equivalent according to the predicate.
+         * This erases all occurrences of the design pointer specified.  Clones
          * of key may remain in the set.
          *
          * \param key The Design for which instances should be removed.
-         * \return The number of occurances found and marked.
+         * \return The number of occurrences found and marked.
          */
         size_type
         erase_exacts(
@@ -523,7 +523,7 @@ class JEGA_SL_IEDECL DesignMultiSet :
         /// Finds the actual passed in design without regard to the predicate.
         /**
          * The pointer value of the returned iterator (if not end()) will not
-         * be equal to key. If no equivolent matches other than an exact match
+         * be equal to key. If no equivalent matches other than an exact match
          * of key are present, the return is end().  This is just like the
          * regular find method except that a return of the exact same object as
          * is pointed to by "key" is not allowed.
@@ -690,7 +690,7 @@ class JEGA_SL_IEDECL DesignMultiSet :
          * \brief A specialization of the test_for_clones method for containers
          *        of this type.
          *
-         * The knowledge that the sorts are the same can be used to expediate
+         * The knowledge that the sorts are the same can be used to expedite
          * this search.  This must be re-implemented in any derived classes and
          * called back on in order for the specialization to work properly.
          *
@@ -752,7 +752,7 @@ class JEGA_SL_IEDECL DesignMultiSet :
          * This method should be used instead of comparing this container
          * to itself using test_for_clones.
          *
-         * Found clones are tagged as such using Desing::TagAsClones.
+         * Found clones are tagged as such using Design::TagAsClones.
          * The return is the number of newly found clones (those that were
          * not previously marked as a clone of any other Design).
          *
@@ -764,12 +764,12 @@ class JEGA_SL_IEDECL DesignMultiSet :
         test_within_list_for_clones(
             ) const;
 
-        /// Marks all occurences of logical equivolents to the key specified.
+        /// Marks all occurrences of logical equivalents to the key specified.
         /**
          * This includes the key itself.
          *
          * \param key The Design for which instances should be removed.
-         * \return The number of occurances found and marked.
+         * \return The number of occurrences found and marked.
          */
         size_type
         mark(
@@ -778,11 +778,11 @@ class JEGA_SL_IEDECL DesignMultiSet :
             );
 
         /**
-         * \brief Marks all occurences of logical equivolents to the key
+         * \brief Marks all occurrences of logical equivalents to the key
          *        with the exception of the key itself.
          *
          * \param key The Design for which instances should be removed.
-         * \return The number of occurances found and marked.
+         * \return The number of occurrences found and marked.
          */
         size_type
         mark_not_exact(
@@ -907,8 +907,8 @@ class JEGA_SL_IEDECL DVMultiSetPredicate :
 
         /// The activation function for this predicate.
         /**
-         * Compares Design 's for a heirarchical sort by design variable such
-         * that the Design 's are sorted first by dv0, then by dv1, then dv2,
+         * Compares Designs for a hierarchical sort by design variable such
+         * that the Designs are sorted first by dv0, then by dv1, then dv2,
          * etc.
          *
          * \param d1 The first Design for order comparison.
@@ -1071,7 +1071,7 @@ class JEGA_SL_IEDECL OFMultiSetPredicate :
 
         /// The activation function for this predicate.
         /**
-         * Compares Design 's for a heirarchical sort by objective function
+         * Compares Design 's for a hierarchical sort by objective function
          * such that the Design 's are sorted first by of0, then by of1, then
          * of2, etc.
          *
@@ -1096,7 +1096,7 @@ class JEGA_SL_IEDECL OFMultiSetPredicate :
             ) const
         {
             EDDY_FUNC_DEBUGSCOPE
-            EDDY_ASSERT(&d1->GetDesignTarget() == &d2->GetDesignTarget())
+            EDDY_ASSERT(&d1->GetDesignTarget() == &d2->GetDesignTarget());
 
             // prepare to iterate those infos.
             const ObjectiveFunctionInfoVector& infos =
@@ -1250,7 +1250,7 @@ class JEGA_SL_IEDECL CNMultiSetPredicate :
 
         /// The activation function for this predicate.
         /**
-         * Compares Design 's for a heirarchical sort by constraint such
+         * Compares Design 's for a hierarchical sort by constraint such
          * that the Design 's are sorted first by cn0, then by cn1, then cn2,
          * etc.
          *

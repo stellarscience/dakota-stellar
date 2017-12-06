@@ -60,6 +60,7 @@ Includes
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <cfloat>
+#include <limits>
 #include <algorithm>
 #include <functional>
 #include <utilities/include/Math.hpp>
@@ -313,30 +314,30 @@ DiscreteDesignVariableNature::Clone(
     return new DiscreteDesignVariableNature(*this, forType);
 }
 
-double
-DiscreteDesignVariableNature::GetMaxDoubleRep(
+var_rep_t
+DiscreteDesignVariableNature::GetMaxRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return static_cast<double>(this->_disVals.size()-1);
+    return static_cast<var_rep_t>(this->_disVals.size()-1);
 }
 
-double
-DiscreteDesignVariableNature::GetMinDoubleRep(
+var_rep_t
+DiscreteDesignVariableNature::GetMinRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->_disVals.empty() ? -1 : 0.0;
+    return this->_disVals.empty() ? var_rep_t(-1) : var_rep_t(0);
 }
 
-double
-DiscreteDesignVariableNature::GetRandomDoubleRep(
+var_rep_t
+DiscreteDesignVariableNature::GetRandomRep(
     double lb,
     double ub
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return static_cast<double>(
+    return static_cast<var_rep_t>(
         RandomNumberGenerator::UniformInt<DoubleVector::size_type>(
                 // if anything, shrink the range.
                 static_cast<size_t>(Math::Ceil(lb)),
@@ -345,8 +346,8 @@ DiscreteDesignVariableNature::GetRandomDoubleRep(
         );
 }
 
-double
-DiscreteDesignVariableNature::GetDoubleRepOf(
+var_rep_t
+DiscreteDesignVariableNature::GetRepOf(
     double value
     ) const
 {
@@ -355,7 +356,8 @@ DiscreteDesignVariableNature::GetDoubleRepOf(
         find(this->_disVals.begin(), this->_disVals.end(), value)
         );
     return (it==this->_disVals.end()) ?
-        -DBL_MAX : static_cast<double>(it-this->_disVals.begin());
+        -std::numeric_limits<var_rep_t>::max() :
+		static_cast<var_rep_t>(it-this->_disVals.begin());
 }
 
 double
@@ -365,7 +367,7 @@ DiscreteDesignVariableNature::GetRandomValue(
     EDDY_FUNC_DEBUGSCOPE
     DoubleVector::size_type elem =
         static_cast<DoubleVector::size_type>(
-            this->DesignVariableNatureBase::GetRandomDoubleRep()
+            this->DesignVariableNatureBase::GetRandomRep()
             );
     return this->_disVals[elem];
 }
@@ -388,14 +390,15 @@ DiscreteDesignVariableNature::GetMinValue(
 
 double
 DiscreteDesignVariableNature::GetValueOf(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    EDDY_ASSERT(this->IsValidDoubleRep(rep));
+    EDDY_ASSERT(this->IsValidRep(rep));
     DoubleVector::size_type loc =
         static_cast<DoubleVector::size_type>(Math::Round(rep));
-    return this->IsValidDoubleRep(rep) ? this->_disVals[loc] : -DBL_MAX;
+    return this->IsValidRep(rep) ?
+		this->_disVals[loc] : -std::numeric_limits<double>::max();
 }
 
 double
@@ -405,17 +408,18 @@ DiscreteDesignVariableNature::GetNearestValidValue(
 {
     EDDY_FUNC_DEBUGSCOPE
 
+	typedef DoubleVector::const_iterator dvci;
+
     // go through the values (which are in sorted order)
     // and find the closest one.
 
     // prepare to use the beginning and end of the vector over
     // and over again.
-    DoubleVector::const_iterator b(this->_disVals.begin());
-    DoubleVector::const_iterator e(this->_disVals.end());
+    dvci b(this->_disVals.begin());
+    dvci e(this->_disVals.end());
 
     // bound the passed in value
-    pair<DoubleVector::const_iterator, DoubleVector::const_iterator> p =
-        equal_range(b, e, value);
+    pair<dvci, dvci> p = equal_range(b, e, value);
 
     // if the value actually exists in the list, the lowerbound will be
     // the correct value.
@@ -437,34 +441,30 @@ DiscreteDesignVariableNature::GetNearestValidValue(
     EDDY_ASSERT(p.first != b);
     --p.first;
 
-    double ubd = Math::Abs(*(p.second) - value);
-    double lbd = Math::Abs(*(p.first) - value);
+    const double ubd = Math::Abs(*(p.second) - value);
+    const double lbd = Math::Abs(*(p.first) - value);
 
     return (ubd > lbd) ? *(p.first) : *(p.second);
 }
 
-double
-DiscreteDesignVariableNature::GetNearestValidDoubleRep(
-    double rep
+var_rep_t
+DiscreteDesignVariableNature::GetNearestValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    if(rep == -DBL_MAX) return rep;
-
-    const double temp = Math::Round(rep);
-
-    return Math::Max(Math::Min(
-        this->GetMaxDoubleRep(), temp
-        ), this->GetMinDoubleRep());
+    if(rep == -std::numeric_limits<var_rep_t>::max()) return rep;
+    const var_rep_t temp = Math::Round(rep);
+    return Math::Max(Math::Min(this->GetMaxRep(), temp), this->GetMinRep());
 }
 
-double
-DiscreteDesignVariableNature::GetDistanceBetweenDoubleReps(
+var_rep_t
+DiscreteDesignVariableNature::GetDistanceBetweenReps(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return 1.0;
+    return var_rep_t(1);
 }
 
 bool
@@ -478,7 +478,7 @@ DiscreteDesignVariableNature::AddDiscreteValue(
         );
 
     EDDY_DEBUG(it!=this->_disVals.end(),
-          "Attempt to add duplicate discrete value failed");
+        "Attempt to add duplicate discrete value failed");
 
     if(it == this->_disVals.end())
     {
@@ -512,7 +512,8 @@ DiscreteDesignVariableNature::RemoveDiscreteValue(
     return this->_disVals.size() != osize;
 }
 
-void DiscreteDesignVariableNature::SetMaxValue(
+void
+DiscreteDesignVariableNature::SetMaxValue(
     double value
     )
 {
@@ -526,7 +527,8 @@ void DiscreteDesignVariableNature::SetMaxValue(
     this->AddDiscreteValue(value);
 }
 
-void DiscreteDesignVariableNature::SetMinValue(
+void
+DiscreteDesignVariableNature::SetMinValue(
     double value
     )
 {
@@ -558,7 +560,7 @@ DiscreteDesignVariableNature::IsValueInBounds(
 
 bool
 DiscreteDesignVariableNature::IsRepInBounds(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -587,17 +589,17 @@ DiscreteDesignVariableNature::IsValidValue(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return DesignVariableNatureBase::IsValidValue(value) &&
+    return this->DesignVariableNatureBase::IsValidValue(value) &&
            this->IsValueInBounds(value);
 }
 
 bool
-DiscreteDesignVariableNature::IsValidDoubleRep(
-    double rep
+DiscreteDesignVariableNature::IsValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return DesignVariableNatureBase::IsValidDoubleRep(rep) &&
+    return this->DesignVariableNatureBase::IsValidRep(rep) &&
            this->IsRepInBounds(rep);
 }
 

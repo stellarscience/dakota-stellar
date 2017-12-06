@@ -31,15 +31,18 @@
 
 #include <queso/1D1DFunction.h>
 
+#include <iostream>
+#include <vector>
+
 namespace QUESOTesting
 {
 
-double value(double domainValue, const void * routinesDataPtr)
+double value(double /* domainValue */, const void * /* routinesDataPtr */)
 {
   return 2.0;
 }
 
-double deriv(double domainValue, const void * routinesDataPtr)
+double deriv(double /* domainValue */, const void * /* routinesDataPtr */)
 {
   return 0.0;
 }

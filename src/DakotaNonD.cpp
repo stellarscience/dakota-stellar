@@ -1799,8 +1799,8 @@ void NonD::initialize_response_covariance()
 
 
 /** Default definition of virtual function (used by sampling, reliability,
-    and stochastic expansion methods) defines the set of statistical
-    results to include means, standard deviations, and level mappings. */
+    and stochastic expansion methods) defines the set of statistical results
+    to include the first two moments and level mappings for each QoI. */
 void NonD::initialize_final_statistics()
 {
   size_t i, j, num_levels, cntr = 0, rl_len = 0, num_final_stats,
@@ -1822,9 +1822,13 @@ void NonD::initialize_final_statistics()
       num_final_stats += rl_len; // 1 aggregated system metric per resp level
     }
   }
-  // default response ASV/DVV may be overridden by NestedModel update
-  // in subIterator.response_results_active_set(sub_iterator_set)
-  ActiveSet stats_set(num_final_stats);//, num_active_vars);
+  // Instantiate finalStatistics:
+  // > default response ASV/DVV may be overridden by NestedModel update
+  //   in subIterator.response_results_active_set(sub_iterator_set)
+  // > inactive views are not set until NestedModel ctor defines them, and
+  //   subIterator construction follows in NestedModel::derived_init_comms()
+  //   --> invocation of this fn from NonD ctors should have inactive view
+  ActiveSet stats_set(num_final_stats);//, num_active_vars); // default RV = 1
   stats_set.derivative_vector(iteratedModel.inactive_continuous_variable_ids());
   finalStatistics = Response(SIMULATION_RESPONSE, stats_set);
 
@@ -1882,18 +1886,130 @@ void NonD::initialize_final_statistics()
 }
 
 
-void NonD::initialize_final_statistics_gradients()
+void NonD::
+load_pilot_sample(const SizetArray& pilot_spec, SizetArray& delta_N_l)
 {
+  size_t pilot_size = pilot_spec.size(), delta_size = delta_N_l.size();
+  if (delta_size == pilot_size)
+    delta_N_l = pilot_spec;
+  else if (pilot_size <= 1) {
+    size_t num_samp = (pilot_size) ? pilot_spec[0] : 100;
+    delta_N_l.assign(delta_size, num_samp);
+  }
+  else {
+    Cerr << "Error: inconsistent pilot sample size (" << pilot_size
+	 << ") in load_pilot_sample(SizetArray).  " << delta_size
+	 << " expected." << std::endl;
+    abort_handler(METHOD_ERROR);
+  }
+
+  Cout << "\nPilot sample:\n" << delta_N_l << std::endl;
+}
+
+
+void NonD::
+load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
+		  SizetArray& delta_N_l)
+{
+  size_t num_mf = N_l.size(), pilot_size = pilot_spec.size(), delta_size;
+
+  if (num_mf > 1) { // CV only case
+    delta_size = num_mf;
+    for (size_t i=0; i<num_mf; ++i)
+      if (N_l[i].size() > 1) {
+	Cerr << "Error: multidimensional N_l not expected in 1-dimensional "
+	     << "load_pilot_sample(SizetArray)" << std::endl;
+	abort_handler(METHOD_ERROR);
+      }
+    Cout << "\nnMultifidelity pilot sample:\n";
+  }
+  else { // ML only case
+    delta_size = N_l[0].size();
+    Cout << "\nMultilevel pilot sample:\n";
+  }
+
+  if (delta_size == pilot_size)
+    delta_N_l = pilot_spec;
+  else if (pilot_size <= 1) {
+    size_t num_samp = (pilot_size) ? pilot_spec[0] : 100;
+    delta_N_l.assign(delta_size, num_samp);
+  }
+  else {
+    Cerr << "Error: inconsistent pilot sample size (" << pilot_size
+	 << ") in load_pilot_sample(SizetArray).  " << delta_size
+	 << " expected." << std::endl;
+    abort_handler(METHOD_ERROR);
+  }
+
+  Cout << delta_N_l << std::endl;
+}
+
+
+void NonD::
+load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
+		  Sizet2DArray& delta_N_l)
+{
+  size_t i, num_samp, pilot_size = pilot_spec.size(), num_mf = N_l.size();
+  delta_N_l.resize(num_mf);
+
+  // allow several different pilot sample specifications
+  if (pilot_size <= 1) {
+    num_samp = (pilot_size) ? pilot_spec[0] : 100;
+    for (i=0; i<num_mf; ++i)
+      delta_N_l[i].assign(N_l[i].size(), num_samp);
+  }
+  else {
+    size_t j, num_lev, num_prev_lev, num_total_lev = 0;
+    bool same_lev = true;
+
+    for (i=0; i<num_mf; ++i) {
+      // for now, only SimulationModel supports solution_levels()
+      num_lev = N_l[i].size();
+      delta_N_l[i].resize(num_lev);
+      if (i && num_lev != num_prev_lev) same_lev = false;
+      num_total_lev += num_lev; num_prev_lev = num_lev;
+    }
+
+    if (same_lev && pilot_size == num_lev)
+      for (j=0; j<num_lev; ++j) {
+	num_samp = pilot_spec[j];
+	for (i=0; i<num_mf; ++i)
+	  delta_N_l[i][j] = num_samp;
+      }
+    else if (pilot_size == num_total_lev) {
+      size_t cntr = 0;
+      for (i=0; i<num_mf; ++i) {
+	SizetArray& delta_N_li = delta_N_l[i]; num_lev = delta_N_li.size();
+	for (j=0; j<num_lev; ++j, ++cntr)
+	  delta_N_li[j] = pilot_spec[cntr];
+      }
+    }
+    else {
+      Cerr << "Error: inconsistent pilot sample size (" << pilot_size
+	   << ") in load_pilot_sample(Sizet2DArray)." << std::endl;
+      abort_handler(METHOD_ERROR);
+    }
+  }
+
+  Cout << "\nMultilevel-multifidelity pilot sample:\n";
+  print_multilevel_evaluation_summary(Cout, delta_N_l);
+}
+
+
+void NonD::resize_final_statistics_gradients()
+{
+  if (finalStatistics.is_null()) // not all ctor chains track final stats
+    return;
+
   const ShortArray& final_asv = finalStatistics.active_set_request_vector();
   const SizetArray& final_dvv = finalStatistics.active_set_derivative_vector();
-  size_t i, num_final_stats     = final_asv.size(),
-            num_final_grad_vars = final_dvv.size();
+  size_t i, num_final_stats = final_asv.size();
   bool final_grad_flag = false;
   for (i=0; i<num_final_stats; i++)
-    if (final_asv[i] & 2)
+    if (final_asv[i] & 2) // no need to distinguish moment/level mapping grads
       { final_grad_flag = true; break; }
-  finalStatistics.reshape(num_final_stats, num_final_grad_vars,
-			  final_grad_flag, false);
+  finalStatistics.reshape(num_final_stats, final_dvv.size(),
+			  final_grad_flag, false); // no final Hessians
 }
 
 
@@ -1919,10 +2035,10 @@ void NonD::update_aleatory_final_statistics()
   for (i=0; i<numFunctions; ++i) {
     // final stats from compute_moments()
     if (finalMomentsType) {
-      if (finalMomentStats.empty())
+      if (momentStats.empty())
 	cntr += 2;
       else {
-	const Real* mom_i = finalMomentStats[i];
+	const Real* mom_i = momentStats[i];
 	finalStatistics.function_value(mom_i[0], cntr++); // mean
 	finalStatistics.function_value(mom_i[1], cntr++); // stdev or var
       }

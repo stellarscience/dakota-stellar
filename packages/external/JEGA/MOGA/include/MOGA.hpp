@@ -296,10 +296,10 @@ class JEGA_SL_IEDECL MOGA :
             );
 
         /**
-         * \brief Overriden to look through the current designs and remove
+         * \brief Overridden to look through the current designs and remove
          *        any that are not optimal.
          *
-         * Removeed designs are placed into the targets discards.
+         * Removed designs are placed into the targets discards.
          */
         virtual
         void

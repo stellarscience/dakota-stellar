@@ -167,7 +167,7 @@ NPointBinaryCrosser::Description(
         "operation that takes place on the entire genome encoded as a "
         "binary string.\n\n"
         "The rate is used to determine how many members of the "
-        "passed in group (population) should be given an oportunity to "
+        "passed in group (population) should be given an opportunity to "
         "participate in a crossover operation.  Each operation "
         "involves 2 members of the passed in group and creates 2 new "
         "designs.  So the number of operations is round(rate*size/2) "
@@ -223,19 +223,17 @@ NPointBinaryCrosser::GetSplitVariable(
     for(eddy::utilities::uint32_t sum=0; dv<ndv; ++dv)
     {
         // find out how many bits belong to this variable.
-        eddy::utilities::uint16_t nbits = maniper.GetNumberOfBits(dv);
+        const eddy::utilities::uint16_t nbits = maniper.GetNumberOfBits(dv);
 
         // if we have surpassed the "ofcpt", we know our dv and bit location.
-        if((sum+=nbits) > ofcpt)
-            return VariableBitLocPair(
-                dv, nbits-static_cast<eddy::utilities::uint16_t>(sum-ofcpt)
-                );
+        if((sum+=nbits) > ofcpt) return VariableBitLocPair(
+            dv, nbits-static_cast<eddy::utilities::uint16_t>(sum-ofcpt)
+            );
 
         // if we are equal to "ofcpt", we have split exactly at the boundary
         // of two variables.  We will consider the split variable to be the
         // next one and the bit location to be 0.
-        if(sum == ofcpt)
-            return VariableBitLocPair(++dv, 0);
+        if(sum == ofcpt) return VariableBitLocPair(++dv, 0);
     }
 
     // if we make it here, there is some problem.
@@ -315,7 +313,7 @@ NPointBinaryCrosser::Crossover(
     EDDY_ASSERT(&target == &into.GetDesignTarget());
 
     // We need a BitManipulator to do the bit operations
-    BitManipulator maniper(target);
+    const BitManipulator maniper(target);
 
     // Store the number of design variables for repeated use.
     const size_t ndv = target.GetNDV();
@@ -363,7 +361,7 @@ NPointBinaryCrosser::Crossover(
 
         // Determine the crossover points (which must be unique for this to
         // make sense). Also prepare the crossover point container.
-        CrossPointSet cpts(this->GetCrossoverPoints(1, hicpt));
+        const CrossPointSet cpts(this->GetCrossoverPoints(1, hicpt));
 
         JEGAIFLOG_CF_II_F(cpts.empty(), this->GetLogger(), this,
             text_entry(lfatal(), this->GetName() + ": The number of crossover "
@@ -371,7 +369,7 @@ NPointBinaryCrosser::Crossover(
             )
 
         // now we go through and find out which variables are actually
-        // being split.  Do a raw copy of each unsplit variable and
+        // being split.  Do a raw copy of each un-split variable and
         // perform parameterized crossover on the split ones.
 
         // iterate over the crossover points

@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implementaion of class MOGAOperatorGroup.
+        Implementation of class MOGAOperatorGroup.
 
     NOTES:
 
@@ -63,6 +63,7 @@ Includes
 #include <../MOGA/include/FitnessAssessors/LayerFitnessAssessor.hpp>
 #include <../MOGA/include/PostProcessors/DistanceNichingPostProcessor.hpp>
 #include <../MOGA/include/FitnessAssessors/DominationCountFitnessAssessor.hpp>
+//#include <../MOGA/include/NichePressureApplicators/HoffmanSpacePreservingNicher.hpp>
 #include <../MOGA/include/NichePressureApplicators/RadialNichePressureApplicator.hpp>
 #include <../MOGA/include/NichePressureApplicators/DistanceNichePressureApplicator.hpp>
 #include <../MOGA/include/NichePressureApplicators/MaxDesignsNichePressureApplicator.hpp>
@@ -250,6 +251,9 @@ MOGAOperatorGroup::AcquireOperators(
         DO_REGISTER(
             NichePressureApplicatorRegistry, MaxDesignsNichePressureApplicator
             );
+        //DO_REGISTER(
+        //    NichePressureApplicatorRegistry, HoffmanSpacePreservingNicher
+        //    );
         DO_REGISTER(PostProcessorRegistry, DistanceNichingPostProcessor);
 
 #undef DO_REGISTER

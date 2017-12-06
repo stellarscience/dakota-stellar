@@ -76,8 +76,8 @@ Namespace Using Directives
 ================================================================================
 */
 using namespace std;
-using namespace JEGA::Utilities;
 using namespace JEGA::Logging;
+using namespace JEGA::Utilities;
 
 
 
@@ -245,11 +245,11 @@ LayerFitnessAssessor::AssessFitness(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    JEGALOG_II(GetLogger(), ldebug(), this,
-        text_entry(ldebug(), GetName() + ": Assessing fitness.")
+    JEGALOG_II(this->GetLogger(), ldebug(), this,
+        text_entry(ldebug(), this->GetName() + ": Assessing fitness.")
         )
 
-    size_t gSize = groups.GetTotalDesignCount();
+    const size_t gSize = groups.GetTotalDesignCount();
 
     // prepare our resulting fitness record.
     FitnessRecord* ret = new FitnessRecord(gSize);
@@ -260,7 +260,7 @@ LayerFitnessAssessor::AssessFitness(
     typedef eddy::utilities::uint64_t ui64;
 
     // We'll use a MultiObjectiveStatistician to compute the layers.
-    DesignValueMap<ui64> layers(
+    const DesignValueMap<ui64> layers(
         MultiObjectiveStatistician::ComputeLayers(
             DesignStatistician::CollectDesignsByOF(groups)
             )

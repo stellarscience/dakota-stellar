@@ -296,7 +296,7 @@ class ts_multimap
 
         /// A pair of const_iterators.
         /**
-         * This is the return type fo the const version of the equal_range
+         * This is the return type for the const version of the equal_range
          * method.
          */
         typedef
@@ -305,7 +305,7 @@ class ts_multimap
 
         /// A pair of iterators.
         /**
-         * This is the return type fo the non-const version of the equal_range
+         * This is the return type for the non-const version of the equal_range
          * method.
          */
         typedef
@@ -552,8 +552,8 @@ class ts_multimap
             InputIterator last
             )
         {
-            mutex_lock lock(_mutex);
-            _container.insert(first, last);
+            mutex_lock lock(this->_mutex);
+            this->_container.insert(first, last);
         }
 
         /// Returns a duplicate of the comparison object used to order this map.

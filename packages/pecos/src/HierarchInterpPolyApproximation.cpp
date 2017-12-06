@@ -17,6 +17,7 @@
 
 //#define DEBUG
 //#define VBD_DEBUG
+//#define INTERPOLATION_TEST
 
 namespace Pecos {
 
@@ -81,8 +82,14 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 }
 
 
-void HierarchInterpPolyApproximation::compute_expansion_coefficients()
+void HierarchInterpPolyApproximation::compute_coefficients(size_t index)
 {
+  PolynomialApproximation::compute_coefficients(index);
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag)
+    return;
+
+  allocate_arrays();
+
   if (surrData.anchor()) {
     PCerr << "Error: anchor point not supported in HierarchInterpPoly"
 	  << "Approximation::compute_expansion_coefficients" << std::endl;
@@ -107,18 +114,18 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
   const UShort4DArray&      key          = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, v, num_levels = key.size(), num_sets, num_tp_pts,
-    cntr = 0, index, num_deriv_vars = surrData.num_derivative_variables();
+    cntr = 0, c_index, num_deriv_vars = surrData.num_derivative_variables();
 
   // level 0
-  index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
   if (expansionCoeffFlag) {
-    expansionType1Coeffs[0][0][0] = surrData.response_function(index);
+    expansionType1Coeffs[0][0][0] = surrData.response_function(c_index);
     if (data_rep->basisConfigOptions.useDerivs)
-      Teuchos::setCol(surrData.response_gradient(index), 0,
+      Teuchos::setCol(surrData.response_gradient(c_index), 0,
 		      expansionType2Coeffs[0][0]);
   }
   if (expansionCoeffGradFlag)
-    Teuchos::setCol(surrData.response_gradient(index), 0,
+    Teuchos::setCol(surrData.response_gradient(c_index), 0,
 		    expansionType1CoeffGrads[0][0]);
   ++cntr;
   // levels 1 to num_levels
@@ -128,15 +135,17 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
     for (set=0; set<num_sets; ++set) {
       num_tp_pts = key_l[set].size();
       for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	const RealVector& c_vars = surrData.continuous_variables(index);
+	c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	const RealVector& c_vars = surrData.continuous_variables(c_index);
 	// coefficients are hierarchical surpluses
 	if (expansionCoeffFlag) {
-	  expansionType1Coeffs[lev][set][pt] = surrData.response_function(index)
+	  expansionType1Coeffs[lev][set][pt]
+	    = surrData.response_function(c_index)
 	    - value(c_vars, sm_mi, key, expansionType1Coeffs,
 		    expansionType2Coeffs, lev-1);
 	  if (data_rep->basisConfigOptions.useDerivs) {
-	    const RealVector& data_grad = surrData.response_gradient(index);
+	    const RealVector& data_grad
+	      = surrData.response_gradient(c_index);
 	    const RealVector& prev_grad = gradient_basis_variables(c_vars,
 	      sm_mi, key, expansionType1Coeffs, expansionType2Coeffs, lev-1);
 	    Real* hier_grad = expansionType2Coeffs[lev][set][pt];
@@ -145,7 +154,7 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 	  }
 	}
 	if (expansionCoeffGradFlag) {
-	  const RealVector& data_grad = surrData.response_gradient(index);
+	  const RealVector& data_grad = surrData.response_gradient(c_index);
 	  const RealVector& prev_grad = gradient_nonbasis_variables(c_vars,
 	    sm_mi, key, expansionType1CoeffGrads, lev-1);
 	  Real* hier_grad = expansionType1CoeffGrads[lev][set][pt];
@@ -156,14 +165,21 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
     }
   }
 
+#ifdef INTERPOLATION_TEST
+  test_interpolation();
+#endif
+
   computedMean = computedVariance
     = computedRefMean = computedDeltaMean
     = computedRefVariance = computedDeltaVariance = 0;
 }
 
 
-void HierarchInterpPolyApproximation::increment_coefficients()
+void HierarchInterpPolyApproximation::increment_coefficients(size_t index)
 {
+  // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
+  synchronize_surrogate_data(index);
+
   increment_current_from_reference();
 
   SharedHierarchInterpPolyApproxData* data_rep
@@ -196,8 +212,12 @@ void HierarchInterpPolyApproximation::increment_coefficients()
 // ***************************************************************
 
 
-void HierarchInterpPolyApproximation::decrement_coefficients()
+void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.pop(save_data);
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& trial_set = data_rep->hsg_driver()->trial_set();
@@ -224,8 +244,16 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
 
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data()) {
+    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    for (i=0; i<num_popped; ++i)
+      surrData.push(data_rep->finalization_index(i), false);
+    surrData.clear_popped(); // only after process completed
+  }
+
+  const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
   size_t lev, set, num_sets, num_levels = sm_mi.size(), num_smolyak_sets,
     num_coeff_sets;
   for (lev=0; lev<num_levels; ++lev) {
@@ -245,8 +273,9 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 
 void HierarchInterpPolyApproximation::store_coefficients(size_t index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.store(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS || index == stored_len) { // append
@@ -287,8 +316,9 @@ void HierarchInterpPolyApproximation::store_coefficients(size_t index)
 
 void HierarchInterpPolyApproximation::restore_coefficients(size_t index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.restore(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS) {
@@ -309,24 +339,11 @@ void HierarchInterpPolyApproximation::restore_coefficients(size_t index)
 }
 
 
-void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
-{
-  if (expansionCoeffFlag) {
-    std::swap(expansionType1Coeffs, storedExpType1Coeffs[index]);
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    if (data_rep->basisConfigOptions.useDerivs)
-      std::swap(expansionType2Coeffs, storedExpType2Coeffs[index]);
-  }
-  if (expansionCoeffGradFlag)
-    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads[index]);
-}
-
-
 void HierarchInterpPolyApproximation::remove_stored_coefficients(size_t index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.remove_stored(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS || index == stored_len) {
@@ -344,8 +361,36 @@ void HierarchInterpPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void HierarchInterpPolyApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+void HierarchInterpPolyApproximation::clear_stored()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.clear_stored();
+
+  storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
+  storedExpType1CoeffGrads.clear();
+}
+
+
+void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
+{
+  // mirror operations to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.swap(index);
+
+  if (expansionCoeffFlag) {
+    std::swap(expansionType1Coeffs, storedExpType1Coeffs[index]);
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    if (data_rep->basisConfigOptions.useDerivs)
+      std::swap(expansionType2Coeffs, storedExpType2Coeffs[index]);
+  }
+  if (expansionCoeffGradFlag)
+    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads[index]);
+}
+
+
+void HierarchInterpPolyApproximation::combine_coefficients(size_t swap_index)
 {
   if (swap_index != _NPOS) {
     swap_coefficients(swap_index);
@@ -357,6 +402,9 @@ combine_coefficients(short combine_type, size_t swap_index)
   size_t i, j, num_pts = surrData.points();
   Real curr_val, stored_val;
   /*
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  short combine_type = data_rep->expConfigOptions.combineType;
   for (i=0; i<num_pts; ++i) {
     const RealVector& c_vars = (anchor_pt && i == 0) ?
       surrData.anchor_continuous_variables() :
@@ -401,10 +449,6 @@ combine_coefficients(short combine_type, size_t swap_index)
     }
   }
   */
-
-  // clear stored data now that it has been combined
-  storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
-  storedExpType1CoeffGrads.clear();
 
   computedMean = computedVariance = 0;
 }
@@ -460,8 +504,9 @@ increment_coefficients(const UShortArray& index_set)
   for (pt=0, index=old_pts; pt<num_trial_pts; ++pt, ++index) {
     const RealVector& c_vars = surrData.continuous_variables(index);
     if (expansionCoeffFlag) {
-      t1_coeffs[pt] = surrData.response_function(index) - value(c_vars, sm_mi,
-	key, expansionType1Coeffs, expansionType2Coeffs, lev-1);
+      t1_coeffs[pt] = surrData.response_function(index)
+	- value(c_vars, sm_mi, key, expansionType1Coeffs,
+		expansionType2Coeffs, lev-1);
       if (data_rep->basisConfigOptions.useDerivs) {
 	const RealVector& data_grad = surrData.response_gradient(index);
 	const RealVector& prev_grad = gradient_basis_variables(c_vars, sm_mi,
@@ -1903,8 +1948,8 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   else {
     // level 0 (assume this is always contained in a partial reference_key)
     index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    r1r2_t1_coeffs[0][0][0]
-      = surrData.response_function(index) * s_data_2.response_function(index);
+    r1r2_t1_coeffs[0][0][0] = surrData.response_function(index)
+                            * s_data_2.response_function(index);
     ++cntr;
     // levels 1:w
     for (lev=1; lev<num_levels; ++lev) {
@@ -2078,9 +2123,9 @@ central_product_gradient_interpolant(
              r2_mm = s_data_2.response_function(index) - mean_2;
 	const RealVector& r1_grad = surrData.response_gradient(index);
 	const RealVector& r2_grad = s_data_2.response_gradient(index);
-	const RealVector& prev_grad
-	  = gradient_nonbasis_variables(surrData.continuous_variables(index),
-					sm_mi, key, cov_t1_coeff_grads, lev-1);
+	const RealVector& prev_grad = gradient_nonbasis_variables(
+	  surrData.continuous_variables(index), sm_mi, key,
+	  cov_t1_coeff_grads, lev-1);
 	Real* cov_t1_coeff_grads_lsp = cov_t1_coeff_grads_ls[pt];
 	for (v=0; v<num_deriv_vars; ++v)
 	  cov_t1_coeff_grads_lsp[v] = r1_mm * (r2_grad[v] - mean2_grad[v])

@@ -301,7 +301,7 @@ class JEGA_SL_IEDECL ConstraintInfo :
         inline
         double
         GetViolationAmount(
-            double of
+            con_val_t of
             ) const;
 
         /**
@@ -345,7 +345,7 @@ class JEGA_SL_IEDECL ConstraintInfo :
          */
         double
         GetViolationPercentage(
-            double of
+            con_val_t of
             ) const;
 
         /**
@@ -437,7 +437,7 @@ class JEGA_SL_IEDECL ConstraintInfo :
          * \return The corresponding constraint value of the supplied Design.
          */
         inline
-        double
+        con_val_t
         Which(
             const Design& des
             ) const;
@@ -484,7 +484,7 @@ class JEGA_SL_IEDECL ConstraintInfo :
          */
         void
         RecordViolation(
-            double rawValue
+            con_val_t rawValue
             );
 
         /// Computes and returns the average violation observed thus far.

@@ -325,7 +325,7 @@ class JEGA_SL_IEDECL DesignGroup
          * \return An object containing the extreme values (min and max) for
          *         each design variable of the Designs contained in this group.
          */
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<var_rep_t>
         ComputeDVExtremes(
             ) const;
 
@@ -337,7 +337,7 @@ class JEGA_SL_IEDECL DesignGroup
          *         each objective function of the Designs contained in this
          *         group.
          */
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<obj_val_t>
         ComputeOFExtremes(
             ) const;
 

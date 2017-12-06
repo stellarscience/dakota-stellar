@@ -123,8 +123,8 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MEvaluator);
-MANAGED_INTERFACE_FORWARD_DECLARE(public, MParameterDatabase);
+ref class MEvaluator;
+interface class MParameterDatabase;
 
 
 
@@ -156,7 +156,7 @@ Class Definition
  * exposes the required methods in a managed compliant manner for use from
  * .NET languages.
  */
-MANAGED_CLASS(public, MAlgorithmConfig) :
+public ref class MAlgorithmConfig :
     public System::IDisposable
 {
     /*
@@ -180,7 +180,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
     public:
 
         /// An enum to mirror the one in JEGA::FrontEnd::AlgorithmConfig.
-        MANAGED_ENUM(AlgType)
+        enum class AlgType
         {
             /// The tag for a MOGA
             MOGA = JEGA::FrontEnd::AlgorithmConfig::MOGA,
@@ -191,7 +191,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
         }; // enum AlgType
 
         /// An enum to mirror the one in the JEGA::Logging::Logger class.
-        MANAGED_ENUM(FatalBehavior)
+        enum class FatalBehavior
         {
             /// The tag for abort behavior
             ABORT = JEGA::Logging::Logger::ABORT,
@@ -271,7 +271,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * \brief A pointer to the ParameterDatabase created by this class for
          *        the underlying JEGA algorithm config.
          */
-        MParameterDatabase MOH _thePDB;
+        MParameterDatabase^ _thePDB;
 
 
 
@@ -299,7 +299,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetAlgorithmName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -354,7 +354,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetLoggingFilename(
-            System::String MOH filename
+            System::String^ filename
             );
 
     protected:
@@ -377,7 +377,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * \return The parameter database from which configuration of the
          *         algorithm will be extracted by JEGA.
          */
-        MParameterDatabase MOH
+        MParameterDatabase^
         GetParameterDB(
             );
 
@@ -413,7 +413,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the mutator operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.mutation_type", name);
            \endcode
@@ -424,7 +424,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetMutatorName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -434,7 +434,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the converger operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.convergence_type", name);
            \endcode
@@ -445,7 +445,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetConvergerName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -455,7 +455,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the crossover operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.crossover_type", name);
            \endcode
@@ -466,7 +466,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetCrosserName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -476,7 +476,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the niche pressure
          * application operator, this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.jega.niching_type", name);
            \endcode
@@ -488,7 +488,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetNichePressureApplicatorName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -498,7 +498,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the fitness assessment
          * operator, this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.fitness_type", name);
            \endcode
@@ -510,7 +510,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetFitnessAssessorName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -520,7 +520,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the selector operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.replacement_type", name);
            \endcode
@@ -531,7 +531,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetSelectorName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -541,7 +541,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the post processor operator,
          * this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam(
                 "method.jega.postprocessing_type", name
@@ -555,7 +555,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetPostProcessorName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -565,7 +565,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the initializer operator,
          * this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.initialization_type", name);
            \endcode
@@ -576,7 +576,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetInitializerName(
-            System::String MOH name
+            System::String^ name
             );
 
         /**
@@ -586,7 +586,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          * If there is already a name supplied for the main loop operator,
          * this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.jega.mainloop_type", name);
            \endcode
@@ -597,7 +597,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         bool
         SetMainLoopName(
-            System::String MOH name
+            System::String^ name
             );
 
 
@@ -626,7 +626,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          */
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
 
@@ -665,8 +665,8 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          *                     will be performed.
          */
         MAlgorithmConfig(
-            MParameterDatabase MOH thePDB,
-            MEvaluator MOH theEvaluator
+            MParameterDatabase^ thePDB,
+            MEvaluator^ theEvaluator
             );
 
         /**
@@ -679,7 +679,7 @@ MANAGED_CLASS(public, MAlgorithmConfig) :
          *                     will be performed.
          */
         MAlgorithmConfig(
-            MEvaluator MOH theEvaluator
+            MEvaluator^ theEvaluator
             );
 
         /// Finalizes an MAlgorithmConfig.

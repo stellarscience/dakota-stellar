@@ -243,7 +243,7 @@ const RealSymMatrix& BasisApproximation::hessian(const RealVector& x)
 	  << "type." << std::endl;
     abort_handler(-1);
   }
-    
+
   return basisApproxRep->hessian(x);
 }
 
@@ -267,7 +267,19 @@ const SurrogateData& BasisApproximation::surrogate_data() const
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
-    
+
+  return basisApproxRep->surrogate_data();
+}
+
+
+SurrogateData& BasisApproximation::surrogate_data()
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: surrogate_data() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+
   return basisApproxRep->surrogate_data();
 }
 
@@ -284,10 +296,10 @@ int BasisApproximation::min_coefficients() const
 }
 
 
-void BasisApproximation::compute_coefficients()
+void BasisApproximation::compute_coefficients(size_t index)
 {
   if (basisApproxRep)
-    basisApproxRep->compute_coefficients(); 
+    basisApproxRep->compute_coefficients(index); 
   else {
     PCerr << "Error: compute_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
@@ -296,10 +308,10 @@ void BasisApproximation::compute_coefficients()
 }
 
 
-void BasisApproximation::increment_coefficients()
+void BasisApproximation::increment_coefficients(size_t index)
 {
   if (basisApproxRep)
-    basisApproxRep->increment_coefficients(); 
+    basisApproxRep->increment_coefficients(index); 
   else {
     PCerr << "Error: increment_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
@@ -308,10 +320,10 @@ void BasisApproximation::increment_coefficients()
 }
 
 
-void BasisApproximation::decrement_coefficients()
+void BasisApproximation::decrement_coefficients(bool save_data)
 {
   if (basisApproxRep)
-    basisApproxRep->decrement_coefficients(); 
+    basisApproxRep->decrement_coefficients(save_data); 
   else {
     PCerr << "Error: decrement_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
@@ -392,11 +404,19 @@ void BasisApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void BasisApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+void BasisApproximation::clear_stored()
 {
   if (basisApproxRep)
-    basisApproxRep->combine_coefficients(combine_type, swap_index);
+    basisApproxRep->clear_stored(); 
+  //else
+  //  default: no stored approx data to clear
+}
+
+
+void BasisApproximation::combine_coefficients(size_t swap_index)
+{
+  if (basisApproxRep)
+    basisApproxRep->combine_coefficients(swap_index);
   else {
     PCerr << "Error: combine_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;

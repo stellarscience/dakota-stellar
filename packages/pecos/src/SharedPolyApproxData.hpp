@@ -41,6 +41,7 @@ public:
   ExpansionConfigOptions();
   /// constructor
   ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
+			 short combine_type, short discrep_type,
 			 short output_level, bool vbd_flag,
 			 unsigned short vbd_order, //short refine_type,
 			 short refine_cntl, int max_refine_iter,
@@ -62,6 +63,11 @@ public:
   /// {NODAL,HIERARCHICAL}_INTERPOLANT for SC or
   /// {TENSOR_PRODUCT,TOTAL_ORDER,ADAPTED}_BASIS for PCE regression
   short expBasisType;
+
+  /// type of expansion combination: additive, multiplicative, or both
+  short combineType;
+  /// type of multilevel discrepancy emulation: distinct or recursive
+  short discrepancyType;
 
   /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   short outputLevel;
@@ -94,6 +100,7 @@ public:
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
+  combineType(NO_COMBINE), discrepancyType(DISTINCT_DISCREP), 
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
   /*refinementType(NO_REFINEMENT),*/ refinementControl(NO_CONTROL),
   maxRefineIterations(100), maxSolverIterations(100),
@@ -103,12 +110,14 @@ inline ExpansionConfigOptions::ExpansionConfigOptions():
 
 inline ExpansionConfigOptions::
 ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
+		       short combine_type, short discrep_type,
 		       short output_level, bool vbd_flag,
 		       unsigned short vbd_order, //short refine_type,
 		       short refine_cntl, int max_refine_iter,
 		       int max_solver_iter, Real conv_tol,
 		       unsigned short sc_limit):
   expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
+  combineType(combine_type), discrepancyType(discrep_type),
   outputLevel(output_level), vbdFlag(vbd_flag), vbdOrderLimit(vbd_order),
   /*refinementType(refine_type),*/ refinementControl(refine_cntl),
   maxRefineIterations(max_refine_iter), maxSolverIterations(max_solver_iter),
@@ -119,8 +128,10 @@ ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 inline ExpansionConfigOptions::
 ExpansionConfigOptions(const ExpansionConfigOptions& ec_options):
   expCoeffsSolnApproach(ec_options.expCoeffsSolnApproach),
-  expBasisType(ec_options.expBasisType), outputLevel(ec_options.outputLevel),
-  vbdFlag(ec_options.vbdFlag), vbdOrderLimit(ec_options.vbdOrderLimit),
+  expBasisType(ec_options.expBasisType), combineType(ec_options.combineType),
+  discrepancyType(ec_options.discrepancyType),
+  outputLevel(ec_options.outputLevel), vbdFlag(ec_options.vbdFlag),
+  vbdOrderLimit(ec_options.vbdOrderLimit),
   //refinementType(ec_options.refinementType),
   refinementControl(ec_options.refinementControl),
   maxRefineIterations(ec_options.maxRefineIterations),
@@ -252,10 +263,10 @@ public:
   //
 
   /// allocate the shared data prior to building the set of approximations
-  virtual void allocate_data() = 0;
+  virtual void allocate_data(size_t index = _NPOS) = 0;
 
   /// update the shared data prior to rebuilding the set of approximations
-  virtual void increment_data();
+  virtual void increment_data(size_t index = _NPOS);
   /// decrement the previous increment and store its shared data for
   /// later retrieval
   virtual void decrement_data();
@@ -275,9 +286,11 @@ public:
   /// removes a redundant stored approximation data prior to combination
   virtual void remove_stored_data(size_t index = _NPOS) = 0;
   /// combines current and stored approximation data
-  virtual size_t pre_combine_data(short combine_type);
+  virtual size_t pre_combine_data();
   /// combines current and stored approximation data
-  virtual void post_combine_data(short combine_type);
+  virtual void post_combine_data();
+  /// clear stored approximation data
+  virtual void clear_stored_data();
 
   //
   //- Heading: Member functions

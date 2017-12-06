@@ -77,8 +77,8 @@ Namespace Using Directives
 ================================================================================
 */
 using namespace std;
-using namespace JEGA::Utilities;
 using namespace JEGA::Logging;
+using namespace JEGA::Utilities;
 using namespace eddy::utilities;
 
 
@@ -182,16 +182,6 @@ RandomBitMutator::Create(
     EDDY_FUNC_DEBUGSCOPE
     return new RandomBitMutator(algorithm);
 }
-
-
-
-
-
-
-
-
-
-
 
 /*
 ================================================================================
@@ -321,10 +311,6 @@ RandomBitMutator::Mutate(
         )
 }
 
-
-
-
-
 /*
 ================================================================================
 Private Methods
@@ -343,10 +329,6 @@ Private Methods
 Structors
 ================================================================================
 */
-
-
-
-
 RandomBitMutator::RandomBitMutator(
     GeneticAlgorithm& algorithm
     ) :
@@ -371,14 +353,6 @@ RandomBitMutator::RandomBitMutator(
 {
     EDDY_FUNC_DEBUGSCOPE
 }
-
-
-
-
-
-
-
-
 
 /*
 ================================================================================

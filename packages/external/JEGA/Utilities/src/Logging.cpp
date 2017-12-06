@@ -197,7 +197,7 @@ Static Member Data Definitions
 ================================================================================
 */
 Logger::FatalBehavior Logger::fatal_callback::onFatal = Logger::ABORT;
-auto_ptr<Logger> Logger::_global(0x0);
+unique_ptr<Logger> Logger::_global(nullptr);
 file_log Logger::_globalFLog;
 ostr_log Logger::_globalOLog _CONSOLE_ARGS(CONSOLE_STREAM);
 
@@ -296,6 +296,7 @@ Logger::FlushStreams(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
+
     JEGA_LOGGING_IF_FILE_LOGGING(
         this->_gate.get_log().get_first_log().flush_stream();
         )
@@ -310,6 +311,7 @@ Logger::GetFilename(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
+
     JEGA_LOGGING_IF_FILE_LOGGING(
         return _global->Gate().get_log().get_first_log().get_filename();
         )

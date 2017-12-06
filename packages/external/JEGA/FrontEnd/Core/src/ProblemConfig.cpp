@@ -171,6 +171,23 @@ ProblemConfig::GetMaxGuffSize(
     return this->_theTarget.GetMaxGuffSize();
 }
 
+void
+ProblemConfig::SetMaxDiscardCacheSize(
+    std::size_t maxSize
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    this->_theTarget.SetMaxDiscardCacheSize(maxSize);
+}
+
+std::size_t
+ProblemConfig::GetMaxDiscardCacheSize(
+    ) const
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return this->_theTarget.GetMaxDiscardCacheSize();
+}
+
 bool
 ProblemConfig::AddContinuumRealVariable(
     const string& label,
@@ -274,7 +291,7 @@ ProblemConfig::AddLinearMaximizeObjective(
 bool
 ProblemConfig::AddLinearSeekValueObjective(
     const string& label,
-    double value,
+    obj_val_t value,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -287,8 +304,8 @@ ProblemConfig::AddLinearSeekValueObjective(
 bool
 ProblemConfig::AddLinearSeekRangeObjective(
     const string& label,
-    double lowerBound,
-    double upperBound,
+    obj_val_t lowerBound,
+    obj_val_t upperBound,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -323,7 +340,7 @@ ProblemConfig::AddNonlinearMaximizeObjective(
 bool
 ProblemConfig::AddNonlinearSeekValueObjective(
     const string& label,
-    double value
+    obj_val_t value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -335,8 +352,8 @@ ProblemConfig::AddNonlinearSeekValueObjective(
 bool
 ProblemConfig::AddNonlinearSeekRangeObjective(
     const string& label,
-    double lowerBound,
-    double upperBound
+    obj_val_t lowerBound,
+    obj_val_t upperBound
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -348,7 +365,7 @@ ProblemConfig::AddNonlinearSeekRangeObjective(
 bool
 ProblemConfig::AddLinearInequalityConstraint(
     const string& label,
-    double upperLimit,
+    con_val_t upperLimit,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -361,7 +378,7 @@ ProblemConfig::AddLinearInequalityConstraint(
 bool
 ProblemConfig::AddLinearEqualityConstraint(
     const string& label,
-    double target,
+    con_val_t target,
     double allowedViol,
     const JEGA::DoubleVector& coeffs
     )
@@ -375,7 +392,7 @@ ProblemConfig::AddLinearEqualityConstraint(
 bool
 ProblemConfig::AddLinearNotEqualityConstraint(
     const string& label,
-    double tabooValue,
+    con_val_t tabooValue,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -388,8 +405,8 @@ ProblemConfig::AddLinearNotEqualityConstraint(
 bool
 ProblemConfig::AddLinearTwoSidedInequalityConstraint(
     const string& label,
-    double lowerLimit,
-    double upperLimit,
+    con_val_t lowerLimit,
+    con_val_t upperLimit,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -402,7 +419,7 @@ ProblemConfig::AddLinearTwoSidedInequalityConstraint(
 bool
 ProblemConfig::AddNonlinearInequalityConstraint(
     const string& label,
-    double upperLimit
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -414,7 +431,7 @@ ProblemConfig::AddNonlinearInequalityConstraint(
 bool
 ProblemConfig::AddNonlinearEqualityConstraint(
     const string& label,
-    double target,
+    con_val_t target,
     double allowedViol
     )
 {
@@ -427,7 +444,7 @@ ProblemConfig::AddNonlinearEqualityConstraint(
 bool
 ProblemConfig::AddNonlinearNotEqualityConstraint(
     const string& label,
-    double tabooValue
+    con_val_t tabooValue
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -439,8 +456,8 @@ ProblemConfig::AddNonlinearNotEqualityConstraint(
 bool
 ProblemConfig::AddNonlinearTwoSidedInequalityConstraint(
     const string& label,
-    double lowerLimit,
-    double upperLimit
+    con_val_t lowerLimit,
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE

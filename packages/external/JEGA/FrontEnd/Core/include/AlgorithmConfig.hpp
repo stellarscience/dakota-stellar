@@ -232,7 +232,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
 
         /**
          * \brief The parameter database into which data is loaded and from
-         *        which it is retreived.
+         *        which it is retrieved.
          *
          * This includes all information needed by the algorithm to run.  For
          * example, the names of the operators, the values the operators need,
@@ -292,7 +292,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
             ) const;
 
         /**
-         * \brief Allows mutable access to the evaluator createor known by this
+         * \brief Allows mutable access to the evaluator creator known by this
          *        config.
          *
          * \return The EvaluatorCreator used to create an evaluator for this
@@ -322,7 +322,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the algorithm, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.jega.algorithm_name", name);
            \endcode
@@ -342,7 +342,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a value stored for this flag,  this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddBooleanParam("method.print_each_pop", doPrint);
            \endcode
@@ -362,7 +362,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already an algorithm type stored,  this
          * operation will fail.
          *
-         * What is actually stored is not the valeu of the parameter but a
+         * What is actually stored is not the value of the parameter but a
          * string that indicates the algorithm type based on \a algType.
          *
          * \param algType The type of algorithm to create.
@@ -380,7 +380,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          *
          * This is ignored if the logging filename is empty.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddIntegralParam("method.output", defLevel);
            \endcode
@@ -402,7 +402,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * Leave this empty (do not call this method or call it with an empty
          * string) if you wish for this algorithm to log into the global log.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.log_file", filename);
            \endcode
@@ -422,10 +422,10 @@ class JEGA_SL_IEDECL AlgorithmConfig
          *        algorithm run as a result of utilization of this
          *        configuration object will write output.
          *
-         * All occurances of a # in the pattern will be replaced by the number
+         * All occurrences of a # in the pattern will be replaced by the number
          * of the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam(
                 "method.jega.final_data_filename", fpattern
@@ -449,7 +449,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the mutator operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.mutation_type", name);
            \endcode
@@ -470,7 +470,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the converger operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.convergence_type", name);
            \endcode
@@ -491,7 +491,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the crossover operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.crossover_type", name);
            \endcode
@@ -512,7 +512,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the niche pressure
          * application operator, this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.jega.niching_type", name);
            \endcode
@@ -534,7 +534,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the fitness assessment
          * operator, this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.fitness_type", name);
            \endcode
@@ -556,7 +556,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the selector operator, this
          * operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.replacement_type", name);
            \endcode
@@ -577,7 +577,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the post processor operator,
          * this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam(
                 "method.jega.postprocessor_type", name
@@ -601,7 +601,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the initializer operator,
          * this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.initialization_type", name);
            \endcode
@@ -622,7 +622,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * If there is already a name supplied for the main loop operator,
          * this operation will fail.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().AddStringParam("method.jega.mainloop_type", name);
            \endcode
@@ -640,7 +640,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Retrieves the supplied algorithm name from the parameter
          *        database.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.jega.algorithm_name");
            \endcode
@@ -655,7 +655,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied flag to indicate whether the algorithm
          *        should write each population to a data file or not.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetBooleanParam("method.print_each_pop");
            \endcode
@@ -684,7 +684,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          *        algorithm run as a result of utilization of this
          *        configuration object will log.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetIntegralParam("method.output");
            \endcode
@@ -700,7 +700,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Gets the name of the file to which the algorithm run as a
          *        result of utilization of this configuration object will log.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.log_file");
            \endcode
@@ -716,7 +716,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the mutator
          *        operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.mutation_type");
            \endcode
@@ -731,7 +731,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the converger
          *        operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.convergence_type");
            \endcode
@@ -747,7 +747,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the crossover
          *        operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.crossover_type");
            \endcode
@@ -763,7 +763,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the niche pressure
          *        application operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.jega.niching_type");
            \endcode
@@ -779,7 +779,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the
          *        fitness assessment operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.fitness_type");
            \endcode
@@ -795,7 +795,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the selector
          *        operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.replacement_type");
            \endcode
@@ -810,7 +810,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the post processor
          *        operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam(
                 "method.jega.postprocessor_type"
@@ -828,7 +828,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the initializer
          *        operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.initialization_type");
            \endcode
@@ -844,7 +844,7 @@ class JEGA_SL_IEDECL AlgorithmConfig
          * \brief Stores the supplied \a name as the name of the main loop
          *        operator to be used by the algorithm.
          *
-         * The result of this method can be equivolently achieved by a call to
+         * The result of this method can be equivalently achieved by a call to
          * \code
            GetParameterDB().GetStringParam("method.jega.mainloop_type");
            \endcode

@@ -139,7 +139,6 @@ Class Definition
 ================================================================================
 */
 
-
 /// Mutates by flipping bits of a binary representation.
 /**
  * This mutator introduces random variation by first converting a randomly
@@ -151,6 +150,20 @@ Class Definition
 class RandomBitMutator :
     public GeneticAlgorithmMutator
 {
+    /*
+    ============================================================================
+    Class Scope Typedefs
+    ============================================================================
+    */
+    public:
+
+
+    protected:
+
+
+    private:
+
+
     /*
     ============================================================================
     Member Data Declarations
@@ -237,10 +250,6 @@ class RandomBitMutator :
             GeneticAlgorithm& algorithm
             );
 
-
-
-
-
     /*
     ============================================================================
     Subclass Visible Methods
@@ -305,7 +314,6 @@ class RandomBitMutator :
             GeneticAlgorithm& algorithm
             ) const;
 
-
     protected:
 
 
@@ -332,18 +340,16 @@ class RandomBitMutator :
     ============================================================================
     */
     public:
-
-
-        /// Constructs an RandomBitMutator for use by \a algorithm.
+        
+        /// Constructs a RandomBitMutator for use by \a algorithm.
         /**
-         * \param algorithm The GA for which this mutator is
-         *                  being constructed.
+         * \param algorithm The GA for which this mutator is being constructed.
          */
         RandomBitMutator(
             GeneticAlgorithm& algorithm
             );
 
-        /// Copy constructs an RandomBitMutator.
+        /// Copy constructs a RandomBitMutator.
         /**
          * \param copy The instance from which properties should be copied into
          *             this.
@@ -353,13 +359,11 @@ class RandomBitMutator :
             );
 
         /**
-         * \brief Copy constructs an RandomBitMutator for use by
-         *        \a algorithm.
+         * \brief Copy constructs a RandomBitMutator for use by \a algorithm.
          *
          * \param copy The instance from which properties should be copied into
          *             this.
-         * \param algorithm The GA for which this mutator is
-         *                  being constructed.
+         * \param algorithm The GA for which this mutator is being constructed.
          */
         RandomBitMutator(
             const RandomBitMutator& copy,

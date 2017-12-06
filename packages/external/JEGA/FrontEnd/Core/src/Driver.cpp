@@ -56,6 +56,7 @@ Includes
 ================================================================================
 */
 // JEGAConfig.hpp should be the first include in all JEGA files.
+#include <../Utilities/include/JEGATypes.hpp>
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <ctime>
@@ -175,7 +176,29 @@ Driver::IsJEGAInitialized(
     return _initialized;
 }
 
+const char*
+Driver::GetXType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return typeid(var_rep_t).name();
+}
 
+const char*
+Driver::GetGType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return typeid(con_val_t).name();
+}
+
+const char*
+Driver::GetFType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return typeid(obj_val_t).name();
+}
 
 
 

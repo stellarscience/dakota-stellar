@@ -38,6 +38,7 @@
 
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
 
 #include "HOPSPACK_common.hpp"
 #include "HOPSPACK_CitizenGssNlc.hpp"

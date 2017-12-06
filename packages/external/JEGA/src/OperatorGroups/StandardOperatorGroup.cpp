@@ -195,7 +195,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 
-/// A macro to write implemenations for the Get operator registry methods.
+/// A macro to write implementations for the Get operator registry methods.
 /**
  * \param optype The operator registry type for which this is to be the get
  *               method.

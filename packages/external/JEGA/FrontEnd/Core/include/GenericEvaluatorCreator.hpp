@@ -244,7 +244,7 @@ class GenericEvaluatorCreator :
     */
     public:
 
-        /// Overriden to return a newly created EvalT.
+        /// Overridden to return a newly created EvalT.
         /**
          * The GA will assume ownership of the evaluator so you needn't worry
          * about keeping track of it for destruction.

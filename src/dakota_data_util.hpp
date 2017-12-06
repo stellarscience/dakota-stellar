@@ -699,17 +699,18 @@ void copy_data(const Teuchos::SerialDenseVector<OrdinalType1, ScalarType>& sdv,
 template <typename vecType1, typename vecType2>
 void copy_data_partial(
   const vecType1& source,
+	size_t source_start_idx,
         vecType2& target,
-	size_t start_idx,
+	size_t target_start_idx,
         size_t len)
 {
-  // This requires that the target type supports tghe size() method, which RealVectors don't
+  // This requires that the target type supports the size() method, which RealVectors don't
   //if( len != target.size()) { // could use <, but enforce exact match
   //  Cerr << "Error: bad target vector length copy_data_partial." << std::endl;
   //  abort_handler(-1);
   //}
   for( size_t i=0; i<len; ++i)
-    target[i] = source[i+start_idx];
+    target[i+target_start_idx] = source[i+source_start_idx];
 }
 
 /// copy portion of first SerialDenseVector to all of second SerialDenseVector - used by DataTransformModel::vars_mapping - RWH
@@ -733,7 +734,7 @@ void copy_data_partial(
     sdv2[i] = sdv1[start_index1+i];
 }
 
-/// copy all of first SerialDenseVector to portion of second SerialDenseVector - used by MixedVariables - RWH
+/// copy all of first SerialDenseVector to portion of second SerialDenseVector - used by MixedVariables - RWH, NLSSOLLeastSq - BMA
 template <typename OrdinalType1, typename OrdinalType2, typename ScalarType>
 void copy_data_partial(
   const Teuchos::SerialDenseVector<OrdinalType1, ScalarType>& sdv1,
@@ -1028,11 +1029,25 @@ size_t map_key_to_index(const KeyType& key,
   // linear search provides index in one pass, but find() plus distance()
   // should be faster for sorted associative containers
   //size_t index = 0;
-  //typename std::set<ScalarType>::const_iterator cit;
-  //for (cit=values.begin(); cit!=values.end(); ++cit, ++index)
-  //  if (*cit == value)
+  //typename std::map<KeyType, ValueType>::const_iterator cit;
+  //for (cit=pairs.begin(); cit!=pairs.end(); ++cit, ++index)
+  //  if (cit->first == value)
   //    return index;
   //return _NPOS;
+}
+
+
+/// calculate the map index corresponding to the passed value
+template <typename KeyType, typename ValueType>
+size_t map_value_to_index(const ValueType& value,
+			  const std::map<KeyType, ValueType>& pairs)
+{
+  size_t index = 0;
+  typename std::map<KeyType, ValueType>::const_iterator cit;
+  for (cit=pairs.begin(); cit!=pairs.end(); ++cit, ++index)
+    if (cit->second == value)
+      return index;
+  return _NPOS;
 }
 
 

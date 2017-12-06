@@ -187,7 +187,7 @@ class EDDY_SL_IEDECL java_util_levels
         static const level Off;
 
         /// This is the default level at which to log.
-        static const level Default;;
+        static const level Default;
 
     /*
     ============================================================================

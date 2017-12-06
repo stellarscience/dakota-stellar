@@ -180,7 +180,7 @@ MessageBoard::Unsubscribe(
     JEGA_IF_THREADSAFE(SubscriptionVector::scoped_lock l1(SVEC()));
 
     SubscriptionVector::iterator it(find(SVEC().begin(), SVEC().end(), s));
-    bool found = it != SVEC().end();
+    const bool found = (it != SVEC().end());
 
     if(found)
     {
@@ -233,17 +233,6 @@ MessageBoard::CountSubscribers(
 
     return ret;
 }
-
-
-
-
-
-
-
-
-
-
-
 
 void
 MessageInfo::ResetMessageIdentifier(
@@ -326,6 +315,7 @@ MessageInfo::Subscribe(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
+
     this->_subTag = MessageBoard::AddSubscriptionListener(
         bind1st(mem_fun(&MessageInfo::OnSubscription), this)
         );

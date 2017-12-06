@@ -36,6 +36,8 @@
   @brief Implement functions declared in HOPSPACK_LapackWrappers.hpp.
 */
 
+#include <algorithm>
+
 #include "HOPSPACK_common.hpp"
 #include "HOPSPACK_float.hpp"
 #include "HOPSPACK_LapackWrappers.hpp"

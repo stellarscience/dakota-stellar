@@ -222,8 +222,12 @@ protected:
   size_t solution_levels() const;
   /// activate entry in subModel::solnControlCostMap
   void solution_level_index(size_t lev_index);
+  /// return active entry in subModel::solnControlCostMap
+  size_t solution_level_index() const;
   /// return cost estimates from subModel::solnControlCostMap
-  RealVector solution_level_cost() const;
+  RealVector solution_level_costs() const;
+  /// return active cost estimate from subModel::solnControlCostMap
+  Real solution_level_cost() const;
 
   /// set the relative weightings for multiple objective functions or least
   /// squares terms and optionally recurses into subModel
@@ -238,31 +242,37 @@ protected:
   /// (SurrogateModel::responseMode)
   void surrogate_response_mode(short mode);
 
+  /// retrieve error estimates corresponding to the subModel
+  const RealVector& error_estimates();
+
   /// builds the subModel approximation
-  void build_approximation();
+  void build_approximation(size_t index = _NPOS);
   /// builds the subModel approximation
   bool build_approximation(const Variables& vars,
-			   const IntResponsePair& response_pr);
+			   const IntResponsePair& response_pr,
+			   size_t index = _NPOS);
 
   /// replaces data in the subModel approximation
-  void update_approximation(bool rebuild_flag);
+  void update_approximation(bool rebuild_flag, size_t index = _NPOS);
   /// replaces data in the subModel approximation
   void update_approximation(const Variables& vars,
 			    const IntResponsePair& response_pr,
-			    bool rebuild_flag);
+			    bool rebuild_flag, size_t index = _NPOS);
   /// replaces data in the subModel approximation
   void update_approximation(const VariablesArray& vars_array,
-			    const IntResponseMap& resp_map, bool rebuild_flag);
+			    const IntResponseMap& resp_map, bool rebuild_flag,
+			    size_t index = _NPOS);
 
   /// appends data to the subModel approximation
-  void append_approximation(bool rebuild_flag);
+  void append_approximation(bool rebuild_flag, size_t index = _NPOS);
   /// appends data to the subModel approximation
   void append_approximation(const Variables& vars,
 			    const IntResponsePair& response_pr,
-			    bool rebuild_flag);
+			    bool rebuild_flag, size_t index = _NPOS);
   /// appends data to the subModel approximation
   void append_approximation(const VariablesArray& vars_array,
-			    const IntResponseMap& resp_map, bool rebuild_flag);
+			    const IntResponseMap& resp_map, bool rebuild_flag,
+			    size_t index = _NPOS);
 
   void pop_approximation(bool save_surr_data, bool rebuild_flag = false);
   void push_approximation();
@@ -272,7 +282,8 @@ protected:
   void store_approximation(size_t index = _NPOS);
   void restore_approximation(size_t index = _NPOS);
   void remove_stored_approximation(size_t index = _NPOS);
-  void combine_approximation(short corr_type);
+  void combine_approximation();
+  void clear_stored();
 
   /// retrieve the set of Approximations from the subModel
   std::vector<Approximation>& approximations();
@@ -417,7 +428,7 @@ private:
   void initialize_data_from_submodel();
 
   /// update current variables/labels/bounds/targets from subModel
-  void update_from_sub_model();
+  void update_from_model(Model& model);
 
   //
   //- Heading: Data members
@@ -451,6 +462,9 @@ private:
   /// recast function using a nonlinear mapping.  Used in transform_set() to
   /// augment the subModel function value/gradient requirements.
   BoolDequeArray nonlinearRespMapping;
+
+  /// mapping of subModel.error_estimates() through response mappings
+  RealVector mappedErrorEstimates;
 
   /// holds pointer for variables mapping function passed in ctor/initialize
   void (*variablesMapping)     (const Variables& recast_vars,
@@ -545,7 +559,7 @@ inline void RecastModel::update_from_subordinate_model(size_t depth)
   if (depth > 0)
     subModel.update_from_subordinate_model(depth - 1);
   // now pull the latest updates from subModel
-  update_from_sub_model();
+  update_from_model(subModel);
 }
 
 
@@ -561,7 +575,15 @@ inline void RecastModel::solution_level_index(size_t lev_index)
 { subModel.solution_level_index(lev_index); }
 
 
-inline RealVector RecastModel::solution_level_cost() const
+inline size_t RecastModel::solution_level_index() const
+{ return subModel.solution_level_index(); }
+
+
+inline RealVector RecastModel::solution_level_costs() const
+{ return subModel.solution_level_costs(); }
+
+
+inline Real RecastModel::solution_level_cost() const
 { return subModel.solution_level_cost(); }
 
 
@@ -583,45 +605,49 @@ surrogate_function_indices(const IntSet& surr_fn_indices)
 { subModel.surrogate_function_indices(surr_fn_indices); }
 
 
-inline void RecastModel::build_approximation()
-{ subModel.build_approximation(); }
+inline void RecastModel::build_approximation(size_t index)
+{ subModel.build_approximation(index); }
 
 
 inline bool RecastModel::
-build_approximation(const Variables& vars, const IntResponsePair& response_pr)
-{ return subModel.build_approximation(vars, response_pr); }
+build_approximation(const Variables& vars, const IntResponsePair& response_pr,
+		    size_t index)
+{ return subModel.build_approximation(vars, response_pr, index); }
 
 
-inline void RecastModel::update_approximation(bool rebuild_flag)
-{ subModel.update_approximation(rebuild_flag); }
+inline void RecastModel::
+update_approximation(bool rebuild_flag, size_t index)
+{ subModel.update_approximation(rebuild_flag, index); }
 
 
 inline void RecastModel::
 update_approximation(const Variables& vars, const IntResponsePair& response_pr,
-		     bool rebuild_flag)
-{ subModel.update_approximation(vars, response_pr, rebuild_flag); }
+		     bool rebuild_flag, size_t index)
+{ subModel.update_approximation(vars, response_pr, rebuild_flag, index); }
 
 
 inline void RecastModel::
 update_approximation(const VariablesArray& vars_array,
-		     const IntResponseMap& resp_map, bool rebuild_flag)
-{ subModel.update_approximation(vars_array, resp_map, rebuild_flag); }
+		     const IntResponseMap& resp_map,
+		     bool rebuild_flag, size_t index)
+{ subModel.update_approximation(vars_array, resp_map, rebuild_flag, index); }
 
 
-inline void RecastModel::append_approximation(bool rebuild_flag)
-{ subModel.append_approximation(rebuild_flag); }
+inline void RecastModel::append_approximation(bool rebuild_flag, size_t index)
+{ subModel.append_approximation(rebuild_flag, index); }
 
 
 inline void RecastModel::
 append_approximation(const Variables& vars, const IntResponsePair& response_pr,
-		     bool rebuild_flag)
-{ subModel.append_approximation(vars, response_pr, rebuild_flag); }
+		     bool rebuild_flag, size_t index)
+{ subModel.append_approximation(vars, response_pr, rebuild_flag, index); }
 
 
 inline void RecastModel::
 append_approximation(const VariablesArray& vars_array,
-		     const IntResponseMap& resp_map, bool rebuild_flag)
-{ subModel.append_approximation(vars_array, resp_map, rebuild_flag); }
+		     const IntResponseMap& resp_map,
+		     bool rebuild_flag, size_t index)
+{ subModel.append_approximation(vars_array, resp_map, rebuild_flag, index); }
 
 
 inline void RecastModel::
@@ -653,8 +679,12 @@ inline void RecastModel::remove_stored_approximation(size_t index)
 { subModel.remove_stored_approximation(index); }
 
 
-inline void RecastModel::combine_approximation(short corr_type)
-{ subModel.combine_approximation(corr_type); }
+inline void RecastModel::combine_approximation()
+{ subModel.combine_approximation(); }
+
+
+inline void RecastModel::clear_stored()
+{ subModel.clear_stored(); }
 
 
 inline std::vector<Approximation>& RecastModel::approximations()

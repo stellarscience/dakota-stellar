@@ -295,63 +295,63 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
          * \brief Returns the representation of the max value for this nature
          *        as a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of the maximum value for this variable or
-         *         -DBL_MAX if error.
+         *         -limits::max if error.
          */
         virtual
-        double
-        GetMaxDoubleRep(
+        var_rep_t
+        GetMaxRep(
             ) const;
 
         /**
          * \brief Returns the representation of the min value for this nature
          *        as a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of the minimum value for this variable or
-         *         -DBL_MAX if error.
+         *         -limits::max if error.
          */
         virtual
-        double
-        GetMinDoubleRep(
+        var_rep_t
+        GetMinRep(
             ) const;
 
         /**
          * \brief Returns a random representation existing within
          *        the supplied range.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param lb The lower bound on the desired random value.
          * \param ub The upper bound on the desired value.
          * \return The representation of a random value inside \a within.
          */
         virtual
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             double lb,
             double ub
             ) const;
 
         /// Returns the proper representation of \a value as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to retrieve the representation of.
          * \return The representation of the value \a value.
          */
         virtual
-        double
-        GetDoubleRepOf(
+		var_rep_t
+        GetRepOf(
             double value
             ) const;
 
         /// Returns a random valid value for this type as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return A random value for this variable for which IsValidValue will
          *         return true;
@@ -363,7 +363,7 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
 
         /// Returns the maximum value this nature may have as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The largest legitimate value for this variable.
          */
@@ -374,7 +374,7 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
 
         /// Returns the minimum value this nature may have as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The smallest legitimate value for this variable.
          */
@@ -385,7 +385,7 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
 
         /// Returns the value represented by \a rep as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param rep The representation to convert to a value.
          * \return The value associated with or represented by \a rep.
@@ -393,12 +393,12 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
         virtual
         double
         GetValueOf(
-            double rep
+            var_rep_t rep
             ) const;
 
         /// Returns the nearest valid value to \a value.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to correct to a valid value.
          * \return The nearest value to \a value for which IsValidValue will
@@ -412,28 +412,28 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
 
         /// Returns the nearest valid double rep to \a rep.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param rep The representation to correct to a valid representation.
          * \return The nearest representation to \a rep for which
-         *         IsValidDoubleRep will return true;
+         *         IsValidRep will return true;
          */
         virtual
-        double
-        GetNearestValidDoubleRep(
-            double rep
+        var_rep_t
+        GetNearestValidRep(
+            var_rep_t rep
             ) const;
 
         /// Returns the distance between valid representations as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The increment that exists between consecutive
          *         representations according to the decimal precision.
          */
         virtual
-        double
-        GetDistanceBetweenDoubleReps(
+        var_rep_t
+        GetDistanceBetweenReps(
             ) const;
 
         /**
@@ -546,7 +546,7 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
         virtual
         bool
         IsRepInBounds(
-            double rep
+            var_rep_t rep
             ) const;
 
         /**
@@ -597,7 +597,7 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
          *        for this variable.
          *
          * Valid representations are those that may be returned by
-         * GetRandomDoubleRep.  This method considers a representation to be
+         * GetRandomRep.  This method considers a representation to be
          * valid if it is in bounds.
          *
          * \param rep The representation to check for validity with this
@@ -607,8 +607,8 @@ class JEGA_SL_IEDECL DiscreteDesignVariableNature :
          */
         virtual
         bool
-        IsValidDoubleRep(
-            double rep
+        IsValidRep(
+            var_rep_t rep
             ) const;
 
         /// Returns true b/c this is the discrete nature.

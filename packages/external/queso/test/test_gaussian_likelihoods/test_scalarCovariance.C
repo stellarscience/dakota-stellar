@@ -25,10 +25,12 @@
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 #include <queso/VectorSet.h>
+#include <queso/VectorSpace.h>
 #include <queso/BoxSubset.h>
 #include <queso/GaussianLikelihoodScalarCovariance.h>
 
 #include <cstdlib>
+#include <cmath>
 
 #define TOL 1e-8
 
@@ -55,6 +57,8 @@ public:
       modelOutput[i] = domainVector[i] + 3.0;
     }
   }
+
+  using QUESO::GaussianLikelihoodScalarCovariance<V, M>::evaluateModel;
 };
 
 int main(int argc, char ** argv) {

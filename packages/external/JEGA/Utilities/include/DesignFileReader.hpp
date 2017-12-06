@@ -162,7 +162,7 @@ Class Definition
  * values as opposed to representations (see the DesignVariableInfo class for
  * a detailed description of values vs. representations).
  *
- * The delimeter is usually a single character such as a tab or a space.  The
+ * The delimiter is usually a single character such as a tab or a space.  The
  * public read methods each have 2 versions.  One that takes a delimiter and
  * one that doesn't.  If a delimiter is supplied, the fields must all be
  * separated by exactly that delimiter on all lines.  If one is not supplied
@@ -263,8 +263,8 @@ class DesignFileReader
                 eddy::utilities::uint64_t _emptyLines;
 
                 /**
-                 * \brief A flag that indicates that a catestrophic error has
-                 *        occured.
+                 * \brief A flag that indicates that a catastrophic error has
+                 *        occurred.
                  *
                  * An example of such an error is the file not opening.
                  */
@@ -507,7 +507,7 @@ class DesignFileReader
          * this class type.
          *
          * \param file The file from which to read Designs.
-         * \param delim The delimeter used to separate values.
+         * \param delim The delimiter used to separate values.
          * \param target The target describing the expected configuration of
          *               Designs and used to create new Design class objects.
          * \return A fully loaded Result class object describing the results of
@@ -569,8 +569,8 @@ class DesignFileReader
          * of successes after this method call.
          *
          * \param from The unparsed string of textual representations of values
-         *             separated by the supplied delimeter.
-         * \param delim The delimeter separating values in \a from.
+         *             separated by the supplied delimiter.
+         * \param delim The delimiter separating values in \a from.
          * \param into The vector into which to store parsed values.  This
          *             vector is initially cleared by this method.
          */
@@ -589,7 +589,7 @@ class DesignFileReader
          * use of the automatic delimiter detection algorithm.
          *
          * \param from The unparsed string of textual representations of values
-         *             separated by the supplied delimeter.
+         *             separated by the supplied delimiter.
          * \param into The vector into which to store parsed values.  This
          *             vector is initially cleared by this method.
          */
@@ -603,7 +603,7 @@ class DesignFileReader
         /// Records values from \a from into \a des.
         /**
          * Interprets the values in \a from as design variable values, followed
-         * by objective function values, folowed by constraint values for a
+         * by objective function values, followed by constraint values for a
          * Design.
          *
          * \param from The vector of values to copy into \a into.
@@ -620,8 +620,8 @@ class DesignFileReader
         /// Gets the next field of a delimited list.
         /**
          * \param from The unparsed string of textual representations of values
-         *             separated by the supplied delimeter.
-         * \param delim The delimeter separating values in \a from.
+         *             separated by the supplied delimiter.
+         * \param delim The delimiter separating values in \a from.
          * \param off The offset amount at which to start looking for the next
          *            field.
          */
@@ -637,9 +637,9 @@ class DesignFileReader
          * \brief Attempts to interpret the supplied string as a list of
          *        delimited values and extract and return the delimiter.
          *
-         * This works by repeatedly finding the next "candiatate" delimiter
+         * This works by repeatedly finding the next "candidate" delimiter
          * and comparing it to the existing candidate delimiter.  If there
-         * is dissagreement at any point, the method fails and returns an
+         * is disagreement at any point, the method fails and returns an
          * empty string.
          *
          * \param from The string that is supposed to be a list of delimited
@@ -661,11 +661,11 @@ class DesignFileReader
          *        value of type double.
          *
          * \param str The string to attempt to parse as a double.
-         * \return A pair in which the first value is boolean and indicates
+         * \return A pair in which the first value is Boolean and indicates
          *         whether or not the parse succeeded and in which the second
          *         value is a double and is the value that was parsed out of
          *         the string.  Note that the double value is only meaningful
-         *         if the boolean is true.
+         *         if the Boolean is true.
          */
         static
         std::pair<bool, double>
@@ -698,7 +698,7 @@ class DesignFileReader
         /// Takes a potential delimiter and does required formatting.
         /**
          * This will identify an all-whitespace delimiter and replace it with
-         * the whitespace delimiter sentinal value and will otherwise strip
+         * the whitespace delimiter sentinel value and will otherwise strip
          * the leading and trailing whitespace off.
          *
          * \param unformatted The candidate delimiter to format.

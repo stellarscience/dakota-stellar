@@ -113,7 +113,7 @@ Inline Public Methods
 
 
 inline
-double
+con_val_t
 ConstraintInfo::Which(
    const Design& des
    ) const
@@ -135,7 +135,7 @@ ConstraintInfo::GetViolationAmount(
 inline
 double
 ConstraintInfo::GetViolationAmount(
-    double of
+    con_val_t of
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE

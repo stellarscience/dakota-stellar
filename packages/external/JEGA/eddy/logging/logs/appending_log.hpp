@@ -347,7 +347,7 @@ class EDDY_SL_IEDECL appending_log
 
         /// Removes app from the list of appenders.
         /**
-         * This will remove all occurances of the appender.
+         * This will remove all occurrences of the appender.
          *
          * \param app The appender to remove from the list of appenders.
          */

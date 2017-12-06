@@ -64,6 +64,7 @@ Includes
 #include <MainLoops/StandardMainLoop.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
+#include <../Utilities/include/LRUDesignCache.hpp>
 
 
 
@@ -295,7 +296,7 @@ StandardMainLoop::RunGeneration(
         pop.GetDVSortContainer().test_for_clones(cldrn.GetDVSortContainer());
         cldrn.GetDVSortContainer().test_within_list_for_clones();
 
-        const DesignDVSortSet& discards =
+        const LRUDesignCache& discards =
             this->GetDesignTarget().CheckoutDiscards();
         discards.test_for_clones(cldrn.GetDVSortContainer());
         this->GetDesignTarget().CheckinDiscards();

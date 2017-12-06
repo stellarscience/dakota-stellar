@@ -131,7 +131,7 @@ MaxDesignsNichePressureApplicator::SetDistancePercentages(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    std::size_t nof = this->GetDesignTarget().GetNOF();
+    const std::size_t nof = this->GetDesignTarget().GetNOF();
 
     JEGAIFLOG_CF_II(nof < pcts.size(), this->GetLogger(), lquiet(), this,
         text_entry(lquiet(),
@@ -155,7 +155,7 @@ MaxDesignsNichePressureApplicator::SetDistancePercentages(
 
     this->_distPcts = pcts;
 
-    double fill_val =
+    const double fill_val =
         (this->_distPcts.size() == 1) ? this->_distPcts[0] : DEFAULT_DIST_PCT;
 
     if(nof > this->_distPcts.size())
@@ -180,7 +180,7 @@ MaxDesignsNichePressureApplicator::SetDistancePercentages(
         static const double minPct = std::numeric_limits<double>::min();
         )
 
-    std::size_t nof = this->GetDesignTarget().GetNOF();
+    const std::size_t nof = this->GetDesignTarget().GetNOF();
 
     JEGAIFLOG_CF_II(pct < 0.0, this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(),
@@ -220,8 +220,8 @@ MaxDesignsNichePressureApplicator::SetDistancePercentage(
         )
 
     const DesignTarget& target = GetDesignTarget();
-    std::size_t nof = target.GetNOF();
-    JEGA::DoubleVector::size_type dvsof =
+    const std::size_t nof = target.GetNOF();
+    const JEGA::DoubleVector::size_type dvsof =
         static_cast<JEGA::DoubleVector::size_type>(of);
 
     // make sure we have enough locations in the percentages vector.
@@ -326,7 +326,7 @@ MaxDesignsNichePressureApplicator::Description(
         "computed count of how many other designs are too close to them.  Too "
         "close is a function of the supplied niche_vector.  Once the designs "
         "are all ranked, the top max_designs designs are kept in the "
-        "population and the remaining ones are bufferred or discarded "
+        "population and the remaining ones are buffered or discarded "
         "depending on the value of the cache_niched_designs flag.  Note that "
         "like other niching operators, this one will not discard an extreme "
         "design."
@@ -358,27 +358,29 @@ Subclass Visible Methods
 
 JEGA::DoubleVector
 MaxDesignsNichePressureApplicator::ComputeCutoffDistances(
-    const DoubleExtremes& paretoExtremes
+    const eddy::utilities::extremes<obj_val_t>& exts
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
+    typedef eddy::utilities::extremes<obj_val_t> extremes_t;
+
     // the cutoff distance is a percentage of the range of the objective
     // considering only the non-dominated designs.
-    std::size_t nof = this->GetDesignTarget().GetNOF();
+    const std::size_t nof = this->GetDesignTarget().GetNOF();
 
-    JEGAIFLOG_CF_II_F(nof != paretoExtremes.size(), GetLogger(), this,
+    JEGAIFLOG_CF_II_F(nof != exts.size(), GetLogger(), this,
         ostream_entry(lfatal(), this->GetName() + ": Extremes contain "
-            "record of ") << paretoExtremes.size() << " objectives for an "
+            "record of ") << exts.size() << " objectives for an "
             << nof << " objective problem."
         )
 
     // Prepare a vector for return.
     JEGA::DoubleVector ret(nof);
 
-    for(DoubleExtremes::size_type i=0; i<nof; ++i)
+    for(extremes_t::size_type i=0; i<nof; ++i)
         ret[i] = Math::Abs(
-            this->GetDistancePercentage(i) * paretoExtremes.get_range(i)
+            this->GetDistancePercentage(i) * exts.get_range(i)
             );
 
     // return the square route of the sum of squares.
@@ -496,14 +498,14 @@ MaxDesignsNichePressureApplicator::PreSelection(
     // if we are not caching designs, we needn't do anything here.
     if(!this->GetCacheDesigns()) return;
 
-    // Sychronize the lists just in case.
+    // Synchronize the lists just in case.
     population.SynchronizeOFAndDVContainers();
 
     JEGA_LOGGING_IF_ON(
         const DesignOFSortSet::size_type initPSize = population.SizeOF();
         )
 
-    // Re-assimilate the bufferred designs into the population so that they
+    // Re-assimilate the buffered designs into the population so that they
     // can be considered when making the initial selection.  We will cull
     // them out again when ApplyNichePressure is called later if appropriate.
     this->ReAssimilateBufferedDesigns(population);
@@ -524,8 +526,15 @@ MaxDesignsNichePressureApplicator::ApplyNichePressure(
 {
     EDDY_FUNC_DEBUGSCOPE
 
+    JEGALOG_II(GetLogger(), ldebug(), this, text_entry(ldebug(),
+        "max designs nicher: in use."))
+
     // If the population is empty, we needn't go any further.
     if(population.IsEmpty()) return;
+
+    // Make sure that the Taboo mark is clear on all designs.
+    for(DesignDVSortSet::const_iterator it(population.BeginDV());
+        it!=population.EndDV(); ++it) (*it)->ModifyAttribute(TABOO_MARK, false);
 
     // in case we are not caching, we will need the target below.
     DesignTarget& target = this->GetDesignTarget();
@@ -533,10 +542,10 @@ MaxDesignsNichePressureApplicator::ApplyNichePressure(
     // we will need the number of objectives for a few things here.
     const size_t nof = target.GetNOF();
 
-    // Sychronize the lists just in case.
+    // Synchronize the lists just in case.
     population.SynchronizeOFAndDVContainers();
 
-    // The the number of designs to keep for repeated use below.
+    // The number of designs to keep for repeated use below.
     const size_t n2Keep = this->GetMaximumDesigns();
 
     // See if there are fewer solutions in the population than we are to
@@ -553,7 +562,7 @@ MaxDesignsNichePressureApplicator::ApplyNichePressure(
     JEGA_LOGGING_IF_ON(std::size_t prevPopSize = popByOf.size();)
 
     // Now continue by extracting the populations objective function extremes
-    DoubleExtremes popExtremes(
+    eddy::utilities::extremes<obj_val_t> popExtremes(
         DesignStatistician::GetObjectiveFunctionExtremes(popByOf)
         );
 
@@ -563,15 +572,9 @@ MaxDesignsNichePressureApplicator::ApplyNichePressure(
     // all and keep them.  Then go into the loop below.
     DesignOFSortSet pareto(GetBest(popByOf, fitnesses));
 
-    // Now continue by extracting the pareto extremes
-    DoubleExtremes paretoExtremes(
-        DesignStatistician::GetObjectiveFunctionExtremes(pareto)
-        );
+    // Now continue by extracting the Pareto extremes
+    this->TagTabooNicheDesigns(pareto);
 
-    /*********************** Method 1  ****************************/
-    // Find the min and max fitness values.  Don't use the min and max of
-    // the fitness record b/c it may include solutions not currently in the
-    // population.
     double minFit = DBL_MAX;
     double maxFit = DBL_MIN;
 
@@ -607,106 +610,21 @@ MaxDesignsNichePressureApplicator::ApplyNichePressure(
         GeneticAlgorithmSelector::FitnessPred(nicheFits)
         );
 
-    // Keep track of the extremes that were about to get cut out.  We will
-    // keep them and cut out something else instead.
-    size_t nExtremesFound = 0;
-    for(size_t i=n2Keep; i<allDesVec.size(); ++i)
+    // Start at the end of the list and remove the required number all the while
+    // skipping any taboo.
+    size_t n2Remove = allDesVec.size() - n2Keep;
+    size_t index = allDesVec.size()-1;
+
+    while(n2Remove > 0)
     {
-        if(nExtremesFound < nof &&
-           MultiObjectiveStatistician::IsExtremeDesign(
-            *allDesVec[i], paretoExtremes
-            )){ ++nExtremesFound; continue; }
+        const Design* des = allDesVec[index--];
+        if(des->HasAttribute(TABOO_MARK)) continue;
 
-        bool buffered = this->BufferDesign(allDesVec[i]);
-        population.Erase(allDesVec[i]);
-        if(!buffered) target.TakeDesign(const_cast<Design*>(allDesVec[i]));
+        const bool buffered = this->BufferDesign(des);
+        population.Erase(des);
+        if(!buffered) target.TakeDesign(const_cast<Design*>(des));
+        --n2Remove;
     }
-
-    // Now cut out others instead of the extremes.  Cut from the current end
-    // of the list of designs kept
-    for(size_t i=1; i<=n2Keep && nExtremesFound>0; ++i)
-    {
-        const size_t desIndex = n2Keep-i;
-        if(MultiObjectiveStatistician::IsExtremeDesign(
-            *allDesVec[desIndex], paretoExtremes
-            )) continue;
-
-        bool buffered = this->BufferDesign(allDesVec[desIndex]);
-        population.Erase(allDesVec[desIndex]);
-        if(!buffered)
-            target.TakeDesign(const_cast<Design*>(allDesVec[desIndex]));
-        --nExtremesFound;
-    }
-
-
-    ///*********************** Method 2, complete ******************************/
-    //// Organize the solutions first by fitness and then, for all of the same
-    //// fitness, by niche count.   Select from them in priority order of fitness
-    //// followed by niche count.
-    //typedef map<size_t, vector<Design*> > RevNCMap;
-    //typedef map<double, RevNCMap> FitNCMap;
-
-    //FitNCMap fnm;
-
-    //for(DesignOFSortSet::const_iterator curr(popByOf.begin());
-    //    curr!=popByOf.end(); ++curr)
-    //{
-    //    const Design& des = **curr;
-    //    const double fitness = fitnesses.GetFitness(des);
-    //    const size_t nicheCt = ncts.GetValue(des);
-    //    fnm[fitness][nicheCt].push_back(const_cast<Design*>(&des));
-    //}
-
-    //size_t nSelected = 0;
-
-    //// Now go through the big map and start taking designs.  Remember to do
-    //// random selection when the number at a niche level will get us over the
-    //// number to be kept.  Remove items from the maps such that when we are done
-    //// the only items in the maps are the designs that we want taken out of the
-    //// population.
-    //for(FitNCMap::iterator fit(fnm.begin()); fit!=fnm.end(); )
-    //{
-    //    RevNCMap& rMap = fit->second;
-    //    for(RevNCMap::iterator cit(rMap.begin()); cit!=rMap.end();)
-    //    {
-    //        vector<Design*>& designs = cit->second;
-    //        if((nSelected + designs.size()) < n2Keep)
-    //        {
-    //            nSelected += designs.size();
-    //            cit = rMap.erase(cit);
-    //        }
-    //        else
-    //        {
-    //            // Choose and remove the number that need to be removed.
-    //            for(; nSelected<n2Keep; ++nSelected)
-    //            {
-    //                size_t index = RandomNumberGenerator::UniformInt<size_t>(
-    //                    0, designs.size()-1
-    //                    );
-
-    //                designs.erase(designs.begin() + index);
-    //            }
-    //        }
-    //    }
-
-    //    if(nSelected >= n2Keep) break;
-
-    //    if(rMap.empty()) fit = fnm.erase(fit); else ++fit;
-    //}
-
-
-    //// Now, every design that remains in the map must be removed from the
-    //// population.  Do that now.
-
-    //for(FitNCMap::iterator fit(fnm.begin()); fit!=fnm.end(); ++fit)
-    //    for(
-    //        RevNCMap::iterator cit(fit->second.begin());
-    //        cit!=fit->second.end(); ++cit
-    //        )
-    //        for(
-    //            vector<Design*>::iterator dit(cit->second.begin());
-    //            dit!=cit->second.end(); ++dit
-    //            ) population.Erase(*dit);
 
     JEGALOG_II(this->GetLogger(), lverbose(), this,
         ostream_entry(lverbose(), this->GetName() + ": Final population size "
@@ -730,13 +648,13 @@ Private Methods
 MaxDesignsNichePressureApplicator::NicheCountMap
 MaxDesignsNichePressureApplicator::ComputeNicheCounts(
     const DesignOFSortSet& designs,
-    const DoubleExtremes& paretoExtremes
+    const eddy::utilities::extremes<obj_val_t>& exts
     ) const
 {
     NicheCountMap ncm(designs.size());
     ncm.SuspendStatistics();
 
-    JEGA::DoubleVector dists(this->ComputeCutoffDistances(paretoExtremes));
+    JEGA::DoubleVector dists(this->ComputeCutoffDistances(exts));
 
     const size_t nof = this->GetDesignTarget().GetNOF();
 
@@ -757,7 +675,7 @@ MaxDesignsNichePressureApplicator::ComputeNicheCounts(
             // increment the count for jit stored in ncm.  That way, ncm will
             // always have record of those that are too close prior to iit at
             // the beginning of an iit loop.
-            double obj0Dist = this->ComputeObjectiveDistance(id, jd, 0);
+            const double obj0Dist = this->ComputeObjectiveDistance(id, jd, 0);
 
             // If the distance at obj0 is large enough, we can get out of this
             // inner loop and move onto the next "iit".  This is b/c of the

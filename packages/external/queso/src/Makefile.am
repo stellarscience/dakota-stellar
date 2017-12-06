@@ -1,6 +1,10 @@
 AM_CPPFLAGS = $(QUESO_CPPFLAGS)
 AM_CPPFLAGS += -I$(top_builddir)/inc
+
+if HAVE_BOOST
 AM_CPPFLAGS += $(BOOST_CPPFLAGS)
+endif
+
 AM_CPPFLAGS += $(GSL_CFLAGS)
 
 if HAVE_ANN
@@ -19,6 +23,10 @@ if HDF5_ENABLED
   AM_CPPFLAGS += $(HDF5_CFLAGS)
 endif
 
+if TRILINOS_ENABLED
+  AM_CPPFLAGS += -I$(TRILINOS_INCLUDE)
+endif
+
 if LIBMESH_SLEPC_ENABLED
   AM_CPPFLAGS += $(LIBMESH_CPPFLAGS)# $(LIBMESH_INCLUDE)
 endif
@@ -32,7 +40,11 @@ lib_LTLIBRARIES      = libqueso.la
 libqueso_includedir  = $(prefix)/include/queso
 libqueso_la_LDFLAGS  = $(all_libraries) -release $(GENERIC_RELEASE)
 libqueso_la_LDFLAGS += $(GSL_LIBS)
+
+if HAVE_BOOST
 libqueso_la_LDFLAGS += $(BOOST_PROGRAM_OPTIONS_LDFLAGS) $(BOOST_PROGRAM_OPTIONS_LIBS)
+endif
+
 libqueso_la_LDFLAGS += $(HDF5_LIBS)
 libqueso_la_LIBADD   =  # Empty.  Append below.
 
@@ -53,7 +65,13 @@ endif
 # variable later.
 
 if TRILINOS_ENABLED
-  libqueso_la_LDFLAGS += -lteuchoscore -lteuchoscomm -lteuchosnumerics -lteuchosparameterlist -lteuchosremainder -lepetra
+  libqueso_la_LDFLAGS += -L$(TRILINOS_LIB) \
+			 -lteuchoscore \
+			 -lteuchoscomm \
+			 -lteuchosnumerics \
+			 -lteuchosparameterlist \
+			 -lteuchosremainder \
+			 -lepetra
 endif
 
 if LIBMESH_SLEPC_ENABLED
@@ -65,6 +83,7 @@ endif
 libqueso_la_SOURCES =
 libqueso_la_SOURCES += core/src/Defines.C
 libqueso_la_SOURCES += core/src/Environment.C
+libqueso_la_SOURCES += core/inc/FilePtr.h  # Not installed
 libqueso_la_SOURCES += core/src/EnvironmentOptions.C
 libqueso_la_SOURCES += core/src/RngBase.C
 libqueso_la_SOURCES += core/src/RngGsl.C
@@ -152,6 +171,7 @@ libqueso_la_SOURCES += basic/src/VectorSet.C
 libqueso_la_SOURCES += basic/src/BoxSubset.C
 libqueso_la_SOURCES += basic/src/ConcatenationSubset.C
 libqueso_la_SOURCES += basic/src/DiscreteSubset.C
+libqueso_la_SOURCES += basic/inc/DiscreteSubset.h  # Not installed
 libqueso_la_SOURCES += basic/src/IntersectionSubset.C
 libqueso_la_SOURCES += basic/src/VectorSubset.C
 libqueso_la_SOURCES += basic/src/ScalarFunction.C
@@ -177,6 +197,7 @@ endif
 # Sources from stats/src
 
 libqueso_la_SOURCES += stats/src/FiniteDistribution.C
+libqueso_la_SOURCES += stats/inc/FiniteDistribution.h  # Not installed
 libqueso_la_SOURCES += stats/src/MetropolisHastingsSG.C
 libqueso_la_SOURCES += stats/src/MetropolisHastingsSGOptions.C
 libqueso_la_SOURCES += stats/src/MLSampling.C
@@ -275,6 +296,8 @@ libqueso_la_SOURCES += surrogates/src/InterpolationSurrogateIOASCII.C
 # Sources from gp/src
 libqueso_la_SOURCES += gp/src/GPMSA.C
 libqueso_la_SOURCES += gp/src/GPMSAOptions.C
+libqueso_la_SOURCES += gp/src/SimulationOutputMesh.C
+libqueso_la_SOURCES += gp/src/TensorProductMesh.C
 
 # Headers to install from core/inc
 
@@ -375,14 +398,12 @@ libqueso_include_HEADERS += basic/inc/VectorSpace.h
 libqueso_include_HEADERS += basic/inc/VectorSubset.h
 libqueso_include_HEADERS += basic/inc/BoxSubset.h
 libqueso_include_HEADERS += basic/inc/ConcatenationSubset.h
-libqueso_include_HEADERS += basic/inc/DiscreteSubset.h
 libqueso_include_HEADERS += basic/inc/IntersectionSubset.h
 libqueso_include_HEADERS += basic/inc/GenericVectorFunction.h
 libqueso_include_HEADERS += basic/inc/ConstantVectorFunction.h
 
 # Headers to install from stats/inc
 
-libqueso_include_HEADERS += stats/inc/FiniteDistribution.h
 libqueso_include_HEADERS += stats/inc/JointPdf.h
 libqueso_include_HEADERS += stats/inc/BayesianJointPdf.h
 libqueso_include_HEADERS += stats/inc/BetaJointPdf.h
@@ -485,6 +506,9 @@ libqueso_include_HEADERS += surrogates/inc/InterpolationSurrogateIOASCII.h
 # Headers to install from gp/inc
 libqueso_include_HEADERS += gp/inc/GPMSA.h
 libqueso_include_HEADERS += gp/inc/GPMSAOptions.h
+libqueso_include_HEADERS += gp/inc/SimulationOutputMesh.h
+libqueso_include_HEADERS += gp/inc/SimulationOutputPoint.h
+libqueso_include_HEADERS += gp/inc/TensorProductMesh.h
 
 # Install the magic header
 libqueso_include_HEADERS += contrib/inc/all.h

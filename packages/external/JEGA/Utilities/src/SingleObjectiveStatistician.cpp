@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class SingleObjectiveStatistician.
+        Implementation of class SingleObjectiveStatistician.
 
     NOTES:
 
@@ -145,7 +145,7 @@ SingleObjectiveStatistician::FindMinSumDesigns(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    double minSum = DBL_MAX;
+    double minSum = std::numeric_limits<double>::max();
     vector<const Design*> bests;
 
     const WeightedSumMap::const_iterator e(wsm.end());

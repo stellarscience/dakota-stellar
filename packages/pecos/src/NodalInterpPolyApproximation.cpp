@@ -20,6 +20,7 @@
 
 //#define DEBUG
 //#define VBD_DEBUG
+//#define INTERPOLATION_TEST
 
 namespace Pecos {
 
@@ -55,34 +56,45 @@ void NodalInterpPolyApproximation::allocate_arrays()
 }
 
 
-void NodalInterpPolyApproximation::compute_expansion_coefficients()
+void NodalInterpPolyApproximation::compute_coefficients(size_t index)
 {
+  PolynomialApproximation::compute_coefficients(index);
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag)
+    return;
+
+  allocate_arrays();
+
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  size_t index = 0, num_colloc_pts = surrData.points(), offset = 0;
+  size_t c_index = 0, num_colloc_pts = surrData.points(), offset = 0;
   if (surrData.anchor()) {
     offset = 1; ++num_colloc_pts;
     if (expansionCoeffFlag) {
       expansionType1Coeffs[0] = surrData.anchor_function();
       if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType2Coeffs);
+	Teuchos::setCol(surrData.anchor_gradient(),0,expansionType2Coeffs);
     }
     if (expansionCoeffGradFlag)
-      Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType1CoeffGrads);
+      Teuchos::setCol(surrData.anchor_gradient(), 0,
+		      expansionType1CoeffGrads);
   }
 
-  for (int i=offset; i<num_colloc_pts; ++i, ++index) {
+  for (int i=offset; i<num_colloc_pts; ++i, ++c_index) {
     if (expansionCoeffFlag) {
-      expansionType1Coeffs[i] = surrData.response_function(index);
+      expansionType1Coeffs[i] = surrData.response_function(c_index);
       // Note: gradients from DAKOTA already scaled in u-space Recast
       if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(surrData.response_gradient(index), i,
+	Teuchos::setCol(surrData.response_gradient(c_index), i,
 			expansionType2Coeffs);
     }
     if (expansionCoeffGradFlag)
-      Teuchos::setCol(surrData.response_gradient(index), i,
+      Teuchos::setCol(surrData.response_gradient(c_index), i,
 		      expansionType1CoeffGrads);
   }
+
+#ifdef INTERPOLATION_TEST
+  test_interpolation();
+#endif
 
   computedMean = computedVariance = 0;
 }
@@ -90,8 +102,9 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
 
 void NodalInterpPolyApproximation::store_coefficients(size_t index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.store(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS || index == stored_len) { // append
@@ -132,8 +145,9 @@ void NodalInterpPolyApproximation::store_coefficients(size_t index)
 
 void NodalInterpPolyApproximation::restore_coefficients(size_t index)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.restore(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS) {
@@ -154,8 +168,45 @@ void NodalInterpPolyApproximation::restore_coefficients(size_t index)
 }
 
 
+void NodalInterpPolyApproximation::remove_stored_coefficients(size_t index)
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.remove_stored(index);
+
+  size_t stored_len = storedExpType1Coeffs.size();
+  if (index == _NPOS || index == stored_len) {
+    storedExpType1Coeffs.pop_back(); storedExpType2Coeffs.pop_back();
+    storedExpType1CoeffGrads.pop_back();
+  }
+  else if (index < stored_len) {
+    RealVectorArray::iterator vit = storedExpType1Coeffs.begin();
+    std::advance(vit, index); storedExpType1Coeffs.erase(vit);
+    RealMatrixArray::iterator mit = storedExpType2Coeffs.begin();
+    std::advance(mit, index); storedExpType2Coeffs.erase(mit);
+    mit = storedExpType1CoeffGrads.begin();
+    std::advance(mit, index); storedExpType1CoeffGrads.erase(mit);
+  }
+}
+
+
+void NodalInterpPolyApproximation::clear_stored()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.clear_stored();
+
+  storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
+  storedExpType1CoeffGrads.clear();
+}
+
+
 void NodalInterpPolyApproximation::swap_coefficients(size_t index)
 {
+  // mirror operations to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.swap(index);
+
   if (expansionCoeffFlag) {
     RealVector tmp_vec(expansionType1Coeffs);
     expansionType1Coeffs = storedExpType1Coeffs[index];
@@ -176,26 +227,7 @@ void NodalInterpPolyApproximation::swap_coefficients(size_t index)
 }
 
 
-void NodalInterpPolyApproximation::remove_stored_coefficients(size_t index)
-{
-  size_t stored_len = storedExpType1Coeffs.size();
-  if (index == _NPOS || index == stored_len) {
-    storedExpType1Coeffs.pop_back(); storedExpType2Coeffs.pop_back();
-    storedExpType1CoeffGrads.pop_back();
-  }
-  else if (index < stored_len) {
-    RealVectorArray::iterator vit = storedExpType1Coeffs.begin();
-    std::advance(vit, index); storedExpType1Coeffs.erase(vit);
-    RealMatrixArray::iterator mit = storedExpType2Coeffs.begin();
-    std::advance(mit, index); storedExpType2Coeffs.erase(mit);
-    mit = storedExpType1CoeffGrads.begin();
-    std::advance(mit, index); storedExpType1CoeffGrads.erase(mit);
-  }
-}
-
-
-void NodalInterpPolyApproximation::
-combine_coefficients(short combine_type, size_t maximal_index)
+void NodalInterpPolyApproximation::combine_coefficients(size_t maximal_index)
 {
 #ifdef DEBUG
   PCout << "Original type1 expansion coefficients prior to combination:\n";
@@ -210,6 +242,7 @@ combine_coefficients(short combine_type, size_t maximal_index)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  short combine_type = data_rep->expConfigOptions.combineType;
 
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
@@ -307,20 +340,68 @@ combine_coefficients(short combine_type, size_t maximal_index)
   write_data(PCout, expansionType1Coeffs);
 #endif // DEBUG
 
-  // clear stored data now that it has been combined
-  if (expansionCoeffFlag) {
-    storedExpType1Coeffs.clear();
-    if (data_rep->basisConfigOptions.useDerivs)
-      storedExpType2Coeffs.clear();
-  }
-  if (expansionCoeffGradFlag)
-    storedExpType1CoeffGrads.clear();
-
   computedMean = computedVariance = 0;
 }
 
 
+void NodalInterpPolyApproximation::increment_coefficients(size_t index)
+{
+  synchronize_surrogate_data(index); // TO DO: update_surrogate_data() ?
+  update_expansion_coefficients();
+  allocate_component_sobol();
+}
+
+
+void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.pop(save_data);
+
+  size_t new_colloc_pts = surrData.points();
+  if (expansionCoeffFlag) {
+   expansionType1Coeffs.resize(new_colloc_pts);
+   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+   if (data_rep->basisConfigOptions.useDerivs) {
+     size_t num_deriv_vars = expansionType2Coeffs.numRows();
+     expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
+   }
+  }
+  if (expansionCoeffGradFlag) {
+    size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+    expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
+  }
+}
+
+
+void NodalInterpPolyApproximation::finalize_coefficients()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data()) {
+    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    for (i=0; i<num_popped; ++i)
+      surrData.push(data_rep->finalization_index(i), false);
+    surrData.clear_popped(); // only after process completed
+  }
+
+  update_expansion_coefficients();
+}
+
+
 void NodalInterpPolyApproximation::push_coefficients()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data()) {
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    surrData.push(data_rep->retrieval_index());
+  }
+
+  update_expansion_coefficients();
+}
+
+
+void NodalInterpPolyApproximation::update_expansion_coefficients()
 {
   size_t index, offset = 0, old_colloc_pts, new_colloc_pts = surrData.points();
   if (surrData.anchor())
@@ -329,8 +410,7 @@ void NodalInterpPolyApproximation::push_coefficients()
   if (expansionCoeffFlag) {
     old_colloc_pts = expansionType1Coeffs.length();
     expansionType1Coeffs.resize(new_colloc_pts);
-    SharedNodalInterpPolyApproxData* data_rep
-      = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
       size_t num_deriv_vars = expansionType2Coeffs.numRows();
       expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
@@ -3768,7 +3848,7 @@ member_coefficients_weights(const BitArray& member_bits,
     // key and c_vars data may change, but member data should be consistent.
     member_t1_wts[member_index]       = member_wt;
     member_colloc_key[member_index]   = key_i;  // links back to interp poly's
-    member_colloc_index[member_index] = c_index;// links back to surrData c_vars
+    member_colloc_index[member_index] = c_index;// links back to SurrData c_vars
 
     // now do the same for the type2 coeffs and weights
     if (data_rep->basisConfigOptions.useDerivs) {

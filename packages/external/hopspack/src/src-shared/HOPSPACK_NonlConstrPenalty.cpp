@@ -36,6 +36,7 @@
   @brief Implement HOPSPACK::NonlConstrPenalty.
 */
 
+#include <algorithm>
 #include <math.h>     //-- FOR fabs, sqrt
 
 #include "HOPSPACK_common.hpp"

@@ -24,11 +24,13 @@
 
 #include <queso/Environment.h>
 
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 #include <boost/program_options.hpp>
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
+#define GETPOT_NAMESPACE QUESO // So we don't clash with other getpots
 #include <queso/getpot.h>
+#undef GETPOT_NAMESPACE
 
 #include <queso/config_queso.h>
 #include <queso/EnvironmentOptions.h>
@@ -39,6 +41,10 @@
 #include <queso/BasicPdfsBoost.h>
 #include <queso/BasicPdfsCXX11.h>
 #include <queso/Miscellaneous.h>
+
+// Local includes
+#include <queso/FilePtr.h>
+
 #include <sys/time.h>
 #ifdef HAVE_GRVY
 #include <grvy.h>
@@ -144,7 +150,7 @@ FilePtrSetStruct::~FilePtrSetStruct()
 // Default constructor --------------------------------
 BaseEnvironment::BaseEnvironment(
   const char*                    passedOptionsInputFileName,
-  EnvOptionsValues* alternativeOptionsValues)
+  EnvOptionsValues* initialOptionsValues)
   :
   m_fullEnvIsReady             (false),
   m_worldRank                  (-1),
@@ -153,10 +159,10 @@ BaseEnvironment::BaseEnvironment(
   m_fullCommSize               (1),
   m_optionsInputFileName       (""),
   m_optionsInputFileAccessState(true),
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
   m_allOptionsDesc             (),
   m_allOptionsMap              (),
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
   m_input                      (new GetPot),
   m_subComm                    (),
   m_subRank                    (-1),
@@ -176,14 +182,19 @@ BaseEnvironment::BaseEnvironment(
   // If the user passed in an options object pointer, we really shouldn't let
   // ScopedPtr delete their object, so we make a copy.  That way, the dtor
   // will kill this local copy and leave the user's object in tact.
-  if (alternativeOptionsValues != NULL) {
-    m_optionsObj.reset(new EnvOptionsValues(*alternativeOptionsValues));
+  if (initialOptionsValues != NULL) {
+    m_optionsObj.reset(new EnvOptionsValues(*initialOptionsValues));
+  }
+  else {
+    // BMA 20170925: Changed this to default construct the options when none
+    // are passed in, so downstream checks for != NULL may behave differently
+    m_optionsObj.reset(new EnvOptionsValues());
   }
 }
 
 BaseEnvironment::BaseEnvironment(
   const std::string&             passedOptionsInputFileName,
-  EnvOptionsValues* alternativeOptionsValues)
+  EnvOptionsValues* initialOptionsValues)
   :
   m_fullEnvIsReady             (false),
   m_worldRank                  (-1),
@@ -192,10 +203,10 @@ BaseEnvironment::BaseEnvironment(
   m_fullCommSize               (1),
   m_optionsInputFileName       (passedOptionsInputFileName),
   m_optionsInputFileAccessState(true),
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
   m_allOptionsDesc             (),
   m_allOptionsMap              (),
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
   m_input                      (new GetPot),
   m_subComm                    (),
   m_subRank                    (-1),
@@ -213,8 +224,13 @@ BaseEnvironment::BaseEnvironment(
   // If the user passed in an options object pointer, we really shouldn't let
   // ScopedPtr delete their object, so we make a copy.  That way, the dtor
   // will kill this local copy and leave the user's object in tact.
-  if (alternativeOptionsValues != NULL) {
-    m_optionsObj.reset(new EnvOptionsValues(*alternativeOptionsValues));
+  if (initialOptionsValues != NULL) {
+    m_optionsObj.reset(new EnvOptionsValues(*initialOptionsValues));
+  }
+  else {
+    // BMA 20170925: Changed this to default construct the options when none
+    // are passed in, so downstream checks for != NULL may behave differently
+    m_optionsObj.reset(new EnvOptionsValues());
   }
 }
 
@@ -326,8 +342,7 @@ BaseEnvironment::subDisplayFile() const
 std::string
 BaseEnvironment::subDisplayFileName() const
 {
-  if (m_optionsObj == NULL) return ".";
-
+  queso_require_msg(m_optionsObj, "m_optionsObj variable is NULL");
   return m_optionsObj->m_subDisplayFileName;
 }
 //-------------------------------------------------------
@@ -369,7 +384,7 @@ BaseEnvironment::setOptionsInputFileAccessState(bool newState) const
   return;
 }
 //-------------------------------------------------------
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 #ifdef UQ_USES_COMMAND_LINE_OPTIONS
 const boost::program_options::options_description&
 BaseEnvironment::allOptionsDesc() const
@@ -379,9 +394,9 @@ BaseEnvironment::allOptionsDesc() const
   return *m_allOptionsDesc;
 }
 #endif
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 //-------------------------------------------------------
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 boost::program_options::variables_map&
 BaseEnvironment::allOptionsMap() const
 {
@@ -390,9 +405,9 @@ BaseEnvironment::allOptionsMap() const
   queso_require_msg(m_allOptionsMap, "m_allOptionsMap variable is NULL");
   return *m_allOptionsMap;
 }
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 //-------------------------------------------------------
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 void
 BaseEnvironment::scanInputFileForMyOptions(const boost::program_options::options_description& optionsDesc) const
 {
@@ -444,7 +459,7 @@ BaseEnvironment::scanInputFileForMyOptions(const boost::program_options::options
 
   return;
 }
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 //-----------------------------------------------------
 unsigned int
 BaseEnvironment::displayVerbosity() const
@@ -495,18 +510,21 @@ BaseEnvironment::basicPdfs() const
 std::string
 BaseEnvironment::platformName() const
 {
+  queso_require_msg(m_optionsObj, "m_optionsObj variable is NULL");
   return m_optionsObj->m_platformName;
 }
 //-------------------------------------------------------
 std::string
 BaseEnvironment::identifyingString() const
 {
+  queso_require_msg(m_optionsObj, "m_optionsObj variable is NULL");
   return m_optionsObj->m_identifyingString;
 }
 //-------------------------------------------------------
 void
 BaseEnvironment::resetIdentifyingString(const std::string& newString)
 {
+  queso_require_msg(m_optionsObj, "m_optionsObj variable is NULL");
   m_optionsObj->m_identifyingString = newString;
   return;
 }
@@ -807,10 +825,18 @@ BaseEnvironment::openUnifiedOutputFile(
         }
 #ifdef QUESO_HAS_HDF5
         else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
-          filePtrSet.h5Var = H5Fcreate((baseFileName+"."+fileType).c_str(),
+
+          std::string fullFileName = baseFileName+"."+fileType;
+
+          filePtrSet.h5Var = H5Fcreate(fullFileName.c_str(),
                                        H5F_ACC_TRUNC,
                                        H5P_DEFAULT,
                                        H5P_DEFAULT);
+
+
+          queso_require_greater_equal_msg(
+              filePtrSet.h5Var, 0,
+              "error opening file `" << fullFileName << "`");
         }
 #endif
         else {
@@ -838,7 +864,10 @@ BaseEnvironment::openUnifiedOutputFile(
         }
 #ifdef QUESO_HAS_HDF5
         else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
-          filePtrSet.h5Var = H5Fcreate((baseFileName+"."+fileType).c_str(), // TEMPORARY - FIX ME
+
+          std::string fullFileName = baseFileName+"."+fileType;
+
+          filePtrSet.h5Var = H5Fcreate(fullFileName.c_str(),
                                        H5F_ACC_TRUNC,
                                        H5P_DEFAULT,
                                        H5P_DEFAULT);
@@ -846,6 +875,9 @@ BaseEnvironment::openUnifiedOutputFile(
           //                    m_worldRank,
           //                    "BaseEnvironment::openUnifiedOutputFile(), writeOver=false",
           //                    "hdf file type not supported yet");
+          queso_require_greater_equal_msg(
+              filePtrSet.h5Var, 0,
+              "error opening file `" << fullFileName << "`");
         }
 #endif
         else {
@@ -1180,9 +1212,9 @@ FullEnvironment::FullEnvironment(
   RawType_MPI_Comm             inputComm,
   const char*                    passedOptionsInputFileName,
   const char*                    prefix,
-  EnvOptionsValues* alternativeOptionsValues)
+  EnvOptionsValues* initialOptionsValues)
   :
-  BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
+  BaseEnvironment(passedOptionsInputFileName,initialOptionsValues)
 {
   this->construct(inputComm, prefix);
 }
@@ -1191,9 +1223,9 @@ FullEnvironment::FullEnvironment(
   RawType_MPI_Comm             inputComm,
   const std::string&           passedOptionsInputFileName,
   const std::string&           prefix,
-  EnvOptionsValues* alternativeOptionsValues)
+  EnvOptionsValues* initialOptionsValues)
   :
-  BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
+  BaseEnvironment(passedOptionsInputFileName,initialOptionsValues)
 {
   this->construct(inputComm, prefix.c_str());
 }
@@ -1227,26 +1259,9 @@ FullEnvironment::construct (RawType_MPI_Comm inputComm,
   std::cout << "In FullEnv, finished dealing with MPI initially" << std::endl;
 #endif
 
-  //////////////////////////////////////////////////
   // Read options
-  //////////////////////////////////////////////////
-  // If NULL, we create one
-  if (m_optionsObj == NULL) {
-    // If there's an input file, we grab the options from there.  Otherwise the
-    // defaults are used
-    if (m_optionsInputFileName != "") {
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
-      m_allOptionsMap.reset(new boost::program_options::variables_map());
-      m_allOptionsDesc.reset(new boost::program_options::options_description("Allowed options"));
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
-
-      readOptionsInputFile();
-
-      m_input->parse_input_file(m_optionsInputFileName);
-    }
-
-    m_optionsObj.reset(new EnvOptionsValues(this, prefix));
-  }
+  if (!m_optionsInputFileName.empty())
+    readOptionsInputFile(prefix);
 
   // If help option was supplied, print info
   if (m_optionsObj->m_help != "") {
@@ -1431,8 +1446,12 @@ FullEnvironment::construct (RawType_MPI_Comm inputComm,
     m_basicPdfs.reset(new BasicPdfsGsl(m_worldRank));
   }
   else if (m_optionsObj->m_rngType == "boost") {
+#ifdef QUESO_HAVE_BOOST
     m_rngObject.reset(new RngBoost(m_optionsObj->m_seed,m_worldRank));
     m_basicPdfs.reset(new BasicPdfsBoost(m_worldRank));
+#else
+    queso_error_msg("Boost RNG requested, but QUESO was not built with boost.");
+#endif  // QUESO_HAVE_BOOST
   }
   else if (m_optionsObj->m_rngType == "cxx11") {
 #ifdef QUESO_HAVE_CXX11
@@ -1467,9 +1486,9 @@ FullEnvironment::construct (RawType_MPI_Comm inputComm,
 FullEnvironment::FullEnvironment(
   const char*                    passedOptionsInputFileName,
   const char*                    prefix,
-  EnvOptionsValues* alternativeOptionsValues)
+  EnvOptionsValues* initialOptionsValues)
   :
-  BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
+  BaseEnvironment(passedOptionsInputFileName,initialOptionsValues)
 {
   this->construct(prefix);
 }
@@ -1477,9 +1496,9 @@ FullEnvironment::FullEnvironment(
 FullEnvironment::FullEnvironment(
   const std::string&             passedOptionsInputFileName,
   const std::string&             prefix,
-  EnvOptionsValues* alternativeOptionsValues)
+  EnvOptionsValues* initialOptionsValues)
   :
-  BaseEnvironment(passedOptionsInputFileName,alternativeOptionsValues)
+  BaseEnvironment(passedOptionsInputFileName,initialOptionsValues)
 {
   this->construct(prefix.c_str());
 }
@@ -1487,6 +1506,7 @@ FullEnvironment::FullEnvironment(
 void
 FullEnvironment::construct (const char *prefix)
 {
+
 #ifdef QUESO_MEMORY_DEBUGGING
   std::cout << "Entering FullEnv" << std::endl;
 #endif
@@ -1508,26 +1528,9 @@ FullEnvironment::construct (const char *prefix)
   std::cout << "In FullEnv, finished dealing with MPI initially" << std::endl;
 #endif
 
-  //////////////////////////////////////////////////
   // Read options
-  //////////////////////////////////////////////////
-  // If NULL, we create one
-  if (m_optionsObj == NULL) {
-    // If there's an input file, we grab the options from there.  Otherwise the
-    // defaults are used
-    if (m_optionsInputFileName != "") {
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
-      m_allOptionsMap.reset(new boost::program_options::variables_map());
-      m_allOptionsDesc.reset(new boost::program_options::options_description("Allowed options"));
-#endif  // DISABLE_BOOST_PROGRAM_OPTIONS
-
-      readOptionsInputFile();
-
-      m_input->parse_input_file(m_optionsInputFileName);
-    }
-
-    m_optionsObj.reset(new EnvOptionsValues(this, prefix));
-  }
+  if (!m_optionsInputFileName.empty())
+    readOptionsInputFile(prefix);
 
   // If help option was supplied, print info
   if (m_optionsObj->m_help != "") {
@@ -1684,8 +1687,12 @@ FullEnvironment::construct (const char *prefix)
     m_basicPdfs.reset(new BasicPdfsGsl(m_worldRank));
   }
   else if (m_optionsObj->m_rngType == "boost") {
+#ifdef QUESO_HAVE_BOOST
     m_rngObject.reset(new RngBoost(m_optionsObj->m_seed,m_worldRank));
     m_basicPdfs.reset(new BasicPdfsBoost(m_worldRank));
+#else
+    queso_error_msg("Boost RNG requested, but QUESO wasn't built with boost.");
+#endif  // QUESO_HAVE_BOOST
   }
   else if (m_optionsObj->m_rngType == "cxx11") {
 #ifdef QUESO_HAVE_CXX11
@@ -1753,10 +1760,10 @@ void queso_terminate_handler()
 }
 
 
-//-------------------------------------------------------
 void
-FullEnvironment::readOptionsInputFile()
+FullEnvironment::readOptionsInputFile(const std::string& prefix)
 {
+  // Check file for readability for both Boost and GetPot cases
   std::ifstream* ifs = new std::ifstream(m_optionsInputFileName.c_str());
   if (ifs->is_open()) {
     //ifs->close();
@@ -1775,6 +1782,18 @@ FullEnvironment::readOptionsInputFile()
                                    << std::endl;
     queso_error();
   }
+
+  // prepare BPO data structures
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
+  m_allOptionsMap.reset(new boost::program_options::variables_map());
+  m_allOptionsDesc.reset(new boost::program_options::options_description("Allowed options"));
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
+
+  // perform the GetPot parse
+  m_input->parse_input_file(m_optionsInputFileName);
+
+  // allow input file options to override current options class values
+  m_optionsObj->parse(*this, prefix);
 
   return;
 }

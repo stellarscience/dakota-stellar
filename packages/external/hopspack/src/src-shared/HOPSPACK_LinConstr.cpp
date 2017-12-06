@@ -37,6 +37,7 @@
 */
 
 #include <iomanip>
+#include <algorithm>
 #include <math.h>     //-- FOR fabs
 
 #include "HOPSPACK_common.hpp"

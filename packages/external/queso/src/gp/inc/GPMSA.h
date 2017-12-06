@@ -32,6 +32,7 @@
 #include <queso/VectorSpace.h>
 #include <queso/VectorRV.h>
 #include <queso/ConcatenatedVectorRV.h>
+#include <queso/ConcatenationSubset.h>
 #include <queso/GammaVectorRV.h>
 #include <queso/BetaVectorRV.h>
 #include <queso/UniformVectorRV.h>
@@ -44,6 +45,10 @@ namespace QUESO {
 class GslVector;
 class GslMatrix;
 
+template <class V>
+class SimulationOutputMesh;
+class SimulationOutputPoint;
+
 template <class V = GslVector, class M = GslMatrix>
 class GPMSAEmulator : public BaseScalarFunction<V, M>
 {
@@ -52,7 +57,6 @@ public:
                 const VectorSpace<V, M> & m_scenarioSpace,
                 const VectorSpace<V, M> & m_parameterSpace,
                 const VectorSpace<V, M> & m_simulationOutputSpace,
-                const VectorSpace<V, M> & m_experimentOutputSpace,
                 const unsigned int m_numSimulations,
                 const unsigned int m_numExperiments,
                 const std::vector<typename SharedPtr<V>::Type> & m_simulationScenarios,
@@ -67,7 +71,10 @@ public:
                 const V & residual_in,
                 const M & BT_Wy_B_inv_in,
                 const M & KT_K_inv_in,
-                const GPMSAOptions & opts);
+                const GPMSAOptions & opts,
+                const std::vector<typename SharedPtr<SimulationOutputMesh<V> >::Type> & m_simulationMeshes_in,
+                const std::vector<std::vector<SimulationOutputPoint> > & m_experimentPoints_in,
+                const std::vector<std::vector<unsigned int> > & m_experimentVariables_in);
 
   virtual ~GPMSAEmulator();
 
@@ -86,7 +93,6 @@ public:
   const VectorSpace<V, M> & m_scenarioSpace;
   const VectorSpace<V, M> & m_parameterSpace;
   const VectorSpace<V, M> & m_simulationOutputSpace;
-  const VectorSpace<V, M> & m_experimentOutputSpace;
 
   const unsigned int m_numSimulations;
   const unsigned int m_numExperiments;
@@ -101,13 +107,13 @@ public:
 
   const std::vector<typename SharedPtr<M>::Type> & m_observationErrorMatrices;
 
-  // Block diagonal matrix; sacrificing efficiency for clarity
   typename SharedPtr<M>::Type m_observationErrorMatrix;
 
   //
   // Intermediate calculations we can cache
   //
   unsigned int num_svd_terms;
+  unsigned int num_nonzero_eigenvalues;
 
   const ConcatenatedVectorRV<V, M> & m_totalPrior;
 
@@ -120,7 +126,29 @@ public:
 
   const M & KT_K_inv;
 
+  //
+  // GPMSA user options to query
+  //
   const GPMSAOptions & m_opts;
+
+  //
+  // Data for functional output(s) cases
+  //
+
+  // Mesh(es) on which functional output is defined
+  const std::vector<typename SharedPtr<SimulationOutputMesh<V> >::Type> & m_simulationMeshes;
+
+  // Point(s) at which experimental data is located.
+  const std::vector<std::vector<SimulationOutputPoint> > & m_experimentPoints;
+
+  // Variable(s) for which experimental data is valid.
+  const std::vector<std::vector<unsigned int> > & m_experimentVariables;
+
+  using BaseScalarFunction<V, M>::lnValue;
+
+private:
+
+  unsigned int m_numExperimentOutputs;
 };
 
 template <class V = GslVector, class M = GslMatrix>
@@ -134,7 +162,6 @@ public:
                const VectorSpace<V, M> & scenarioSpace,
                const VectorSpace<V, M> & parameterSpace,
                const VectorSpace<V, M> & simulationOutputSpace,
-               const VectorSpace<V, M> & experimentOutputSpace,
                unsigned int numSimulations,
                unsigned int numExperiments);
 
@@ -163,9 +190,6 @@ public:
 
   //! Return the vector space in which simulations live
   const VectorSpace<V, M> & simulationOutputSpace() const;
-
-  //! Return the vector space in which experiments live
-  const VectorSpace<V, M> & experimentOutputSpace() const;
 
   //! Return the point in \c scenarioSpace for simulation \c simulationId
   /*!
@@ -223,16 +247,9 @@ public:
   const std::vector<typename SharedPtr<V>::Type> & experimentScenarios() const;
 
   //! Return the experiment output for experiment \c experimentId
-  /*!
-   * The returned vector is a point in \c experimentOutputSpace
-   */
   const V & experimentOutput(unsigned int experimentId) const;
 
-  //! Return all points in \c experimentOutputSpace for all experiments
-  /*!
-   * This returns all points in experiment output space at which experiments
-   * were executed
-   */
+  //! Return all outputs for all experiments
   const std::vector<typename SharedPtr<V>::Type> & experimentOutputs() const;
 
   //! Return all observation error covarince matrices for all experiments
@@ -246,12 +263,31 @@ public:
 
   //@}
 
+  //! Add a mesh to \c this, describing simulation output in
+  // space and/or time, for use in interpolation of functional data.
+  //
+  // We currently assume that meshes are added in the order in which
+  // their data appears in a simulation output vector, and we assume
+  // that all multivariate data in simulation outputs comes after all
+  // functional data.
+  void addSimulationMesh
+    (typename SharedPtr<SimulationOutputMesh<V> >::Type simulationMesh);
+
   //! Add a simulation to \c this
   /*!
    * The simulation added to \c this is assumed to correspond to the point
    * \c simulationScenario in scenario space and \c simulationParameter in
    * parameter space.  The simulation output is assumed to be stored in
    * \c simulationOutput.
+   *
+   * If the simulation includes functional data, then the functional
+   * data is expected to be indexed according to conventions which are
+   * user-supplied via addSimulationMesh.
+   *
+   * If the simulation includes both functional and multivariate data,
+   * then the functional data indices are expected to start at 0 and
+   * the multivariate data is expected to always begin after the last
+   * functional data index.
    */
   void addSimulation(typename SharedPtr<V>::Type simulationScenario,
                      typename SharedPtr<V>::Type simulationParameter,
@@ -293,10 +329,28 @@ public:
    * point \c expermientScenarios[i] in scenario space.  Each
    * experiment has a corresponding error covariance matrix stored in
    * \c experimentErrors[i]
+   *
+   * In cases where simulations return functional data, each
+   * experiment output may correspond to that data at a given point;
+   * if so then a non-NULL experimentPoints vector may be supplied to
+   * indicate the location (as a space/time point) of each output, and
+   * a non-NULL experimentVariables vector may be supplied to indicate
+   * the variable (corresponding to a particular functional or
+   * multivariate entry) of each output.  E.g. if each simulation has
+   * 2 functional and 8 multivariate outputs, then for an
+   * experimentVariables vector of {0, 1, 9}, the first output
+   * comes from the first functional variable, the second from the
+   * second, and the third output comes from the last multivariate
+   * variable.  Note that the last *variable* number in this case is 9
+   * (10 variables, counting from 0), even though the last *simulation
+   * output* index will be larger, probably much larger depending on
+   * the discretizations of the two functional data variables.
    */
   void addExperiments(const std::vector<typename SharedPtr<V>::Type> & experimentScenarios,
                       const std::vector<typename SharedPtr<V>::Type> & experimentOutputs,
-                      const std::vector<typename SharedPtr<M>::Type> & experimentErrors);
+                      const std::vector<typename SharedPtr<M>::Type> & experimentErrors,
+                      const std::vector<std::vector<SimulationOutputPoint> > * experimentPoints = NULL,
+                      const std::vector<std::vector<unsigned int> > * experimentVariables = NULL);
 
   //! Add all discrepancy bases to \c this
   /*!
@@ -307,13 +361,13 @@ public:
    * consistent with the discrepancy precision coefficients which will
    * multiply them.
    *
-   * If no discrepancy basis is provided, a single "1 for each output"
-   * vector will be used.
+   * If no discrepancy basis is provided, the natural basis e_i
+   * vectors will be used for multivariate data, and a gaussian
+   * discrepancy basis generated from user options will be used for
+   * functional data.
    *
-   * For now we will assume that outputs are the same for each
-   * experiment (tau_ij and phi_ij are independent of i, in the
-   * notation of Higdon et al), and so each discrepancy basis can be
-   * expressed as a vector indexed by output index.
+   * Data vectors are consistently indexed for each simulation output
+   * provided, and so discrepancy bases use the same indexing.
    */
   void setDiscrepancyBases(const std::vector<typename SharedPtr<V>::Type> & discrepancyBases);
 
@@ -338,10 +392,11 @@ public:
   const VectorSpace<V, M> & m_scenarioSpace;
   const VectorSpace<V, M> & m_parameterSpace;
   const VectorSpace<V, M> & m_simulationOutputSpace;
-  const VectorSpace<V, M> & m_experimentOutputSpace;
 
   unsigned int m_numSimulations;
   unsigned int m_numExperiments;
+
+  std::vector<typename SharedPtr<SimulationOutputMesh<V> >::Type> m_simulationMeshes;
 
   std::vector<typename SharedPtr<V>::Type> m_simulationScenarios;
   std::vector<typename SharedPtr<V>::Type> m_simulationParameters;
@@ -349,11 +404,23 @@ public:
   std::vector<typename SharedPtr<V>::Type> m_experimentScenarios;
   std::vector<typename SharedPtr<V>::Type> m_experimentOutputs;
 
-  // We will be recentering data around the simulation output mean
+  std::vector<std::vector<SimulationOutputPoint> > m_experimentPoints;
+  std::vector<std::vector<unsigned int> > m_experimentVariables;
+
+  // We will be recentering data around the simulation output mean.
+  //
+  // For efficiency, we save the means of the *normalized* outputs
+  // here.
   typename ScopedPtr<V>::Type simulationOutputMeans;
 
+  // Discrepancy basis vectors, whether autogenerated or provided by
+  // user.  Stored in non-normalized form, since they may be user
+  // provided.
   std::vector<typename SharedPtr<V>::Type> m_discrepancyBases;
 
+  // Observation error covariance matrices, indexed by experiment
+  // number.  Stored in non-normalized form, since they are user
+  // provided.
   std::vector<typename SharedPtr<M>::Type> m_observationErrorMatrices;
 
   // Counter for the number of adds that happen
@@ -366,19 +433,28 @@ public:
   // The emulator state
   // const V & m_emulator;
 
+  // Set up default discrepancy basis vectors if users have not
+  // supplied or requested a non-default basis.
+  void setUpDiscrepancyBases();
+
   // Build the emulator once all data has been added
   void setUpEmulator();
 
   // All the GP priors information for a scalar GP follows:
-  void setUpHyperpriors();
+  void setUpHyperpriors(const M & Wy);
 
   // Number of dimensions preserved from the SVD of simulation outputs
   unsigned int num_svd_terms;
 
+  // Number of "nonzero" eigenvalues in SVD of simulation outputs
+  unsigned int num_nonzero_eigenvalues;
+
   // Domains for all the hyperpriors
   typename ScopedPtr<VectorSpace<V, M> >::Type oneDSpace;
+  typename ScopedPtr<VectorSpace<V, M> >::Type numDiscrepancyGroupsDSpace;
 
   // Truncation error precision
+  typename ScopedPtr<VectorSpace<V, M> >::Type truncationErrorPrecisionSpace;
   typename ScopedPtr<V>::Type truncationErrorPrecisionMin;
   typename ScopedPtr<V>::Type truncationErrorPrecisionMax;
   typename ScopedPtr<BoxSubset<V, M> >::Type truncationErrorPrecisionDomain;
@@ -417,17 +493,21 @@ public:
   typename ScopedPtr<V>::Type emulatorDataPrecisionMax;
   typename ScopedPtr<BoxSubset<V, M> >::Type emulatorDataPrecisionDomain;
 
-  // Now form full prior
-  typename ScopedPtr<VectorSpace<V, M> >::Type totalSpace;
-  typename ScopedPtr<V>::Type totalMins;
-  typename ScopedPtr<V>::Type totalMaxs;
+  // Hyperparameter-only prior components
+  typename ScopedPtr<VectorSpace<V, M> >::Type hyperparamSpace;
+  typename ScopedPtr<V>::Type hyperparamMins;
+  typename ScopedPtr<V>::Type hyperparamMaxs;
 
-  typename ScopedPtr<BoxSubset<V, M> >::Type totalDomain;
+  typename ScopedPtr<BoxSubset<V, M> >::Type hyperparamDomain;
+
+  // Full prior components
+  typename ScopedPtr<VectorSpace<V, M> >::Type totalSpace;
+  typename ScopedPtr<ConcatenationSubset<V, M> >::Type totalDomain;
 
   std::vector<const BaseVectorRV<V, M> *> priors;
 
   // The hyperpriors
-  typename ScopedPtr<UniformVectorRV<V, M> >::Type m_truncationErrorPrecision;  // scalar
+  typename ScopedPtr<GammaVectorRV<V, M> >::Type m_truncationErrorPrecision;  // scalar
   typename ScopedPtr<GammaVectorRV<V, M> >::Type m_emulatorPrecision;  // (dim num_svd_terms) gamma(a, b) shape-rate
   typename ScopedPtr<GammaVectorRV<V, M> >::Type m_observationalPrecision;  // scalar gamma(a, b) shape-rate
   typename ScopedPtr<BetaVectorRV<V, M> >::Type m_emulatorCorrelationStrength;  // (dim scenariosspace + dim parameterspace)
@@ -436,6 +516,8 @@ public:
   typename ScopedPtr<GammaVectorRV<V, M> >::Type m_emulatorDataPrecision;  // (scalar) shape-rate
   typename ScopedPtr<ConcatenatedVectorRV<V, M> >::Type m_totalPrior;  // prior for joint parameters and hyperparameters
 
+  typename ScopedPtr<V>::Type m_truncationErrorPrecisionShapeVec;
+  typename ScopedPtr<V>::Type m_truncationErrorPrecisionScaleVec;
   typename ScopedPtr<V>::Type m_emulatorPrecisionShapeVec;
   typename ScopedPtr<V>::Type m_emulatorPrecisionScaleVec;
   typename ScopedPtr<V>::Type m_observationalPrecisionShapeVec;
@@ -454,18 +536,24 @@ public:
   bool m_constructedGP;
 
   // Block diagonal matrix; sacrificing efficiency for clarity
+  //
+  // This stores entries in *normalized*, not physical, units
   typename SharedPtr<M>::Type m_observationErrorMatrix;
 
   //
   // Intermediate calculations we can cache
+
+  // Vector of the SVD basis vectors we save.  Calculated from
+  // normalized data.
+  std::vector<V> m_TruncatedSVD_simulationOutputs;
+
+  // B matrix from Higdon et. al.
   //
-  typename ScopedPtr<M>::Type m_TruncatedSVD_simulationOutputs;
-
-  std::vector<M> m_discrepancyMatrices;
-
+  // Calculated from normalized discrepancy matrices and normalized
+  // SVD outputs
   typename ScopedPtr<M>::Type m_BMatrix;
 
-  // Matrix of svd basis vectors
+  // Matrix calculated from normalized SVD basis vectors
   typename ScopedPtr<M>::Type K;
 
   typename ScopedPtr<V>::Type residual;

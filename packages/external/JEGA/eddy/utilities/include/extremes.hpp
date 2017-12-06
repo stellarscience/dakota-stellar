@@ -314,7 +314,7 @@ class extremes
          *        larger.
          *
          * \param elem The index of the element of interest in these extremes.
-         * \param val The value to conditionally take as the new max for theS
+         * \param val The value to conditionally take as the new max for the
          *            element at \a elem.
          * \return true if the value was taken and false otherwise.
          */

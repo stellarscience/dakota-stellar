@@ -138,16 +138,16 @@ Public Methods
 ================================================================================
 */
 
-System::String MOH
+System::String^
 ManagedUtils::ToSysString(
     const char* cstr
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return MANAGED_GCNEW System::String(cstr);
+    return gcnew System::String(cstr);
 }
 
-System::String MOH
+System::String^
 ManagedUtils::ToSysString(
     const string& stdStr
     )
@@ -213,13 +213,15 @@ Structors
 
 JEGA::DoubleVector
 ToStdDoubleVector(
-    JEGA::FrontEnd::Managed::DoubleVector MOH ar
+    JEGA::FrontEnd::Managed::DoubleVector^ ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     JEGA::DoubleVector ret;
 
-    MANAGED_IENUMERATOR(System::Double) MOH oe = ar->GetEnumerator();
+    System::Collections::Generic::IEnumerator<System::Double>^ oe =
+		ar->GetEnumerator();
+
     while(oe->MoveNext())
     {
         // This cannot be reserve and push_back because of problems
@@ -231,15 +233,15 @@ ToStdDoubleVector(
     return ret;
 }
 
-JEGA::FrontEnd::Managed::DoubleVector MOH
+JEGA::FrontEnd::Managed::DoubleVector^
 ToSysDoubleVector(
     const JEGA::DoubleVector& ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    JEGA::FrontEnd::Managed::DoubleVector MOH ret =
-        MANAGED_GCNEW JEGA::FrontEnd::Managed::DoubleVector(
+    JEGA::FrontEnd::Managed::DoubleVector^ ret =
+        gcnew JEGA::FrontEnd::Managed::DoubleVector(
             static_cast<int>(ar.size())
             );
 
@@ -251,13 +253,15 @@ ToSysDoubleVector(
 
 JEGA::IntVector
 ToStdIntVector(
-    JEGA::FrontEnd::Managed::IntVector MOH ar
+    JEGA::FrontEnd::Managed::IntVector^ ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     JEGA::IntVector ret;
 
-    MANAGED_IENUMERATOR(System::Int32) MOH oe = ar->GetEnumerator();
+    System::Collections::Generic::IEnumerator<System::Int32>^ oe =
+		ar->GetEnumerator();
+
     while(oe->MoveNext())
     {
         // This cannot be reserve and push_back because of problems
@@ -269,15 +273,15 @@ ToStdIntVector(
     return ret;
 }
 
-JEGA::FrontEnd::Managed::IntVector MOH
+JEGA::FrontEnd::Managed::IntVector^
 ToSysIntVector(
     const JEGA::IntVector& ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    JEGA::FrontEnd::Managed::IntVector MOH ret =
-        MANAGED_GCNEW JEGA::FrontEnd::Managed::IntVector(
+    JEGA::FrontEnd::Managed::IntVector^ ret =
+        gcnew JEGA::FrontEnd::Managed::IntVector(
             static_cast<int>(ar.size())
             );
 
@@ -289,13 +293,15 @@ ToSysIntVector(
 
 JEGA::StringVector
 ToStdStringVector(
-    JEGA::FrontEnd::Managed::StringVector MOH ar
+    JEGA::FrontEnd::Managed::StringVector^ ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     JEGA::StringVector ret;
 
-    MANAGED_IENUMERATOR(System::String MOH) MOH oe = ar->GetEnumerator();
+    System::Collections::Generic::IEnumerator<System::String^>^ oe =
+		ar->GetEnumerator();
+
     while(oe->MoveNext())
     {
         // This cannot be reserve and push_back because of problems
@@ -307,15 +313,15 @@ ToStdStringVector(
     return ret;
 }
 
-JEGA::FrontEnd::Managed::StringVector MOH
+JEGA::FrontEnd::Managed::StringVector^
 ToSysStringVector(
     const JEGA::StringVector& ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    JEGA::FrontEnd::Managed::StringVector MOH ret =
-        MANAGED_GCNEW JEGA::FrontEnd::Managed::StringVector(
+    JEGA::FrontEnd::Managed::StringVector^ ret =
+        gcnew JEGA::FrontEnd::Managed::StringVector(
             static_cast<int>(ar.size())
             );
 
@@ -327,7 +333,7 @@ ToSysStringVector(
 
 std::string
 ToStdStr(
-    System::String MOH sysStr
+    System::String^ sysStr
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -341,7 +347,7 @@ ToStdStr(
 
 JEGA::DoubleMatrix
 ToStdDoubleMatrix(
-    JEGA::FrontEnd::Managed::DoubleMatrix MOH ar
+    JEGA::FrontEnd::Managed::DoubleMatrix^ ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -350,7 +356,8 @@ ToStdDoubleMatrix(
 
     JEGA::DoubleMatrix::size_type i=0;
 
-    MANAGED_IENUMERATOR(DoubleVector MOH) MOH oe = ar->GetEnumerator();
+    System::Collections::Generic::IEnumerator<DoubleVector^>^ oe =
+		ar->GetEnumerator();
 
     while(oe->MoveNext())
         ret[i++] = ToStdDoubleVector(oe->Current);
@@ -358,15 +365,15 @@ ToStdDoubleMatrix(
     return ret;
 }
 
-JEGA::FrontEnd::Managed::DoubleMatrix MOH
+JEGA::FrontEnd::Managed::DoubleMatrix^
 ToSysDoubleMatrix(
     const JEGA::DoubleMatrix& ar
     )
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    JEGA::FrontEnd::Managed::DoubleMatrix MOH ret =
-        MANAGED_GCNEW JEGA::FrontEnd::Managed::DoubleMatrix(
+    JEGA::FrontEnd::Managed::DoubleMatrix^ ret =
+        gcnew JEGA::FrontEnd::Managed::DoubleMatrix(
             static_cast<int>(ar.size())
             );
 

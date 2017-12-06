@@ -50,14 +50,14 @@ protected:
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
-  void compute_expansion_coefficients();
+  void compute_coefficients(size_t index = _NPOS);
 
   /// update the coefficients for the expansion of interpolation polynomials:
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void increment_coefficients();
+  void increment_coefficients(size_t index = _NPOS);
   /// restore the coefficients to their previous state prior to last increment:
   /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void decrement_coefficients();
+  void decrement_coefficients(bool save_data);
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index:
   /// push expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -76,10 +76,12 @@ protected:
   /// remove a redundant entry from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   /// prior to combine_coefficients (default is pop_back)
   void remove_stored_coefficients(size_t index = _NPOS);
+  /// clear storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void clear_stored();
 
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index]
-  void combine_coefficients(short combine_type, size_t swap_index);
+  void combine_coefficients(size_t swap_index);
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
@@ -123,6 +125,10 @@ private:
   //
   //- Heading: Convenience functions
   //
+
+  /// update expansionType{1Coeffs,2Coeffs,1CoeffGrads} following
+  /// changes to surrData
+  void update_expansion_coefficients();
 
   /// compute the mean of a tensor interpolant on a tensor grid;
   /// contributes to mean(x)
@@ -236,32 +242,6 @@ NodalInterpPolyApproximation(const SharedBasisApproxData& shared_data):
 
 inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 { }
-
-
-inline void NodalInterpPolyApproximation::increment_coefficients()
-{ push_coefficients(); allocate_component_sobol(); }
-
-
-inline void NodalInterpPolyApproximation::decrement_coefficients()
-{
-  size_t new_colloc_pts = surrData.points();
-  if (expansionCoeffFlag) {
-   expansionType1Coeffs.resize(new_colloc_pts);
-   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-   if (data_rep->basisConfigOptions.useDerivs) {
-     size_t num_deriv_vars = expansionType2Coeffs.numRows();
-     expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
-   }
-  }
-  if (expansionCoeffGradFlag) {
-   size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
-   expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
-  }
-}
-
-
-inline void NodalInterpPolyApproximation::finalize_coefficients()
-{ push_coefficients(); }
 
 
 inline RealVector NodalInterpPolyApproximation::

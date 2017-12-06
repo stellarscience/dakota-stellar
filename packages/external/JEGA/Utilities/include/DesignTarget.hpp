@@ -126,6 +126,7 @@ In-Namespace Forward Declares
 class Design;
 class DesignTarget;
 class RegionOfSpace;
+class LRUDesignCache;
 class ConstraintInfo;
 class DesignDVSortSet;
 class DesignVariableInfo;
@@ -228,8 +229,11 @@ class JEGA_SL_IEDECL DesignTarget
     */
     private:
 
+        /// Cache of discards
+        LRUDesignCache* _discCache;
+
         /// Collection of discarded Design's
-        DesignDVSortSet* _discards;
+        //DesignDVSortSet* _discards;
 
         /// The information objects describing the Design variables.
         DesignVariableInfoVector _dvInfos;
@@ -240,7 +244,7 @@ class JEGA_SL_IEDECL DesignTarget
         /// The information objects describing the constraints.
         ConstraintInfoVector _cnInfos;
 
-        std::vector<Design*> _guff;
+        mutable std::vector<Design*> _guff;
 
         std::size_t _maxGuffSize;
 
@@ -263,7 +267,12 @@ class JEGA_SL_IEDECL DesignTarget
 
         void
         SetMaxGuffSize(
-            std::size_t mgs
+            std::size_t maxSize
+            );
+
+        void
+        SetMaxDiscardCacheSize(
+            std::size_t maxSize
             );
 
 
@@ -291,6 +300,10 @@ class JEGA_SL_IEDECL DesignTarget
         GetMaxGuffSize(
             ) const;
 
+
+        std::size_t
+        GetMaxDiscardCacheSize(
+            ) const;
 
         /// Gets the vector of DesignVariableInfo's for this problem.
         /**
@@ -364,7 +377,7 @@ class JEGA_SL_IEDECL DesignTarget
          * \return The set of Designs passed to this Target by way of the
          *         TakeDesign* methods.
          */
-        const DesignDVSortSet&
+        const LRUDesignCache&
         CheckoutDiscards(
             ) const;
 

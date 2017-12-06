@@ -124,9 +124,9 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MSolution);
-MANAGED_CLASS_FORWARD_DECLARE(public, MGeneticAlgorithm);
-MANAGED_CLASS_FORWARD_DECLARE(public, MGeneticAlgorithmEvaluator);
+ref class MSolution;
+ref class MGeneticAlgorithm;
+ref class MGeneticAlgorithmEvaluator;
 
 
 
@@ -156,7 +156,7 @@ Class Definition
  *
  *
  */
-MANAGED_CLASS(public, MGeneticAlgorithm) :
+public ref class MGeneticAlgorithm :
     public System::IDisposable
 {
     /*
@@ -182,7 +182,7 @@ MANAGED_CLASS(public, MGeneticAlgorithm) :
 
         JEGA::Algorithms::GeneticAlgorithm* _theAlg;
 
-        MGeneticAlgorithmEvaluator MOH _wrappedEvaler;
+        MGeneticAlgorithmEvaluator^ _wrappedEvaler;
 
 
 
@@ -244,7 +244,7 @@ MANAGED_CLASS(public, MGeneticAlgorithm) :
          *
          * \return The single best Design currently in the population.
          */
-        MSolution MOH
+        MSolution^
         GetBestDesign(
             );
 
@@ -261,11 +261,11 @@ MANAGED_CLASS(public, MGeneticAlgorithm) :
          *
          * \return The set of solutions currently found by this algorithm
          */
-        SolutionVector MOH
+        SolutionVector^
         GetCurrentSolution(
             );
 
-        SolutionVector MOH
+        SolutionVector^
         GetCurrentPopulation(
             );
 
@@ -293,7 +293,7 @@ MANAGED_CLASS(public, MGeneticAlgorithm) :
         FlushLogStreams(
             );
 
-        MGeneticAlgorithmEvaluator MOH
+        MGeneticAlgorithmEvaluator^
         GetEvaluator(
             );
 
@@ -325,7 +325,7 @@ MANAGED_CLASS(public, MGeneticAlgorithm) :
          */
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
 

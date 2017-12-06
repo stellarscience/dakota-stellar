@@ -264,7 +264,7 @@ class JEGA_SL_IEDECL Driver
          *        number generator.
          *
          * This is not necessarily the same as the value provided to the
-         * InitializeJEGA method.  When that method is provided with a sentinal
+         * InitializeJEGA method.  When that method is provided with a sentinel
          * seed value, a seed is generated based on the clock and the time.
          * Therefore, this method provides access to whatever value was
          * actually used.
@@ -302,6 +302,21 @@ class JEGA_SL_IEDECL Driver
         static
         bool
         IsJEGAInitialized(
+            );
+
+        static
+        const char*
+        GetXType(
+            );
+        
+        static
+        const char*
+        GetGType(
+            );
+        
+        static
+        const char*
+        GetFType(
             );
 
     protected:

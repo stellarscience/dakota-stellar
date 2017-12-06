@@ -23,9 +23,9 @@
 namespace Pecos {
 
 
-void SharedNodalInterpPolyApproxData::allocate_data()
+void SharedNodalInterpPolyApproxData::allocate_data(size_t index)
 {
-  SharedInterpPolyApproxData::allocate_data();
+  SharedInterpPolyApproxData::allocate_data(index);
 
   // We are migrating towards consistent usage of INTERPOLATION_OF_PRODUCTS,
   // but its usage of higher-order reinterpolation of covariance is currently

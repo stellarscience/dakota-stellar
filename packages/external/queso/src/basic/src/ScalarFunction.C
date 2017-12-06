@@ -22,16 +22,19 @@
 //
 //-----------------------------------------------------------------------el-
 
+#include <queso/config_queso.h>
 #include <queso/ScalarFunction.h>
 #include <queso/VectorSet.h>
 #include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 #include <queso/BoostInputOptionsParser.h>
 #else
+#define GETPOT_NAMESPACE QUESO // So we don't clash with other getpots
 #include <queso/getpot.h>
+#undef GETPOT_NAMESPACE
 #endif
 
 #include <cstdlib>
@@ -47,7 +50,7 @@ BaseScalarFunction<V, M>::BaseScalarFunction(const char * prefix,
   : m_env(domainSet.env()),
     m_prefix((std::string)(prefix) + "func_"),
     m_domainSet(domainSet),
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
     m_parser(new BoostInputOptionsParser(m_env.optionsInputFileName())),
 #endif
     m_fdStepSize(1, std::atof(QUESO_BASESCALARFN_FD_STEPSIZE_ODV))
@@ -55,7 +58,7 @@ BaseScalarFunction<V, M>::BaseScalarFunction(const char * prefix,
   unsigned int dim = m_domainSet.vectorSpace().dimLocal();
 
   // Snarf fd step size from input file.
-#ifndef DISABLE_BOOST_PROGRAM_OPTIONS
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
   m_parser->registerOption<std::string>(m_prefix + "fdStepSize",
                                         QUESO_BASESCALARFN_FD_STEPSIZE_ODV,
                                         "step size for finite difference");
@@ -125,11 +128,11 @@ const VectorSet<V, M> & BaseScalarFunction<V, M>::domainSet() const
 
 template <class V, class M>
 double
-BaseScalarFunction<V, M>::lnValue(const V & domainVector,
-                                  const V * domainDirection,
-                                  V * gradVector,
-                                  M * hessianMatrix,
-                                  V * hessianEffect) const
+BaseScalarFunction<V, M>::lnValue(const V & /* domainVector */,
+                                  const V * /* domainDirection */,
+                                  V * /* gradVector */,
+                                  M * /* hessianMatrix */,
+                                  V * /* hessianEffect */) const
 {
   std::string msg;
 
@@ -172,10 +175,10 @@ BaseScalarFunction<V, M>::lnValue(const V & domainVector, V & gradVector) const
 
 template <class V, class M>
 double
-BaseScalarFunction<V, M>::lnValue(const V & domainVector,
-                                  V & gradVector,
-                                  const V & domainDirection,
-                                  V & hessianEffect) const
+BaseScalarFunction<V, M>::lnValue(const V & /* domainVector */,
+                                  V & /* gradVector */,
+                                  const V & /* domainDirection */,
+                                  V & /* hessianEffect */) const
 {
   std::string msg;
 

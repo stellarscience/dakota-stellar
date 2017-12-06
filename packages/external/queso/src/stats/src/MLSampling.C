@@ -31,6 +31,9 @@
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 #include <queso/BayesianJointPdf.h>
+#include <queso/FilePtr.h>
+
+#include <queso/FiniteDistribution.h>
 
 namespace QUESO {
 

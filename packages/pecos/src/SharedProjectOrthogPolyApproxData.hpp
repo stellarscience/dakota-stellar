@@ -62,10 +62,10 @@ public:
   //
   //- Cosmin Heading: Virtual function redefinitions
   //
-  void allocate_data();
+  void allocate_data(size_t index = _NPOS);
   void pre_push_data();
   void post_push_data();
-  void increment_data();
+  void increment_data(size_t index = _NPOS);
   void decrement_data();
   void pre_finalize_data();
   void post_finalize_data();
@@ -76,7 +76,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  size_t pre_combine_data(short combine_type);
+  size_t pre_combine_data();
 
   void increment_component_sobol();
 
@@ -114,9 +114,6 @@ private:
   //- Heading: Data
   //
 
-  /// combination type for stored expansions; cached in class to bridge
-  /// combine_coefficients() and integrate_response_moments()
-  short storedExpCombineType;
 };
 
 
@@ -124,8 +121,7 @@ inline SharedProjectOrthogPolyApproxData::
 SharedProjectOrthogPolyApproxData(short basis_type,
 				  const UShortArray& approx_order,
 				  size_t num_vars):
-  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars),
-  storedExpCombineType(NO_COMBINE)
+  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars)
 { }
 
 
@@ -135,8 +131,8 @@ SharedProjectOrthogPolyApproxData(short basis_type,
 				  size_t num_vars,
 				  const ExpansionConfigOptions& ec_options,
 				  const BasisConfigOptions& bc_options):
-  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars, ec_options,
-			     bc_options), storedExpCombineType(NO_COMBINE)
+  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars,
+			     ec_options, bc_options)
 { }
 
 

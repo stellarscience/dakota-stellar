@@ -239,7 +239,7 @@ class JEGA_SL_IEDECL ExternalEvaluator :
 
         std::size_t _evalNum;
 
-        /// The mutext that protects the _evalNum variable in threadsafe mode.
+        /// The mutex that protects the _evalNum variable in threadsafe mode.
         EDDY_DECLARE_MUTABLE_MUTEX(_currEvalMutex)
 
     /*
@@ -443,7 +443,7 @@ class JEGA_SL_IEDECL ExternalEvaluator :
          * method will issue a call to the external evaluation program and
          * read in the results.
          *
-         * \param des The design to be evaluted.
+         * \param des The design to be evaluated.
          * \return true if the Design is successfully evaluated and the results
          *              read in and false otherwise.
          */
@@ -537,7 +537,7 @@ class JEGA_SL_IEDECL ExternalEvaluator :
     private:
 
         /**
-         * \brief Replaces all occurances of the supplied character in the
+         * \brief Replaces all occurrences of the supplied character in the
          *        supplied string with a string representation of the supplied
          *        value.
          *

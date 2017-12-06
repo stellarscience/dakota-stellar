@@ -18,7 +18,7 @@
 
 namespace Pecos {
 
-void SharedRegressOrthogPolyApproxData::allocate_data()
+void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
 {
   if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
     // clear history from previous expansion; new pts -> new least interpolant
@@ -103,7 +103,7 @@ update_approx_order(unsigned short new_order)
 }
 
 
-void SharedRegressOrthogPolyApproxData::increment_data()
+void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
 {
   // To automatically update approxOrder, would need to either infer a
   // collocation ratio (based on initial data size + initial approxOrder)

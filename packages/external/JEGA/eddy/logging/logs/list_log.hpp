@@ -370,7 +370,7 @@ class EDDY_SL_IEDECL list_log
          * If the supplied list is the list of this log, nothing happens.
          *
          * This method is useful if you wish for example to copy only those
-         * entries of another log that match a certain prediate into this log.
+         * entries of another log that match a certain predicate into this log.
          * Consider the following line of code.
          * \code
             llog1.copy_in(llog2.get_entries(some_pred()));

@@ -90,8 +90,6 @@ namespace eddy
 
         template <typename T>
         class extremes;
-
-        typedef extremes<double> DoubleExtremes;
     }
 }
 
@@ -265,7 +263,7 @@ class DesignStatistician
          * violations.
          *
          * Once it is known that both Designs are infeasible, the method first
-         * considers bound contraints.  These are considered to be the most
+         * considers bound constraints.  These are considered to be the most
          * important since violation of these can often result in
          * designs that cannot even be evaluated.  If one of the designs
          * satisfies the bounds and the other does not, the one that does is
@@ -298,7 +296,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -323,7 +321,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not evaluate the feasibility of the Designs. It
@@ -362,7 +360,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -393,7 +391,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -426,7 +424,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -456,7 +454,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -481,7 +479,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -519,7 +517,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -552,7 +550,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -563,7 +561,7 @@ class DesignStatistician
          *
          * \param from The container from which to separate out all the
          *             evaluated into a new container.
-         * \return The new container containing only the evaluted of \a from.
+         * \return The new container containing only the evaluated of \a from.
          */
         template <typename Set_T>
         inline static
@@ -583,7 +581,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -594,7 +592,7 @@ class DesignStatistician
          *
          * \param from The container from which to separate out all the
          *             evaluated into a new container.
-         * \return The new container containing only the evaluted of \a from.
+         * \return The new container containing only the evaluated of \a from.
          */
         template <typename FromSet_T, typename IntoSet_T>
         inline static
@@ -609,7 +607,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -647,7 +645,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -680,7 +678,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -711,7 +709,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -737,7 +735,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -776,7 +774,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -810,7 +808,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -841,7 +839,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -867,7 +865,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -905,7 +903,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -938,7 +936,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -968,7 +966,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -993,7 +991,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1031,7 +1029,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1064,7 +1062,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1096,7 +1094,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1123,7 +1121,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1162,7 +1160,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1196,7 +1194,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1228,7 +1226,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1255,7 +1253,7 @@ class DesignStatistician
          *
          * Set_T must be an associative container, must hold pointers to
          * Design class objects or derivatives, be forward iteratable in STL
-         * style, be default constructable, and support the begin, end, erase,
+         * style, be default constructible, and support the begin, end, erase,
          * and insert methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1294,7 +1292,7 @@ class DesignStatistician
          * iteratable in STL style, and support the begin, end, and erase
          * methods.
          *
-         * IntoSet_T must be default constructable and support an insert
+         * IntoSet_T must be default constructible and support an insert
          * method that takes only a value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1325,7 +1323,7 @@ class DesignStatistician
         /// Finds the feasible in \a from and adds them in a new container.
         /**
          * Set_T must hold pointers to Design derivatives, be forward
-         * iteratable in STL style, be default constructable, and support the
+         * iteratable in STL style, be default constructible, and support the
          * begin, end, and insert methods.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -1345,7 +1343,7 @@ class DesignStatistician
          * \brief Finds the feasible from the range [first, end) and adds them
          *        into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1373,7 +1371,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -1398,7 +1396,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1421,7 +1419,7 @@ class DesignStatistician
 
         /// Finds the infeasible in \a from and adds them in a new container.
         /**
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -1442,7 +1440,7 @@ class DesignStatistician
          * \brief Finds the infeasible from the range [first, end) and adds
          *        them into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1470,7 +1468,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not evaluate the feasibility of the Designs.  It
@@ -1496,7 +1494,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1519,7 +1517,7 @@ class DesignStatistician
 
         /// Finds the evaluated in \a from and adds them in a new container.
         /**
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1539,7 +1537,7 @@ class DesignStatistician
          * \brief Finds the evaluated from the range [first, end) and adds them
          *        into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1567,7 +1565,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1592,7 +1590,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1617,7 +1615,7 @@ class DesignStatistician
          * \brief Finds the non-evaluated in \a from and adds them in a new
          *        container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1638,7 +1636,7 @@ class DesignStatistician
          * \brief Finds the non-evaluated from the range [first, end) and adds
          *        them into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1669,7 +1667,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1695,7 +1693,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
@@ -1721,11 +1719,11 @@ class DesignStatistician
          * \brief Finds the illconditioned in \a from and adds them in a new
          *        container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param from The container in which to find illconditioned Designs.
          * \return A new container holding only the illconditioned found in
@@ -1742,11 +1740,11 @@ class DesignStatistician
          * \brief Finds the illconditioned from the range [first, end) and adds
          *        them into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param first The iterator to the first Design in the range in which
          *              to search for illconditioned.  \a first will be
@@ -1773,11 +1771,11 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param from The container in which to find illconditioned Designs.
          * \return A new container holding only the illconditioned found in
@@ -1799,11 +1797,11 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param first The iterator to the first Design in the range in which
          *              to search for illconditioned.  \a first will be
@@ -1825,11 +1823,11 @@ class DesignStatistician
          * \brief Finds the non-illconditioned in \a from and adds them in a
          *        new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param from The container in which to find non-illconditioned
          *        Designs.
@@ -1847,11 +1845,11 @@ class DesignStatistician
          * \brief Finds the non-illconditioned from the range [first, end) and
          *        adds them into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param first The iterator to the first Design in the range in which
          *              to search for non-illconditioned.  \a first will be
@@ -1878,11 +1876,11 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param from The container in which to find non-illconditioned
          *             Designs.
@@ -1905,11 +1903,11 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param first The iterator to the first Design in the range in which
          *              to search for non-illconditioned.  \a first will be
@@ -1929,7 +1927,7 @@ class DesignStatistician
 
         /// Finds the cloned in \a from and adds them in a new container.
         /**
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -1949,7 +1947,7 @@ class DesignStatistician
          * \brief Finds the cloned from the range [first, end) and adds them
          *        into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -1977,7 +1975,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -2002,7 +2000,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -2025,7 +2023,7 @@ class DesignStatistician
 
         /// Finds the non-cloned in \a from and adds them in a new container.
         /**
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -2046,7 +2044,7 @@ class DesignStatistician
          * \brief Finds the non-cloned from the range [first, end) and adds
          *        them into a new container.
          *
-         * Set_T must be default constructable and support an insert
+         * Set_T must be default constructible and support an insert
          * method taking a single argument of type Design*.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -2074,7 +2072,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -2100,7 +2098,7 @@ class DesignStatistician
          *
          * FromSet_T must be forward iteratable in STL style, and support
          * the begin and end methods. IntoSet_T must be default
-         * constructable and support an insert method that takes only a
+         * constructible and support an insert method that takes only a
          * value_type argument.
          *
          * This method does not do any clone testing of the Designs.  It simply
@@ -2284,7 +2282,7 @@ class DesignStatistician
          * style, and support the begin and end methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param in The container of Designs in which to count the
          *           illconditioned.
@@ -2302,7 +2300,7 @@ class DesignStatistician
          * FwdIt must be a forward iterator that points to Design*'s.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param first An iterator to the first Design in the range in which
          *              to count the illconditioned. \a first may be counted.
@@ -2324,7 +2322,7 @@ class DesignStatistician
          * style, and support the begin and end methods.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param in The container of Designs in which to count the
          *           non-illconditioned.
@@ -2342,7 +2340,7 @@ class DesignStatistician
          * FwdIt must be a forward iterator that points to Design*'s.
          *
          * This method does not do any evaluation of the Designs.  It simply
-         * checks the Design::Isillconditioned method for each.
+         * checks the Design::IsIllconditioned method for each.
          *
          * \param first An iterator to the first Design in the range in which
          *              to count the non-illconditioned. \a first may be
@@ -2538,9 +2536,31 @@ class DesignStatistician
          */
         template <typename Set_T>
         static
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<obj_val_t>
         GetObjectiveFunctionExtremes(
             const Set_T& from
+            );
+
+        template <typename Set_T>
+        static
+        std::vector<const typename Set_T::value_type>
+        GetObjectiveFunctionExtremeDesigns(
+            const Set_T& from
+            );
+
+        template <typename Set_T>
+        static
+        std::vector<const typename Set_T::value_type>
+        GetObjectiveFunctionExtremeDesigns(
+            const Set_T& from,
+            const eddy::utilities::extremes<obj_val_t>& exts
+            );
+
+        static
+        eddy::utilities::extremes<obj_val_t>
+        TransformForMinimization(
+            const eddy::utilities::extremes<obj_val_t>& exts,
+            const ObjectiveFunctionInfoVector& infos
             );
 
         /**
@@ -2557,7 +2577,7 @@ class DesignStatistician
          */
         template <typename Set_T>
         static
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<var_rep_t>
         GetDesignVariableExtremes(
             const Set_T& from
             );
@@ -2579,7 +2599,7 @@ class DesignStatistician
          *         values for each variable represented in \a from.
          */
         static
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<var_rep_t>
         GetDesignVariableExtremes(
             const DesignDVSortSet& from
             );
@@ -2968,16 +2988,16 @@ class DesignStatistician
          *
          * The template parameter IntoSet_T must be an STL style
          * container that supports the insert(value_type) method and is default
-         * constructable.
+         * constructible.
          *
          * The return will be a container of type IntoSet_T
          * containing the "predicate = true" Designs of \a from. \a from will
          * be left with only "predicate = false" Designs in it.
          *
          * \param from The container from which to separate Designs.
-         * \param first The iterator to the first Design in the subrange of
+         * \param first The iterator to the first Design in the sub range of
          *              \a from from which to separate Designs.
-         * \param end The iterator to one past the last Design in the subrange
+         * \param end The iterator to one past the last Design in the sub range
          *            of \a from from which to separate Designs.
          * \param predicate The predicate with which to test each Design.
          *                  Those for which \a predicate returns true will be
@@ -3008,7 +3028,7 @@ class DesignStatistician
          *
          * The template parameter IntoSet_T must be an STL style
          * container that supports the insert(value_type) method and is default
-         * constructable.
+         * constructible.
          *
          * The return will be a container of type IntoSet_T
          * containing the "predicate = true" Designs of the supplied range.

@@ -25,6 +25,7 @@
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 #include <queso/VectorSet.h>
+#include <queso/VectorSpace.h>
 #include <queso/BoxSubset.h>
 #include <queso/UniformVectorRV.h>
 #include <queso/GenericVectorRV.h>
@@ -58,6 +59,8 @@ public:
       modelOutput[i] = domainVector[i];
     }
   }
+
+  using QUESO::GaussianLikelihoodScalarCovariance<V, M>::evaluateModel;
 };
 
 // A custom likelihood (that just so happens to also be Gaussian)
@@ -93,6 +96,8 @@ public:
   {
     return this->lnValue(domainVector);
   }
+
+  using QUESO::BaseScalarFunction<V, M>::lnValue;
 };
 
 template<class V, class M>

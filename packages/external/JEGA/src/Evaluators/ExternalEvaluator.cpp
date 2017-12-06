@@ -401,7 +401,7 @@ ExternalEvaluator::Evaluate(
     size_t ind = 0;
     for(ind=0; ind<nof && !ifile.eof(); ++ind)
     {
-        double temp = 0.0;
+        obj_val_t temp = obj_val_t(0);
         JEGAIFLOG_CF_II_F(!(ifile >> temp), this->GetLogger(), this,
             text_entry(lfatal(), GetName() + ": Failed to extract "
                 "a value of type double from \"" + inFName + "\".  Make sure "
@@ -431,7 +431,7 @@ ExternalEvaluator::Evaluate(
     {
         for(ind=0; ind<ncn && !ifile.eof(); ++ind)
         {
-            double temp = 0.0;
+            con_val_t temp = con_val_t(0);
             JEGAIFLOG_CF_II_F(!(ifile >> temp), this->GetLogger(), this,
                 text_entry(lfatal(), this->GetName() + ": Failed to "
                     "extract a value of type double from \"" + inFName + "\". "

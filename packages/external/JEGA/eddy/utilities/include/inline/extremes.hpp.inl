@@ -54,6 +54,7 @@ Document This File
 Includes
 ================================================================================
 */
+#include <limits>
 #include <cstdlib>
 #include "../Math.hpp"
 
@@ -209,12 +210,9 @@ extremes<T>::take_if_either(
     const T& val
     )
 {
-    bool tookMax = this->take_if_max(elem, val);
-    bool tookMin = this->take_if_min(elem, val);
-    return (tookMax && tookMin) ? 2 :
-           (tookMax) ? 1 :
-           (tookMin) ? -1 :
-           0;
+    const bool tookMax = this->take_if_max(elem, val);
+    const bool tookMin = this->take_if_min(elem, val);
+    return (tookMax && tookMin) ? 2 : ((tookMax) ? 1 : ((tookMin) ? -1 : 0));
 }
 
 template<typename T>
@@ -346,7 +344,7 @@ extremes<T>::merge(
     bool ret = false;
 
     // only go for the min of the two sizes.
-    size_type nelem = Math::Min(this->size(), rhs.size());
+    const size_type nelem = Math::Min(this->size(), rhs.size());
 
     for(std::size_t elem=0; elem<nelem; ++elem)
     {
@@ -430,7 +428,12 @@ inline
 extremes<T>::extremes(
     size_type size
     ) :
-        _data(size, std::make_pair(T(), T()))
+        _data(
+            size,
+            std::make_pair(
+                std::numeric_limits<T>::max(), std::numeric_limits<T>::min()
+                )
+            )
 {
 }
 

@@ -152,9 +152,9 @@ Class Definition
  * This class houses information such as descriptions of the design variables,
  * objective functions, and constraints.
  *
- * It may seem a bit nonintuitive but this does not include the means of
+ * It may seem a bit non-intuitive but this does not include the means of
  * evaluation.  This is only a description of the form of a problem.  The
- * means of evaluation is supplied throught the AlgorithmConfig class.
+ * means of evaluation is supplied through the AlgorithmConfig class.
  * Thus, a problem configuration can be used with multiple algorithm
  * configurations and thus with multiple different evaluators.
  *
@@ -275,6 +275,15 @@ class JEGA_SL_IEDECL ProblemConfig
 
         std::size_t
         GetMaxGuffSize(
+            ) const;
+
+        void
+        SetMaxDiscardCacheSize(
+            std::size_t maxSize
+            );
+
+        std::size_t
+        GetMaxDiscardCacheSize(
             ) const;
 
         /**
@@ -418,7 +427,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddLinearSeekValueObjective(
             const std::string& label,
-            double value,
+            obj_val_t value,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -439,8 +448,8 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddLinearSeekRangeObjective(
             const std::string& label,
-            double lowerBound,
-            double upperBound,
+            obj_val_t lowerBound,
+            obj_val_t upperBound,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -485,7 +494,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddNonlinearSeekValueObjective(
             const std::string& label,
-            double value
+            obj_val_t value
             );
 
         /**
@@ -502,8 +511,8 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddNonlinearSeekRangeObjective(
             const std::string& label,
-            double lowerBound,
-            double upperBound
+            obj_val_t lowerBound,
+            obj_val_t upperBound
             );
 
         /**
@@ -523,7 +532,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddLinearInequalityConstraint(
             const std::string& label,
-            double upperLimit = 0.0,
+            con_val_t upperLimit = 0.0,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -546,7 +555,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddLinearEqualityConstraint(
             const std::string& label,
-            double target,
+            con_val_t target,
             double allowedViol = 0.0,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
@@ -568,7 +577,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddLinearNotEqualityConstraint(
             const std::string& label,
-            double tabooValue,
+            con_val_t tabooValue,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -591,8 +600,8 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddLinearTwoSidedInequalityConstraint(
             const std::string& label,
-            double lowerLimit,
-            double upperLimit,
+            con_val_t lowerLimit,
+            con_val_t upperLimit,
             const JEGA::DoubleVector& coeffs = JEGA::DoubleVector()
             );
 
@@ -610,7 +619,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddNonlinearInequalityConstraint(
             const std::string& label,
-            double upperLimit = 0.0
+            con_val_t upperLimit = con_val_t(0)
             );
 
         /**
@@ -629,7 +638,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddNonlinearEqualityConstraint(
             const std::string& label,
-            double target,
+            con_val_t target,
             double allowedViol = 0.0
             );
 
@@ -647,7 +656,7 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddNonlinearNotEqualityConstraint(
             const std::string& label,
-            double tabooValue
+            con_val_t tabooValue
             );
 
         /**
@@ -667,8 +676,8 @@ class JEGA_SL_IEDECL ProblemConfig
         bool
         AddNonlinearTwoSidedInequalityConstraint(
             const std::string& label,
-            double lowerLimit,
-            double upperLimit
+            con_val_t lowerLimit,
+            con_val_t upperLimit
             );
 
 

@@ -284,8 +284,6 @@ class RandomDesignVariableCrosser :
             GeneticAlgorithm& algorithm
             );
 
-
-
     /*
     ============================================================================
     Subclass Visible Methods

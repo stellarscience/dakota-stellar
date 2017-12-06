@@ -8,12 +8,14 @@
 #include <cstdio>
 #include <cstdlib>
 
+#define LINE_SIZE 512
+
 // Read in data files.  Return std deviations for each output.
 std::vector<double>
 readData(const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & simulationScenarios,
          const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & simulationParameters,
          const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & simulationOutputs,
-         const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & experimentScenarios,
+         const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & /* experimentScenarios */,
          const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & experimentOutputs) {
 
   std::string simulationsFileName = "test_Regression/dakota_pstudy.dat";
@@ -25,9 +27,9 @@ readData(const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & simulatio
   if (!fp_in)
     queso_error_msg("Cannot find " << simulationsFileName);
 
-  unsigned int i, id, size = 512;
+  unsigned int i, id;
   double k_tmasl, k_tmoml, k_tnrgl, k_xkwlx, k_cd, pressure;
-  char line[size];
+  char line[LINE_SIZE];
 
   // The user should know what the bounds on the data are
   double mins[] = {0.95, 0.9, 0.9, 0.9, 0.9};
@@ -40,12 +42,12 @@ readData(const std::vector<QUESO::SharedPtr<QUESO::GslVector>::Type> & simulatio
   double m2expsim = 0;
 
   // First line is a header, so we ignore it
-  char * gotline = fgets(line, size, fp_in);
+  char * gotline = fgets(line, LINE_SIZE, fp_in);
   if (!gotline)
     queso_error_msg(simulationsFileName << " was unreadable");
 
   i = 0;
-  while (fscanf(fp_in, "%d %lf %lf %lf %lf %lf %lf\n", &id, &k_tmasl, &k_tmoml,
+  while (fscanf(fp_in, "%u %lf %lf %lf %lf %lf %lf\n", &id, &k_tmasl, &k_tmoml,
         &k_tnrgl, &k_xkwlx, &k_cd, &pressure) != EOF) {
     (*(simulationScenarios[i]))[0] = 0.5;
 
@@ -217,7 +219,6 @@ int main(int argc, char ** argv) {
                  configSpace,
                  paramSpace,
                  nEtaSpace,
-                 experimentSpace,
                  numSimulations,
                  numExperiments);
 
@@ -309,17 +310,18 @@ int main(int argc, char ** argv) {
   // regression gold standard predates distributionMean()
   paramInitials[5]  = 0.4; // emulator precision
   paramInitials[6]  = 0.4; // weights0 precision
-  paramInitials[7]  = 0.4; // weights1 precision
+  paramInitials[7]  = 0.97; // emulator corr str
   paramInitials[8]  = 0.97; // emulator corr str
-  paramInitials[9]  = 0.97; // emulator corr str
+  paramInitials[9] = 0.97; // emulator corr str
   paramInitials[10] = 0.97; // emulator corr str
-  paramInitials[11] = 0.97; // emulator corr str
-  paramInitials[12] = 0.20; // emulator corr str
-  paramInitials[13] = 0.80; // emulator corr str
-  paramInitials[14] = 10.0; // discrepancy precision
-  paramInitials[15] = 0.97; // discrepancy corr str
-  paramInitials[16] = 8000.0; // emulator data precision
-  // paramInitials[17]  = 1.0;  // observation error precision
+  paramInitials[11] = 0.20; // emulator corr str
+  paramInitials[12] = 0.80; // emulator corr str
+  paramInitials[13] = 10.0; // discrepancy precision0
+  paramInitials[14] = 10.0; // discrepancy precision1
+  paramInitials[15] = 0.97; // discrepancy corr str0
+  paramInitials[16] = 0.97; // discrepancy corr str1
+  paramInitials[17] = 8000.0; // emulator data precision
+  paramInitials[18]  = 1.0;  // observation error precision
 
   QUESO::GslMatrix proposalCovMatrix(
       gpmsaFactory.prior().imageSet().vectorSpace().zeroVector());
@@ -341,17 +343,18 @@ int main(int argc, char ** argv) {
   proposalCovMatrix(4, 4)   = 0.6719 / 10.0;  // param 5
   proposalCovMatrix(5, 5)   = 0.4953 / scale;  // emulator precision
   proposalCovMatrix(6, 6)   = 0.4953 / scale;  // weights0 precision
-  proposalCovMatrix(7, 7)   = 0.4953 / scale;  // weights1 precision
-  proposalCovMatrix(8, 8)   = 0.6058 / scale;  // emulator corr str
-  proposalCovMatrix(9, 9)   = 7.6032e-04 / scale;  // emulator corr str
-  proposalCovMatrix(10, 10) = 8.3815e-04 / scale;  // emulator corr str
-  proposalCovMatrix(11, 11) = 7.5412e-04 / scale;  // emulator corr str
-  proposalCovMatrix(12, 12) = 0.2682 / scale;  // emulator corr str
-  proposalCovMatrix(13, 13) = 0.0572 / scale;  // emulator corr str
-  proposalCovMatrix(14, 14) = 1.3417 / scale;  // discrepancy precision
-  proposalCovMatrix(15, 15) = 0.3461 / scale;  // discrepancy corr str
-  proposalCovMatrix(16, 16) = 495.3 / scale;  // emulator data precision
-  proposalCovMatrix(17, 17) = 0.4953 / scale;  // observation error precision
+  proposalCovMatrix(7, 7)   = 0.6058 / scale;  // emulator corr str
+  proposalCovMatrix(8, 8)   = 7.6032e-04 / scale;  // emulator corr str
+  proposalCovMatrix(9, 9) = 8.3815e-04 / scale;  // emulator corr str
+  proposalCovMatrix(10, 10) = 7.5412e-04 / scale;  // emulator corr str
+  proposalCovMatrix(11, 11) = 0.2682 / scale;  // emulator corr str
+  proposalCovMatrix(12, 12) = 0.0572 / scale;  // emulator corr str
+  proposalCovMatrix(13, 13) = 1.3417 / scale;  // discrepancy precision0
+  proposalCovMatrix(14, 14) = 1.3417 / scale;  // discrepancy precision1
+  proposalCovMatrix(15, 15) = 0.3461 / scale;  // discrepancy corr str0
+  proposalCovMatrix(16, 16) = 0.3461 / scale;  // discrepancy corr str1
+  proposalCovMatrix(17, 17) = 495.3 / scale;  // emulator data precision
+  proposalCovMatrix(18, 18) = 0.4953 / scale;  // observation error precision
 
   // Square to get variances
   for (unsigned int i = 0; i < 15; i++) {

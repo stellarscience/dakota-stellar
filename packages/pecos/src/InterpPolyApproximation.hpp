@@ -48,10 +48,6 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// compute the coefficients for the expansion of multivariate
-  /// interpolation polynomials
-  void compute_coefficients();
-
 protected:
 
   //
@@ -68,16 +64,13 @@ protected:
   void compute_total_sobol();
 
   /// compute numerical moments to order 4
-  void compute_moments();
+  void compute_moments(bool full_stats = true);
   /// compute numerical moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x);
+  void compute_moments(const RealVector& x, bool full_stats = true);
 
   //
   //- Heading: New virtual functions
   //
-
-  /// derived portion of compute_coefficients()
-  virtual void compute_expansion_coefficients() = 0;
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;
@@ -90,6 +83,9 @@ protected:
   //
   //- Heading: Convenience functions
   //
+
+  /// test accuracy of the interpolants
+  void test_interpolation();
 
   //
   //- Heading: Data
@@ -124,25 +120,29 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
 
 
-inline void InterpPolyApproximation::compute_moments()
+inline void InterpPolyApproximation::compute_moments(bool full_stats)
 {
   // standard variables mode supports four moments using the collocation rules
   // as integration rules
   integrate_response_moments(4);
 
   // do this second so that clearing any existing rules does not cause rework
-  //if (expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
+  if (full_stats) //&& expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
     integrate_expansion_moments(4);
+  else
+    expansionMoments.resize(0);
 }
 
 
-inline void InterpPolyApproximation::compute_moments(const RealVector& x)
+inline void InterpPolyApproximation::
+compute_moments(const RealVector& x, bool full_stats)
 {
   // all variables mode only supports first two moments
   mean(x); variance(x);
   //standardize_moments(numericalMoments);
-  //integrate_expansion_moments(4, x);
 
+  //if (full_stats) integrate_expansion_moments(4, x);
+  //else            expansionMoments.resize(0);
   // Note: it would be feasible to implement an all_variables version of
   // integrate_expansion_moments() by evaluating the combined expansion at
   // {design/epistemic=initialPtU,aleatory=Gauss points}

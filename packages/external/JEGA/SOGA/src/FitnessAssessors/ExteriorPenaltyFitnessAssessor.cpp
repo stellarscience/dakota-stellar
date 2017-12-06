@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class ExteriorPenaltyFitnessAssessor.
+        Implementation of class ExteriorPenaltyFitnessAssessor.
 
     NOTES:
 

@@ -27,11 +27,10 @@
 #ifdef QUESO_HAS_TRILINOS
 #include <queso/TeuchosMatrix.h>
 #include <queso/TeuchosVector.h>
-#endif
+#include <queso/FilePtr.h>
 #include <sys/time.h>
 #include <cmath>
 
-#ifdef QUESO_HAS_TRILINOS
 
 namespace QUESO {
 

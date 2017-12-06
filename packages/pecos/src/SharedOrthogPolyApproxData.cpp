@@ -21,7 +21,7 @@
 namespace Pecos {
 
 
-void SharedOrthogPolyApproxData::allocate_data()
+void SharedOrthogPolyApproxData::allocate_data(size_t index)
 {
   // detect changes since previous construction
   bool update_exp_form = (approxOrder != approxOrderPrev);
@@ -345,7 +345,7 @@ size_t SharedOrthogPolyApproxData::maximal_expansion()
 }
 
 
-void SharedOrthogPolyApproxData::swap_data(size_t index)
+void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
 {
   std::swap(storedMultiIndex[index], multiIndex);
   switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -358,26 +358,25 @@ void SharedOrthogPolyApproxData::swap_data(size_t index)
 }
 
 
-size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedOrthogPolyApproxData::pre_combine_data()
 {
-  // based on incoming combine_type, combine the data stored previously
-  // by store_coefficients()
+  // Combine the data stored previously by store_data()
 
   // Sufficient for two grids: if not currently the maximal grid, then swap
   // with the stored grid (only one is stored)
   //bool swap = !maximal_expansion();
-  //if (swap) swap_data();
+  //if (swap) swap_shared_data();
   
   // For open-ended number of stored grids: retrieve the most refined from the
   // existing grids (from sequence specification + any subsequent refinement)
   size_t max_index = maximal_expansion();
-  if (max_index != _NPOS) swap_data(max_index);
+  if (max_index != _NPOS) swap_shared_data(max_index);
 
   // Most general: overlay all grid refinement levels to create a new superset
   //size_t new_index = overlay_maximal_grid();
-  //if (current_grid_index() != new_index) swap_data(new_index);
+  //if (current_grid_index() != new_index) swap_shared_data(new_index);
 
-  switch (combine_type) {
+  switch (expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // update multiIndex with any storedMultiIndex terms not yet included.
     // An update in place is sufficient.
@@ -417,29 +416,27 @@ size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 }
 
 
-void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
+void SharedOrthogPolyApproxData::post_combine_data()
 {
-  // storedMultiIndex and storedApproxOrder used downstream in
-  // ProjectOrthogPolyApproximation::integrate_response_moments(),
-  // which calls ProjectOrthogPolyApproximation::stored_value()
-
-  //storedMultiIndex.clear(); // needed in {OPA,POPA,ROPA}::stored_value()
-  storedMultiIndexMap.clear();
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID:
-    driverRep->clear_stored(); break;
-  case QUADRATURE:
-    //storedApproxOrder.clear(); // needed in ProjectOPA::stored_value()
-    driverRep->clear_stored(); break;
-  default: // total-order expansions
-    storedApproxOrder.clear(); break;
-  }
-
-  switch (combine_type) {
+  switch (expConfigOptions.combineType) {
   case MULT_COMBINE:
     std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
     combinedMultiIndex.clear();
     break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::clear_stored_data()
+{
+  storedMultiIndex.clear(); storedMultiIndexMap.clear();
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID:
+    driverRep->clear_stored(); break;
+  case QUADRATURE:
+    storedApproxOrder.clear(); driverRep->clear_stored(); break;
+  default: // total-order expansions
+    storedApproxOrder.clear(); break;
   }
 }
 

@@ -128,7 +128,7 @@ NPointParameterizedBinaryCrosser::SetNumCrossPoints(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    size_t ndv = this->GetDesignTarget().GetNDV();
+    const size_t ndv = this->GetDesignTarget().GetNDV();
 
     JEGAIFLOG_CF_II(ndv < ncpts.size(), this->GetLogger(), lquiet(), this,
         text_entry(lquiet(),
@@ -153,7 +153,7 @@ NPointParameterizedBinaryCrosser::SetNumCrossPoints(
 
     this->_numCrossPts = ncpts;
 
-    eddy::utilities::int32_t fill_val = (this->_numCrossPts.size() == 1) ?
+    const eddy::utilities::int32_t fill_val = (this->_numCrossPts.size() == 1) ?
         this->_numCrossPts[0] : DEFAULT_NUM_CROSS_PTS;
 
     this->_numCrossPts.resize(ndv, fill_val);
@@ -183,7 +183,7 @@ NPointParameterizedBinaryCrosser::SetNumCrossPoints(
 
     const DesignTarget& target = this->GetDesignTarget();
 
-    size_t ndv = target.GetNDV();
+    const size_t ndv = target.GetNDV();
 
     // make sure we have enough locations in the cross pt ct vector.
     this->_numCrossPts.resize(ndv, DEFAULT_NUM_CROSS_PTS);
@@ -262,7 +262,7 @@ NPointParameterizedBinaryCrosser::Description(
         "variable individually.  Each variable has its own desired number of "
         "crossover locations.\n\n"
         "The rate is used to determine how many members of the "
-        "passed in group (population) should be given an oportunity to "
+        "passed in group (population) should be given an opportunity to "
         "participate in a crossover operation.  Each operation "
         "involves 2 members of the passed in group and creates 2 new "
         "designs.  So the number of operations is round(rate*size/2) "
@@ -374,7 +374,7 @@ NPointParameterizedBinaryCrosser::Crossover(
     const DVIV& dvinfos = target.GetDesignVariableInfos();
 
     // We need a BitManipulator to do the bit operations
-    BitManipulator maniper(target);
+    const BitManipulator maniper(target);
 
     // get the crossover rate.
     const double rate = this->GetRate();
@@ -421,8 +421,7 @@ NPointParameterizedBinaryCrosser::Crossover(
             const size_t dv = (*it)->GetNumber();
 
             // store the number of bits for this dv.
-            const eddy::utilities::uint16_t nbits =
-                maniper.GetNumberOfBits(dv);
+            const eddy::utilities::uint16_t nbits = maniper.GetNumberOfBits(dv);
 
             // figure out if this dv can be crossed like this at all.
             JEGAIFLOG_CF_II_F(nbits < 2, this->GetLogger(), this,
@@ -441,7 +440,7 @@ NPointParameterizedBinaryCrosser::Crossover(
                 maniper.ConvertToShiftedInt(*prnts[1], dv);
 
             // Get the crossover points
-            ReverseCrossPointSet cpts(CreateReverseCrossoverPointSet(
+            const ReverseCrossPointSet cpts(CreateReverseCrossoverPointSet(
                 1, nbits-1, this->_numCrossPts[dv]
                 ));
 
@@ -493,7 +492,7 @@ NPointParameterizedBinaryCrosser::PollForParameters(
             "database.  Checking for a single value.")
         )
 
-    bool ret = this->NPointCrosserBase::PollForParameters(db);
+    const bool ret = this->NPointCrosserBase::PollForParameters(db);
 
     if(success) this->SetNumCrossPoints(this->_numCrossPts);
     else this->SetNumCrossPoints(this->NPointCrosserBase::GetNumCrossPoints());

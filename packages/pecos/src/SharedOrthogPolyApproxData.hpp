@@ -122,14 +122,14 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void allocate_data();
+  void allocate_data(size_t index = _NPOS);
+  size_t pre_combine_data();
+  void post_combine_data();
 
   void store_data(size_t index = _NPOS);
   void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
-  
-  size_t pre_combine_data(short combine_type);
-  void post_combine_data(short combine_type);
+  void clear_stored_data();
 
   //
   //- Heading: Member functions
@@ -137,8 +137,9 @@ protected:
 
   /// detect whether current expansion settings are the most refined
   size_t maximal_expansion();
-  /// swap current data and the stored data set identified by index
-  void swap_data(size_t index);
+  /// swap current shared data with a stored shared data set, as identified
+  /// by stored index
+  void swap_shared_data(size_t index);
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(

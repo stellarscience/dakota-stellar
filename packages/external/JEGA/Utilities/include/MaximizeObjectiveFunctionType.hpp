@@ -259,9 +259,9 @@ class JEGA_SL_IEDECL MaximizeObjectiveFunctionType :
          *         techniques.
          */
         virtual
-        double
+        obj_val_t
         GetValueForMinimization(
-            double val
+            obj_val_t val
             ) const;
 
         /// Returns the string name of this type.

@@ -145,7 +145,10 @@ enum { INTERPOLATION_OF_PRODUCTS, REINTERPOLATION_OF_PRODUCTS,
        PRODUCT_OF_INTERPOLANTS_FAST, PRODUCT_OF_INTERPOLANTS_FULL };
 
 /// special values for polynomial expansion combination
-enum { NO_COMBINE=0,  ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
+enum { NO_COMBINE=0, ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
+
+/// special values for discrepancy emulation
+enum { NO_DISCREP=0, DISTINCT_DISCREP, RECURSIVE_DISCREP };
 
 
 // ----------------

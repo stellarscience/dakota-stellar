@@ -260,25 +260,25 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
          * \brief Override to return the representation of a random "value" as
          *        a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of a random value.
          */
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             ) const;
 
         /**
          * \brief Override to return a random representation existing within
          *        the supplied region of space.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param within The region of space of the desired random value.
          * \return The representation of a random value inside \a within.
          */
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             const RegionOfSpace& within
             ) const;
 
@@ -343,43 +343,43 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
          * \brief Override to return the representation of the max value for
          *        this nature as a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of the maximum value for this variable or
-         *         -DBL_MAX if none.
+         *         -limits::max if none.
          */
         virtual
-        double
-        GetMaxDoubleRep(
+        var_rep_t
+        GetMaxRep(
             ) const = 0;
 
         /**
          * \brief Override to return the representation of the min value for
          *        this nature as a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of the minimum value for this variable or
-         *         -DBL_MAX if none.
+         *         -limits::max if none.
          */
         virtual
-        double
-        GetMinDoubleRep(
+        var_rep_t
+        GetMinRep(
             ) const = 0;
 
         /**
          * \brief Override to return a random representation existing within
          *        the supplied range.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param lb The lower bound on the desired random value.
          * \param ub The upper bound on the desired value.
          * \return The representation of a random value within \a lb and \a ub.
          */
         virtual
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             double lb,
             double ub
             ) const = 0;
@@ -388,20 +388,20 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
          * \brief Override to return the proper representation of "value" as a
          *        double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to retrieve the representation of.
          * \return The representation of the value "value".
          */
         virtual
-        double
-        GetDoubleRepOf(
+		var_rep_t
+        GetRepOf(
             double value
             ) const = 0;
 
         /// Override to return a random valid value for this type as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return A random value for this variable for which IsValidValue will
          *         return true;
@@ -415,7 +415,7 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
          * \brief Override to return the maximum value this nature may have as
          *        a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The largest legitimate value for this variable.
          */
@@ -428,7 +428,7 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
          * \brief Override to return the minimum value this nature may have as
          *        a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The smallest legitimate value for this variable.
          */
@@ -439,7 +439,7 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
 
         /// Override to return the value represented by "rep" as a double.
         /**
-         * A return of -DBL_MAX indicates failure.  The returned
+         * A return of -limits::max indicates failure.  The returned
          * value is not necessarily valid.  It may be out of bounds
          * etc.
          *
@@ -449,12 +449,12 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
         virtual
         double
         GetValueOf(
-            double rep
+            var_rep_t rep
             ) const = 0;
 
         /// Override to return the nearest valid value to "value".
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to correct to a valid value.
          * \return The nearest value to "value" for which IsValidValue will
@@ -468,30 +468,30 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
 
         /// Override to return the nearest valid double rep to "rep".
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param rep The representation to correct to a valid representation.
          * \return The nearest representation to "rep" for which
-         *         IsValidDoubleRep will return true;
+         *         IsValidRep will return true;
          */
         virtual
-        double
-        GetNearestValidDoubleRep(
-            double rep
+        var_rep_t
+        GetNearestValidRep(
+            var_rep_t rep
             ) const = 0;
 
         /**
          * \brief Override to return the distance between valid representations
          *        as a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The increment that exists between consecutive
          *         representations according to the decimal precision.
          */
         virtual
-        double
-        GetDistanceBetweenDoubleReps(
+        var_rep_t
+        GetDistanceBetweenReps(
             ) const = 0;
 
         /**
@@ -601,7 +601,7 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
         virtual
         bool
         IsRepInBounds(
-            double rep
+            var_rep_t rep
             ) const = 0;
 
         /**
@@ -657,7 +657,7 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
          *        for this variable.
          *
          * Valid representations are those that may be returned by
-         * GetRandomDoubleRep.
+         * GetRandomRep.
          *
          * \param rep The representation to check for validity with this
          *            variable nature.
@@ -666,8 +666,8 @@ class JEGA_SL_IEDECL DesignVariableNatureBase
          */
         virtual
         bool
-        IsValidDoubleRep(
-            double rep
+        IsValidRep(
+            var_rep_t rep
             ) const;
 
         /// Override to return true if the nature of this variable is Discrete.

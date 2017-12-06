@@ -195,7 +195,7 @@ mutex::mutex(
     if(pthread_mutexattr_init(&attributes) != 0)
         throw resource_error("mutex::mutex failed to init attributes.");
 
-    // if the seting of attributes fails, it means sharing is invalid
+    // if the setting of attributes fails, it means sharing is invalid
     if(pthread_mutexattr_settype(&attributes, type) != 0)
         throw logical_error("mutex::mutex invalid type argument");
 

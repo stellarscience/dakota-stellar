@@ -391,6 +391,7 @@ int OptBCNewtonLike::computeStep(SerialDenseVector<int,double> sk)
 //
   stptmp = computeMaxStep(sk);
   stpmax = min(stpmax, stptmp);
+  TR_size = min(TR_size, stpmax);
 
   if (strategy == TrustRegion) {
     SerialSymDenseMatrix<int,double> H(Hessian.numRows());

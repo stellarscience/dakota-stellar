@@ -187,7 +187,7 @@ class JEGA_SL_IEDECL SeekValueObjectiveFunctionType :
 
 
         /// The value to seek.
-        double _value;
+        obj_val_t _value;
 
 
 
@@ -206,7 +206,7 @@ class JEGA_SL_IEDECL SeekValueObjectiveFunctionType :
         inline
         void
         SetValue(
-            double value
+            obj_val_t value
             );
 
     protected:
@@ -227,7 +227,7 @@ class JEGA_SL_IEDECL SeekValueObjectiveFunctionType :
          * \return The target value currently being sought by this objective.
          */
         inline
-        double
+        obj_val_t
         GetValue(
             ) const;
 
@@ -285,9 +285,9 @@ class JEGA_SL_IEDECL SeekValueObjectiveFunctionType :
          *         techniques.
          */
         virtual
-        double
+        obj_val_t
         GetValueForMinimization(
-            double val
+            obj_val_t val
             ) const;
 
         /// Returns the string name of this type.

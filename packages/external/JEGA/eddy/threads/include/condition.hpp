@@ -11,10 +11,10 @@
     NOTES:
 
         This project is modeled heavily after the boost thread library.  Some
-        Serious shortcommings of the boost thread library make this one
+        Serious shortcomings of the boost thread library make this one
         necessary such as the lack of ability to cancel threads.
 
-        Hopefully, the shortcommings of the boost library will be taken care of
+        Hopefully, the shortcomings of the boost library will be taken care of
         at which time this library will likely be changed to use it.
 
         Also, see notes under Class Definition section of this file.
@@ -162,7 +162,7 @@ Class Definition
  * to a user input instructing it to resume.
  *
  * This class is implemented by keeping a pthread_cond_t member and using
- * the usual posix pthread functions.
+ * the usual Posix pthread functions.
  */
 class EDDY_SL_IEDECL condition
 {

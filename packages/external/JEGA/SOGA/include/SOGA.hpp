@@ -71,7 +71,7 @@ Includes
 // JEGAConfig.hpp should be the first include in all JEGA files.
 #include <../Utilities/include/JEGAConfig.hpp>
 
-#include <memory> // for auto_ptr
+#include <memory> // for unique_ptr
 #include <GeneticAlgorithm.hpp>
 #include <../Utilities/include/JEGATypes.hpp>
 
@@ -326,10 +326,10 @@ class JEGA_SL_IEDECL SOGA :
             );
 
         /**
-         * \brief Overriden to look through the current designs and remove
+         * \brief Overridden to look through the current designs and remove
          *        any that are not optimal.
          *
-         * Removeed designs are placed into the targets discards.
+         * Removed designs are placed into the targets discards.
          */
         virtual
         void

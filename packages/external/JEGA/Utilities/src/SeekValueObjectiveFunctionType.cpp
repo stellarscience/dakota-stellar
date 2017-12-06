@@ -173,13 +173,13 @@ Subclass Overridable Methods
 
 
 
-double
+obj_val_t
 SeekValueObjectiveFunctionType::GetValueForMinimization(
-    double val
+    obj_val_t val
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return (val - _value) * (val - _value);
+    return (val - this->_value) * (val - this->_value);
 
 } // SeekValueObjectiveFunctionType::GetValueForMinimization
 
@@ -234,7 +234,7 @@ SeekValueObjectiveFunctionType::SeekValueObjectiveFunctionType(
     ObjectiveFunctionInfo& info
     ) :
         ObjectiveFunctionTypeBase(info),
-        _value(0.0)
+        _value(obj_val_t(0))
 {
     EDDY_FUNC_DEBUGSCOPE
 

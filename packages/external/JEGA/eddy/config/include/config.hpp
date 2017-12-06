@@ -185,11 +185,11 @@ Macro Definitions
 Utility Macros
 ================================================================================
 */
-/// A macro to add things to doxygen commenting.
+/// A macro to add things to Doxygen commenting.
 /**
  * This should never turn into anything with coding significance.  It will
- * always cause the argument to be removed completely.  However, the doxygen
- * preprocessor can be instructed to expand the macro.  The doxygen
+ * always cause the argument to be removed completely.  However, the Doxygen
+ * preprocessor can be instructed to expand the macro.  The Doxygen
  * instruction should be placed in your Doxyfile at the tag for PREDEFINED
  * and should look like this:
  * \verbatim
@@ -203,7 +203,7 @@ Utility Macros
     void method(double DOXYGEN_ONLY(arg)) {}
  * \endcode
  *
- * \param a The text to appear in doxygen documentation and not in the code.
+ * \param a The text to appear in Doxygen documentation and not in the code.
  */
 #define DOXYGEN_ONLY(a)
 
