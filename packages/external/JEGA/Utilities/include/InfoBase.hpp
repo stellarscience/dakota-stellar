@@ -210,7 +210,7 @@ class JEGA_SL_IEDECL InfoBase
         GetDesignTarget(
             );
 
-        /// Returns the DesignTarget known by this object (const)
+        /// Returns the DesignTarget known by this object (constant)
         /**
          * \return The DesignTarget being used by this info object.
          */

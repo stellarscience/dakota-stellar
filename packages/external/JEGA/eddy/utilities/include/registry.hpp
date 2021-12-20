@@ -168,7 +168,7 @@ class registry
         typename container::value_type
         value_type;
 
-        /// Type that can be used as a contant iterator over this container
+        /// Type that can be used as a constant iterator over this container
         typedef
         typename container::const_iterator
         const_iterator;
@@ -183,7 +183,7 @@ class registry
         /// Type that can be used as an iterator over this container
         /**
          * This type is protected because it is not permitted to modify
-         * this container except throught the provided methods.
+         * this container except through the provided methods.
          */
         typedef
         typename container::iterator
@@ -226,7 +226,7 @@ class registry
     */
     public:
 
-        /// Get an iterator to the first element in the container (const)
+        /// Get an iterator to the first element in the container (constant)
         /**
          * \return An iterator to the first element or end if none.
          */
@@ -234,7 +234,7 @@ class registry
         begin(
             ) const;
 
-        /// Get an iterator to the last element in the container (const)
+        /// Get an iterator to the last element in the container (constant)
         /**
          * \return An iterator to one past the last element.
          */
@@ -259,7 +259,7 @@ class registry
          * This method allows mutable subclass access to the underlying
          * container.
          *
-         * \return A reference to the container used to store registrees.
+         * \return A reference to the container used to store registerees.
          */
         container&
         get_container(
@@ -272,7 +272,7 @@ class registry
     */
     public:
 
-        /// Checks for a logically equivolent entry to value
+        /// Checks for a logically equivalent entry to value
         /**
          * \param value The value to check for registration in this.
          * \return True if \a value is registered here and false otherwise.
@@ -285,7 +285,7 @@ class registry
         /// Adds value to the registry if it is not already present.
         /**
          * \param value The value to register in this registry.
-         * \return True if \a value is successfully registeredand false
+         * \return True if \a value is successfully registered and false
          *         otherwise.  Failure occurs if \a value is already registered.
          */
         bool
@@ -307,7 +307,7 @@ class registry
 
         /**
          * \brief Returns an iterator pointing to \a value in the registry or
-         *        end if not found (const).
+         *        end if not found (constant).
          *
          * \param value The value to find in this registry.
          * \return Iterator to \a value or end if not found.
@@ -337,7 +337,7 @@ class registry
         empty(
             ) const;
 
-        /// Assimilates the registrees of \a other into this.
+        /// Assimilates the registerees of \a other into this.
         /**
          * Recall that duplicates are not permitted and so the return
          * is the number of successful assimilations.
@@ -368,7 +368,7 @@ class registry
          *        end if not found (non-const).
          *
          * This method allows subclass access to mutable iterators describing
-         * the locations of registrees.
+         * the locations of registerees.
          *
          * \param value The registree to find in this registry.
          * \return An iterator to \a value's location in this registry or end

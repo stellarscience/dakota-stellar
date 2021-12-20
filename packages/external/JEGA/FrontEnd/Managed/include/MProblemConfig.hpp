@@ -157,7 +157,7 @@ Class Definition
  * exposes the required methods in a managed compliant manner for use from
  * .NET languages.
  */
-MANAGED_CLASS(public, MProblemConfig) :
+public ref class MProblemConfig :
     public System::IDisposable
 {
     /*
@@ -197,35 +197,7 @@ MANAGED_CLASS(public, MProblemConfig) :
 
         /// A pointer to the actual underlying problem configuration object.
         JEGA::FrontEnd::ProblemConfig* _theConfig;
-
-
-    /*
-    ============================================================================
-    Mutators
-    ============================================================================
-    */
-    public:
-
-
-    protected:
-
-
-    private:
-
-
-    /*
-    ============================================================================
-    Accessors
-    ============================================================================
-    */
-    public:
-
-
-    protected:
-
-
-    private:
-
+        
 
     /*
     ============================================================================
@@ -235,7 +207,7 @@ MANAGED_CLASS(public, MProblemConfig) :
     public:
 
         /**
-         * \brief A method that can be used to manfiest this managed wrapper
+         * \brief A method that can be used to manifest this managed wrapper
          *        into an actual JEGA::FrontEnd::ProblemConfig.
          *
          * The object returned by this method can be used directly in a call
@@ -266,6 +238,15 @@ MANAGED_CLASS(public, MProblemConfig) :
         GetMaxGuffSize(
             );
 
+        void
+        SetMaxDiscardCacheSize(
+            System::UInt32 maxSize
+            );
+
+        System::UInt32
+        GetMaxDiscardCacheSize(
+            );
+
         /**
          * \brief Adds a continuum, real valued variable to the target
          *        using the supplied information.
@@ -283,7 +264,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddContinuumRealVariable(
-            System::String MOH label,
+            System::String^ label,
             double lowerBound,
             double upperBound,
             int precision
@@ -301,8 +282,8 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddDiscreteRealVariable(
-            System::String MOH label,
-            DoubleVector MOH values
+            System::String^ label,
+            DoubleVector^ values
             );
 
         /**
@@ -320,7 +301,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddContinuumIntegerVariable(
-            System::String MOH label,
+            System::String^ label,
             int lowerBound,
             int upperBound
             );
@@ -337,8 +318,8 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddDiscreteIntegerVariable(
-            System::String MOH label,
-            IntVector MOH values
+            System::String^ label,
+            IntVector^ values
             );
 
         /**
@@ -352,7 +333,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddBooleanVariable(
-            System::String MOH label
+            System::String^ label
             );
 
         /**
@@ -369,8 +350,8 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddLinearMinimizeObjective(
-            System::String MOH label,
-            DoubleVector MOH coeffs
+            System::String^ label,
+            DoubleVector^ coeffs
             );
 
         /**
@@ -387,8 +368,8 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddLinearMaximizeObjective(
-            System::String MOH label,
-            DoubleVector MOH coeffs
+            System::String^ label,
+            DoubleVector^ coeffs
             );
 
         /**
@@ -406,9 +387,9 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddLinearSeekValueObjective(
-            System::String MOH label,
+            System::String^ label,
             double value,
-            DoubleVector MOH coeffs
+            DoubleVector^ coeffs
             );
 
         /**
@@ -427,10 +408,10 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddLinearSeekRangeObjective(
-            System::String MOH label,
+            System::String^ label,
             double lowerBound,
             double upperBound,
-            DoubleVector MOH coeffs
+            DoubleVector^ coeffs
             );
 
         /**
@@ -444,7 +425,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddNonlinearMinimizeObjective(
-            System::String MOH label
+            System::String^ label
             );
 
         /**
@@ -458,7 +439,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddNonlinearMaximizeObjective(
-            System::String MOH label
+            System::String^ label
             );
 
         /**
@@ -473,7 +454,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddNonlinearSeekValueObjective(
-            System::String MOH label,
+            System::String^ label,
             double value
             );
 
@@ -490,7 +471,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddNonlinearSeekRangeObjective(
-            System::String MOH label,
+            System::String^ label,
             double lowerBound,
             double upperBound
             );
@@ -511,9 +492,9 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddLinearInequalityConstraint(
-            System::String MOH label,
-            double upperLimit,
-            DoubleVector MOH coeffs
+            System::String^ label,
+            con_val_t upperLimit,
+            DoubleVector^ coeffs
             );
 
         /**
@@ -534,10 +515,10 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddLinearEqualityConstraint(
-            System::String MOH label,
-            double target,
+            System::String^ label,
+            con_val_t target,
             double allowedViol,
-            DoubleVector MOH coeffs
+            DoubleVector^ coeffs
             );
 
         /**
@@ -558,10 +539,31 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddLinearTwoSidedInequalityConstraint(
-            System::String MOH label,
+            System::String^ label,
             double lowerLimit,
             double upperLimit,
-            DoubleVector MOH coeffs
+            DoubleVector^ coeffs
+            );
+
+        /**
+        * \brief Adds a linear, not-equality constraint to the target
+        *        using the supplied information.
+        *
+        * \param label The label for the new constraint description.
+        * \param target The value that this constraint cannot take on. Any other
+        *               value is acceptable.
+        * \param coeffs The coefficients for the linear equation of this
+        *               constraint.  If not supplied, the created info object
+        *               will be unable to evaluate itself.
+        * \return True if the new description is added successfully and false
+        *         if not.  This comes directly from the
+        *         ConfigHelper::AddLinearNotEqualityConstraint method.
+        */
+        bool
+        AddLinearNotEqualityConstraint(
+            System::String^ label,
+            double target,
+            DoubleVector^ coeffs
             );
 
         /**
@@ -577,7 +579,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddNonlinearInequalityConstraint(
-            System::String MOH label,
+            System::String^ label,
             double upperLimit
             );
 
@@ -596,9 +598,26 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddNonlinearEqualityConstraint(
-            System::String MOH label,
+            System::String^ label,
             double target,
             double allowedViol
+            );
+
+        /**
+        * \brief Adds a non-linear, not-equality constraint to the target
+        *        using the supplied information.
+        *
+        * \param label The label for the new constraint description.
+        * \param target The value that this constraint cannot take on. Any other
+        *               value is acceptable
+        * \return True if the new description is added successfully and false
+        *         if not.  This comes directly from the
+        *         ConfigHelper::AddNonlinearNotEqualityConstraint method.
+        */
+        bool
+        AddNonlinearNotEqualityConstraint(
+            System::String^ label,
+            double target
             );
 
         /**
@@ -617,7 +636,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         bool
         AddNonlinearTwoSidedInequalityConstraint(
-            System::String MOH label,
+            System::String^ label,
             double lowerLimit,
             double upperLimit
             );
@@ -650,7 +669,7 @@ MANAGED_CLASS(public, MProblemConfig) :
          */
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
     protected:

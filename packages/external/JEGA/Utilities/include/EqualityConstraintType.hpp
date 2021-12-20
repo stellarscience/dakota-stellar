@@ -161,7 +161,7 @@ class JEGA_SL_IEDECL EqualityConstraintType :
         /**
          * Default value is 0.0.
          */
-        double _value;
+        con_val_t _value;
 
         /**
          * \brief This variable can be used to provide the constraint with
@@ -189,7 +189,7 @@ class JEGA_SL_IEDECL EqualityConstraintType :
         inline
         void
         SetTargetValue(
-            double val
+            con_val_t val
             );
 
         /// Sets the value of the \a _viol member variable.
@@ -217,7 +217,7 @@ class JEGA_SL_IEDECL EqualityConstraintType :
          * \return The singular feasible value for this constraint.
          */
         inline
-        double
+        con_val_t
         GetTargetValue(
             ) const;
 
@@ -298,7 +298,7 @@ class JEGA_SL_IEDECL EqualityConstraintType :
         virtual
         double
         GetViolationAmount(
-            double of
+            con_val_t of
             ) const;
 
         /// Returns an exact duplicate of this type object.

@@ -180,7 +180,7 @@ Class Definition
  * operator obtained from an operator set as it may be a default operator
  * and thus should not be deleted external to this class.  Instead use
  * the methods provided to destroy the operators which will account for the
- * possiblility of having default operators.
+ * possibility of having default operators.
  *
  * If you do delete an operator external to a set containing it, be sure to set
  * the operator appropriately either to another new operator or to null in
@@ -572,7 +572,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetPostProcessor(
             );
 
-        /// Gets the current mutator (const).
+        /// Gets the current mutator (constant).
         /**
          * This method allows immutable access to the mutator known by this
          * operator set.  It is always safe to call this method, there is
@@ -585,7 +585,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetMutator(
             ) const;
 
-        /// Gets the current crosser (const).
+        /// Gets the current crosser (constant).
         /**
          * This method allows immutable access to the crosser known by this
          * operator set.  It is always safe to call this method, there is
@@ -598,7 +598,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetCrosser(
             ) const;
 
-        /// Gets the current converger (const).
+        /// Gets the current converger (constant).
         /**
          * This method allows immutable access to the converger known by this
          * operator set.  It is always safe to call this method, there is
@@ -611,7 +611,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetConverger(
             ) const;
 
-        /// Gets the current evaluator (const).
+        /// Gets the current evaluator (constant).
         /**
          * This method allows immutable access to the evaluator known by this
          * operator set.  It is always safe to call this method, there is
@@ -624,7 +624,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetEvaluator(
             ) const;
 
-        /// Gets the current niche pressure applicator (const).
+        /// Gets the current niche pressure applicator (constant).
         /**
          * This method allows immutable access to the niche pressure applicator
          * known by this operator set.  It is always safe to call this method,
@@ -638,7 +638,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetNichePressureApplicator(
             ) const;
 
-        /// Gets the current fitness assessor (const).
+        /// Gets the current fitness assessor (constant).
         /**
          * This method allows immutable access to the fitness assessor known by
          * this operator set.  It is always safe to call this method, there is
@@ -652,7 +652,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetFitnessAssessor(
             ) const;
 
-        /// Gets the current main loop (const).
+        /// Gets the current main loop (constant).
         /**
          * This method allows immutable access to the main loop known by this
          * operator set.  It is always safe to call this method, there is
@@ -665,7 +665,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetMainLoop(
             ) const;
 
-        /// Gets the current initializer (const).
+        /// Gets the current initializer (constant).
         /**
          * This method allows immutable access to the initializer known by this
          * operator set.  It is always safe to call this method, there is
@@ -678,7 +678,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetInitializer(
             ) const;
 
-        /// Gets the current selector (const).
+        /// Gets the current selector (constant).
         /**
          * This method allows immutable access to the selector known by this
          * operator set.  It is always safe to call this method, there is
@@ -691,7 +691,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
         GetSelector(
             ) const;
 
-        /// Gets the current post processor (const).
+        /// Gets the current post processor (constant).
         /**
          * This method allows immutable access to the post processor known by
          * this operator set.  It is always safe to call this method, there is
@@ -713,7 +713,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmOperatorSet
     */
     public:
 
-        /// Assignement operator.
+        /// Assignment operator.
         /**
          * Assignment is carried out by direct pointer duplication of the
          * operators in \a rhs to \a this.  The only exception is the case

@@ -341,7 +341,7 @@ NonDuplicatingRouletteWheelSelector::Select(
             // otherwise, decrement i and continue.
             else { ++consecFails; --i; }
 
-            // if we have brieched the tolerable number of consecutive
+            // if we have breeched the tolerable number of consecutive
             // failures, we will stop now.
             if(consecFails >= (10*tsize))
             {

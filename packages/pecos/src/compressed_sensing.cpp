@@ -1,5 +1,14 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
 #include "compressed_sensing.hpp"
-#include "MathTools.hpp"
+#include "linear_algebra.hpp"
+#include "math_tools.hpp"
 
 //#define PRECOMPUTE_GRAMMIAN
 
@@ -107,7 +116,7 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
       // Solve AX = b
       int rank;
       RealVector singular_values; // singular values
-      svd_solve( A, b, x, singular_values, rank );
+      util::svd_solve( A, b, x, singular_values, rank );
       // Compute reciprocal of condition number
       Real rcond = singular_values[singular_values.length()-1] / 
 	singular_values[0];
@@ -156,7 +165,7 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
   if ( verbosity > 1 )
     {
       std::cout << "At Initialisation:\n";
-      std::cout << "\tObjective: " << sum( u ) << "\n";
+      std::cout << "\tObjective: " << util::sum( u ) << "\n";
       std::cout << "\tPrimal-dual gap: " << sdg << "\n";
       std::cout << "\tPrimal residual: ";
       std::cout << r.normFrobenius() << "\n";
@@ -222,8 +231,8 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
       if ( cg_tol < 0 )
 	{
 	  // Compute the direction of the newton step for v
-	  info = cholesky_solve( newton_step_pos_def_matrix, 
-				 newton_step_rhs, dv, rcond );
+	  info = util::cholesky_solve( newton_step_pos_def_matrix,
+					     newton_step_rhs, dv, rcond );
 	  if ( info > 0 )
 	    {
 	      if ( verbosity > 0 )
@@ -253,9 +262,12 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
       else
 	{
 	  dv = 0.0;
-	  info = conjugate_gradients_solve( newton_step_pos_def_matrix, 
-					    newton_step_rhs, dv, r_norm, 
-					    cg_tol, M, verbosity );
+	  int iters_taken = 0;
+	  info = 
+	    util::conjugate_gradients_solve( newton_step_pos_def_matrix,
+						   newton_step_rhs, dv, r_norm,
+						   iters_taken, cg_tol, M,
+						   verbosity );
 	  if ( ( r_norm > 0.5 ) || ( info > 1 ) )
 	    {
 	      if ( verbosity > 0 )
@@ -397,7 +409,7 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
       if ( verbosity > 1 )
 	{
 	  std::cout << "Newton iteration: " << primal_dual_iter << "\n";
-	  std::cout << "\tObjective: " << sum( u ) << "\n";
+	  std::cout << "\tObjective: " << util::sum( u ) << "\n";
 	  std::cout << "\tPrimal-dual gap: " << sdg << "\n";
 	  std::cout << "\tPrimal residual: ";
 	  std::cout << r.normFrobenius() << "\n";
@@ -507,8 +519,8 @@ int BPDN_compute_central_point( RealMatrix &A,
       if ( cg_tol < 0 )
 	{
 
-	  info = cholesky_solve( newton_step_pos_def_matrix, 
-				 newton_step_rhs, dx, rcond );	      
+	  info = util::cholesky_solve( newton_step_pos_def_matrix,
+					     newton_step_rhs, dx, rcond );
 	  if ( info > 0 )
 	    {
 	      if ( verbosity > 0 )
@@ -541,9 +553,12 @@ int BPDN_compute_central_point( RealMatrix &A,
       else
 	{
 	  dx = 0.0;
-	  info = conjugate_gradients_solve( newton_step_pos_def_matrix, 
-					    newton_step_rhs, dx, r_norm, 
-					    cg_tol, N, verbosity );
+	  int iters_taken = 0;
+	  info = 
+	    util::conjugate_gradients_solve( newton_step_pos_def_matrix,
+						   newton_step_rhs, dx, r_norm,
+						   iters_taken, cg_tol, N,
+						   verbosity );
 
 	  if ( ( r_norm > 0.5 ) || ( info > 1 ) )
 	    {
@@ -718,7 +733,7 @@ void BPDN_log_barrier_interior_point_method( RealMatrix &A, RealVector &b,
       // Solve AX = b
       int rank;
       RealVector singular_values; // singular values
-      svd_solve( A, b, x, singular_values, rank );
+      util::svd_solve( A, b, x, singular_values, rank );
       // Compute reciprocal of condition number
       Real rcond = singular_values[singular_values.length()-1] / 
 	singular_values[0];
@@ -748,7 +763,7 @@ void BPDN_log_barrier_interior_point_method( RealMatrix &A, RealVector &b,
   if ( verbosity > 1 )
     {
       std::cout << "\nInitial l1 norm: " << x.normOne() << "\n";
-      std::cout << "Initial objective: " << sum( u ) << "\n";
+      std::cout << "Initial objective: " << util::sum( u ) << "\n";
       std::cout << "Number of log-barrier iterations: ";
       std::cout << num_log_barrier_iter << "\n";
     }
@@ -902,9 +917,10 @@ void orthogonal_matching_pursuit( RealMatrix &A,
 				    memory_chunk_size );
 	}
       // Update the QR factorisation.	 
-      RealMatrix A_col( Teuchos::View, A, M, 1, 0, active_index );
-      int colinear = qr_factorization_update_insert_column( Q, R, A_col, 
-							    num_active_indices );
+      RealVector A_col = Teuchos::getCol(Teuchos::View, A, active_index);
+      int colinear =
+	util::qr_factorization_update_insert_column( Q, R, A_col,
+							   num_active_indices );
 
       if ( !colinear )
 	{
@@ -930,10 +946,10 @@ void orthogonal_matching_pursuit( RealMatrix &A,
 	  RealMatrix R_new( Teuchos::View, R, num_active_indices+1, 
 			    num_active_indices+1, 0, 0 );
 	  
-	  substitution_solve( R_new, Atb_sparse, z, Teuchos::TRANS );
+	  util::substitution_solve(R_new, Atb_sparse, z, Teuchos::TRANS);
 
 	  //Solve Rx = z via back substitution to obtain signal
-	  substitution_solve( R_new, z, x_sparse );
+	  util::substitution_solve( R_new, z, x_sparse );
 #ifdef PRECOMPUTE_GRAMMIAN
 	  correlation.assign( Atb );
 	  correlation.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
@@ -1157,11 +1173,12 @@ void orthogonal_matching_pursuit_cholesky( RealMatrix &A,
 
       // Update the QR factorisation.	 
       RealMatrix A_col( Teuchos::View, A, M, 1, 0, active_index );
-      int colinear = cholesky_factorization_update_insert_column( A_sparse_prev, 
-								  U, 
-								  A_col, 
- 							  num_active_indices,
-							      0.0 );
+      int colinear =
+	util::cholesky_factorization_update_insert_column( A_sparse_prev,
+								 U,
+								 A_col,
+								 num_active_indices,
+								 0.0 );
 
       if ( !colinear )
 	{
@@ -1205,10 +1222,10 @@ void orthogonal_matching_pursuit_cholesky( RealMatrix &A,
 	  RealMatrix z;
 	  RealMatrix U_new( Teuchos::View, U, num_active_indices+1, 
 			    num_active_indices+1, 0, 0 );
-	  substitution_solve( U_new, Atb_sparse, z, Teuchos::TRANS );
+	  util::substitution_solve(U_new, Atb_sparse, z, Teuchos::TRANS);
 
 	  // Solve U'x = z via back substitution to obtain signal
-	  substitution_solve( U_new, z, x_sparse, Teuchos::NO_TRANS );
+	  util::substitution_solve(U_new, z, x_sparse, Teuchos::NO_TRANS);
 
 	  correlation.assign( Atb );
 	  correlation.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
@@ -1245,7 +1262,7 @@ void orthogonal_matching_pursuit_cholesky( RealMatrix &A,
       RealMatrix AtA_sparse_inv;
       // compute inverse of AtA_sparse
       // This is second most expensive line 5.3/20 seconds
-      cholesky_inverse( U_new, AtA_sparse_inv, Teuchos::UPPER_TRI ); 
+      util::cholesky_inverse(U_new, AtA_sparse_inv, Teuchos::UPPER_TRI);
 
       // Speed up leave one out cross validation
       //RealMatrix tmp( M, AtA_sparse_inv.numCols(), false );
@@ -1300,7 +1317,7 @@ void orthogonal_matching_pursuit_cholesky( RealMatrix &A,
 	    H(i,i) += 1.0;
 	  
 	  RealMatrix L, H_inv; // Cholesky factor H = L*L.T
-	  int info = cholesky( H, L, Teuchos::LOWER_TRI, true ); //.4/31.6
+	  int info = util::cholesky( H, L, Teuchos::LOWER_TRI, true ); //.4/31.6
 
 	  if ( info != 0 )
 	    {
@@ -1314,7 +1331,7 @@ void orthogonal_matching_pursuit_cholesky( RealMatrix &A,
 	    }
 	  else
 	    {
-	      cholesky_inverse( L, H_inv, Teuchos::LOWER_TRI ); //.8/31.6s
+	      util::cholesky_inverse( L, H_inv, Teuchos::LOWER_TRI ); //.8/31.6s
 	  
 	      // compute leave k out errors
 	      cv_residuals[num_active_indices-1][n].multiply( 
@@ -1513,11 +1530,12 @@ void least_angle_regression( RealMatrix &A,
 	{
 	  RealMatrix A_col( Teuchos::View, A, M, 1, 0, 
 			    index_to_add );
-	  colinear = cholesky_factorization_update_insert_column( A_sparse, 
-								  U, 
-								  A_col, 
-								  num_covariates,
-								  delta );
+	  colinear =
+	    util::cholesky_factorization_update_insert_column( A_sparse,
+								     U,
+								     A_col,
+								     num_covariates,
+								     delta );
 	  if ( colinear == 1 )
 	    {
 	      if ( verbosity > 0  )
@@ -1536,7 +1554,7 @@ void least_angle_regression( RealMatrix &A,
 	  if ( verbosity > 1 )
 	    std::printf( "%d\t%d\t\t\t%d\t\t", homotopy_iter, 
 			 index_to_add, (int)active_indices.size()+1  );
-	  column_append( A_col, A_sparse );
+	  util::column_append( A_col, A_sparse );
 	  active_indices.push_back( index_to_add );
 	  inactive_index_iter = inactive_indices.find( index_to_add );
 	  inactive_indices.erase( inactive_index_iter );
@@ -1551,7 +1569,7 @@ void least_angle_regression( RealMatrix &A,
       for ( int active_index = 0; active_index < num_covariates; active_index++ )
 	{
 	  s_sparse(active_index,0) = 
-	    sgn( correlation(active_indices[active_index],0) );
+	    util::sgn( correlation(active_indices[active_index],0) );
 	}
 
       // normalisation_factor = 1 / sqrt( s'*inv(A'*A)*s )
@@ -1559,8 +1577,8 @@ void least_angle_regression( RealMatrix &A,
       // so solve two problems w = U' \ s then z = U \ w
       RealMatrix w, z;	      
       RealMatrix U_old( Teuchos::View, U, num_covariates, num_covariates, 0, 0 );
-      substitution_solve( U_old, s_sparse, w, Teuchos::TRANS );
-      substitution_solve( U_old, w, z, Teuchos::NO_TRANS );
+      util::substitution_solve( U_old, s_sparse, w, Teuchos::TRANS );
+      util::substitution_solve( U_old, w, z, Teuchos::NO_TRANS );
       Real normalisation_factor = 1.0 / std::sqrt( blas.DOT( num_covariates, 
 							     s_sparse[0], 
 							     1, z[0], 1 ) );
@@ -1694,9 +1712,10 @@ void least_angle_regression( RealMatrix &A,
 			   (int)active_indices.size()-1 );
 	    }
 
-	  cholesky_factorization_update_delete_column( U, 
-						       index_to_drop, 
-						       num_covariates );
+	  util::
+	    cholesky_factorization_update_delete_column( U,
+							 index_to_drop, 
+							 num_covariates );
 	  
 	  
 	  // store which variable was removed from active index set
@@ -1704,7 +1723,7 @@ void least_angle_regression( RealMatrix &A,
 	  result_1(1,homotopy_iter) =  -active_indices[index_to_drop];
 
 	  // delete column from A_sparse and resize
-	  delete_column( index_to_drop, A_sparse );
+	  util::delete_column( index_to_drop, A_sparse );
 	  inactive_indices.insert( active_indices[index_to_drop] );
 	  std::vector<int>::iterator it;
 	  it =  active_indices.begin() + index_to_drop;
@@ -1817,8 +1836,8 @@ int loo_step_lsq_cross_validation( RealMatrix &A, RealVector &b,
 
       RealMatrix A_col( Teuchos::View, A, M, 1, 0, ordering[i] );
       int colinear = 
-	cholesky_factorization_update_insert_column( A_sparse_prev, 
-						     U, A_col, i, 0.0 );
+	util::cholesky_factorization_update_insert_column( A_sparse_prev,
+								 U, A_col, i, 0.0 );
       if ( colinear )
 	{
 	  std::string msg = "cross validation: chosen column was colinear";
@@ -1844,7 +1863,7 @@ int loo_step_lsq_cross_validation( RealMatrix &A, RealVector &b,
 
       RealMatrix U_new( Teuchos::View, U, i+1, i+1, 0, 0 );
       RealMatrix AtA_sparse_inv;
-      cholesky_inverse( U_new, AtA_sparse_inv, Teuchos::UPPER_TRI );
+      util::cholesky_inverse( U_new, AtA_sparse_inv, Teuchos::UPPER_TRI );
 
       RealMatrix tmp( M, AtA_sparse_inv.numCols(), false );
       tmp.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
@@ -1856,7 +1875,7 @@ int loo_step_lsq_cross_validation( RealMatrix &A, RealVector &b,
       for ( int n = 0; n < M; n++ )
 	cv_residuals[n] = residual[n] / ( 1. - H_loo(n,n) );
 
-      Real tpn = (Real)M / ((Real)(M - (i+1) ) ) * ( 1.+trace( AtA_sparse_inv) );
+      Real tpn = (Real)M / ((Real)(M - (i+1) ) ) * ( 1.+util::trace( AtA_sparse_inv) );
 
       cv_scores[i] = cv_residuals.normFrobenius();
       //cv_scores[i] /= std::sqrt( M );
@@ -1883,7 +1902,7 @@ int loo_step_lsq_cross_validation( RealMatrix &A, RealVector &b,
 void prune( RealVector &v, int n, IntVector & indices )
 {
   Real eps = 2. * std::numeric_limits<double>::epsilon();
-  magnitude_argsort( v, indices );
+  util::magnitude_argsort( v, indices );
   int k;
   for ( k = 0; k < n; k++ )
     {
@@ -1974,7 +1993,7 @@ void cosamp( RealMatrix &A,
       //     Estimate signal by least squares    //
       // --------------------------------------- //
       RealVector x_sparse;
-      qr_solve( A_sparse, b, x_sparse, Teuchos::NO_TRANS );
+      util::qr_solve( A_sparse, b, x_sparse, Teuchos::NO_TRANS );
 
       // --------------------------------------- //
       //   Prune to obtain next approximation    //

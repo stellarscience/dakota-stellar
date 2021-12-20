@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -28,7 +28,10 @@
 #include <queso/Environment.h>
 #include <queso/MLSamplingLevelOptions.h>
 #include <queso/SequenceStatisticalOptions.h>
+
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 #include <queso/BoostInputOptionsParser.h>
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
 #undef  UQ_MH_SG_REQUIRES_INVERTED_COV_MATRICES
 #define UQ_NOTHING_JUST_FOR_TEST_OF_SVN_ID 1
@@ -93,12 +96,17 @@
 #define UQ_MH_SG_OUTPUT_LOG_LIKELIHOOD                                1
 #define UQ_MH_SG_OUTPUT_LOG_TARGET                                    1
 #define UQ_MH_SG_DO_LOGIT_TRANSFORM                                   1
+#define UQ_MH_SG_ALGORITHM                                            "logit_random_walk"
+#define UQ_MH_SG_TK                                                   "logit_random_walk"
+#define UQ_MH_SG_UPDATE_INTERVAL                                      1
 
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 namespace boost {
   namespace program_options {
     class options_description;
   }
 }
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
 namespace QUESO {
 
@@ -143,6 +151,19 @@ public:
   //! Copy constructor.
   /*! It assigns the same options values from  \c src to \c this.*/
   MhOptionsValues            (const MhOptionsValues& src);
+
+  //! Translating copy constructor.
+  /*! Extract options from MLSamplingLevelOptions to \c this.*/
+  MhOptionsValues (const MLSamplingLevelOptions& ml_opts);
+
+  //! Set parameter option names to begin with prefix
+  void set_prefix(const std::string& prefix);
+
+  //! Set default values for parameter options
+  void set_defaults();
+
+  //! Given prefix, read the input file for parameters named "prefix"+*
+  void parse(const BaseEnvironment& env, const std::string& prefix);
 
   //! Destructor
   virtual ~MhOptionsValues            ();
@@ -599,8 +620,22 @@ public:
   //! Flag for deciding whether or not to do logit transform of bounded domains Default is true.
   bool m_doLogitTransform;
 
+  //! Which algorithm to use for the MCMC.  Default is "random_walk"
+  std::string m_algorithm;
+
+  //! Which transition kernel to use for MCMC.  Default is "random_walk"
+  std::string m_tk;
+
+  //! How often to call the TK's updateTK method.  Default is 1.
+  unsigned int m_updateInterval;
+
 private:
-  BoostInputOptionsParser * m_parser;
+  // Cache a pointer to the environment.
+  const BaseEnvironment * m_env;
+
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
+  ScopedPtr<BoostInputOptionsParser>::Type m_parser;
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
   //! Option name for MhOptionsValues::m_help.  Option name is m_prefix + "mh_help"
   std::string                   m_option_help;
@@ -715,153 +750,26 @@ private:
   std::string                   m_option_outputLogTarget;
   //! Option name for MhOptionsValues::m_doLogitTransform.  Option name is m_prefix + "mh_doLogitTransform"
   std::string                   m_option_doLogitTransform;
+  //! Option name for MhOptionsValues::m_algorithm.  Option name is m_prefix + "mh_algorithm"
+  std::string                   m_option_algorithm;
+  //! Option name for MhOptionsValues::m_tk.  Option name is m_prefix + "mh_tk"
+  std::string                   m_option_tk;
+  //! Option name for MhOptionsValues::m_updateInterval.  Option name is m_prefix + "mh_updateInterval"
+  std::string                   m_option_updateInterval;
 
   //! Copies the option values from \c src to \c this.
   void copy(const MhOptionsValues& src);
 
-  // We pass the the passed environment to get access to the MPI ranks etc for
-  // sanity checks
-  void checkOptions(const BaseEnvironment * env);
+  void checkOptions();
 
   friend std::ostream & operator<<(std::ostream & os,
       const MhOptionsValues & obj);
 
 #ifdef QUESO_USES_SEQUENCE_STATISTICAL_OPTIONS
-  friend class MetropolisHastingsSGOptions;
   SsOptionsValues             m_alternativeRawSsOptionsValues;
   SsOptionsValues             m_alternativeFilteredSsOptionsValues;
 #endif
 };
-
-/*! \class MetropolisHastingsSGOptions
- *  \brief This class reads the options for the Metropolis-Hastings generator of samples from an input file.
- *
- * This class implements a Metropolis-Hastings generator of samples.  'SG'
- * stands for 'Sequence Generator'.  Metropolis-Hastings generator of samples
- * expects some options to be fully defined.  This class reads the options for
- * the Metropolis-Hastings generator of samples from an input file provided by
- * the user.  The class expects the prefix '\<prefix\>_mh_'.  For instance, if
- * 'prefix' is 'foo_775_fp_', then the constructor will read all options that
- * begin with 'foo_775_fp_mh_'.  Options reading is hpandled by class
- * 'MetropolisHastingsOptions'.  To set options by hand, use the \c
- * MhOptionsValues class.
- */
-
-class MetropolisHastingsSGOptions
-{
-public:
-  //! @name Constructor/Destructor methods
-  //@{
-  //! Constructor: reads options from the input file.
-  MetropolisHastingsSGOptions(const BaseEnvironment& env, const char* prefix);
-
-  //! Constructor: with alternative option values.
-  /*! In this constructor, the input options are given by \c alternativeOptionsValues.*/
-  MetropolisHastingsSGOptions(const BaseEnvironment& env, const char* prefix, const MhOptionsValues& alternativeOptionsValues);
-
-  //! Copy constructor
-  MetropolisHastingsSGOptions(const MLSamplingLevelOptions& mlOptions);
-
-  //! Destructor
-  ~MetropolisHastingsSGOptions();
-  //@}
-
-  //! @name I/O methods
-  //@{
-  //! It scans the option values from the options input file.
-  void scanOptionsValues();
-
-  //!  It prints the option values.
-  void print            (std::ostream& os) const;
-  //@}
-
-  //! This class is where the actual options are stored
-  MhOptionsValues             m_ov;
-
-#ifdef QUESO_USES_SEQUENCE_STATISTICAL_OPTIONS
-  SequenceStatisticalOptions* m_rawChainStatisticalOptionsObj;
-  bool                               m_rawChainStatOptsInstantiated;
-  SequenceStatisticalOptions* m_filteredChainStatisticalOptionsObj;
-  bool                               m_filteredChainStatOptsInstantiated;
-#endif
-  std::string                        m_prefix;
-
-private:
-  //! Defines the options for the Metropolis-Hastings generator of samples as the default options.
-  void   defineMyOptions  (boost::program_options::options_description& optionsDesc) const;
-
-  //! Gets the sequence options defined to the  Metropolis-Hastings algorithm.
-  void   getMyOptionValues(boost::program_options::options_description& optionsDesc);
-
-  const BaseEnvironment& m_env;
-  boost::program_options::options_description*      m_optionsDesc;
-
-  std::string                   m_option_help;
-
-  std::string                   m_option_dataOutputFileName;
-  std::string                   m_option_dataOutputAllowAll;
-  std::string                   m_option_dataOutputAllowedSet;
-
-  std::string                   m_option_totallyMute;
-  std::string                   m_option_initialPosition_dataInputFileName;
-  std::string                   m_option_initialPosition_dataInputFileType;
-  std::string                   m_option_initialProposalCovMatrix_dataInputFileName;
-  std::string                   m_option_initialProposalCovMatrix_dataInputFileType;
-  std::string                   m_option_listOfDisabledParameters;  // gpmsa2
-  std::string                   m_option_rawChain_dataInputFileName;
-  std::string                   m_option_rawChain_dataInputFileType;
-  std::string                   m_option_rawChain_size;
-  std::string                   m_option_rawChain_generateExtra;
-  std::string                   m_option_rawChain_displayPeriod;
-  std::string                   m_option_rawChain_measureRunTimes;
-  std::string                   m_option_rawChain_dataOutputPeriod;
-  std::string                   m_option_rawChain_dataOutputFileName;
-  std::string                   m_option_rawChain_dataOutputFileType;
-  std::string                   m_option_rawChain_dataOutputAllowAll;
-  std::string                   m_option_rawChain_dataOutputAllowedSet;
-#ifdef QUESO_USES_SEQUENCE_STATISTICAL_OPTIONS
-  std::string                   m_option_rawChain_computeStats;
-#endif
-  std::string                   m_option_filteredChain_generate;
-  std::string                   m_option_filteredChain_discardedPortion;
-  std::string                   m_option_filteredChain_lag;
-  std::string                   m_option_filteredChain_dataOutputFileName;
-  std::string                   m_option_filteredChain_dataOutputFileType;
-  std::string                   m_option_filteredChain_dataOutputAllowAll;
-  std::string                   m_option_filteredChain_dataOutputAllowedSet;
-#ifdef QUESO_USES_SEQUENCE_STATISTICAL_OPTIONS
-  std::string                   m_option_filteredChain_computeStats;
-#endif
-  std::string                   m_option_displayCandidates;
-  std::string                   m_option_putOutOfBoundsInChain;
-  std::string                   m_option_tk_useLocalHessian;
-  std::string                   m_option_tk_useNewtonComponent;
-  std::string                   m_option_dr_maxNumExtraStages;
-  std::string                   m_option_dr_listOfScalesForExtraStages;
-  std::string                   m_option_dr_duringAmNonAdaptiveInt;
-  std::string                   m_option_am_keepInitialMatrix;
-  std::string                   m_option_am_initialNonAdaptInterval;
-  std::string                   m_option_am_adaptInterval;
-  std::string                   m_option_am_adaptedMatrices_dataOutputPeriod;
-  std::string                   m_option_am_adaptedMatrices_dataOutputFileName;
-  std::string                   m_option_am_adaptedMatrices_dataOutputFileType;
-  std::string                   m_option_am_adaptedMatrices_dataOutputAllowAll;
-  std::string                   m_option_am_adaptedMatrices_dataOutputAllowedSet;
-
-  //! See MhOptionsValues::m_amEta
-  std::string                   m_option_am_eta;
-  //! See MhOptionsValues::m_amEpsilon
-  std::string                   m_option_am_epsilon;
-
-  std::string                   m_option_enableBrooksGelmanConvMonitor;
-  std::string                   m_option_BrooksGelmanLag;
-
-  std::string                   m_option_outputLogLikelihood;
-  std::string                   m_option_outputLogTarget;
-  std::string                   m_option_doLogitTransform;
-};
-
-std::ostream& operator<<(std::ostream& os, const MetropolisHastingsSGOptions& obj);
 
 }  // End namespace QUESO
 

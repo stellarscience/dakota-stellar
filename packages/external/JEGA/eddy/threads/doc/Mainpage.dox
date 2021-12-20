@@ -91,7 +91,7 @@ Document The Namespaces Relevant To This Project
  * \section purpose Purpose
  *
  * The purpose of this application is to provide a simple OO interface to
- * mult-threaded application development.  It is meant to be portable
+ * multi-threaded application development.  It is meant to be portable
  * and thus is not very feature rich.
  *
  * \section impl Implementation

@@ -106,7 +106,7 @@ Specialize the Main Page
  *
  * The program is licensed under the GNU Lesser General Public License and so
  * is free of charge.  Each source file is prepended with the following
- * copyright disclaimer (or equivolent):
+ * copyright disclaimer (or equivalent):
  *
  * \verbatim
  
@@ -138,7 +138,7 @@ Specialize the Main Page
  * making JEGA a useful stand alone library.  This includes the creation and
  * maintenance of a front-end project to ease the syntax of incorporating JEGA
  * into any application.  In addition, manages extensions to the front end have
- * been created for seemless encorporation of JEGA into programs written in any
+ * been created for seamless incorporation of JEGA into programs written in any
  * Microsoft .NET languages.  These extensions are not available through the
  * DAKOTA release.  Contact <a href="mailto:jpeddy@sandia.gov">John Eddy</a>
  * for more information.
@@ -302,7 +302,7 @@ Specialize the Main Page
  * developers with a great deal of flexibility as well as simplicity.  A flow
  * diagram of the standard progression of the algorithm is shown below.  Note
  * that specialized main loop operators may do things in a different order or
- * add additional opertions in various places.  Click on the operator boxes to
+ * add additional operations in various places.  Click on the operator boxes to
  * browse to the corresponding documentation.
  *
  * \htmlonly

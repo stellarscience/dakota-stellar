@@ -15,91 +15,9 @@
 #ifndef RANDOM_VARIABLE_HPP
 #define RANDOM_VARIABLE_HPP
 
-#include "pecos_data_types.hpp"
-#include <boost/math/distributions.hpp>
-#include <boost/math/special_functions/sqrt1pm1.hpp> // includes expm1,log1p
-#include <boost/random/uniform_real.hpp>
-
-namespace bmth = boost::math;
-namespace bmp  = bmth::policies;
+#include "pecos_stat_util.hpp"
 
 namespace Pecos {
-
-// -----------------------------------
-// Non-default boost math/policy types
-// -----------------------------------
-
-// continuous random variable types:
-typedef bmth::
-  normal_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  normal_dist;
-typedef bmth::
-  lognormal_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  lognormal_dist;
-typedef bmth::
-  triangular_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  triangular_dist;
-typedef bmth::
-  exponential_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  exponential_dist;
-typedef bmth::
-  beta_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  beta_dist;
-typedef bmth::
-  gamma_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  gamma_dist;
-typedef bmth::
-  inverse_gamma_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  inv_gamma_dist;
-typedef bmth::
-  extreme_value_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  extreme_value_dist;
-typedef bmth::
-  weibull_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  weibull_dist;
-// discrete random variable types:
-typedef bmth::
-  poisson_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  poisson_dist;
-typedef bmth::
-  binomial_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  binomial_dist;
-typedef bmth::
-  negative_binomial_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  negative_binomial_dist;
-typedef bmth::
-  geometric_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  geometric_dist;
-typedef bmth::
-  hypergeometric_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  hypergeometric_dist;
-// distributions used in statistical utilities (e.g., confidence intervals):
-typedef bmth::
-  chi_squared_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  chi_squared_dist;
-typedef bmth::
-  students_t_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  students_t_dist;
-typedef bmth::
-  fisher_f_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  fisher_f_dist;
 
 
 /// base class for random variable hierarchy
@@ -196,9 +114,53 @@ public:
   virtual Real from_standard(Real z) const;
 
   /// return the value of the named distribution parameter
-  virtual Real parameter(short dist_param) const;
+  virtual void pull_parameter(short dist_param, Real& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, int& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, unsigned int& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, IntSet& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, StringSet& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, RealSet& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, IntRealMap& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, StringRealMap& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, RealRealMap& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, IntIntPairRealMap& val) const;
+  /// return the value of the named distribution parameter
+  virtual void pull_parameter(short dist_param, RealRealPairRealMap& val) const;
+
   /// update the value of the named distribution parameter
-  virtual void parameter(short dist_param, Real val);
+  virtual void push_parameter(short dist_param, Real val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, int val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, unsigned int val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const IntSet& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const StringSet& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const RealSet& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const IntRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const StringRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const RealRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const IntIntPairRealMap& val);
+  /// update the value of the named distribution parameter
+  virtual void push_parameter(short dist_param, const RealRealPairRealMap& val);
+
+  /// copy the distribution parameter values from rv into *this
+  virtual void copy_parameters(const RandomVariable& rv);
 
   /// return the distribution mean
   virtual Real mean() const;
@@ -214,8 +176,18 @@ public:
   /// return the distribution mean and standard deviation as a pair
   /** default is only overridden when more efficient to compute together */
   virtual RealRealPair moments() const;
+
   /// return the distribution lower and upper bounds as a pair
-  virtual RealRealPair bounds() const;
+  virtual RealRealPair distribution_bounds() const;
+
+  //virtual Real pull_lower_bound() const;
+  //virtual int  pull_lower_bound() const;
+  //virtual void push_lower_bound(Real l_bnd);
+  //virtual void push_lower_bound(int  l_bnd);
+  virtual void lower_bound(Real l_bnd);
+  virtual void lower_bound(int  l_bnd);
+  virtual void upper_bound(Real l_bnd);
+  virtual void upper_bound(int  l_bnd);
 
   /// compute the coefficient of variation (used to compute selected
   /// correlation warping factors); defined for semi-infinite distributions
@@ -240,6 +212,10 @@ public:
   //- Heading: Member functions
   //
 
+  // Invoke virtual pull_parameter(short, T) and return result
+  //template <typename T>
+  //T return_parameter(short dist_param) const;
+
   /// Draw a sample from the distribution using inverse_cdf on uniform[0,1]
   template <typename Engine>
   Real draw_sample(Engine& rng) const;
@@ -255,6 +231,8 @@ public:
   /// returns ranVarRep for access to derived class member functions
   /// that are not mapped to the base level
   RandomVariable* random_variable_rep() const;
+  /// function to check modelRep (does this envelope contain a letter)
+  bool is_null() const;
 
 protected:
 
@@ -302,6 +280,17 @@ private:
 };
 
 
+/*
+template <typename T>
+T RandomVariable::return_parameter(short dist_param) const
+{
+  T val;
+  pull_parameter(dist_param, val);
+  return val;
+}
+*/
+
+
 template <typename Engine> 
 Real RandomVariable::draw_sample(Engine& rng) const
 {
@@ -341,6 +330,10 @@ inline short RandomVariable::type() const
 
 inline RandomVariable* RandomVariable::random_variable_rep() const
 { return ranVarRep; }
+
+
+inline bool RandomVariable::is_null() const
+{ return (ranVarRep) ? false : true; }
 
 } // namespace Pecos
 

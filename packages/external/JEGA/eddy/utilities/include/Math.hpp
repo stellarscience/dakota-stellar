@@ -184,6 +184,13 @@ class EDDY_SL_IEDECL Math
     */
     public:
 
+		template <typename T>
+        inline static
+        bool
+        IsWhole(
+            T val
+            );
+
         /// Returns true if the supplied number is a whole number.
         /**
          * \param val The value to test as a whole number or not.
@@ -287,6 +294,14 @@ class EDDY_SL_IEDECL Math
             float val = 1.0f
             );
 
+		template <typename T>
+        static
+        T
+        Round(
+            T val,
+            int prec = 0
+            );
+
         /// Rounds \a val to \a prec decimal places.
         /**
          * Positive numbers cause rounding to the right of the radix.
@@ -340,7 +355,7 @@ class EDDY_SL_IEDECL Math
          *
          * \param val The value to be truncated.
          * \param prec The precision to which \a val is to be truncated.
-         * \return val trunctated at the \a prec decimal place.
+         * \return val truncated at the \a prec decimal place.
          */
         static
         double
@@ -358,7 +373,7 @@ class EDDY_SL_IEDECL Math
          *
          * \param val The value to be truncated.
          * \param prec The precision to which \a val is to be truncated.
-         * \return val trunctated at the \a prec decimal place.
+         * \return val truncated at the \a prec decimal place.
          */
         static
         float
@@ -705,6 +720,50 @@ class EDDY_SL_IEDECL Math
         float
         Abs(
             float val
+            );
+
+        /// Returns the absolute value of val.
+        /**
+         * \param val The value to take the absolute value of.
+         * \return val.
+         */
+        static inline
+        unsigned int
+        Abs(
+            unsigned int val
+            );
+
+        /// Returns the absolute value of val.
+        /**
+         * \param val The value to take the absolute value of.
+         * \return val.
+         */
+        static inline
+        unsigned long
+        Abs(
+            unsigned long val
+            );
+
+        /// Returns the absolute value of val.
+        /**
+         * \param val The value to take the absolute value of.
+         * \return val.
+         */
+        static inline
+        unsigned short
+        Abs(
+            unsigned short val
+            );
+
+        /// Returns the absolute value of val.
+        /**
+         * \param val The value to take the absolute value of.
+         * \return val.
+         */
+        static inline
+        unsigned long long
+        Abs(
+            unsigned long long val
             );
 
         /// Returns the LambertW of val.

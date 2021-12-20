@@ -560,12 +560,12 @@ GeneticAlgorithmEvaluator::SetEvaluationConcurrency(
     JEGAIFLOG_II(ec < 1, this->GetLogger(), lquiet(), this,
         text_entry(lquiet(), this->GetName() + ": Attempt to assign the "
             "evaluation concurrency to 0.  1 is the minimum evaluation "
-            "concurency.  Using the value of 1 instead.")
+            "concurrency.  Using the value of 1 instead.")
         )
 
     JEGAIFLOG_II(ec > MAX_EVAL_CONCUR, this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(), this->GetName() + ": Attempt to assign the "
-            "evalauation concurrency to a value of ") << ec << " which is "
+            "evaluation concurrency to a value of ") << ec << " which is "
             "greater than the maximum allowable value of " << MAX_EVAL_CONCUR
             << ". Using the max value."
         )
@@ -683,7 +683,7 @@ GeneticAlgorithmEvaluator::MergeInjectedDesigns(
                 text_entry(
                     lquiet(),
                     this->GetName() + ": encountered and skipped an "
-                    "illconditioned injection design.  The design was not "
+                    "ill-conditioned injection design.  The design was not "
                     "merged into the group."
                     )
                 )
@@ -827,7 +827,7 @@ GeneticAlgorithmEvaluator::Evaluate(
     JEGAIFLOG_II(nskipped > 0, this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(), this->GetName() + ": skipped evaluation of ")
             << nskipped << " designs because the maximum number of "
-               "evaluations was reached.  They were marked illconditioned."
+               "evaluations was reached.  They were marked ill-conditioned."
         )
 
     return twm.final_result();

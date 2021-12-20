@@ -17,7 +17,19 @@
 #include "OrthogonalPolynomial.hpp"
 #include "pecos_global_defs.hpp"
 #include "pecos_stat_util.hpp"
-
+#include "BoundedNormalRandomVariable.hpp"
+#include "BoundedLognormalRandomVariable.hpp"
+#include "LoguniformRandomVariable.hpp"
+#include "TriangularRandomVariable.hpp"
+#include "GumbelRandomVariable.hpp"
+#include "FrechetRandomVariable.hpp"
+#include "WeibullRandomVariable.hpp"
+#include "HistogramBinRandomVariable.hpp"
+//#include "PoissonRandomVariable.hpp"
+//#include "BinomialRandomVariable.hpp"
+//#include "NegBinomialRandomVariable.hpp"
+//#include "GeometricRandomVariable.hpp"
+//#include "HypergeometricRandomVariable.hpp"
 
 namespace Pecos {
 
@@ -58,6 +70,15 @@ public:
   /// calculate and return beta3TR[order]
   Real beta_recursion(unsigned short order);
 
+  /// set RV type and parameters for a discrete range distribution
+  void discrete_range_distribution(int l_bnd, int u_bnd);
+  /// set RV type and parameters for a discrete integer set distribution
+  void discrete_set_distribution(const IntSet& set_values);
+  /// set RV type and parameters for a discrete string set distribution
+  void discrete_set_distribution(const StringSet& set_values);
+  /// set RV type and parameters for a discrete real set distribution
+  void discrete_set_distribution(const RealSet& set_values);
+
   /// set distribution type and parameters for a BOUNDED_NORMAL distribution
   void bounded_normal_distribution(Real mean,  Real std_dev,
 				   Real l_bnd, Real u_bnd);
@@ -81,10 +102,21 @@ public:
 
   /// set distribution type and parameters for a HISTOGRAM_PT_INT distribution
   void histogram_pt_distribution(const IntRealMap& bin_pairs);
-  /// set distribution type and parameters for a HISTOGRAM_PT_STRING distribution
+  /// set distribution type & parameters for a HISTOGRAM_PT_STRING distribution
   void histogram_pt_distribution(const StringRealMap& bin_pairs);
   /// set distribution type and parameters for a HISTOGRAM_PT_REAL distribution
   void histogram_pt_distribution(const RealRealMap& bin_pairs);
+
+  /// set RV type and parameters for a continuous interval distribution
+  void continuous_interval_distribution(const RealRealPairRealMap& c_bpa);
+  /// set RV type and parameters for a discrete interval distribution
+  void discrete_interval_distribution(const IntIntPairRealMap& d_bpa);
+  /// set RV type and parameters for a discrete integer map distribution
+  void discrete_map_distribution(const IntRealMap& vals_probs);
+  /// set RV type and parameters for a discrete string map distribution
+  void discrete_map_distribution(const StringRealMap& vals_probs);
+  /// set RV type and parameters for a discrete real map distribution
+  void discrete_map_distribution(const RealRealMap& vals_probs);
 
   /// set coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
@@ -106,6 +138,8 @@ protected:
   bool parameterized() const;
 
   Real length_scale() const;
+
+  void precompute_rules(unsigned short order);
 
 private:
 
@@ -198,9 +232,9 @@ private:
   //- Heading: Data
   //
 
-  /// the type of non-Askey distribution: BOUNDED_NORMAL, LOGNORMAL,
+  /// the type of non-Askey distribution, e.g. BOUNDED_NORMAL, LOGNORMAL,
   /// BOUNDED_LOGNORMAL, LOGUNIFORM, TRIANGULAR, GUMBEL, FRECHET, WEIBULL,
-  /// HISTOGRAM_BIN, or STOCHASTIC_EXPANSION
+  /// HISTOGRAM_BIN, etc.
   short distributionType;
 
   /// distribution parameters (e.g., mean, std_dev, alpha, beta)
@@ -264,7 +298,70 @@ polynomial_recursion(RealVector& poly_coeffs_ip1, Real alpha_i,
 
 
 inline void NumericGenOrthogPolynomial::
-bounded_normal_distribution(Real mean,  Real std_dev, Real l_bnd, Real u_bnd)
+discrete_range_distribution(int l_bnd, int u_bnd)
+{
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_RANGE) {
+    if (l_bnd != (int)distParams[0] || u_bnd != (int)distParams[1])
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = DISCRETE_RANGE; parametricUpdate = true; }
+  if (parametricUpdate)
+    { distParams[0] = (Real)l_bnd; distParams[1] = (Real)u_bnd; reset_gauss(); }
+}
+
+
+inline void NumericGenOrthogPolynomial::
+discrete_set_distribution(const IntSet& set_values)
+{
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_SET_INT) {
+    if (!equivalent(distParams, set_values))
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = DISCRETE_SET_INT; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(set_values, distParams); reset_gauss(); }
+}
+
+
+inline void NumericGenOrthogPolynomial::
+discrete_set_distribution(const StringSet& set_values)
+{
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_SET_STRING) {
+    if (!equivalent(distParams, set_values)) // set indices
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = DISCRETE_SET_STRING; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(set_values, distParams); reset_gauss(); } // set indices
+}
+
+
+inline void NumericGenOrthogPolynomial::
+discrete_set_distribution(const RealSet& set_values)
+{
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_SET_REAL) {
+    if (!equivalent(distParams, set_values))
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = DISCRETE_SET_REAL; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(set_values, distParams); reset_gauss(); }
+}
+
+
+inline void NumericGenOrthogPolynomial::
+bounded_normal_distribution(Real mean, Real std_dev, Real l_bnd, Real u_bnd)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -462,16 +559,13 @@ histogram_bin_distribution(const RealRealMap& bin_pairs)
     { copy_data(bin_pairs, distParams); reset_gauss(); }
 }
 
+
 inline void NumericGenOrthogPolynomial::
 histogram_pt_distribution(const IntRealMap& pt_pairs)
 {
   parametricUpdate = false;
   if (distributionType == HISTOGRAM_PT_INT) {
-    // BMA TODO: handle differential data types in equivalent?
-    //    if (!equivalent(distParams, pt_pairs))
-    RealVector dist_params_tmp;
-    copy_data(pt_pairs, dist_params_tmp);
-    if (distParams != dist_params_tmp)
+    if (!equivalent(distParams, pt_pairs))
       parametricUpdate = true;
   }
   else
@@ -480,16 +574,13 @@ histogram_pt_distribution(const IntRealMap& pt_pairs)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
+
 inline void NumericGenOrthogPolynomial::
 histogram_pt_distribution(const StringRealMap& pt_pairs)
 {
   parametricUpdate = false;
   if (distributionType == HISTOGRAM_PT_STRING) {
-    // BMA TODO: handle differential data types in equivalent?
-    //    if (!equivalent(distParams, pt_pairs))
-    RealVector dist_params_tmp;
-    copy_data(pt_pairs, dist_params_tmp);
-    if (distParams != dist_params_tmp)
+    if (!equivalent(distParams, pt_pairs))
       parametricUpdate = true;
   }
   else
@@ -498,13 +589,13 @@ histogram_pt_distribution(const StringRealMap& pt_pairs)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
+
 inline void NumericGenOrthogPolynomial::
 histogram_pt_distribution(const RealRealMap& pt_pairs)
 {
   parametricUpdate = false;
   if (distributionType == HISTOGRAM_PT_REAL) {
-    // BMA TODO: handle differential data types
-    //    if (!equivalent(distParams, pt_pairs))
+    if (!equivalent(distParams, pt_pairs))
       parametricUpdate = true;
   }
   else
@@ -512,6 +603,97 @@ histogram_pt_distribution(const RealRealMap& pt_pairs)
   if (parametricUpdate)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
+
+
+inline void NumericGenOrthogPolynomial::
+continuous_interval_distribution(const RealRealPairRealMap& ciu_bpa)
+{
+  // combine intervals to create histogram bin representation (as vector)
+
+  parametricUpdate = false;
+  if (distributionType == CONTINUOUS_INTERVAL_UNCERTAIN) {
+    RealVector xy_vec;  intervals_to_xy_pdf(ciu_bpa, xy_vec);
+    if (!equivalent(distParams, xy_vec))
+      { parametricUpdate = true; distParams = xy_vec; }
+  }
+  else {
+    distributionType = CONTINUOUS_INTERVAL_UNCERTAIN;
+    parametricUpdate = true;
+    intervals_to_xy_pdf(ciu_bpa, distParams);
+  }
+  if (parametricUpdate)
+    reset_gauss();
+}
+
+
+inline void NumericGenOrthogPolynomial::
+discrete_interval_distribution(const IntIntPairRealMap& diu_bpa)
+{
+  // combine intervals to create discrete uncertain set representation
+  // (as vector)
+
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_INTERVAL_UNCERTAIN) {
+    RealVector xy_vec;  intervals_to_xy_pdf(diu_bpa, xy_vec);
+    if (!equivalent(distParams, xy_vec))
+      { parametricUpdate = true; distParams = xy_vec; }
+  }
+  else {
+    distributionType = DISCRETE_INTERVAL_UNCERTAIN;
+    parametricUpdate = true;
+    intervals_to_xy_pdf(diu_bpa, distParams);
+  }
+  if (parametricUpdate)
+    reset_gauss();
+}
+
+
+inline void NumericGenOrthogPolynomial::
+discrete_map_distribution(const IntRealMap& pt_pairs)
+{
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_UNCERTAIN_SET_INT) {
+    if (!equivalent(distParams, pt_pairs))
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = DISCRETE_UNCERTAIN_SET_INT; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(pt_pairs, distParams); reset_gauss(); }
+}
+
+
+inline void NumericGenOrthogPolynomial::
+discrete_map_distribution(const StringRealMap& pt_pairs)
+{
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_UNCERTAIN_SET_STRING) {
+    if (!equivalent(distParams, pt_pairs))
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = DISCRETE_UNCERTAIN_SET_STRING;
+    parametricUpdate = true;
+  }
+  if (parametricUpdate)
+    { copy_data(pt_pairs, distParams); reset_gauss(); }
+}
+
+
+inline void NumericGenOrthogPolynomial::
+discrete_map_distribution(const RealRealMap& pt_pairs)
+{
+  parametricUpdate = false;
+  if (distributionType == DISCRETE_UNCERTAIN_SET_REAL) {
+    if (!equivalent(distParams, pt_pairs))
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = DISCRETE_UNCERTAIN_SET_REAL; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(pt_pairs, distParams); reset_gauss(); }
+}
+
 
 inline Real NumericGenOrthogPolynomial::
 bounded_normal_pdf(Real x, const RealVector& params)
@@ -597,11 +779,10 @@ inline Real NumericGenOrthogPolynomial::length_scale() const
     WeibullRandomVariable::
       moments_from_params(distParams[0], distParams[1], mean, stdev);
     break;
-  case HISTOGRAM_BIN: {
-    RealRealMap hist_bin_prs_rrm;
-    copy_data(distParams, hist_bin_prs_rrm);
-    HistogramBinRandomVariable::
-      moments_from_params(hist_bin_prs_rrm, mean, stdev); break;
+  case HISTOGRAM_BIN: case CONTINUOUS_INTERVAL_UNCERTAIN: {
+    RealRealMap val_prob_prs;  copy_data(distParams, val_prob_prs);
+    HistogramBinRandomVariable::moments_from_params(val_prob_prs, mean, stdev);
+    break;
   }
   default:
     PCerr << "Error: distributionType " << distributionType << " not supported "
@@ -609,6 +790,13 @@ inline Real NumericGenOrthogPolynomial::length_scale() const
     abort_handler(-1);
   }
   return std::max(mean, stdev);
+}
+
+
+inline void NumericGenOrthogPolynomial::precompute_rules(unsigned short order)
+{
+  if (polyCoeffs.size() <= order)
+    solve_eigenproblem(order);
 }
 
 } // namespace Pecos

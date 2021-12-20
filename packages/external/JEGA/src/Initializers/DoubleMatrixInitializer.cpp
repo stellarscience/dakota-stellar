@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class DoubleMatrixInitializer.
+        Implementation of class DoubleMatrixInitializer.
 
     NOTES:
 
@@ -349,7 +349,7 @@ DoubleMatrixInitializer::Initialize(
 
     JEGAIFLOG_CF_II(!into.IsEmpty(), this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(), this->GetName() + ": ") << into.SizeDV() <<
-            " total designs were were read from the design matrix."
+            " total designs were read from the design matrix."
         )
 
     // now we have to make sure that we have enough according to the

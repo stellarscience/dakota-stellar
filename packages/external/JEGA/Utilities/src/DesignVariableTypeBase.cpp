@@ -59,6 +59,7 @@ Includes
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <cfloat>
+#include <limits>
 #include <utilities/include/Math.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
 #include <../Utilities/include/DesignVariableInfo.hpp>
@@ -122,7 +123,7 @@ DesignVariableTypeBase::SetNature(
     EDDY_ASSERT(!this->IsNatureLocked());
     EDDY_ASSERT(nature != this->_nature);
     EDDY_ASSERT(nature != 0x0);
-    EDDY_ASSERT(& this->_nature->GetType() == this);
+    EDDY_ASSERT(&this->_nature->GetType() == this);
 
     if(this->IsNatureLocked() ||
         (nature == 0x0) ||
@@ -229,7 +230,7 @@ DesignVariableTypeBase::IsValueInBounds(
 
 bool
 DesignVariableTypeBase::IsRepInBounds(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -275,13 +276,14 @@ DesignVariableTypeBase::IsValidValue(
 }
 
 bool
-DesignVariableTypeBase::IsValidDoubleRep(
-    double rep
+DesignVariableTypeBase::IsValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_nature != 0x0);
-    return (rep != -DBL_MAX) && this->_nature->IsValidDoubleRep(rep);
+    return (rep != -std::numeric_limits<var_rep_t>::max()) &&
+		this->_nature->IsValidRep(rep);
 }
 
 double
@@ -311,40 +313,40 @@ DesignVariableTypeBase::GetMinValue(
     return this->_nature->GetMinValue();
 }
 
-double
-DesignVariableTypeBase::GetDefaultDoubleRep(
+var_rep_t
+DesignVariableTypeBase::GetDefaultRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_nature != 0x0);
-    return this->_nature->GetMinDoubleRep();
+    return this->_nature->GetMinRep();
 }
 
-double
-DesignVariableTypeBase::GetMaxDoubleRep(
+var_rep_t
+DesignVariableTypeBase::GetMaxRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_nature != 0x0);
-    return this->_nature->GetMaxDoubleRep();
+    return this->_nature->GetMaxRep();
 }
 
-double
-DesignVariableTypeBase::GetMinDoubleRep(
+var_rep_t
+DesignVariableTypeBase::GetMinRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_nature != 0x0);
-    return this->_nature->GetMinDoubleRep();
+    return this->_nature->GetMinRep();
 }
 
-double
-DesignVariableTypeBase::GetDistanceBetweenDoubleReps(
+var_rep_t
+DesignVariableTypeBase::GetDistanceBetweenReps(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_nature != 0x0);
-    return this->_nature->GetDistanceBetweenDoubleReps();
+    return this->_nature->GetDistanceBetweenReps();
 }
 
 bool

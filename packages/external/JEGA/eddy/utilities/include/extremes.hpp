@@ -314,7 +314,7 @@ class extremes
          *        larger.
          *
          * \param elem The index of the element of interest in these extremes.
-         * \param val The value to conditionally take as the new max for theS
+         * \param val The value to conditionally take as the new max for the
          *            element at \a elem.
          * \return true if the value was taken and false otherwise.
          */
@@ -411,7 +411,7 @@ class extremes
         /// Takes the larger of \a val1 and \a val2 as the max at \a elem.
         /**
          * \param elem The index of the element of interest in these extremes.
-         * \param val1 The frist value to consider as a possible max.
+         * \param val1 The first value to consider as a possible max.
          * \param val2 The second value to consider as a possible max.
          * \return -1 if val1 was taken and 1 of val2.
          */
@@ -425,7 +425,7 @@ class extremes
         /// Takes the smaller of \a val1 and \a val2 as the min at \a elem.
         /**
          * \param elem The index of the element of interest in these extremes.
-         * \param val1 The frist value to consider as a possible min.
+         * \param val1 The first value to consider as a possible min.
          * \param val2 The second value to consider as a possible min.
          * \return -1 if val1 was taken and 1 of val2.
          */
@@ -617,7 +617,7 @@ class extremes
         extremes(
             );
 
-        /// Construcs an extremes object with size default entries.
+        /// Constructs an extremes object with size default entries.
         /**
          * \param size The number of locations to allocate for min/max pairs.
          */
@@ -626,7 +626,7 @@ class extremes
             size_type size
             );
 
-        /// Construcs an extremes object with size entries.
+        /// Constructs an extremes object with size entries.
         /**
          * This constructor uses minVal as the initial value of all mins and
          * maxVal ans the initial value of all maxs.
@@ -642,7 +642,7 @@ class extremes
             const T& maxVal
             );
 
-        /// Copy construcs an extremes.
+        /// Copy constructs an extremes.
         /**
          * \param copy The existing extremes object to duplicate into this new
          *             one.

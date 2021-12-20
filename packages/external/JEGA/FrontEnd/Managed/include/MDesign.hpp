@@ -120,7 +120,7 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MDesign);
+ref class MDesign;
 
 
 
@@ -151,7 +151,7 @@ Class Definition
  *
  *
  */
-MANAGED_CLASS(public, MDesign)
+public ref class MDesign
 {
     /*
     ============================================================================
@@ -257,6 +257,22 @@ MANAGED_CLASS(public, MDesign)
          */
         double
         GetVariable(
+            eddy::utilities::uint64_t num
+            );
+		
+        /// Retrieves the requested design variable representation.
+        /**
+         * It is up to you to make sure that \a num is in bounds
+         * (less than ndv).
+         *
+         * In terms of the way the Design class works, this method is akin
+         * to the GetVariableRep method.
+         *
+         * \param num The index of the variable whose representation is sought.
+         * \return The design variable representation stored in location \a num.
+         */
+        double
+        GetVariableRep(
             eddy::utilities::uint64_t num
             );
 
@@ -386,9 +402,9 @@ MANAGED_CLASS(public, MDesign)
         SatisfiesConstraints(
             );
 
-        /// Marks this Design as being illconditioned.
+        /// Marks this Design as being ill-conditioned.
         /**
-         * \param lval True to set the Illconditioned bit and false to
+         * \param lval True to set the Ill-conditioned bit and false to
          *             unset it.
          */
         void
@@ -398,7 +414,7 @@ MANAGED_CLASS(public, MDesign)
 
         /// Returns true if evaluation failed for this Design.
         /**
-         * \return true if this Design has the Illconditioned attribute
+         * \return true if this Design has the Ill-conditioned attribute
          *         bit set and false otherwise.
          */
         bool
@@ -411,9 +427,9 @@ MANAGED_CLASS(public, MDesign)
             );
 
         static
-        MDesign MOH
+        MDesign^
         Create(
-            MDesign MOH hint
+            MDesign^ hint
             );
 
     /*

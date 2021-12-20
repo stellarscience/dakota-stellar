@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/JeffreysJointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -126,13 +127,34 @@ JeffreysJointPdf<V,M>::lnValue(
     }
   else {
     pdf = pdf * (1.0 / domainVector[i]);
-    result = -log(pdf);
+    result = std::log(pdf);
     }
   }
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 54)) {
     *m_env.subDisplayFile() << " return log(pdf) " << std::endl;
   }
   return result; // No need to add m_logOfNormalizationFactor [PDF-04]
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+JeffreysJointPdf<V,M>::distributionMean(V& meanVector) const
+{
+  // FIXME: This is an improper prior; the "mean" makes little sense.
+  // At least we can return something within the domain set.
+  if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 2)) {
+    *m_env.subDisplayFile() << "Warning: JeffreysJointPdf<V,M>::distributionMean() makes little sense"
+                            << std::endl;
+  }
+  m_domainSet.centroid(meanVector);
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+JeffreysJointPdf<V,M>::distributionVariance (M & /* covMatrix */) const
+{
+  // There's no way this is anything like well-defined
+  queso_not_implemented();
 }
 //--------------------------------------------------
 template<class V, class M>

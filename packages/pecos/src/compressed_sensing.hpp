@@ -1,7 +1,15 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
 #ifndef COMPRESSED_SENSING_HPP
 #define COMPRESSED_SENSING_HPP
 
-#include "LinearAlgebra.hpp"
+#include "pecos_data_types.hpp"
 #include "pecos_global_defs.hpp"
 
 namespace Pecos {

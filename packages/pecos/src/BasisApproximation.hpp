@@ -58,37 +58,54 @@ public:
 
   /// set PolynomialApproximation::surrData
   virtual void surrogate_data(const SurrogateData& data);
-  /// get PolynomialApproximation::surrData
+  /// get PolynomialApproximation::surrData (const)
   virtual const SurrogateData& surrogate_data() const;
+  /// get PolynomialApproximation::surrData (non-const)
+  virtual SurrogateData& surrogate_data();
+
+  /// set PolynomialApproximation::modSurrData
+  virtual void modified_surrogate_data(const SurrogateData& data);
+  /// get PolynomialApproximation::modSurrData (const)
+  virtual const SurrogateData& modified_surrogate_data() const;
+  /// get PolynomialApproximation::modSurrData (non-const)
+  virtual SurrogateData& modified_surrogate_data();
 
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;
-  /// calculate the approximation coefficients using the SurrogateData
+  /// calculate the approximation coefficients using a set of surrogate data
   virtual void compute_coefficients();
-  /// recalculate the approximation coefficients following SurrogateData update
+  /// recalculate approximation coefficients following a surrogate data update
   virtual void increment_coefficients();
   /// restore the approximation coefficients to the state preceding the last
   /// increment
-  virtual void decrement_coefficients();
+  virtual void pop_coefficients(bool save_data);
   /// restore the approximation coefficients to a previously incremented state
   /// as identified by the current data increment
   virtual void push_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
 
+  /*
   /// store the current coefficients for later combination
   virtual void store_coefficients(size_t index = _NPOS);
   /// restore a previously stored coefficient state
   virtual void restore_coefficients(size_t index = _NPOS);
-  /// swap the current coefficients with a previously stored set
-  virtual void swap_coefficients(size_t index);
   /// remove a redundant stored entry prior to combine_coefficients
   /// (default is pop_back)
   virtual void remove_stored_coefficients(size_t index = _NPOS);
 
-  /// combine the current coefficients with a previously stored set
-  virtual void combine_coefficients(short combine_type, size_t swap_index);
+  /// swap the current coefficients with a previously stored set
+  virtual void swap_coefficients(size_t index);
+  */
+
+  /// combine all level coefficients into a multilevel approximation
+  virtual void combine_coefficients();
+  /// promote the combined coefficients into the active coefficient set
+  virtual void combined_to_active(bool clear_combined = true);
+
+  /// clear inactive levels of approximation data
+  virtual void clear_inactive();
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s, bool normalized);

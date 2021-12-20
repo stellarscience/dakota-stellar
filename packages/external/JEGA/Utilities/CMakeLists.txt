@@ -19,8 +19,9 @@ add_library(utilities
   src/InequalityConstraintType.cpp 
   src/InfoBase.cpp 
   src/IntegerDesignVariableType.cpp 
-  src/LinearConstraintNature.cpp 
+  src/LinearConstraintNature.cpp
   src/LinearObjectiveFunctionNature.cpp 
+  src/LRUDesignCache.cpp 
   src/Logging.cpp 
   src/MaximizeObjectiveFunctionType.cpp 
   src/MessageBoard.cpp

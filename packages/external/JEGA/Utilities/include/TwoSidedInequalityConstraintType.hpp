@@ -244,7 +244,7 @@ class JEGA_SL_IEDECL TwoSidedInequalityConstraintType :
         virtual
         double
         GetViolationAmount(
-            double of
+            con_val_t of
             ) const;
 
         /// Returns an exact duplicate of this type object.

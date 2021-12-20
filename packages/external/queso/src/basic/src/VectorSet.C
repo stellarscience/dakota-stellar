@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,7 +23,6 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/Environment.h>
-#include <queso/Defines.h>
 #include <queso/VectorSet.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
@@ -91,6 +90,36 @@ template <class V, class M>
 double VectorSet<V,M>::volume() const
 {
   return m_volume;
+}
+
+template <class V, class M>
+const V &
+VectorSet<V, M>::minValues() const
+{
+  queso_require(this->m_mins);
+  return *(this->m_mins);
+}
+
+template <class V, class M>
+const V &
+VectorSet<V, M>::maxValues() const
+{
+  queso_require(this->m_maxs);
+  return *(this->m_maxs);
+}
+
+template <class V, class M>
+void
+VectorSet<V, M>::setMinValues(const V & mins)
+{
+  this->m_mins.reset(new V(mins));
+}
+
+template <class V, class M>
+void
+VectorSet<V, M>::setMaxValues(const V & maxs)
+{
+  this->m_maxs.reset(new V(maxs));
 }
 
 // I/O methods

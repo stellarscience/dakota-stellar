@@ -219,7 +219,7 @@ class JEGA_SL_IEDECL LinearConstraintNature :
     */
     public:
 
-        /// Returns a reference to the vector of coefficients (const).
+        /// Returns a reference to the vector of coefficients (constant).
         /**
          * \return The set of coefficients currently in use.
          */

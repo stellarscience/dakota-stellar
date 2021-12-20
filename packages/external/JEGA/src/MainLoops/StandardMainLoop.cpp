@@ -64,6 +64,7 @@ Includes
 #include <MainLoops/StandardMainLoop.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
+#include <../Utilities/include/LRUDesignCache.hpp>
 
 
 
@@ -273,7 +274,7 @@ StandardMainLoop::RunGeneration(
             // the generated Designs
             size_t numIll = algorithm.ValidateVariableValues(cldrn);
 
-            // ValidateVariableValues may mark Designs illconditioned if it
+            // ValidateVariableValues may mark Designs ill-conditioned if it
             // cannot fix the variable values so we should flush any of those.
             if(numIll > 0)
             {
@@ -295,7 +296,7 @@ StandardMainLoop::RunGeneration(
         pop.GetDVSortContainer().test_for_clones(cldrn.GetDVSortContainer());
         cldrn.GetDVSortContainer().test_within_list_for_clones();
 
-        const DesignDVSortSet& discards =
+        const LRUDesignCache& discards =
             this->GetDesignTarget().CheckoutDiscards();
         discards.test_for_clones(cldrn.GetDVSortContainer());
         this->GetDesignTarget().CheckinDiscards();
@@ -310,7 +311,7 @@ StandardMainLoop::RunGeneration(
                 "encountered while evaluating the offspring designs")
             )
 
-        // any children that could not be evaluated (are illconditioned) must
+        // any children that could not be evaluated (are ill-conditioned) must
         // be removed.  Issue a log entry about any removed.
         if(!evald)
         {
@@ -324,7 +325,7 @@ StandardMainLoop::RunGeneration(
                     lquiet(), this->GetName() + ": encountered and flushed "
                     )
                     << nrem
-                    << " illconditioned designs after evaluation of children."
+                    << " ill-conditioned designs after evaluation of children."
                 )
         }
     }

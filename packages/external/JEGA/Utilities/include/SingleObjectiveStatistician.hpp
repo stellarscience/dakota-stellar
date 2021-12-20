@@ -150,7 +150,7 @@ In-Namespace File Scope Typedefs
 Class Definition
 ================================================================================
 */
-/// A classe that computes single-objective statistics about DesignGroups.
+/// A class that computes single-objective statistics about DesignGroups.
 /**
  * This class has the capabilities to compute various single-objective
  * statistics about collections of designs.  Examples are:

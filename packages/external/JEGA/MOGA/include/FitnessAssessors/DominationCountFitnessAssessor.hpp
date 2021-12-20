@@ -165,7 +165,7 @@ Class Definition
  * Fonesca, C.M. and Fleming, P.J. (1993) "Genetic Algorithms for
  * Multiobjective Optimization: Formulation, Discussion and Generalization".
  * In Forrest, S., editor, Proceedings of the Fifth International Conference
- * on Genetic Algorithms, pages 416-423, San Mateo, California.  Universit
+ * on Genetic Algorithms, pages 416-423, San Mateo, California.  University
  * of Illinois at Ubana-Champaigne, Morgan Kaufmann Publishers.
  *
  * As presented in:

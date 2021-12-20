@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,11 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/RngBoost.h>
+
+#ifdef QUESO_HAVE_BOOST
+
+#include <boost/random.hpp>
+#include <boost/math/distributions.hpp>
 
 namespace QUESO {
 
@@ -92,3 +97,5 @@ RngBoost::gammaSample(double a, double b) const
 }
 
 }  // End namespace QUESO
+
+#endif  // QUESO_HAVE_BOOST

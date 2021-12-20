@@ -68,6 +68,7 @@ Includes
 #include <../Utilities/include/DesignTarget.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
 #include <../Utilities/include/RegionOfSpace.hpp>
+#include <../Utilities/include/LRUDesignCache.hpp>
 #include <../Utilities/include/ConstraintInfo.hpp>
 #include <../Utilities/include/DesignMultiSet.hpp>
 #include <../Utilities/include/DesignVariableInfo.hpp>
@@ -122,7 +123,7 @@ class DesignTarget::Mutexes
     */
     public:
 
-        /// A mutext to protect the collection of discards.
+        /// A mutex to protect the collection of discards.
         mutable mutex _discardMutex;
 
     /*
@@ -202,6 +203,23 @@ DesignTarget::SetMaxGuffSize(
         )
 }
 
+void
+DesignTarget::SetMaxDiscardCacheSize(
+    std::size_t maxSize
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+
+    EDDY_SCOPEDLOCK(l, this->_mutexes->_discardMutex)
+    this->_discCache->max_size(maxSize);
+
+    JEGALOG_II_G(lverbose(), this,
+        ostream_entry(
+            lverbose(), "Design Target: The maximum discards cache size is "
+            "now set to ") << this->_maxGuffSize << '.'
+        )
+}
+
 
 
 
@@ -215,6 +233,13 @@ DesignTarget::SetMaxGuffSize(
 Accessors
 ================================================================================
 */
+std::size_t
+DesignTarget::GetMaxDiscardCacheSize(
+    ) const
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return this->_discCache->max_size();
+}
 
 
 
@@ -253,13 +278,13 @@ Subclass Visible Methods
 Subclass Overridable Methods
 ================================================================================
 */
-const DesignDVSortSet&
+const LRUDesignCache&
 DesignTarget::CheckoutDiscards(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     JEGA_IF_THREADSAFE(this->_mutexes->_discardMutex.lock();)
-    return *this->_discards;
+    return *this->_discCache;
 }
 
 void
@@ -282,7 +307,7 @@ DesignTarget::GetNewDesign(
         if(this->_guff.empty())
             return new Design(const_cast<DesignTarget&>(*this));
         ret = this->_guff.back();
-        const_cast<DesignTarget*>(this)->_guff.pop_back();
+        this->_guff.pop_back();
     }
     ret->ResetID();
     return ret;
@@ -300,7 +325,7 @@ DesignTarget::GetNewDesign(
         EDDY_SCOPEDLOCK(l, this->_mutexes->_discardMutex)
         if(this->_guff.empty()) return new Design(copy);
         ret = this->_guff.back();
-        const_cast<DesignTarget*>(this)->_guff.pop_back();
+        this->_guff.pop_back();
     }
     ret->operator =(copy);
     ret->ResetID();
@@ -330,7 +355,7 @@ DesignTarget::CheckSideConstraints(
     for(DesignVariableInfoVector::const_iterator dit(this->_dvInfos.begin());
         dit!=this->_dvInfos.end(); ++dit)
     {
-        if(!(*dit)->IsRepInBounds((*dit)->WhichDoubleRep(des)))
+        if(!(*dit)->IsRepInBounds((*dit)->WhichRep(des)))
         {
             des.SetSatisfiesBounds(false);
             return false;
@@ -377,7 +402,7 @@ DesignTarget::TakeDesign(
     if(this->_trackDiscards && des->IsEvaluated())
     {
         EDDY_SCOPEDLOCK(l, this->_mutexes->_discardMutex)
-        this->_discards->insert(des);
+        this->_discCache->insert(des);
     }
     else
     {
@@ -408,11 +433,11 @@ DesignTarget::ReclaimDesign(
 
     EDDY_SCOPEDLOCK(l, this->_mutexes->_discardMutex)
     DesignDVSortSet::iterator it(
-        this->_discards->find_exact(const_cast<Design*>(&des))
+        this->_discCache->find_exact(const_cast<Design*>(&des))
         );
 
-    if(it == this->_discards->end()) return false;
-    this->_discards->erase(it);
+    if(it == this->_discCache->end()) return false;
+    this->_discCache->erase(it);
     return true;
 }
 
@@ -424,7 +449,7 @@ DesignTarget::RecordAllConstraintViolations(
     EDDY_FUNC_DEBUGSCOPE
 
     for(ConstraintInfoVector::const_iterator it(this->_cnInfos.begin());
-         it!=this->_cnInfos.end(); ++it)
+        it!=this->_cnInfos.end(); ++it)
             (*it)->RecordViolation(des);
 }
 
@@ -435,7 +460,7 @@ DesignTarget::AddDesignVariableInfo(
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(&info.GetDesignTarget() == this);
-    EDDY_ASSERT(this->_discards->empty());
+    EDDY_ASSERT(this->_discCache->empty());
 
     if(&info.GetDesignTarget() != this) return false;
 
@@ -449,7 +474,7 @@ DesignTarget::AddDesignVariableInfo(
             )
 
     EDDY_SCOPEDLOCK(l2, this->_mutexes->_discardMutex)
-    this->_discards->flush();
+    this->_discCache->flush();
     this->FlushTheGuff();
     return true;
 }
@@ -461,7 +486,7 @@ DesignTarget::AddConstraintInfo(
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(&info.GetDesignTarget() == this);
-    EDDY_ASSERT(this->_discards->empty());
+    EDDY_ASSERT(this->_discCache->empty());
 
     if(&info.GetDesignTarget() != this) return false;
 
@@ -475,7 +500,7 @@ DesignTarget::AddConstraintInfo(
             )
 
     EDDY_SCOPEDLOCK(l2, this->_mutexes->_discardMutex)
-    this->_discards->flush();
+    this->_discCache->flush();
     this->FlushTheGuff();
     return true;
 }
@@ -487,7 +512,7 @@ DesignTarget::AddObjectiveFunctionInfo(
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(&info.GetDesignTarget() == this);
-    EDDY_ASSERT(this->_discards->empty());
+    EDDY_ASSERT(this->_discCache->empty());
 
     if(&info.GetDesignTarget() != this) return false;
 
@@ -501,7 +526,7 @@ DesignTarget::AddObjectiveFunctionInfo(
             )
 
     EDDY_SCOPEDLOCK(l2, this->_mutexes->_discardMutex)
-    this->_discards->flush();
+    this->_discCache->flush();
     this->FlushTheGuff();
     return true;
 }
@@ -516,8 +541,8 @@ DesignTarget::GetDesignSpace(
         it!=this->_dvInfos.end(); ++it)
             ret.SetLimits(
                 (*it)->GetNumber(),
-                (*it)->GetMinDoubleRep(),
-                (*it)->GetMaxDoubleRep()
+                (*it)->GetMinRep(),
+                (*it)->GetMaxRep()
                 );
 
     return ret;
@@ -554,7 +579,8 @@ Structors
 DesignTarget::DesignTarget(
     ) :
         _trackDiscards(true),
-        _discards(new DesignDVSortSet()),
+        _discCache(new LRUDesignCache(100)),
+        //_discards(new DesignDVSortSet()),
         _dvInfos(),
         _ofInfos(),
         _cnInfos(),
@@ -571,7 +597,8 @@ DesignTarget::~DesignTarget(
     EDDY_FUNC_DEBUGSCOPE
 
     JEGA_IF_THREADSAFE(this->_mutexes->_discardMutex.lock();)
-    this->_discards->flush();
+    //this->_discards->flush();
+    this->_discCache->flush();
     this->FlushTheGuff();
     JEGA_IF_THREADSAFE(this->_mutexes->_discardMutex.unlock();)
 
@@ -585,7 +612,8 @@ DesignTarget::~DesignTarget(
     for(; oit!=this->_ofInfos.end(); ++oit) delete *oit;
 
     JEGA_IF_THREADSAFE(delete this->_mutexes;)
-    delete this->_discards;
+    //delete this->_discards;
+    delete this->_discCache;
 }
 
 

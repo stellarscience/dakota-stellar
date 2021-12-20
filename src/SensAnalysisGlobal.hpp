@@ -66,7 +66,8 @@ public:
                             StringMultiArrayConstView div_labels,
                             StringMultiArrayConstView dsv_labels,
                             StringMultiArrayConstView drv_labels,
-                            const StringArray& resp_labels) const;
+                            const StringArray& resp_labels, 
+                            const size_t &inc_id = 0) const;
 
   /// returns corrComputed to indicate whether compute_correlations()
   /// has been invoked
@@ -123,7 +124,9 @@ private:
                     const RealMatrix& simple_corr_mat,
                     RealMatrix& corr_matrix, bool& numerical_issues);
 
-  //
+  /// Return true if there are any NaN or Inf entries in the matrix
+  bool has_nan_or_inf(const RealMatrix &corr) const;
+
   //- Heading: Data
   //
 

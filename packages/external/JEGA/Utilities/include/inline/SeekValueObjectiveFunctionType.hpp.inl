@@ -87,10 +87,10 @@ Inline Mutators
 inline
 void
 SeekValueObjectiveFunctionType::SetValue(
-    double value
+    obj_val_t value
     )
 {
-    _value = value;
+    this->_value = value;
 }
 
 
@@ -105,11 +105,11 @@ Inline Accessors
 */
 
 inline
-double
+obj_val_t
 SeekValueObjectiveFunctionType::GetValue(
     ) const
 {
-    return _value;
+    return this->_value;
 }
 
 

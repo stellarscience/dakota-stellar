@@ -71,6 +71,7 @@ Includes
 */
 // JEGAConfig.hpp should be the first include in all JEGA files.
 #include <../Utilities/include/JEGAConfig.hpp>
+#include <../Utilities/include/JEGATypes.hpp>
 
 #include <string>
 
@@ -226,7 +227,7 @@ class JEGA_SL_IEDECL ConstraintTypeBase
         GetConstraintInfo(
             );
 
-        /// Returns the ConstraintInfo object known by this (const)
+        /// Returns the ConstraintInfo object known by this (constant)
         /**
          * \return The ConstraintInfo for which this is the type.
          */
@@ -345,7 +346,7 @@ class JEGA_SL_IEDECL ConstraintTypeBase
         virtual
         double
         GetViolationAmount(
-            double of
+            con_val_t of
             ) const = 0;
 
         /// Returns the amount by which "des1" is preferred to "des2".
@@ -370,7 +371,7 @@ class JEGA_SL_IEDECL ConstraintTypeBase
             const Design& des2
             ) const;
 
-        /// This method attempts to evalutate this constraint for "des".
+        /// This method attempts to evaluate this constraint for "des".
         /**
          * This may not be possible.  Generally, only linear constraints
          * can be evaluated in this way.  The method returns true if the

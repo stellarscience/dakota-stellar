@@ -55,8 +55,10 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -65,7 +67,7 @@ public:
   Real variance() const;
   
   RealRealPair moments() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real coefficient_of_variation() const;
 
@@ -241,34 +243,46 @@ inline Real BoundedLognormalRandomVariable::log_pdf_hessian(Real x) const
 }
 
 
-inline Real BoundedLognormalRandomVariable::parameter(short dist_param) const
+inline void BoundedLognormalRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case LN_MEAN: case LN_STD_DEV: case LN_LAMBDA: case LN_ZETA:
-    return LognormalRandomVariable::parameter(dist_param); break;
-  case LN_LWR_BND: return lowerBnd; break;
-  case LN_UPR_BND: return upperBnd; break;
+  case LN_MEAN: case LN_STD_DEV: case LN_ERR_FACT: case LN_LAMBDA: case LN_ZETA:
+    LognormalRandomVariable::pull_parameter(dist_param, val); break;
+  case LN_LWR_BND: val = lowerBnd; break;
+  case LN_UPR_BND: val = upperBnd; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BoundedLognormalRandomVariable::parameter()." << std::endl;
+	  << " in BoundedLognormalRandomVariable::pull_parameter(Real)."
+	  << std::endl;
     abort_handler(-1); break;
   }
 }
 
 
 inline void BoundedLognormalRandomVariable::
-parameter(short dist_param, Real val)
+push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case LN_MEAN: case LN_STD_DEV: case LN_LAMBDA: case LN_ZETA:
-    LognormalRandomVariable::parameter(dist_param, val); break;
+  case LN_MEAN: case LN_STD_DEV: case LN_ERR_FACT: case LN_LAMBDA: case LN_ZETA:
+    LognormalRandomVariable::push_parameter(dist_param, val); break;
   case LN_LWR_BND: lowerBnd = val; break;
   case LN_UPR_BND: upperBnd = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BoundedLognormalRandomVariable::parameter()." << std::endl;
+	  << " in BoundedLognormalRandomVariable::push_parameter(Real)."
+	  << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void BoundedLognormalRandomVariable::
+copy_parameters(const RandomVariable& rv)
+{
+  LognormalRandomVariable::copy_parameters(rv); // same enums used
+  rv.pull_parameter(LN_LWR_BND, lowerBnd);
+  rv.pull_parameter(LN_UPR_BND, upperBnd);
 }
 
 
@@ -332,7 +346,7 @@ inline RealRealPair BoundedLognormalRandomVariable::moments() const
 }
 
 
-inline RealRealPair BoundedLognormalRandomVariable::bounds() const
+inline RealRealPair BoundedLognormalRandomVariable::distribution_bounds() const
 { return RealRealPair(lowerBnd, upperBnd); }
 
 

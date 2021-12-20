@@ -24,12 +24,12 @@ namespace Pecos {
 
 
 void TensorProductDriver::
-initialize_grid(const ShortArray& u_types,
+initialize_grid(const MultivariateDistribution& u_dist,
 		const ExpansionConfigOptions& ec_options,
 		const BasisConfigOptions& bc_options)
 {
-  IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
-  quadOrder.resize(numVars); levelIndex.resize(numVars);
+  IntegrationDriver::initialize_grid(u_dist, ec_options, bc_options);
+  quadOrder.resize(numVars); levelIndIter->second.resize(numVars);
 }
 
 
@@ -37,105 +37,97 @@ void TensorProductDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
-  quadOrder.resize(numVars); levelIndex.resize(numVars);
+  quadOrder.resize(numVars); levelIndIter->second.resize(numVars);
 }
 
 
-void TensorProductDriver::store_grid(size_t index)
+void TensorProductDriver::precompute_rules()
 {
-  size_t stored_len = storedType1WeightSets.size();
-  if (index == _NPOS || index == stored_len) { // append
-    storedCollocKey.push_back(collocKey);
-    storedLevelIndex.push_back(levelIndex);
-    storedType1WeightSets.push_back(type1WeightSets);
-    storedType2WeightSets.push_back(type2WeightSets);
+  for (size_t i=0; i<numVars; ++i)
+    polynomialBasis[i].precompute_rules(quadOrder[i]);
+}
+
+
+void TensorProductDriver::clear_inactive()
+{
+  std::map<UShortArray, UShortArray>::iterator   li_it = levelIndex.begin();
+  std::map<UShortArray, UShort2DArray>::iterator ck_it =  collocKey.begin();
+  std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
+  std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  while (li_it != levelIndex.end())
+    if (li_it == levelIndIter) // preserve active
+      { ++li_it, ++ck_it, ++t1_it, ++t2_it; }
+    else { // clear inactive: postfix increments manage iterator invalidations
+      levelIndex.erase(li_it++);      collocKey.erase(ck_it++);
+      type1WeightSets.erase(t1_it++); type2WeightSets.erase(t2_it++);
+    }
+}
+
+
+const UShortArray& TensorProductDriver::maximal_grid()
+{
+  std::map<UShortArray, RealVector>::const_iterator
+    w_cit = type1WeightSets.begin(), max_cit = w_cit;
+  size_t num_wts, max_wts = w_cit->second.length(); ++w_cit;
+  for (; w_cit!=type1WeightSets.end(); ++w_cit) {
+    num_wts = w_cit->second.length();
+    if (num_wts > max_wts)
+      { max_wts = num_wts; max_cit = w_cit; }
   }
-  else if (index < stored_len) { // replace
-    storedCollocKey[index] = collocKey; storedLevelIndex[index] = levelIndex;
-    storedType1WeightSets[index] = type1WeightSets;
-    storedType2WeightSets[index] = type2WeightSets;
+  //maximalKey = max_cit->first;
+  //return maximalKey;
+  return max_cit->first;
+}
+
+
+void TensorProductDriver::combine_grid()
+{
+  std::map<UShortArray, UShortArray>::const_iterator
+    li_cit = levelIndex.begin();
+  combinedLevelIndex = li_cit->second; ++li_cit;
+  for (; li_cit!=levelIndex.end(); ++li_cit) {
+    const UShortArray& li = li_cit->second;
+    for (size_t v=0; v<numVars; ++v)
+      if (li[v] > combinedLevelIndex[v])
+	combinedLevelIndex[v] = li[v];
+  }
+
+  UShortArray comb_order;
+  update_quadrature_order_from_level_index(combinedLevelIndex, comb_order);
+  compute_tensor_grid(comb_order, combinedLevelIndex, combinedVarSets,
+		      combinedT1WeightSets, combinedT2WeightSets,
+		      combinedCollocKey);
+}
+
+
+void TensorProductDriver::combined_to_active(bool clear_combined)
+{
+  // Replace active arrays with combined arrays
+
+  // Note: inactive weight sets to be removed by clear_inactive()
+
+  if (clear_combined) {
+    std::swap(levelIndIter->second,   combinedLevelIndex);
+    std::swap(collocKeyIter->second,  combinedCollocKey);
+    std::swap(varSetsIter->second,    combinedVarSets);
+    std::swap(t1WtIter->second,       combinedT1WeightSets);
+    std::swap(t2WtIter->second,       combinedT2WeightSets);
+
+    combinedLevelIndex.clear();
+    combinedCollocKey.clear();
+    combinedVarSets.shapeUninitialized(0,0);
+    combinedT1WeightSets.sizeUninitialized(0);
+    combinedT2WeightSets.shapeUninitialized(0,0);
   }
   else {
-    PCerr << "Error: bad index (" << index << ") passed in TensorProductDriver"
-	  << "::store_grid()" << std::endl;
-    abort_handler(-1);
+    levelIndIter->second   = combinedLevelIndex;
+    collocKeyIter->second  = combinedCollocKey;
+    varSetsIter->second    = combinedVarSets;
+    t1WtIter->second       = combinedT1WeightSets;
+    t2WtIter->second       = combinedT2WeightSets;
   }
-}
 
-
-void TensorProductDriver::restore_grid(size_t index)
-{
-  size_t stored_len = storedType1WeightSets.size();
-  if (index == _NPOS) {
-    collocKey = storedCollocKey.back(); levelIndex = storedLevelIndex.back();
-    type1WeightSets = storedType1WeightSets.back();
-    type2WeightSets = storedType2WeightSets.back();
-  }
-  else if (index < stored_len) {
-    collocKey = storedCollocKey[index]; levelIndex = storedLevelIndex[index];
-    type1WeightSets = storedType1WeightSets[index];
-    type2WeightSets = storedType2WeightSets[index];
-  }
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in TensorProductDriver"
-	  << "::restore_grid()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void TensorProductDriver::remove_stored_grid(size_t index)
-{
-  size_t stored_len = storedType1WeightSets.size();
-  if (index == _NPOS || index == stored_len) {
-    storedCollocKey.pop_back(); storedLevelIndex.pop_back();
-    storedType1WeightSets.pop_back();
-    storedType2WeightSets.pop_back();
-  }
-  else if (index < stored_len) {
-    UShort3DArray::iterator u3it = storedCollocKey.begin();
-    std::advance(u3it, index); storedCollocKey.erase(u3it);
-    UShort2DArray::iterator u2it = storedLevelIndex.begin();
-    std::advance(u2it, index); storedLevelIndex.erase(u2it);
-    RealVectorArray::iterator vit = storedType1WeightSets.begin();
-    std::advance(vit, index); storedType1WeightSets.erase(vit);
-    RealMatrixArray::iterator mit = storedType2WeightSets.begin();
-    std::advance(mit, index); storedType2WeightSets.erase(mit);
-  }
-}
-
-
-void TensorProductDriver::clear_stored()
-{
-  storedLevelIndex.clear();      storedCollocKey.clear();
-  storedType1WeightSets.clear(); storedType2WeightSets.clear();
-}
-
-
-size_t TensorProductDriver::maximal_grid() const
-{
-  size_t i, num_stored = storedType1WeightSets.size(),
-    max_index = _NPOS, max_wts = type1WeightSets.length();
-  for (i=0; i<num_stored; ++i)
-    if (storedType1WeightSets[i].length() > max_wts)
-      { max_index = i; max_wts = storedType1WeightSets[i].length(); }
-  return max_index;
-}
-
-
-void TensorProductDriver::swap_grid(size_t index)
-{
-  std::swap(storedCollocKey[index],  collocKey);
-  std::swap(storedLevelIndex[index], levelIndex);
   update_quadrature_order_from_level_index();
-
-  RealVector tmp_vec(type1WeightSets);
-  type1WeightSets = storedType1WeightSets[index];
-  storedType1WeightSets[index] = tmp_vec;
-
-  RealMatrix tmp_mat(type2WeightSets);
-  type2WeightSets = storedType2WeightSets[index];
-  storedType2WeightSets[index] = tmp_mat;
 }
 
 
@@ -188,7 +180,8 @@ integrand_goal_to_nested_quadrature_order(size_t i,
     unsigned short level = 0, max_level = 5;
     while (level <= max_level && precGenzKeister[level] < integrand_goal)
       ++level;
-    nested_quad_order = orderGenzKeister[level];
+    nested_quad_order = (level > max_level) ?
+      USHRT_MAX : orderGenzKeister[level]; // pass error state up a level
     /*
     nested_quad_order = 1;
     unsigned short integrand_goal = 2*ref_quad_order - 1, level = 0,
@@ -244,10 +237,10 @@ quadrature_goal_to_nested_quadrature_order(size_t i, unsigned short quad_goal,
   }
   case GENZ_KEISTER: { // open nested rule with lookup
     nested_quad_order = 1; unsigned short level = 0, max_level = 5;
-    while (level <= max_level && nested_quad_order < quad_goal) {
+    while (level <= max_level && orderGenzKeister[level] < quad_goal)
       ++level;
-      nested_quad_order = orderGenzKeister[level];
-    }
+    nested_quad_order = (level > max_level) ?
+      USHRT_MAX : orderGenzKeister[level]; // pass error state up a level
     break;
   }
   default: // open weakly/non-nested Gauss rules
@@ -260,7 +253,7 @@ void TensorProductDriver::
 reinterpolated_tensor_grid(const UShortArray& lev_index,
 			   const SizetList& reinterp_indices)
 {
-  if (lev_index != levelIndex) {
+  if (lev_index != levelIndIter->second) {
     PCerr << "Error: inconsistent level index in TensorProductDriver::"
 	  << "reinterpolated_tensor_grid()." << std::endl;
     abort_handler(-1);
@@ -314,7 +307,7 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
       }
       else { // not a reinterpolated index --> no change from reference
 	reinterp_quad_order[i] = quadOrder[i];
-	reinterp_lev_index[i]  = levelIndex[i];
+	reinterp_lev_index[i]  = lev_index[i];
       }
     }
 
@@ -325,14 +318,14 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
 
     // update reiterpMap bookkeeping: only 1 index needs to be tracked for TPQ
     reinterpMap.clear();
-    reinterpMap[levelIndex] = activeReinterpIndex = 0;
+    reinterpMap[lev_index] = activeReinterpIndex = 0;
   }
   else
     activeReinterpIndex = map_it->second;
 }
 
 
-void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
+void TensorProductDriver::compute_grid()
 {
 #ifdef DEBUG
   // -----------------------------------
@@ -345,8 +338,9 @@ void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
   // -------------------------------------------------------------------
   // Get collocation points and integration weights and update 1D arrays
   // -------------------------------------------------------------------
-  compute_tensor_grid(quadOrder, levelIndex, variable_sets, type1WeightSets,
-		      type2WeightSets, collocKey);
+  compute_tensor_grid(quadOrder, levelIndIter->second, varSetsIter->second,
+		      t1WtIter->second, t2WtIter->second,
+		      collocKeyIter->second);
 }
 
 } // namespace Pecos

@@ -34,8 +34,7 @@ namespace Dakota {
 
 SysCallApplicInterface::
 SysCallApplicInterface(const ProblemDescDB& problem_db):
-  ProcessApplicInterface(problem_db),
-  pollingSchedule(100, 10, 2)
+  ProcessApplicInterface(problem_db)
 { }
 
 
@@ -132,7 +131,7 @@ pid_t SysCallApplicInterface::create_evaluation_process(bool block_flag)
 
 /** Check for completion of active asynch jobs (tracked with sysCallSet).
     Make one pass through sysCallSet & complete all jobs that have returned. */
-void SysCallApplicInterface::test_local_evaluations(PRPQueue& prp_queue)
+void SysCallApplicInterface::test_local_evaluation_sequence(PRPQueue& prp_queue)
 {
   // Convenience function for common code between wait and nowait case.
 
@@ -152,7 +151,7 @@ void SysCallApplicInterface::test_local_evaluations(PRPQueue& prp_queue)
       PRPQueueIter queue_it = lookup_by_eval_id(prp_queue, fn_eval_id);
       if (queue_it == prp_queue.end()) {
 	Cerr << "Error: failure in queue lookup within SysCallApplic"
-	     << "Interface::test_local_evaluations()." << std::endl;
+	     << "Interface::test_local_evaluation_sequence()." << std::endl;
 	abort_handler(-1);
       }
       Response response = queue_it->response(); // shallow copy
@@ -205,8 +204,8 @@ void SysCallApplicInterface::test_local_evaluations(PRPQueue& prp_queue)
       catch(const FunctionEvalFailure& fneval_except) { 
 	// implemented at the derived class level since 
 	// DirectApplicInterface can do this w/o exceptions
-        //Cout << "Caught FunctionEvalFailure in test_local_evaluations(); "
-	//     << "message: " << fneval_except.what() << std::endl;
+        //Cout << "Caught FunctionEvalFailure in test_local_evaluation_sequence"
+	//     << "(); message: " << fneval_except.what() << std::endl;
         manage_failure(queue_it->variables(), response.active_set(),
 		       response, fn_eval_id);
       }
@@ -226,7 +225,12 @@ void SysCallApplicInterface::test_local_evaluations(PRPQueue& prp_queue)
 
   // reduce processor load from DAKOTA testing if jobs are not finishing
   if (completionSet.empty()) { // no jobs completed in pass through entire set
-    pollingSchedule.sleep();
+    // Test for MinGW first, since there we have usleep as well
+#if defined(_WIN32) || defined(_MSC_VER) || defined(__MINGW32__)
+    Sleep(1);     // 1 millisecond
+#elif defined(HAVE_USLEEP)
+    usleep(1000); // 1000 microseconds = 1 millisec
+#endif // SLEEP
   }
   // remove completed jobs from sysCallSet
   for (ISCIter it = completionSet.begin(); it != completionSet.end(); ++it)
@@ -291,7 +295,7 @@ void SysCallApplicInterface::spawn_evaluation_to_shell(bool block_flag)
        (num_programs > 1 || !iFilterName.empty() || !oFilterName.empty())))
   	shell << "(";
   if (!iFilterName.empty()) {
-    shell << iFilterName;
+    shell << substitute_params_and_results(iFilterName, paramsFileName, resultsFileName);
     if (commandLineArgs)
       shell << " " << paramsFileName << " " << resultsFileName;
     shell << "; ";
@@ -300,77 +304,43 @@ void SysCallApplicInterface::spawn_evaluation_to_shell(bool block_flag)
   // Analysis code portion (function evaluation may be asynchronous, but
   // analyses must be sequential within each function evaluation)
   for (size_t i=0; i<num_programs; ++i) {
-    shell << programNames[i];
-    if (commandLineArgs) {
-       const char* s1 = paramsFileName.c_str();
-       if (s && !std::strncmp(s,s1,wd_strlen) && s1[wd_strlen] == '/')
-		s1 += wd_strlen + 1;
-      shell << " " << s1;
-      std::string prog_num( (multipleParamsFiles || num_programs > 1) ?
-                            "." + boost::lexical_cast<std::string>(i+1) : "" );
-      if (multipleParamsFiles) // append program cntr to paramsFileName
-	shell << prog_num;
-
-      s1 = resultsFileName.c_str();
-      if (s && !std::strncmp(s,s1,wd_strlen) && s1[wd_strlen] == '/')
-		s1 += wd_strlen + 1;
-      shell << " " << s1;
-      if (num_programs > 1)     // append program cntr to resultsFileName
-          shell << prog_num;
-
-        // Stellar Science:
-        // Pass an extra argument to the analysis driver indicating whether
-        // it should execute in blocking or nonblocking mode.
-        if (block_flag) {
-          shell << " 1";
-        } else {
-          shell << " 0";
-        }
+    const char* s1 = paramsFileName.c_str();
+    if (s && !std::strncmp(s,s1,wd_strlen) && s1[wd_strlen] == '/') {
+      s1 += wd_strlen + 1;
     }
-    if (i != num_programs-1)
+    const char *s2 = resultsFileName.c_str();
+    if (s && !std::strncmp(s,s2,wd_strlen) && s2[wd_strlen] == '/') {
+      s2 += wd_strlen + 1;
+    }
+    
+    std::string prog_num( (multipleParamsFiles || num_programs > 1) ?
+                          "." + boost::lexical_cast<std::string>(i+1) : "" );
+    String params_file(s1), results_file(s2);
+    if(multipleParamsFiles)
+      params_file += prog_num;
+    if(num_programs > 1)
+      results_file += prog_num;
+    shell << substitute_params_and_results(programNames[i], params_file, results_file);
+    if (commandLineArgs)  {
+        shell << " " << params_file << " " << results_file;
+    }
+    if (i != num_programs-1) {
       shell << "; ";
+    }
   }
 
   // Output filter portion
   if (!oFilterName.empty()) {
-    shell << "; " << oFilterName;
+    shell << "; " << substitute_params_and_results(oFilterName, paramsFileName, resultsFileName);
     if (commandLineArgs)
       shell << " " << paramsFileName << " " << resultsFileName;
   }
   if (needparen)
   	shell << ")"; // wasteful: needless extra shell layer
 
-  // // Process definition complete; now set the shell's asynchFlag and
-  // // suppressOutputFlag from the incoming block_flag & the interface's
-  // // suppressOutput and spawn the process.
-
-  // Stellar Science:
-  // Always run the dakotaClient process synchronously, so that only one
-  // point at a time is submitted to the server. The evaluation process may
-  // still be either synchronous or asynchronous, as determined by the
-  // additional flag passed to dakotaClient above.
-  shell.asynch_flag(false);
-  shell.suppress_output_flag(suppressOutput);
-
-  prepare_process_environment();
-  shell << flush;
-  reset_process_environment();
-}
-
-
-/** Put the input filter to the shell.  This function is used when multiple
-    analysis drivers are spread between processors.  No need to check for a
-    Null input filter, as this is checked externally.  Use of nonblocking
-    shells is supported in this fn, although its use is currently prevented
-    externally. */
-void SysCallApplicInterface::spawn_input_filter_to_shell(bool block_flag)
-{
-  CommandShell shell;
-
-  shell << iFilterName;
-  if (commandLineArgs)
-    shell << " " << paramsFileName << " " << resultsFileName;
-
+  // Process definition complete; now set the shell's asynchFlag and
+  // suppressOutputFlag from the incoming block_flag & the interface's
+  // suppressOutput and spawn the process.
   shell.asynch_flag(!block_flag);
   shell.suppress_output_flag(suppressOutput);
 
@@ -389,19 +359,42 @@ spawn_analysis_to_shell(int analysis_id, bool block_flag)
 {
   CommandShell shell;
 
-  shell << programNames[analysis_id-1];
-  if (commandLineArgs) {
-    using std::string;
-    size_t num_programs = programNames.size();
-    shell << " " << paramsFileName;
-    string prog_num( (multipleParamsFiles || num_programs > 1) ?
-                     "." + boost::lexical_cast<string>(analysis_id) : "" );
-    if (multipleParamsFiles) // append program cntr to paramsFileName
-      shell << prog_num;
-    shell << " " << resultsFileName;
-    if (num_programs > 1)     // append program cntr to resultsFileName
-      shell << prog_num;
+  const size_t &num_programs = programNames.size();
+  String prog_num( (multipleParamsFiles || num_programs > 1) ?
+                   "." + std::to_string(analysis_id) : "" );
+  String params_file(paramsFileName), results_file(resultsFileName);
+  if(multipleParamsFiles)
+    params_file += prog_num;
+  if(num_programs > 1)
+    results_file += prog_num;
+
+  shell << substitute_params_and_results(programNames[analysis_id-1], params_file,
+      results_file);
+  if(commandLineArgs) {
+    shell << " " << params_file << " " << results_file;
   }
+
+  shell.asynch_flag(!block_flag);
+  shell.suppress_output_flag(suppressOutput);
+
+  prepare_process_environment();
+  shell << flush;
+  reset_process_environment();
+}
+
+
+/** Put the input filter to the shell.  This function is used when multiple
+    analysis drivers are spread between processors.  No need to check for a
+    Null input filter, as this is checked externally.  Use of nonblocking
+    shells is supported in this fn, although its use is currently prevented
+    externally. */
+void SysCallApplicInterface::spawn_input_filter_to_shell(bool block_flag)
+{
+  CommandShell shell;
+
+  shell << substitute_params_and_results(iFilterName, paramsFileName, resultsFileName);
+  if (commandLineArgs)
+    shell << " " << paramsFileName << " " << resultsFileName;
 
   shell.asynch_flag(!block_flag);
   shell.suppress_output_flag(suppressOutput);
@@ -421,7 +414,7 @@ void SysCallApplicInterface::spawn_output_filter_to_shell(bool block_flag)
 {
   CommandShell shell;
 
-  shell << oFilterName;
+  shell << substitute_params_and_results(oFilterName, paramsFileName, resultsFileName);
   if (commandLineArgs)
     shell << " " << paramsFileName << " " << resultsFileName;
 

@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -32,7 +32,6 @@
 #include <queso/VectorCdf.h>
 #include <queso/VectorMdf.h>
 #include <queso/SequenceOfVectors.h>
-#include <queso/InfoTheory.h>
 
 namespace QUESO {
 
@@ -53,7 +52,13 @@ public:
   //! @name Constructor/Destructor methods
   //@{
   //! Default constructor
-  /*! Constructs a uniform vector RV, given a prefix and the image set of the vector RV.*/
+  /*!
+   * Constructs a uniform vector RV, given a prefix and the image set of the
+   * vector RV.
+   *
+   * Note: If \c imageSet is unbounded, the distribution is improper and
+   * realizations (obtained from UniformVectorRV::realizer) do not make sense.
+   */
   UniformVectorRV(const char*                  prefix,
                          const VectorSet<V,M>& imageSet);
   //! Virtual destructor

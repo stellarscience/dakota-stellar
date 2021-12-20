@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -41,6 +41,24 @@ IntersectionSubset<V,M>::IntersectionSubset(const char* prefix,
     m_set1(set1),
     m_set2(set2)
 {
+  V mins(vectorSpace.zeroVector());
+  V maxs(vectorSpace.zeroVector());
+
+  for (unsigned int i = 0; i < mins.sizeLocal(); i++) {
+    double min1 = m_set1.minValues()[i];
+    double min2 = m_set2.minValues()[i];
+
+    double max1 = m_set1.maxValues()[i];
+    double max2 = m_set2.maxValues()[i];
+
+    mins[i] = min1 > min2 ? min1 : min2;
+    maxs[i] = max1 < max2 ? max1 : max2;
+
+    queso_require_less_msg(min1, max1, "intersection is empty");
+  }
+
+  this->setMinValues(mins);
+  this->setMaxValues(maxs);
 }
 
 // Destructor
@@ -54,6 +72,20 @@ template<class V, class M>
 bool IntersectionSubset<V,M>::contains(const V& vec) const
 {
   return (m_set1.contains(vec) && m_set2.contains(vec));
+}
+
+template<class V, class M>
+void IntersectionSubset<V,M>::centroid(V& /* vec */) const
+{
+  // No general way to do this?
+  queso_not_implemented();
+}
+
+template<class V, class M>
+void IntersectionSubset<V,M>::moments(M& /* vec */) const
+{
+  // No general way to do this?
+  queso_not_implemented();
 }
 
 // I/O methods

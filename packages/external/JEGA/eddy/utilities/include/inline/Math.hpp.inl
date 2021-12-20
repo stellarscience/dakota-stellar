@@ -114,6 +114,16 @@ Math::Pi(
 
 } // Math::Pi
 
+template <typename T>
+inline
+bool
+Math::IsWhole(
+    T val
+    )
+{
+	return true;
+}
+
 inline
 bool
 Math::IsWhole(
@@ -157,6 +167,51 @@ Math::Min(
 } // Math::Min
 
 
+template <typename T>
+T
+Math::Round(
+    T val,
+    int prec
+    )
+{
+	return static_cast<T>(Round(static_cast<double>(val), prec));
+}
+
+inline
+unsigned int
+Math::Abs(
+    unsigned int val
+    )
+{
+    return val;
+}
+
+inline
+unsigned long
+Math::Abs(
+    unsigned long val
+    )
+{
+    return val;
+}
+
+inline
+unsigned short
+Math::Abs(
+    unsigned short val
+    )
+{
+    return val;
+}
+
+inline
+unsigned long long
+Math::Abs(
+    unsigned long long val
+    )
+{
+    return val;
+}
 
 
 

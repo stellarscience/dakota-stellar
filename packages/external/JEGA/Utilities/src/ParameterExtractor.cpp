@@ -120,7 +120,7 @@ ParameterExtractor::_GetParamFromDB(
                 "retrieving parameter named \"" + tag + "\" of type \"")
                 << typeid(R).name() << "\" from parameter database reading: "
                 << e.what()
-            )
+            );
         throw;
     }
 }

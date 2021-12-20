@@ -26,10 +26,11 @@ endfunction()
 
 FindOptionalLibrary(CPLEX)
 
+# BMA, 20190422: Disabled as Acro (at least acro-dakota) doesn't require BLAS
 #FindOptionalLibrary(BLAS)
-include(FindBLAS)
-set( HAVE_BLAS ${BLAS_FOUND} 
-     CACHE BOOL "Enable interfaces to system BLAS" )
+##include(FindBLAS)
+##set( HAVE_BLAS ${BLAS_FOUND} 
+##     CACHE BOOL "Enable interfaces to system BLAS" )
 
 include(CheckIncludeFiles)
 # appears no acro sources depend on this define any longer
@@ -102,7 +103,8 @@ if(HAVE_BOOST)
     #message( "in ${CMAKE_CURRENT_BINARY_DIR} Boost_DIR already set to ${Boost_DIR}" )
     include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
   else()
-    find_package(Boost COMPONENTS signals)
+    # BMA: Removed COMPONENTS signals as signals2 is header-only
+    find_package(Boost)
     if(Boost_FOUND)
       include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
     endif()

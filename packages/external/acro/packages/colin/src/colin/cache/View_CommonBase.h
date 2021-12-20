@@ -96,7 +96,7 @@ protected:
 
    member_map_t  members;
    //sizeMap_t  cache_sizes;
-   std::list<boost::signals::connection> connections;
+   std::list<boost::signals2::connection> connections;
 };
 
 } // namespace cache

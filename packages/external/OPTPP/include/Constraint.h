@@ -77,6 +77,11 @@ public:
  */
   OptppArray<int> getConstraintMappingIndices() const;
 
+  /**
+   * Reset values to allow multiple instantiations
+   */
+  void reset();
+
 /**
  * Takes one argument and returns a ColumnVector of reals.
  * @param xcurrent a ColumnVector 

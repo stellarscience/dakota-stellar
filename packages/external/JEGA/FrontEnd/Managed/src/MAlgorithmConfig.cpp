@@ -120,7 +120,7 @@ Mutators
 
 bool
 MAlgorithmConfig::SetAlgorithmName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -149,7 +149,7 @@ MAlgorithmConfig::SetAlgorithmType(
 
 bool
 MAlgorithmConfig::SetLoggingFilename(
-    System::String MOH filename
+    System::String^ filename
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -178,7 +178,7 @@ Accessors
 ================================================================================
 */
 
-MParameterDatabase MOH
+MParameterDatabase^
 MAlgorithmConfig::GetParameterDB(
     )
 {
@@ -209,7 +209,7 @@ MAlgorithmConfig::Manifest(
 
 bool
 MAlgorithmConfig::SetMutatorName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -218,7 +218,7 @@ MAlgorithmConfig::SetMutatorName(
 
 bool
 MAlgorithmConfig::SetConvergerName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -227,7 +227,7 @@ MAlgorithmConfig::SetConvergerName(
 
 bool
 MAlgorithmConfig::SetCrosserName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -236,7 +236,7 @@ MAlgorithmConfig::SetCrosserName(
 
 bool
 MAlgorithmConfig::SetNichePressureApplicatorName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -247,7 +247,7 @@ MAlgorithmConfig::SetNichePressureApplicatorName(
 
 bool
 MAlgorithmConfig::SetFitnessAssessorName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -256,7 +256,7 @@ MAlgorithmConfig::SetFitnessAssessorName(
 
 bool
 MAlgorithmConfig::SetSelectorName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -265,7 +265,7 @@ MAlgorithmConfig::SetSelectorName(
 
 bool
 MAlgorithmConfig::SetInitializerName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -274,7 +274,7 @@ MAlgorithmConfig::SetInitializerName(
 
 bool
 MAlgorithmConfig::SetPostProcessorName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -283,7 +283,7 @@ MAlgorithmConfig::SetPostProcessorName(
 
 bool
 MAlgorithmConfig::SetMainLoopName(
-    System::String MOH name
+    System::String^ name
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -315,7 +315,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 void
-MAlgorithmConfig::MANAGED_DISPOSE(
+MAlgorithmConfig::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -324,7 +324,7 @@ MAlgorithmConfig::MANAGED_DISPOSE(
 
     // The garbage collector will dispose it.  We need only
     // stop referencing it.
-    this->_thePDB = MANAGED_NULL_HANDLE;
+    this->_thePDB = nullptr;
 }
 
 
@@ -354,8 +354,8 @@ Structors
 */
 
 MAlgorithmConfig::MAlgorithmConfig(
-    MParameterDatabase MOH thePDB,
-    MEvaluator MOH theEvaluator
+    MParameterDatabase^ thePDB,
+    MEvaluator^ theEvaluator
     ) :
         _theConfig(0x0),
         _thePDB(thePDB)
@@ -367,10 +367,10 @@ MAlgorithmConfig::MAlgorithmConfig(
 }
 
 MAlgorithmConfig::MAlgorithmConfig(
-    MEvaluator MOH theEvaluator
+    MEvaluator^ theEvaluator
     ) :
         _theConfig(0x0),
-        _thePDB(MANAGED_GCNEW MBasicParameterDatabaseImpl())
+        _thePDB(gcnew MBasicParameterDatabaseImpl())
 {
     EDDY_FUNC_DEBUGSCOPE
     this->_theConfig = new AlgorithmConfig(
@@ -382,7 +382,7 @@ MAlgorithmConfig::~MAlgorithmConfig(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    this->MANAGED_DISPOSE();
+    this->DoDispose();
 }
 
 

@@ -27,7 +27,7 @@
 #include <utilib/SharedPtr.h>
 #include <utilib/PropertyDict.h>
 
-#include <boost/signals.hpp>
+#include <boost/signals2.hpp>
 
 class TiXmlElement;
 
@@ -419,23 +419,23 @@ public:
 
 
    /// signal called when a new point is added to this cache
-   boost::signal<void(cache_t::iterator)>  onInsert;
+   boost::signals2::signal<void(cache_t::iterator)>  onInsert;
 
    /// signal called when an existing point has new data added to it
-   boost::signal<void( cache_t::iterator,
+   boost::signals2::signal<void( cache_t::iterator,
                        AppResponse::response_map_t& )>  onUpdate;
 
    /// signal called just before a point is removed from the cache
-   boost::signal<void(cache_t::iterator)>  onErase;
+   boost::signals2::signal<void(cache_t::iterator)>  onErase;
 
    /// signal called just before an application context is cleared
-   boost::signal<void(const Application_Base*)>  onClear;
+   boost::signals2::signal<void(const Application_Base*)>  onClear;
 
    /// signal called when an annotation is created or updated
-   boost::signal<void(cache_t::iterator, std::string, utilib::Any)> onAnnotate;
+   boost::signals2::signal<void(cache_t::iterator, std::string, utilib::Any)> onAnnotate;
 
    /// signal called when an annotation is erased
-   boost::signal<void(cache_t::iterator, std::string)>  onEraseAnnotation;
+   boost::signals2::signal<void(cache_t::iterator, std::string)>  onEraseAnnotation;
 
 protected:
 

@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -24,6 +24,7 @@
 
 #include <queso/VectorSpace.h>
 #include <queso/DiscreteSubset.h>
+#include <queso/Defines.h>
 
 namespace QUESO {
 
@@ -35,8 +36,6 @@ DiscreteSubset<V,M>::DiscreteSubset(const char* prefix,
   : VectorSubset<V,M>(prefix, vectorSpace, 0.),
     m_elements(elements.size(),NULL)
 {
-  queso_deprecated();
-
   m_volume = 0.;
   queso_not_implemented();
 }
@@ -45,14 +44,12 @@ DiscreteSubset<V,M>::DiscreteSubset(const char* prefix,
 template<class V, class M>
 DiscreteSubset<V,M>::~DiscreteSubset()
 {
-  queso_deprecated();
 }
 
 // Mathematical methods
 template<class V, class M>
 bool DiscreteSubset<V,M>::contains(const V& vec) const
 {
-  queso_deprecated();
   queso_not_implemented();
 }
 
@@ -60,8 +57,6 @@ bool DiscreteSubset<V,M>::contains(const V& vec) const
 template <class V, class M>
 void DiscreteSubset<V,M>::print(std::ostream& os) const
 {
-  queso_deprecated();
-
   os << "In DiscreteSubset<V,M>::print()"
      << ": nothing to print"
      << std::endl;

@@ -9,7 +9,6 @@
 //- Class:        DataMethod
 //- Description:
 //-
-//-
 //- Owner:        Mike Eldred
 //- Version: $Id: DataMethod.hpp 6984 2010-09-27 02:11:09Z lpswile $
 
@@ -52,7 +51,10 @@ enum { DEFAULT_METHOD=0,
        DACE, FSU_CVT, FSU_HALTON, FSU_HAMMERSLEY, PSUADE_MOAT,
        // NonD Analyzers:
        LOCAL_RELIABILITY=(ANALYZER_BIT | NOND_BIT), GLOBAL_RELIABILITY,
-       POLYNOMIAL_CHAOS, STOCH_COLLOCATION,
+       POLYNOMIAL_CHAOS, MULTILEVEL_POLYNOMIAL_CHAOS,
+       MULTIFIDELITY_POLYNOMIAL_CHAOS,
+       STOCH_COLLOCATION, MULTIFIDELITY_STOCH_COLLOCATION,
+       C3_FUNCTION_TRAIN, MULTIFIDELITY_FUNCTION_TRAIN,
        CUBATURE_INTEGRATION, SPARSE_GRID_INTEGRATION, QUADRATURE_INTEGRATION, 
        BAYES_CALIBRATION, GPAIS, POF_DARTS, RKD_DARTS,
        IMPORTANCE_SAMPLING, ADAPTIVE_SAMPLING, MULTILEVEL_SAMPLING,
@@ -71,12 +73,15 @@ enum { DEFAULT_METHOD=0,
        ASYNCH_PATTERN_SEARCH=(MINIMIZER_BIT | OPTIMIZER_BIT), OPTPP_PDS,
        COLINY_BETA, COLINY_COBYLA,         COLINY_DIRECT, COLINY_MULTI_START,
        COLINY_EA,   COLINY_PATTERN_SEARCH, COLINY_SOLIS_WETS,
-       MOGA, SOGA, NCSU_DIRECT, MESH_ADAPTIVE_SEARCH, NOWPAC_OPT, SNOWPAC_OPT,
+       MOGA, SOGA, NCSU_DIRECT, MESH_ADAPTIVE_SEARCH, MIT_NOWPAC, MIT_SNOWPAC,
        GENIE_OPT_DARTS, GENIE_DIRECT,
+       // Place Demo Opt TPL here based on current state of non-gradient flavor
+       DEMO_TPL,
        // Gradient-based Optimizers / Minimizers:
        NONLINEAR_CG, OPTPP_CG, OPTPP_Q_NEWTON, OPTPP_FD_NEWTON, OPTPP_NEWTON,
        NPSOL_SQP, NLPQL_SQP, //REDUCED_SQP,
        DOT_BFGS, DOT_FRCG, DOT_MMFD, DOT_SLP, DOT_SQP, CONMIN_FRCG, CONMIN_MFD,
+       ROL,
        // Generic Optimizers / Minimizers:
        DL_SOLVER,
        // Minimizers that are both opt & least sq
@@ -103,6 +108,12 @@ enum { SUBMETHOD_DEFAULT=0, // no specification
 // Iterator/Model/Interface/Approximation
 enum { SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT,
        DEBUG_OUTPUT };
+// define special values for printing of different results states
+enum { NO_RESULTS=0,        // suppress all results
+       REFINEMENT_RESULTS,  // results following a (minor) refinement iteration
+       INTERMEDIATE_RESULTS,// results following a (major) alg stage/model level
+       FINAL_RESULTS };     // final UQ results (throttled if subIterator)
+
 // define special values for Iterator and Interface scheduling
 enum { DEFAULT_SCHEDULING, MASTER_SCHEDULING, PEER_SCHEDULING, 
        PEER_DYNAMIC_SCHEDULING, PEER_STATIC_SCHEDULING, DYNAMIC_SCHEDULING,
@@ -116,7 +127,7 @@ enum { DEFAULT_CONFIG, PUSH_DOWN, PUSH_UP };
 // ----
 // define special values for u_space_type in
 // NonD::initialize_random_variable_types()
-enum { STD_NORMAL_U, STD_UNIFORM_U, ASKEY_U, EXTENDED_U };
+enum { STD_NORMAL_U, STD_UNIFORM_U, PARTIAL_ASKEY_U, ASKEY_U, EXTENDED_U };
 // define special values for covarianceControl
 enum { DEFAULT_COVARIANCE, NO_COVARIANCE, DIAGONAL_COVARIANCE,
        FULL_COVARIANCE };
@@ -128,19 +139,26 @@ enum { PROBABILITIES, RELIABILITIES, GEN_RELIABILITIES };
 enum { COMPONENT=0, SYSTEM_SERIES, SYSTEM_PARALLEL };
 // define special values for distributionType
 enum { CUMULATIVE, COMPLEMENTARY };
+// define special values for finalMomentsType
+enum { NO_MOMENTS=0, STANDARD_MOMENTS, CENTRAL_MOMENTS };
+// define special values for multilevDiscrepEmulation
+enum { DEFAULT_EMULATION, DISTINCT_EMULATION, RECURSIVE_EMULATION };
 
 // -------------
 // NonDExpansion (most enums defined by Pecos in pecos_global_defs.hpp)
 // -------------
 // define special values for lsRegressionType
 enum { DEFAULT_LS=0, SVD_LS, EQ_CON_LS };
+// define special values for mlmfAllocControl
+enum { DEFAULT_MLMF_CONTROL=0, ESTIMATOR_VARIANCE, RIP_SAMPLING,
+       GREEDY_REFINEMENT };
 
 // --------------------
 // NonDBayesCalibration
 // --------------------
 // define special values for emulatorType
-enum { NO_EMULATOR, PCE_EMULATOR, SC_EMULATOR, GP_EMULATOR, KRIGING_EMULATOR,
-       VPS_EMULATOR };
+enum { NO_EMULATOR, PCE_EMULATOR, ML_PCE_EMULATOR, MF_PCE_EMULATOR, SC_EMULATOR,
+       MF_SC_EMULATOR, GP_EMULATOR, KRIGING_EMULATOR, VPS_EMULATOR };
 // modes for calibrating multipliers on observational error
 enum { CALIBRATE_NONE = 0, CALIBRATE_ONE, CALIBRATE_PER_EXPER, 
        CALIBRATE_PER_RESP, CALIBRATE_BOTH};
@@ -150,10 +168,12 @@ enum { CALIBRATE_NONE = 0, CALIBRATE_ONE, CALIBRATE_PER_EXPER,
 // ------------
 // LHS rank array processing modes:
 enum { IGNORE_RANKS, SET_RANKS, GET_RANKS, SET_GET_RANKS };
-// sampling modes (combinations of Uncertain/Active/All and Native/Uniform):
-enum { UNCERTAIN,           UNCERTAIN_UNIFORM,
+// sampling modes (combination of view and native distribution vs. uniform):
+enum { DESIGN,            //DESIGN_UNIFORM,
+       UNCERTAIN,           UNCERTAIN_UNIFORM,
        ALEATORY_UNCERTAIN,  ALEATORY_UNCERTAIN_UNIFORM,
        EPISTEMIC_UNCERTAIN, EPISTEMIC_UNCERTAIN_UNIFORM,
+       STATE,             //STATE_UNIFORM,
        ACTIVE,              ACTIVE_UNIFORM,
        ALL,                 ALL_UNIFORM };
 // (1) {,A,E}UNCERTAIN: sample only over the {,A,E} uncertain variables,
@@ -177,8 +197,8 @@ enum { ONE_SIDED_LOWER, ONE_SIDED_UPPER, TWO_SIDED };
 // NonDReliability
 // ---------------
 // define special values for mppSearchType
-enum { MV=0, AMV_X, AMV_U, AMV_PLUS_X, AMV_PLUS_U, TANA_X, TANA_U, NO_APPROX,
-       EGRA_X, EGRA_U };
+enum { MV=0, AMV_X, AMV_U, AMV_PLUS_X, AMV_PLUS_U, TANA_X, TANA_U,
+       QMEA_X, QMEA_U, NO_APPROX, EGRA_X, EGRA_U };
 // define special values for secondOrderIntType
 enum { BREITUNG, HOHENRACK, HONG };
 
@@ -364,11 +384,12 @@ public:
   /// flag to indicate user-specification of a bypass of any/all
   /// layerings in evaluating truth response values in SBL.
   bool surrBasedLocalLayerBypass;
-  /// initial trust region size in the surrogate-based local method
-  /// (from the \c initial_size specification in \ref MethodSBL) note:
-  /// this is a relative value, e.g., 0.1 = 10% of global bounds
-  /// distance (upper bound - lower bound) for each variable
-  Real surrBasedLocalTRInitSize;
+  /// initial trust region sizes in the surrogate-based local method
+  /// (from the \c initial_size specification in \ref MethodSBL), one
+  /// size per surrogate model (notes: no trust region for the truth
+  /// model; sizes are relative values, e.g., 0.1 = 10% of range of
+  /// global bounds for each variable
+  RealVector trustRegionInitSize;
   /// minimum trust region size in the surrogate-based local method
   /// (from the \c minimum_size specification in \ref MethodSBL), if
   /// the trust region size falls below this threshold the SBL
@@ -376,25 +397,25 @@ public:
   /// the min trust region size is set to 1.0e-3 in attempt to avoid
   /// ill-conditioned matrixes that arise in kriging over small trust
   /// regions)
-  Real surrBasedLocalTRMinSize;
+  Real trustRegionMinSize;
   /// trust region minimum improvement level (ratio of actual to predicted
   /// decrease in objective fcn) in the surrogate-based local method
   /// (from the \c contract_threshold specification in \ref MethodSBL),
   /// the trust region shrinks or is rejected if the ratio is below
   /// this value ("eta_1" in the Conn-Gould-Toint trust region book)
-  Real surrBasedLocalTRContractTrigger;
+  Real trustRegionContractTrigger;
   /// trust region sufficient improvement level (ratio of actual to
   /// predicted decrease in objective fn) in the surrogate-based local
   /// method (from the \c expand_threshold specification in \ref
   /// MethodSBL), the trust region expands if the ratio is above this
   /// value ("eta_2" in the Conn-Gould-Toint trust region book)
-  Real surrBasedLocalTRExpandTrigger;
+  Real trustRegionExpandTrigger;
   /// trust region contraction factor in the surrogate-based local method
   /// (from the \c contraction_factor specification in \ref MethodSBL)
-  Real surrBasedLocalTRContract;
+  Real trustRegionContract;
   /// trust region expansion factor in the surrogate-based local method
   /// (from the \c expansion_factor specification in \ref MethodSBL)
-  Real surrBasedLocalTRExpand;
+  Real trustRegionExpand;
   /// SBL approximate subproblem objective: ORIGINAL_PRIMARY, SINGLE_OBJECTIVE,
   /// LAGRANGIAN_OBJECTIVE, or AUGMENTED_LAGRANGIAN_OBJECTIVE
   short surrBasedLocalSubProbObj;
@@ -537,7 +558,7 @@ public:
   /// \ref MethodAPPS, \ref MethodSCOLIBCOB, \ref MethodSCOLIBPS, and
   /// \ref MethodSCOLIBSW
   Real initDelta;
-  /// the \c threshold_delta specification for APPS/COBYLA/PS/SW methods
+  /// the \c variable_tolerance specification for APPS/COBYLA/PS/SW methods
   /// in \ref MethodAPPS, \ref MethodSCOLIBCOB, \ref MethodSCOLIBPS, and
   /// \ref MethodSCOLIBSW
   Real threshDelta;
@@ -744,6 +765,13 @@ public:
   /// the \c HAS_SGTE specification for NOMAD
   String useSurrogate;
 
+  // NonD C3 Function Train
+
+  // pointer to model parameters for UQ
+  //String modelParamSpec;
+  // Number of LHS used for construction
+  //size_t numSamplesForConstruct;
+    
   // NonD & DACE
 
   /// the \c samples specification for NonD & DACE methods
@@ -778,8 +806,6 @@ public:
   /// Wilks sided interval type
   short wilksSidedInterval;
 
-  // NonD
-
   /// a sub-specification of vbdFlag: interaction order limit for
   /// calculation/output of component VBD indices
   unsigned short vbdOrder;
@@ -802,7 +828,7 @@ public:
   short growthOverride;
   /// enumeration for u-space type that defines u-space variable targets
   /// for probability space transformations: EXTENDED_U (default), ASKEY_U,
-  /// STD_NORMAL_U, or STD_UNIFORM_U
+  /// PARTIAL_ASKEY_U, STD_NORMAL_U, or STD_UNIFORM_U
   short expansionType;
   /// boolean indicating presence of \c piecewise keyword
   bool piecewiseBasis;
@@ -810,26 +836,41 @@ public:
   /// (Pecos::{NODAL,HIERARCHICAL}_INTERPOLANT) or regression
   /// (Pecos::{TENSOR_PRODUCT,TOTAL_ORDER,ADAPTED}_BASIS).
   short expansionBasisType;
+
+  /// the \c quadrature_order_sequence specification in \ref MethodNonDPCE and
+  /// \ref MethodNonDSC
+  UShortArray quadratureOrderSeq;
+  /// the \c sparse_grid_level_sequence specification in \ref MethodNonDPCE and
+  /// \ref MethodNonDSC
+  UShortArray sparseGridLevelSeq;
+  /// the \c expansion_order_sequence specification in \ref MethodNonDPCE
+  UShortArray expansionOrderSeq;
+  /// the \c collocation_points_sequence specification in \ref MethodNonDPCE
+  SizetArray collocationPointsSeq;
+  /// the \c expansion_samples_sequence specification in \ref MethodNonDPCE
+  SizetArray expansionSamplesSeq;
+
+  /// the \c quadrature_order specification in \ref MethodNonDPCE and
+  /// \ref MethodNonDSC
+  unsigned short quadratureOrder;
+  /// the \c sparse_grid_level specification in \ref MethodNonDPCE and
+  /// \ref MethodNonDSC
+  unsigned short sparseGridLevel;
   /// the \c expansion_order specification in \ref MethodNonDPCE
-  UShortArray expansionOrder;
+  unsigned short expansionOrder;
+  /// the \c collocation_points specification in \ref MethodNonDPCE
+  size_t collocationPoints;
   /// the \c expansion_samples specification in \ref MethodNonDPCE
-  SizetArray expansionSamples;
+  size_t expansionSamples;
+
   /// allows for incremental PCE construction using the \c
   /// incremental_lhs specification in \ref MethodNonDPCE
   String expansionSampleType;
-  /// the \c quadrature_order specification in \ref MethodNonDPCE and
-  /// \ref MethodNonDSC
-  UShortArray quadratureOrder;
-  /// the \c sparse_grid_level specification in \ref MethodNonDPCE,
-  /// \ref MethodNonDSC, and other stochastic expansion-enabled methods
-  UShortArray sparseGridLevel;
   /// the \c dimension_preference specification for tensor and sparse grids
   /// and expansion orders in \ref MethodNonDPCE and \ref MethodNonDSC
   RealVector anisoDimPref;
   /// the \c cubature_integrand specification in \ref MethodNonDPCE
   unsigned short cubIntOrder;
-  /// the \c collocation_points specification in \ref MethodNonDPCE
-  SizetArray collocationPoints;
   /// the \c collocation_ratio specification in \ref MethodNonDPCE
   Real collocationRatio;
   /// order applied to the number of expansion terms when applying
@@ -873,6 +914,8 @@ public:
   /// orthogonal least interpolation PCE; based on the \c tensor_grid
   /// specification in \ref MethodNonDPCE
   UShortArray tensorGridOrder;
+  /// type of discrepancy emulation in multilevel methods: distinct or recursive
+  short multilevDiscrepEmulation;
   /// the \c import_expansion_file specification in \ref MethodNonDPCE
   String importExpansionFile;
   /// the \c export_expansion_file specification in \ref MethodNonDPCE
@@ -902,6 +945,12 @@ public:
   IntVector refineSamples;
   /// the \c pilot_samples selection in \ref MethodMultilevelMC
   SizetArray pilotSamples;
+  /// the \c allocation_control selection in \ref MethodMultilevelPCE
+  short mlmfAllocControl;
+  /// the \c estimator_rate selection in \ref MethodMultilevelPCE
+  Real multilevEstimatorRate;
+  /// the \c final_moments specification in \ref MethodNonD
+  short finalMomentsType;
   /// the \c distribution \c cumulative or \c complementary specification
   /// in \ref MethodNonD
   short distributionType;
@@ -938,25 +987,49 @@ public:
   bool adaptPosteriorRefine;
   /// flag indicating user activation of logit transform option within QUESO
   bool logitTransform;
+  /// whether to apply GPMSA-internal normalization
+  bool gpmsaNormalize;
   /// flag indicating the calculation of KL divergence between prior
   /// and posterior in Bayesian methods 
   bool posteriorStatsKL;
   /// flag indicating the calculation of mutual information between prior
   /// and posterior in Bayesian methods 
   bool posteriorStatsMutual;
+  /// flag indicating calculation of kernel density estimate of posterior 
+  /// distributions
+  bool posteriorStatsKDE;
+  /// flag indicating calculation of chain diagnostics
+  bool chainDiagnostics;
+  /// flag indicating calculation of confidence intervals as a chain
+  /// diagnositc
+  bool chainDiagnosticsCI;
+  /// flag indicating calculation of the evidence of the model
+  bool modelEvidence;
+  /// flag indicating use of Monte Carlo approximation for evidence calc.
+  bool modelEvidMC;
+  /// number of prior samples to use in model evidence calculation
+  int evidenceSamples;
+  /// flag indicating use of Laplace approximation for evidence calc.
+  bool modelEvidLaplace;
   /// the method used for performing a pre-solve for the MAP point
   unsigned short preSolveMethod;
   /// the type of proposal covariance: user, derivatives, or prior
   String proposalCovType;
-  /// number of updates of the proposal covariance from computing the
-  /// misfit Hessian using residual values and derivatives
-  int proposalCovUpdates;
+  /// optional multiplier for prior-based proposal covariance
+  Real priorPropCovMult;
+  /// number of samples after which to update the proposal covariance from
+  /// misfit Hessian (using residual values and derivatives)
+  int proposalCovUpdatePeriod;
   /// the format of proposal covariance input: diagonal or matrix
   String proposalCovInputType;
   /// raw list of real data for the proposal covariance
   RealVector proposalCovData;
   /// file from which to read proposal covariance in diagonal or matrix format
   String proposalCovFile;
+  /// file containing advanced ROL option overrides
+  String advancedOptionsFilename;
+  /// file containing advanced QUESO option overrides
+  String quesoOptionsFilename;
   /// the \c fitness metric type specification in \ref
   /// MethodNonDAdaptive
   String fitnessMetricType;
@@ -976,18 +1049,55 @@ public:
   int burnInSamples;
   /// period or skip in post-processing the acceptance chain
   int subSamplingPeriod;
+  /// flag to calculate model discrepancy
+  bool calModelDiscrepancy;
+  /// number of prediction configurations at which to calculate model 
+  /// discrepancy
+  size_t numPredConfigs;
+  /// list of prediction configurations at which to calculate model discrepancy
+  RealVector predictionConfigList;
+  /// whether to import prediction configurations at which to calculate model
+  /// discrepancy
+  String importPredConfigs;
+  /// tabular format for prediction configurations import file
+  unsigned short importPredConfigFormat;
+  /// type of model discrepancy emulation
+  String modelDiscrepancyType;
+  /// correction order for either gaussian process or polynomial model
+  /// discrepancy calculations: 0 (=constant), 1 (=linear), 2 (=quadratic)
+  short approxCorrectionOrder;
+  /// specify the name of file to which corrected model (model+discrepancy)
+  /// calculations are output
+  String exportCorrModelFile;
+  /// tabular format for corrected model (model+discrepancy) export file
+  unsigned short exportCorrModelFormat;
+  /// specify the name of file to which corrected model variance
+  /// calculations are output
+  String exportCorrVarFile;
+  /// tabular format for corrected model variance export file
+  unsigned short exportCorrVarFormat;
+  /// specify the name of file to which discrepancy calculations are output
+  String exportDiscrepFile;
+  /// tabular format for model discrepancy export file
+  unsigned short exportDiscrepFormat;
   /// whether to perform adaptive Bayesian design of experiments
   bool adaptExpDesign;
-  /// whether to import candidate design points for adaptive Bayesian experimtal
-  /// design
+  /// whether to import candidate design points for adaptive Bayesian
+  /// experimental design
   String importCandPtsFile;
   /// tabular format for the candidate design points import file
   unsigned short importCandFormat;
   /// number of candidate designs for adaptive Bayesian experimental design
   size_t numCandidates;
-  /// maximum number of hi-fidelity model runs to be used for adaptive Bayesian 
-  //experimental design
-  size_t maxHifiEvals;
+  /// maximum number of highfidelity model runs to be used for
+  /// adaptive Bayesian experimental design
+  int maxHifiEvals;
+  /// number of optimal designs selected per iteration of experimental design
+  /// algorithm
+  int batchSize;
+  /// indicate that the KSG2 algorithm is to be employed in the calculation
+  /// of the mutual information
+  bool mutualInfoKSG2;
 
   // DREAM sub-specification
 
@@ -1003,7 +1113,9 @@ public:
   int jumpStep; 
 
   // WASABI sub-specification
-
+  /// Number of samples from the prior that is pushed forward
+  /// through the model to obtain the initial set of pushforward samples
+  int numPushforwardSamples;
   /// the type of data distribution: kde, or gaussian
   String dataDistType;
   /// the format of data distribution gaussian covariance input: 
@@ -1015,8 +1127,8 @@ public:
   RealVector dataDistCovariance;
   /// file from which to read data distribution data (covariance or samples )
   String dataDistFile;
-  /// The filename of the export file containing an arbitrary set of samples and 
-  /// their corresponding density values
+  /// The filename of the export file containing an arbitrary set of
+  /// samples and their corresponding density values
   String posteriorDensityExportFilename;
   /// The filename of the export file containing samples from the posterior and 
   /// their corresponding density values

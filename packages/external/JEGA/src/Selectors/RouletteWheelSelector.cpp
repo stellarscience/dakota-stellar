@@ -311,7 +311,7 @@ RouletteWheelSelector::GenerateCumulativeProbabilities(
 
             double currFit = fitnesses.GetFitness(**dit);
 
-            if(currFit != -DBL_MAX)
+            if(currFit != -std::numeric_limits<double>::max())
             {
                 // compute the cumulative probability for this Design.
                 currprob += fitsum == 0.0 ?

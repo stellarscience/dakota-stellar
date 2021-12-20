@@ -58,11 +58,12 @@ Includes
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <cfloat>
-#include <memory> // for auto_ptr
+#include <memory> // for unique_ptr
 #include <../MOGA/include/MOGA.hpp>
 #include <utilities/include/extremes.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
+#include <../Utilities/include/LRUDesignCache.hpp>
 #include <../Utilities/include/DesignStatistician.hpp>
 #include <../Utilities/include/MultiObjectiveStatistician.hpp>
 #include <../MOGA/include/OperatorGroups/MOGAOperatorGroup.hpp>
@@ -178,11 +179,11 @@ MOGA::ReclaimOptimal(
     DesignTarget& target = this->GetDesignTarget();
 
     // store the discards for repeated use.
-    const DesignDVSortSet& discards = target.CheckoutDiscards();
+    const LRUDesignCache& discards = target.CheckoutDiscards();
 
     // Create a DesignGroup from the discards so that we'll have something we
     // can iterate while reclaiming designs and so we'll have an OF sort set.
-    DesignGroup discardGroup(target, discards);
+    DesignGroup discardGroup(target, discards.DVSortSet());
     discardGroup.FlushNonEvaluatedDesigns();
 
     // Get the current population.
@@ -214,7 +215,7 @@ MOGA::ReclaimOptimal(
     target.CheckinDiscards();
 
     JEGALOG_II(this->GetLogger(), lverbose(), this,
-        ostream_entry(lverbose(), this->GetName() + ": Relcaimed ")
+        ostream_entry(lverbose(), this->GetName() + ": Reclaimed ")
             << numReclaimed << " optimal designs from the discards."
             )
 }
@@ -260,7 +261,7 @@ MOGA::GetBestDesign(
         this->GetPopulation().FlushNonFeasibleDesigns();
 
         //now find and store those extremes
-        DoubleExtremes extremeSet(
+        extremes<obj_val_t> extremeSet(
             MultiObjectiveStatistician::FindParetoExtremes(
                 pop.GetOFSortContainer()
                 )
@@ -272,7 +273,7 @@ MOGA::GetBestDesign(
 
         // This will store the minimum squared deviation from the
         // utopia point.  Initialize it to a very large number.
-        double minDistance = DBL_MAX;
+        double minDistance = std::numeric_limits<double>::max();
 
         // Create a pointer to store the best design as each is
         // considered.  Initialize it to the null pointer.
@@ -309,7 +310,7 @@ MOGA::GetBestDesign(
         }
         // now return our best Design.  The only way this value
         // could be null at this point is if every Design in our feasible
-        // set has sum-of-squares distance from the utopia point == DBL_MAX.
+        // set has sum-of-squares distance from the utopia point == limits::max.
         return bestDesign;
     }
 
@@ -359,12 +360,12 @@ MOGA::GetCurrentSolution(
     // There is no need to search the discards, etc.
     if(this->IsFinalized()) return pop.GetOFSortContainer();
 
-    // Get the pareto from the population.
+    // Get the Pareto from the population.
     DesignOFSortSet pareto(MultiObjectiveStatistician::GetNonDominated(
         pop.GetOFSortContainer()
         ));
 
-    const DesignDVSortSet& discards = target.CheckoutDiscards();
+    const LRUDesignCache& discards = target.CheckoutDiscards();
 
     // popPareto is either all feasible or all infeasible.  Whatever the
     // case, we will add any non-dominated designs from the discards back in.

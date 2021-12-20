@@ -692,7 +692,6 @@ ts_list<ValueType, AllocType>::ts_list(
         _container(),
         _mutex(PTHREAD_MUTEX_RECURSIVE)
 {
-
 } // ts_list
 
 template<typename ValueType, typename AllocType>
@@ -702,7 +701,6 @@ ts_list<ValueType, AllocType>::ts_list(
         _container(held),
         _mutex(PTHREAD_MUTEX_RECURSIVE)
 {
-
 } // ts_list
 
 template<typename ValueType, typename AllocType>
@@ -712,7 +710,6 @@ ts_list<ValueType, AllocType>::ts_list(
         _container(_Al),
         _mutex(PTHREAD_MUTEX_RECURSIVE)
 {
-
 } // ts_list
 
 template<typename ValueType, typename AllocType>
@@ -722,7 +719,6 @@ ts_list<ValueType, AllocType>::ts_list(
         _container(_Count),
         _mutex(PTHREAD_MUTEX_RECURSIVE)
 {
-
 } // ts_list
 
 template<typename ValueType, typename AllocType>
@@ -733,7 +729,6 @@ ts_list<ValueType, AllocType>::ts_list(
         _container(_Count, _Val),
         _mutex(PTHREAD_MUTEX_RECURSIVE)
 {
-
 } // ts_list
 
 template<typename ValueType, typename AllocType>
@@ -745,7 +740,6 @@ ts_list<ValueType, AllocType>::ts_list(
         _container(_Count, _Val, _Al),
         _mutex(PTHREAD_MUTEX_RECURSIVE)
 {
-
 } // ts_list
 
 template<typename ValueType, typename AllocType>
@@ -755,7 +749,6 @@ ts_list<ValueType, AllocType>::ts_list(
         _container(rhs._container),
         _mutex(PTHREAD_MUTEX_RECURSIVE)
 {
-
 } // ts_list
 
 

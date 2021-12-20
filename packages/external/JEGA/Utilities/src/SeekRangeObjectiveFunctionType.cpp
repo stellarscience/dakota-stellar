@@ -178,17 +178,19 @@ Subclass Overridable Methods
 
 
 
-double
+obj_val_t
 SeekRangeObjectiveFunctionType::GetValueForMinimization(
-    double val
+    obj_val_t val
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
     // return the amount by which this value is out of bounds.
-    return (val < _lowerBound) ? (_lowerBound - val) * (_lowerBound - val) :
-           (val > _upperBound) ? (_upperBound - val) * (_upperBound - val) :
-           0.0;
+    return (val < this->_lowerBound) ?
+                (this->_lowerBound - val) * (this->_lowerBound - val) :
+           (val > this->_upperBound) ?
+                (this->_upperBound - val) * (this->_upperBound - val) :
+           obj_val_t(0);
 
 } // SeekRangeObjectiveFunctionType::GetValueForMinimization
 
@@ -241,8 +243,8 @@ SeekRangeObjectiveFunctionType::SeekRangeObjectiveFunctionType(
     ObjectiveFunctionInfo& info
     ) :
         ObjectiveFunctionTypeBase(info),
-        _lowerBound(0.0),
-        _upperBound(0.0)
+        _lowerBound(obj_val_t(0)),
+        _upperBound(obj_val_t(0))
 {
     EDDY_FUNC_DEBUGSCOPE
 

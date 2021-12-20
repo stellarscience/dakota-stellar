@@ -362,7 +362,7 @@ BelowLimitSelector::Select(
     // prepare the groups for this operator.
     size_t numDes = from.GetTotalDesignCount();
 
-    // get the relavant configuration parameters for repeated use.
+    // get the relevant configuration parameters for repeated use.
     const double selCutoff = this->GetLimit();
     const double shrink = this->GetShrinkagePercentage();
 
@@ -390,7 +390,7 @@ BelowLimitSelector::Select(
 
     // Anyway, back to reality.
 
-    // Here is what we are going to do.  This is an elitest algorithm
+    // Here is what we are going to do.  This is an elitist algorithm
     // in that it take the best first and stops when it is full.
     // It is full when any of the following have occurred:
     //

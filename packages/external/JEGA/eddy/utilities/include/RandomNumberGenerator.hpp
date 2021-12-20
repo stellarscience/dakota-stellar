@@ -148,7 +148,7 @@ Class Definition
 /// A class providing random number generation capabilities.
 /**
  * The methods of this class are all static and can be used to retrieve random
- * numbers of varying types (uniform, gaussian, cauchy, etc.).
+ * numbers of varying types (uniform, Gaussian, Cauchy, etc.).
  */
 class EDDY_SL_IEDECL RandomNumberGenerator
 {
@@ -279,7 +279,7 @@ class EDDY_SL_IEDECL RandomNumberGenerator
          *           a random number.
          * \param sigma The standard deviation of the distribution from which
          *              to select a random number.
-         * \return A random number chosen from a gaussian distribution with
+         * \return A random number chosen from a Gaussian distribution with
          *         the supplied mean and standard deviation.
          */
         static
@@ -300,7 +300,7 @@ class EDDY_SL_IEDECL RandomNumberGenerator
          *           a random number.
          * \param sigma The standard deviation of the distribution from which
          *              to select a random number.
-         * \return A random number chosen from a cauchy distribution with
+         * \return A random number chosen from a	 distribution with
          *         the supplied mean and standard deviation.
          */
         static
@@ -310,7 +310,7 @@ class EDDY_SL_IEDECL RandomNumberGenerator
             double sigma = 1.0
             );
 
-        /// Provides a random boolean value.
+        /// Provides a random Boolean value.
         /**
          * \return Either true or false with equal probability.
          */
@@ -517,9 +517,9 @@ class uniform_real_generator
 
 
 /**
- * \brief A generator object for generating gaussian real numbers.
+ * \brief A generator object for generating Gaussian real numbers.
  */
-class gaussian_real_generator
+class Gaussian_real_generator
 {
     /*
     ============================================================================
@@ -546,7 +546,7 @@ class gaussian_real_generator
 
         /// The operator that causes return of the next random value.
         /**
-         * \return The next gaussian random real value with mean \a _mu and
+         * \return The next Gaussian random real value with mean \a _mu and
          *         standard deviation \a _sigma.
          */
         inline
@@ -565,7 +565,7 @@ class gaussian_real_generator
     public:
 
         /**
-         * \brief Constructs a gaussian_real_generator to generate values with
+         * \brief Constructs a Gaussian_real_generator to generate values with
          *        a mean of \a mu and a standard deviation of \a sigma.
          *
          * \param mu The mean of the distribution from which to generate
@@ -573,7 +573,7 @@ class gaussian_real_generator
          * \param sigma The standard deviation of the distribution from which
          *              to generate numbers.
          */
-        gaussian_real_generator(
+        Gaussian_real_generator(
             double mu = 0.0,
             double sigma = 1.0
             ) :
@@ -582,12 +582,12 @@ class gaussian_real_generator
         {
         }
 
-}; // class gaussian_real_generator
+}; // class Gaussian_real_generator
 
 /**
- * \brief A generator object for generating cauchy real numbers.
+ * \brief A generator object for generating Cauchy real numbers.
  */
-class cauchy_real_generator
+class Cauchy_real_generator
 {
     /*
     ============================================================================
@@ -614,7 +614,7 @@ class cauchy_real_generator
 
         /// The operator that causes return of the next random value.
         /**
-         * \return The next cauchy random real value with mean \a _mu and
+         * \return The next Cauchy random real value with mean \a _mu and
          *         standard deviation \a _sigma.
          */
         inline
@@ -633,7 +633,7 @@ class cauchy_real_generator
     public:
 
         /**
-         * \brief Constructs a cauchy_real_generator to generate values with
+         * \brief Constructs a Cauchy_real_generator to generate values with
          *        a mean of \a mu and a standard deviation of \a sigma.
          *
          * \param mu The mean of the distribution from which to generate
@@ -641,7 +641,7 @@ class cauchy_real_generator
          * \param sigma The standard deviation of the distribution from which
          *              to generate numbers.
          */
-        cauchy_real_generator(
+        Cauchy_real_generator(
             double mu = 0.0,
             double sigma = 1.0
             ) :
@@ -650,9 +650,9 @@ class cauchy_real_generator
         {
         }
 
-}; // class cauchy_real_generator
+}; // class Cauchy_real_generator
 
-/// A generator that generates random boolean values.
+/// A generator that generates random Boolean values.
 class random_bool_generator
 {
     /*
@@ -666,7 +666,7 @@ class random_bool_generator
         /**
          * true and false are equally likely.
          *
-         * \return The next random boolean (true or false).
+         * \return The next random Boolean (true or false).
          */
         inline
         bool

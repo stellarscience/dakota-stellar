@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="doc">
+      <UniqueIdentifier>{892e1f55-4fb7-4be6-99b1-c8c89df596b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="include\inline">
+      <UniqueIdentifier>{2e40d490-340f-45cf-8a54-f2b8d86bcb56}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\EDDY_DebugScope.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Math.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\RandomNumberGenerator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\doc\Doxyfile">
+      <Filter>doc</Filter>
+    </None>
+    <None Include="..\doc\Mainpage.dox">
+      <Filter>doc</Filter>
+    </None>
+    <None Include="..\include\inline\bit_mask.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\EDDY_DebugScope.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\extremes.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\keyed_registry.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\Math.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\RandomNumberGenerator.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\registry.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\Makefile.am" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\bit_mask.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\config.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\EDDY_DebugScope.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\EDDY_DebugScope_P.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\extremes.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\generator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\int_types.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\iterator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\keyed_registry.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Math.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\numeric_limits.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\RandomNumberGenerator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\registry.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

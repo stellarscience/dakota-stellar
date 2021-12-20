@@ -235,10 +235,11 @@ endif
   EXTRA_LIBS+= @EXPAT_LIBS@
 endif
 
-if HAVE_BOOST
-  EXTRA_LIB_FLAG += $(BOOST_LDFLAGS)
-  EXTRA_LIBS += -lboost_signals
-endif
+# BMA: Migrated to boost::signals2, so no longer need to link boost_signals
+#if HAVE_BOOST
+#  EXTRA_LIB_FLAG += $(BOOST_LDFLAGS)
+#  EXTRA_LIBS += -lboost_signals
+#endif
 
 lib_LTLIBRARIES=libutilib.la
 

@@ -496,6 +496,8 @@ void OptConstrNewtonLike::reset()
 {
    NLP1* nlp = nlprob();
    int   n   = nlp->getDim();
+   if (nlp->hasConstraints())
+     nlp->getConstraints()->reset();
    nlp->reset();
    OptimizeClass::defaultReset(n);
    me = mi = grad_evals = 0;

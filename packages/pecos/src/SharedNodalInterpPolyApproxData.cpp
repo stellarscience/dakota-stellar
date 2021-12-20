@@ -13,7 +13,7 @@
 
 #include "SharedNodalInterpPolyApproxData.hpp"
 #include "TensorProductDriver.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "InterpolationPolynomial.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
@@ -31,8 +31,16 @@ void SharedNodalInterpPolyApproxData::allocate_data()
   // but its usage of higher-order reinterpolation of covariance is currently
   // too slow for production usage.  Thus, we only activate it when needed to
   // support new capability, such as gradient-enhanced interpolation.
-  momentInterpType = (basisConfigOptions.useDerivs) ?
-    REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: // no FAST approx --> use FULL
+    momentInterpType = (basisConfigOptions.useDerivs) ?
+      REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FULL;
+    break;
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: // use FAST approx
+    momentInterpType = (basisConfigOptions.useDerivs) ?
+      REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+    break;
+  }
 
   // Map out current flow to integration driver:
   // > NonDStochCollocation::initialize_u_space_model() constructs driver_basis
@@ -71,7 +79,7 @@ void SharedNodalInterpPolyApproxData::allocate_data()
 
   // initialize expMomentIntDriver if needed
   if (alt_moment_grid) { // modify driver_basis to employ Gaussian integration
-    // This approach reduces data reqmts (u_types, adp) and increases reuse,
+    // This approach reduces data reqmts (u_types, mv_dist) and increases reuse,
     // relative to building from scratch using SharedOPAData::construct_basis().
     std::vector<BasisPolynomial> alt_driver_basis(numVars);
     for (size_t i=0; i<numVars; ++i) {
@@ -89,10 +97,10 @@ void SharedNodalInterpPolyApproxData::allocate_data()
       }
       // TO DO: any quad order modifications need to be handled downstream
     }
-    /* This approach requires u_types and adp, which aren't readily available
+    /* This approach requires u_types & mv_dist, which aren't readily available
     BasisConfigOptions bc_options(false, false, false, false);
     SharedOrthogPolyApproxData::
-      construct_basis(u_types, adp, bc_options, alt_driver_basis);
+      construct_basis(u_types, mv_dist, bc_options, alt_driver_basis);
     */
 
     // suppress hierarchical sparse grid driver for this purpose
@@ -137,7 +145,7 @@ void SharedNodalInterpPolyApproxData::allocate_component_sobol()
 	multi_index_to_sobol_index_map(tpq_driver->collocation_key());
 	break;
       }
-      case COMBINED_SPARSE_GRID: {
+      case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
 	CombinedSparseGridDriver* csg_driver
 	  = (CombinedSparseGridDriver*)driverRep;
 	const IntArray&      sm_coeffs  = csg_driver->smolyak_coefficients();
@@ -164,14 +172,105 @@ void SharedNodalInterpPolyApproxData::allocate_component_sobol()
 
 void SharedNodalInterpPolyApproxData::increment_component_sobol()
 {
-  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1) {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    if (csg_driver->smolyak_coefficients().back()) {
+  if (!expConfigOptions.vbdFlag || expConfigOptions.vbdOrderLimit == 1)
+    return;
+
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  //case QUADRATURE: // increment_data() uses allocate_component_sobol()
+  case INCREMENTAL_SPARSE_GRID: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refineControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      if (isg_driver->smolyak_coefficients().back()) {
+	reset_sobol_index_map_values();
+	multi_index_to_sobol_index_map(isg_driver->collocation_key().back());
+	assign_sobol_index_map_values();
+      }
+      break;
+    default: {
+      const IntArray&      sm_coeffs  = isg_driver->smolyak_coefficients();
+      const UShort3DArray& colloc_key = isg_driver->collocation_key();
+      size_t i, num_smolyak_indices = sm_coeffs.size(),
+	start_index = isg_driver->smolyak_coefficients_reference().size();
       reset_sobol_index_map_values();
-      multi_index_to_sobol_index_map(csg_driver->collocation_key().back());
+      for (i=start_index; i<num_smolyak_indices; ++i)
+	if (sm_coeffs[i])
+	  multi_index_to_sobol_index_map(colloc_key[i]);
       assign_sobol_index_map_values();
+      break;
     }
+    }
+    break;
   }
+  default:
+    PCerr << "Error: unsupported solution approach in SharedNodalInterpPoly"
+	  << "ApproxData::increment_component_sobol()" << std::endl;
+    abort_handler(-1);
+    break;    
+  }
+}
+
+
+void SharedNodalInterpPolyApproxData::pre_combine_data()
+{
+  // If we assume that multiIndex subsets are enforced across a hierarchy (e.g.,
+  // a fully-integrated MISC approximation), then the maximal grid is sufficient
+  // to allow reinterpolation of all data.  However, in a greedy ML construction
+  // that has separated level refinement candidates, this downward-closed
+  // requirement is not met and a grid overlay must be defined..
+
+  /*
+  // store active state prior to activating the maximal grid
+  // > may be able to restrict this restoration to case of active expansion
+  //   stats (if combined stats are sufficiently independent of active key),
+  //   but for now a number of operations (e.g., SparseGridDriver::push,pop)
+  //   still rely on the active key
+  // > for all variables mode, various routines currently pull active grid
+  //   data --> easier to ensure correct {active,maximal} key prior to
+  //   computing all vars stats than making all of these fns modular on
+  //   active vs. combined grid data inputs
+  //if (expConfigOptions.refineStatsType != COMBINED_EXPANSION_STATS)
+    prevActiveKey = activeKey;
+
+  active_key(driverRep->maximal_grid()); // update activeKey + active iterators
+
+  // defer until combined_to_active()
+  // (Sobol indices not currently computed for a combined expansion):
+  //allocate_component_sobol();
+  */
+
+  // combine level data into combinedSmolyak{MultiIndex,Coeffs},
+  // combined{Var,T1Weight,T2Weight}Sets, et al.
+  // *** TO DO: consider incremental updates for efficiency, as expansion
+  //            combination is performed for every Nodal candidate evaluation
+  driverRep->combine_grid();
+}
+
+
+/*
+void SharedNodalInterpPolyApproxData::post_combine_data()
+{
+  // restore the active state that existed prior to activating the maximal grid
+  // (see notes in pre_combine_data() above)
+  //if (expConfigOptions.refineStatsType != COMBINED_EXPANSION_STATS)
+    active_key(prevActiveKey);
+}
+*/
+
+
+void SharedNodalInterpPolyApproxData::combined_to_active(bool clear_combined)
+{
+  /*
+  // Activate the most refined grid corresponding to the combined exp coeffs
+  // Note: SharedInterpPolyApproxData::active_key() updates driverRep's key
+  active_key(driverRep->maximal_grid());
+  */
+
+  driverRep->combined_to_active(clear_combined);
+
+  // allocate Sobol interactions corresponding to interpolant on combined grid
+  allocate_component_sobol();
 }
 
 

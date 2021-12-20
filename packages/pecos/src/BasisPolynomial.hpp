@@ -157,19 +157,16 @@ public:
   /// (calculate and) return wtFactor
   virtual Real weight_factor();
 
-  /// return {Jacobi,GenLaguerre}OrthogPolynomial::alphaPoly
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual Real alpha_polynomial() const;
-  /// return JacobiOrthogPolynomial::betaPoly
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual Real beta_polynomial() const;
-  /// set JacobiOrthogPolynomial::betaPoly or
-  /// GenLaguerreOrthogPolynomial::alphaPoly from statistical defn of alpha
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void alpha_stat(Real alpha);
-  /// set JacobiOrthogPolynomial::alphaPoly from statistical defn of beta
-  /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void beta_stat(Real beta);
+  /// get real parameter value for a parameterized orthogonal polynomial
+  virtual void pull_parameter(short dist_param, Real& param) const;
+  /// get unsigned int parameter value for a parameterized orthogonal polynomial
+  virtual void pull_parameter(short dist_param, unsigned int& param) const;
+  /// set real parameter value for a parameterized orthogonal polynomial
+  virtual void push_parameter(short dist_param, Real param);
+  /// set unsigned int parameter value for a parameterized orthogonal polynomial
+  virtual void push_parameter(short dist_param, unsigned int param);
+  /// return whether a derived BasisPolynomial type supports parameterization
+  virtual bool parameterized() const;
 
   /// set OrthogonalPolynomial::collocRule
   virtual void collocation_rule(short rule);
@@ -186,12 +183,12 @@ public:
   /** This is defined only for interpolation polynomials. */
   virtual const RealArray& interpolation_points() const;
 
-  /// return whether a derived BasisPolynomial type supports parameterization
-  virtual bool parameterized() const;
-
   /// return a characteristic length scale for the probability distribution
   /// associated with an orthogonal polynomial basis
   virtual Real length_scale() const;
+
+  /// precompute quadrature rules up to specified order
+  virtual void precompute_rules(unsigned short order);
 
   //
   //- Heading: Member functions
@@ -235,7 +232,7 @@ protected:
   //
 
   /// basis polynomial type:
-  /// {HERMITE,LEGENDRE,LAGUERRE,JACOBI,GEN_LAGUERRE,NUM_GEN_ORTHOG}_ORTHOG,
+  /// {HERMITE,LEGENDRE,LAGUERRE,JACOBI,GEN_LAGUERRE,NUM_GEN}_ORTHOG,
   /// {LAGRANGE,HERMITE}_INTERP, or PIECEWISE_{LINEAR,QUADRATIC,CUBIC}_INTERP
   short basisPolyType;
 

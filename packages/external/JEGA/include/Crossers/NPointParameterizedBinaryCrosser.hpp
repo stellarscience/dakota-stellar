@@ -146,7 +146,7 @@ Class Definition
 */
 
 
-/// Performs crossover at N points in the binary cromosomes (dv by dv).
+/// Performs crossover at N points in the binary chromosomes (dv by dv).
 /**
  * This crosser performs a bit switching crossover routine at N crossover
  * points between the binary encoded chromosomes (not genomes) of two designs.
@@ -294,7 +294,7 @@ class NPointParameterizedBinaryCrosser :
            crossover locations.
 
            The rate is used to determine how many members of the
-           passed in group (population) should be given an oportunity to
+           passed in group (population) should be given an opportunity to
            participate in a crossover operation.  Each operation
            involves 2 members of the passed in group and creates 2 new
            designs.  So the number of operations is round(rate*size/2)

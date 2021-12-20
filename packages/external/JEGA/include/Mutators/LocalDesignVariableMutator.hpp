@@ -321,30 +321,21 @@ class LocalDesignVariableMutator :
             );
 
         void
-        ReadDesignSpaceFile(
-            std::istream& iFile,
-            const std::string& fileName
-            );
-
-        void
         ReadMultipleChoiceOptionSection(
             std::istream& iFile,
-            roadmap& rMap,
-            const std::string& fileName
+            roadmap& rMap
             );
 
         void
         ReadSingleChoiceOptionSection(
             std::istream& iFile,
-            roadmap& rMap,
-            const std::string& fileName
+            roadmap& rMap
             );
 
         void
         ReadVariableSection(
             std::istream& iFile,
-            roadmap& rMap,
-            const std::string& fileName
+            roadmap& rMap
             );
 
         std::string
@@ -484,32 +475,28 @@ class LocalDesignVariableMutator :
         void
         ReadFor(
             std::istream& iFile,
-            std::string& line,
-            const std::string& fileName
+            std::string& line
             );
 
         std::string&
         ReadSingleChoiceOptionData(
             std::istream& iFile,
             std::string& line,
-            roadmap& rMap,
-            const std::string& fileName
+            roadmap& rMap
             );
 
         std::string&
         ReadMultipleChoiceOptionData(
             std::istream& iFile,
             std::string& line,
-            roadmap& rMap,
-            const std::string& fileName
+            roadmap& rMap
             );
 
         std::string&
         ReadVariableData(
             std::istream& iFile,
             std::string& line,
-            roadmap& rMap,
-            const std::string& fileName
+            roadmap& rMap
             );
 
         void
@@ -518,8 +505,8 @@ class LocalDesignVariableMutator :
             const roadmap& rMap,
             const std::size_t dv,
             const std::size_t pndv,
-            double oldRep,
-            double newRep
+            var_rep_t oldRep,
+            var_rep_t newRep
             );
 
         std::string
@@ -528,7 +515,7 @@ class LocalDesignVariableMutator :
             roadmap& rm
             );
 
-        double
+        var_rep_t
         GenerateNewRep(
             JEGA::Utilities::Design& des,
             const roadmap& rm,
@@ -553,6 +540,13 @@ class LocalDesignVariableMutator :
         GetRoadmapAndPriorNDV(
             std::size_t dvNum
             );
+
+		inline
+		bool
+		DvIsVar(
+            const roadmap& rm,
+			const std::size_t& dvNum
+			) const;
 
     /*
     ============================================================================

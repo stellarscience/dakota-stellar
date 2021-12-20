@@ -13,9 +13,8 @@
 
 #include "SharedPolyApproxData.hpp"
 #include "BasisPolynomial.hpp"
-#include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
-#include "HahnOrthogPolynomial.hpp"
+#include "MarginalsCorrDistribution.hpp"
 #include "pecos_stat_util.hpp"
 
 //#define DEBUG
@@ -26,39 +25,42 @@ namespace Pecos {
 /** This version supports only orthogonal polynomial types.  In this case,
     the polynomial types needed for an orthogonal basis and for computing
     collocation points and weights in an integration driver are the same. */
-bool SharedPolyApproxData::
-initialize_orthogonal_basis_types_rules(const ShortArray& u_types,
+void SharedPolyApproxData::
+initialize_orthogonal_basis_types_rules(const MultivariateDistribution& u_dist,
 					const BasisConfigOptions& bc_options,
 					ShortArray& basis_types,
 					ShortArray& colloc_rules)
 {
-  bool extra_dist_params = false;
-  size_t i, num_vars = u_types.size();
-  basis_types.resize(num_vars); colloc_rules.resize(num_vars);
+  const ShortArray&   u_types = u_dist.random_variable_types();
+  const BitArray& active_vars = u_dist.active_variables();
+  bool no_mask = active_vars.empty();
+  size_t i, av_cntr, num_v = u_types.size(),
+    num_av = (no_mask) ? num_v : active_vars.count();
+  basis_types.resize(num_av); colloc_rules.resize(num_av);
 
   // Initialize basis_types, colloc_rules, and extra_dist_params from u_types:
-  for (i=0; i<num_vars; ++i)
-    if (initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
-					      basis_types[i], colloc_rules[i]))
-      extra_dist_params = true;
-
-  return extra_dist_params;
+  for (i=0, av_cntr=0; i<num_v; ++i)
+    if (no_mask || active_vars[i]) {
+      initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
+					    basis_types[av_cntr],
+					    colloc_rules[av_cntr]);
+      ++av_cntr;
+    }
 }
 
 
-bool SharedPolyApproxData::
+void SharedPolyApproxData::
 initialize_orthogonal_basis_type_rule(short u_type,
 				      const BasisConfigOptions& bc_options,
 				      short& basis_type, short& colloc_rule)
 {
   // > open Gauss rules are used for all global cases
   // > nested closed rules are used for piecewise approximations
-  bool extra_dist_params;
   switch (u_type) {
   case STD_NORMAL:
     basis_type  = HERMITE_ORTHOG;
     colloc_rule = (bc_options.nestedRules) ? GENZ_KEISTER : GAUSS_HERMITE;
-    extra_dist_params = false; break;
+    break;
   case STD_UNIFORM:
     basis_type = LEGENDRE_ORTHOG;
     // no piecewise orthogonal polynomial bases at this time
@@ -67,13 +69,11 @@ initialize_orthogonal_basis_type_rule(short u_type,
     //    NEWTON_COTES : CLENSHAW_CURTIS;
     //else
     colloc_rule = (bc_options.nestedRules) ? GAUSS_PATTERSON : GAUSS_LEGENDRE;
-    extra_dist_params = false; break;
+    break;
   case STD_EXPONENTIAL:
-    basis_type = LAGUERRE_ORTHOG; colloc_rule = GAUSS_LAGUERRE;
-    extra_dist_params = false; break;
+    basis_type = LAGUERRE_ORTHOG; colloc_rule = GAUSS_LAGUERRE; break;
   case STD_BETA:
-    basis_type = JACOBI_ORTHOG;   colloc_rule = GAUSS_JACOBI;
-    extra_dist_params = true; break;
+    basis_type = JACOBI_ORTHOG;   colloc_rule = GAUSS_JACOBI;   break;
     // a special case of Jacobi is Chebyshev polynomials for alpha=beta=-1/2,
     // which are orthogonal to the weight fn 1/sqrt(1-x^2).
     //case BETA_CHEBY:
@@ -85,30 +85,19 @@ initialize_orthogonal_basis_type_rule(short u_type,
     // polynomials, as these points correspond to extrema rather than roots
     // (point sets from Fejer's first rule are roots, but are not nested).
   case STD_GAMMA:
-    basis_type = GEN_LAGUERRE_ORTHOG; colloc_rule = GEN_GAUSS_LAGUERRE;
-    extra_dist_params = true; break;
+    basis_type = GEN_LAGUERRE_ORTHOG; colloc_rule = GEN_GAUSS_LAGUERRE; break;
   case POISSON:
-    basis_type = CHARLIER_DISCRETE; colloc_rule = GAUSS_CHARLIER;
-    extra_dist_params = true; break;
+    basis_type = CHARLIER_DISCRETE;   colloc_rule = GAUSS_CHARLIER;     break;
   case BINOMIAL:
-    basis_type = KRAWTCHOUK_DISCRETE; colloc_rule = GAUSS_KRAWTCHOUK;
-    extra_dist_params = true; break;
+    basis_type = KRAWTCHOUK_DISCRETE; colloc_rule = GAUSS_KRAWTCHOUK;   break;
   case NEGATIVE_BINOMIAL:
-    basis_type = MEIXNER_DISCRETE; colloc_rule = GAUSS_MEIXNER;
-    extra_dist_params = true; break;
-  case GEOMETRIC:
-    // special case of NEGATIVE_BINOMIAL
-    basis_type = MEIXNER_DISCRETE; colloc_rule = GAUSS_MEIXNER;
-    extra_dist_params = true; break;
+  case GEOMETRIC: // special case of NEGATIVE_BINOMIAL
+    basis_type = MEIXNER_DISCRETE;    colloc_rule = GAUSS_MEIXNER;      break;
   case HYPERGEOMETRIC:
-    basis_type = HAHN_DISCRETE; colloc_rule = GAUSS_HAHN;
-    extra_dist_params = true; break;
+    basis_type = HAHN_DISCRETE;       colloc_rule = GAUSS_HAHN;         break;
   default:
-    basis_type = NUM_GEN_ORTHOG; colloc_rule = GOLUB_WELSCH;
-    extra_dist_params = true; break;
+    basis_type = NUM_GEN_ORTHOG;      colloc_rule = GOLUB_WELSCH;       break;
   }
-
-  return extra_dist_params;
 }
 
 
@@ -117,20 +106,20 @@ initialize_polynomial_basis(const ShortArray& basis_types,
 			    const ShortArray& colloc_rules,
 			    std::vector<BasisPolynomial>& poly_basis)
 {
-  size_t i, num_vars = basis_types.size(), num_rules = colloc_rules.size();
+  size_t i, num_av = basis_types.size(), num_rules = colloc_rules.size();
 
   // instantiate poly_basis using basis_types and colloc_rules
-  if (poly_basis.size() != num_vars) {
-    poly_basis.resize(num_vars);
-    if (num_rules == num_vars)
-      for (i=0; i<num_vars; ++i)
+  if (poly_basis.size() != num_av) {
+    poly_basis.resize(num_av);
+    if (num_rules == num_av)
+      for (i=0; i<num_av; ++i)
 	poly_basis[i] = BasisPolynomial(basis_types[i], colloc_rules[i]);
     else if (num_rules == 0)   // use default rules for each basis type
-      for (i=0; i<num_vars; ++i)
+      for (i=0; i<num_av; ++i)
 	poly_basis[i] = BasisPolynomial(basis_types[i]);
     else if (num_rules == 1) { // cubature utilizes a single rule
       short colloc_rule = colloc_rules[0];
-      for (i=0; i<num_vars; ++i)
+      for (i=0; i<num_av; ++i)
 	poly_basis[i] = BasisPolynomial(basis_types[i], colloc_rule);
     }
 
@@ -159,137 +148,215 @@ initialize_polynomial_basis(const ShortArray& basis_types,
 
 
 void SharedPolyApproxData::
-update_basis_distribution_parameters(const ShortArray& u_types,
-				     const AleatoryDistParams& adp,
+update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 				     std::vector<BasisPolynomial>& poly_basis)
 {
-  size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
-    luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
-    fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0, biuv_cntr=0, nbuv_cntr=0,
-    puv_cntr=0, geuv_cntr=0, hguv_cntr=0, 
-    hpiuv_cntr=0, hpsuv_cntr=0, hpruv_cntr=0;
+  // update poly_basis using distribution data from u_dist
+  const ShortArray&   u_types = u_dist.random_variable_types();
+  const BitArray& active_vars = u_dist.active_variables();
+  bool no_mask = active_vars.empty();
+  size_t i, av_cntr, num_v = u_types.size();
+    //num_av = (no_mask) ? num_v : active_vars.count();
+  MarginalsCorrDistribution* mvd_rep
+    = (MarginalsCorrDistribution*)u_dist.multivar_dist_rep();
+  for (i=0, av_cntr=0; i<num_v; ++i)
+    if (no_mask || active_vars[i]) {
+      switch (u_types[i]) {
+      // CONTINUOUS RANGE vars are always mapped to STD_UNIFORM
+      // DISCRETE RANGE, SET
+      case DISCRETE_RANGE:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_range_distribution(
+	    mvd_rep->pull_parameter<int>(i, DR_LWR_BND),
+	    mvd_rep->pull_parameter<int>(i, DR_UPR_BND));
+	break;
+      case DISCRETE_SET_INT:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_set_distribution(
+	    mvd_rep->pull_parameter<IntSet>(i, DSI_VALUES));
+	break;
+      case DISCRETE_SET_STRING:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_set_distribution(
+	    mvd_rep->pull_parameter<StringSet>(i, DSS_VALUES));
+	break;
+      case DISCRETE_SET_REAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_set_distribution(
+	    mvd_rep->pull_parameter<RealSet>(i, DSR_VALUES));
+	break;
+      // CONTINUOUS ALEATORY
+      case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:
+	break;
+      case STD_BETA:
+	poly_basis[av_cntr].push_parameter(BE_ALPHA,
+	  mvd_rep->pull_parameter<Real>(i, BE_ALPHA));
+	poly_basis[av_cntr].push_parameter(BE_BETA,
+	  mvd_rep->pull_parameter<Real>(i, BE_BETA));
+	break;
+      case STD_GAMMA:
+	poly_basis[av_cntr].push_parameter(GA_ALPHA,
+          mvd_rep->pull_parameter<Real>(i, GA_ALPHA));
+	break;
+      case BOUNDED_NORMAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  bounded_normal_distribution(mvd_rep->pull_parameter<Real>(i, N_MEAN),
+	    mvd_rep->pull_parameter<Real>(i, N_STD_DEV),
+	    mvd_rep->pull_parameter<Real>(i, N_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, N_UPR_BND));
+	break;
+      case LOGNORMAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  lognormal_distribution(mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
+	    mvd_rep->pull_parameter<Real>(i, LN_ZETA));
+	break;
+      case BOUNDED_LOGNORMAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  bounded_lognormal_distribution(
+	    mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
+	    mvd_rep->pull_parameter<Real>(i, LN_ZETA),
+	    mvd_rep->pull_parameter<Real>(i, LN_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, LN_UPR_BND));
+	break;
+      case LOGUNIFORM:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  loguniform_distribution(mvd_rep->pull_parameter<Real>(i, LU_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, LU_UPR_BND));
+	break;
+      case TRIANGULAR:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  triangular_distribution(mvd_rep->pull_parameter<Real>(i, T_LWR_BND),
+	    mvd_rep->pull_parameter<Real>(i, T_MODE),
+	    mvd_rep->pull_parameter<Real>(i, T_UPR_BND));
+	break;
+      case GUMBEL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  gumbel_distribution(mvd_rep->pull_parameter<Real>(i, GU_ALPHA),
+	    mvd_rep->pull_parameter<Real>(i, GU_BETA));
+	break;
+      case FRECHET:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  frechet_distribution(mvd_rep->pull_parameter<Real>(i, F_ALPHA),
+	    mvd_rep->pull_parameter<Real>(i, F_BETA));
+	break;
+      case WEIBULL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  weibull_distribution(mvd_rep->pull_parameter<Real>(i, W_ALPHA),
+	    mvd_rep->pull_parameter<Real>(i, W_BETA));
+	break;
+      case HISTOGRAM_BIN:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  histogram_bin_distribution(
+	    mvd_rep->pull_parameter<RealRealMap>(i, H_BIN_PAIRS));
+	break;
+      // DISCRETE ALEATORY
+      case POISSON:
+	poly_basis[av_cntr].push_parameter(P_LAMBDA,
+	  mvd_rep->pull_parameter<Real>(i, P_LAMBDA));
+	break;
+      case BINOMIAL:
+	poly_basis[av_cntr].push_parameter(BI_P_PER_TRIAL,
+	  mvd_rep->pull_parameter<Real>(i, BI_P_PER_TRIAL));
+	poly_basis[av_cntr].push_parameter(BI_TRIALS,
+	  mvd_rep->pull_parameter<unsigned int>(i, BI_TRIALS));
+	break;
+      case NEGATIVE_BINOMIAL:
+	poly_basis[av_cntr].push_parameter(NBI_P_PER_TRIAL,
+	  mvd_rep->pull_parameter<Real>(i, NBI_P_PER_TRIAL));
+	poly_basis[av_cntr].push_parameter(NBI_TRIALS,
+	  mvd_rep->pull_parameter<unsigned int>(i, NBI_TRIALS));
+	break;
+      case GEOMETRIC:
+	poly_basis[av_cntr].push_parameter(GE_P_PER_TRIAL,
+	  mvd_rep->pull_parameter<Real>(i, GE_P_PER_TRIAL));
+	// There is no numTrials for Geometric variables -> simplest to have
+	// Meixner numTrials default to 1., rather than setting NBI_TRIALS
+	//poly_basis[av_cntr].parameter(NBI_TRIALS, 1.);
+	break;
+      case HYPERGEOMETRIC:
+	poly_basis[av_cntr].push_parameter(HGE_TOT_POP,
+	  mvd_rep->pull_parameter<unsigned int>(i, HGE_TOT_POP));
+	poly_basis[av_cntr].push_parameter(HGE_SEL_POP,
+	  mvd_rep->pull_parameter<unsigned int>(i, HGE_SEL_POP));
+	poly_basis[av_cntr].push_parameter(HGE_DRAWN,
+	  mvd_rep->pull_parameter<unsigned int>(i, HGE_DRAWN));
+	break;
+      case HISTOGRAM_PT_INT:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  histogram_pt_distribution(
+	    mvd_rep->pull_parameter<IntRealMap>(i, H_PT_INT_PAIRS));
+	break;
+      case HISTOGRAM_PT_STRING:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  histogram_pt_distribution(
+	    mvd_rep->pull_parameter<StringRealMap>(i,H_PT_STR_PAIRS));
+	break;
+      case HISTOGRAM_PT_REAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  histogram_pt_distribution(
+	    mvd_rep->pull_parameter<RealRealMap>(i, H_PT_REAL_PAIRS));
+	break;
+      // CONTINUOUS EPISTEMIC
+      case CONTINUOUS_INTERVAL_UNCERTAIN:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  continuous_interval_distribution(
+	    mvd_rep->pull_parameter<RealRealPairRealMap>(i, CIU_BPA));
+	//((IntervalRandomVariable<Real>*)u_rv[i].random_variable_rep())->
+	//  activate_vpp();
+	break;
+      // DISCRETE EPISTEMIC
+      case DISCRETE_INTERVAL_UNCERTAIN:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_interval_distribution(
+	    mvd_rep->pull_parameter<IntIntPairRealMap>(i, DIU_BPA));
+	//((IntervalRandomVariable<int>*)u_rv[i].random_variable_rep())->
+	//  activate_vpp();
+	break;
+      case DISCRETE_UNCERTAIN_SET_INT:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_map_distribution(
+	    mvd_rep->pull_parameter<IntRealMap>(i, DUSI_VALUES_PROBS));
+	break;
+      case DISCRETE_UNCERTAIN_SET_STRING:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_map_distribution(
+	    mvd_rep->pull_parameter<StringRealMap>(i, DUSS_VALUES_PROBS));
+	break;
+      case DISCRETE_UNCERTAIN_SET_REAL:
+	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	  discrete_map_distribution(
+	    mvd_rep->pull_parameter<RealRealMap>(i, DUSR_VALUES_PROBS));
+	break;
+      default:
+	PCerr << "Error: unsupported u-space random variable type ("
+	      << u_types[i] << ") in SharedPolyApproxData::update_basis_"
+	      << "distribution_parameters()" << std::endl;
+	abort_handler(-1);
+	break;
+      }
+      ++av_cntr;
+    }
+}
 
-  // update poly_basis using distribution data from dp
-  for (i=0; i<num_vars; ++i)
-    switch (u_types[i]) {
-    case STD_NORMAL:
-      ++nuv_cntr; break;
-    case STD_UNIFORM: case STD_EXPONENTIAL:
-      break;
-    case STD_BETA:
-      poly_basis[i].alpha_stat(adp.beta_alpha(beuv_cntr));
-      poly_basis[i].beta_stat(adp.beta_beta(beuv_cntr));
-      ++beuv_cntr; break;
-    case STD_GAMMA:
-      poly_basis[i].alpha_stat(adp.gamma_alpha(gauv_cntr));
-      ++gauv_cntr; break;
-    case BOUNDED_NORMAL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_normal_distribution(adp.normal_mean(nuv_cntr),
-				    adp.normal_std_deviation(nuv_cntr),
-				    adp.normal_lower_bound(nuv_cntr),
-				    adp.normal_upper_bound(nuv_cntr));
-      ++nuv_cntr; break;
-    case LOGNORMAL: {
-      Real lambda, zeta;
-      params_from_lognormal_spec(adp.lognormal_means(),
-				 adp.lognormal_std_deviations(),
-				 adp.lognormal_lambdas(), adp.lognormal_zetas(),
-				 adp.lognormal_error_factors(), lnuv_cntr,
-				 lambda, zeta);
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	lognormal_distribution(lambda, zeta);
-      ++lnuv_cntr; break;
-    }
-    case BOUNDED_LOGNORMAL: {
-      Real lambda, zeta;
-      params_from_lognormal_spec(adp.lognormal_means(),
-				 adp.lognormal_std_deviations(),
-				 adp.lognormal_lambdas(), adp.lognormal_zetas(),
-				 adp.lognormal_error_factors(), lnuv_cntr,
-				 lambda, zeta);
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_lognormal_distribution(lambda, zeta,
-				       adp.lognormal_lower_bound(lnuv_cntr),
-				       adp.lognormal_upper_bound(lnuv_cntr));
-      ++lnuv_cntr; break;
-    }
-    case LOGUNIFORM:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	loguniform_distribution(adp.loguniform_lower_bound(luuv_cntr),
-				adp.loguniform_upper_bound(luuv_cntr));
-      ++luuv_cntr; break;
-    case TRIANGULAR:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	triangular_distribution(adp.triangular_lower_bound(tuv_cntr),
-				adp.triangular_mode(tuv_cntr),
-				adp.triangular_upper_bound(tuv_cntr));
-      ++tuv_cntr; break;
-    case GUMBEL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	gumbel_distribution(adp.gumbel_alpha(guuv_cntr),
-			    adp.gumbel_beta(guuv_cntr));
-      ++guuv_cntr; break;
-    case FRECHET:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	frechet_distribution(adp.frechet_alpha(fuv_cntr),
-			     adp.frechet_beta(fuv_cntr));
-      ++fuv_cntr; break;
-    case WEIBULL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	weibull_distribution(adp.weibull_alpha(wuv_cntr),
-			     adp.weibull_beta(wuv_cntr));
-      ++wuv_cntr; break;
-    case HISTOGRAM_BIN:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	histogram_bin_distribution(adp.histogram_bin_pairs(hbuv_cntr));
-      ++hbuv_cntr; break;
-    case BINOMIAL:
-      poly_basis[i].alpha_stat(adp.binomial_probability_per_trial(biuv_cntr));
-      poly_basis[i].beta_stat(adp.binomial_num_trials(biuv_cntr));
-      ++biuv_cntr; break;
-    case NEGATIVE_BINOMIAL:
-      poly_basis[i].alpha_stat(
-	   adp.negative_binomial_probability_per_trial(nbuv_cntr));
-      poly_basis[i].beta_stat(adp.negative_binomial_num_trials(nbuv_cntr));
-      ++nbuv_cntr; break;
-    case POISSON:
-      poly_basis[i].alpha_stat(adp.poisson_lambda(puv_cntr));
-      ++puv_cntr; break;
-    case GEOMETRIC:
-      // Use Meixner polynomial for Geometric variables setting num_trials to 1
-      poly_basis[i].alpha_stat(
-	   adp.geometric_probability_per_trial(geuv_cntr));
-      poly_basis[i].beta_stat(1);
-      ++geuv_cntr; break;
-    case HYPERGEOMETRIC:
-      poly_basis[i].alpha_stat(adp.hypergeometric_total_population(hguv_cntr));
-      poly_basis[i].beta_stat(adp.hypergeometric_selected_population(hguv_cntr));
-      ((HahnOrthogPolynomial*)poly_basis[i].polynomial_rep())->gamma_stat(adp.hypergeometric_num_drawn(hguv_cntr));
-      ++hguv_cntr; break;
-    case HISTOGRAM_PT_INT:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-        histogram_pt_distribution(adp.histogram_point_int_pairs(hpiuv_cntr));
-      ++hpiuv_cntr; break;
-    case HISTOGRAM_PT_STRING:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-        histogram_pt_distribution(adp.histogram_point_string_pairs(hpsuv_cntr));
-      ++hpsuv_cntr; break;
-    case HISTOGRAM_PT_REAL:
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-        histogram_pt_distribution(adp.histogram_point_real_pairs(hpruv_cntr));
-      ++hpruv_cntr; break;
-    default:
-      PCerr << "Error: unsupported u-space type in SharedPolyApproxData::"
-	    << "distribution_parameters()" << std::endl;
-      abort_handler(-1);
-      break;
-    }
+
+void SharedPolyApproxData::active_key(const UShortArray& key)
+{
+  activeKey = key;
+  //update_active_iterators(); // make virtual if used more broadly w/i Shared*
+}
+
+
+void SharedPolyApproxData::clear_keys()
+{
+  activeKey.clear();
+  //poppedLevMultiIndex.clear();
 }
 
 
 void SharedPolyApproxData::increment_data()
 {
+  // Run-time error instead of compile-time (not pure virtual)
+
   PCerr << "Error: derived class does not redefine increment_data()."
 	<< std::endl;
   abort_handler(-1);
@@ -298,10 +365,16 @@ void SharedPolyApproxData::increment_data()
 
 void SharedPolyApproxData::decrement_data()
 {
+  // Run-time error instead of compile-time (not pure virtual)
+
   PCerr << "Error: derived class does not redefine decrement_data()."
 	<< std::endl;
   abort_handler(-1);
 }
+
+
+bool SharedPolyApproxData::push_available()
+{ return false; } // default implementation
 
 
 void SharedPolyApproxData::pre_push_data()
@@ -320,11 +393,19 @@ void SharedPolyApproxData::post_finalize_data()
 { } // default implementation is no op
 
 
-size_t SharedPolyApproxData::pre_combine_data(short combine_type)
-{ return _NPOS; } // default implementation is no op, no swap
+void SharedPolyApproxData::pre_combine_data()
+{ } // default implementation is no op
 
 
-void SharedPolyApproxData::post_combine_data(short combine_type)
+void SharedPolyApproxData::post_combine_data()
+{ } // default implementation is no op
+
+
+void SharedPolyApproxData::combined_to_active(bool clear_combined)
+{ } // default implementation is no op
+
+
+void SharedPolyApproxData::clear_inactive_data()
 { } // default implementation is no op
 
 

@@ -123,13 +123,13 @@ BitManipulator::GetTotalNumOfBits(
 }
 
 inline
-double
+var_rep_t
 BitManipulator::ConvertFromShiftedInt(
     eddy::utilities::int64_t val,
     std::size_t dv
     ) const
 {
-    return val/this->_mults[dv] - this->_mins[dv];
+    return static_cast<var_rep_t>(val/this->_mults[dv] - this->_mins[dv]);
 }
 
 inline

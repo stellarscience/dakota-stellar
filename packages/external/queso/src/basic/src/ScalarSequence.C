@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <queso/ScalarSequence.h>
+#include <queso/FilePtr.h>
 
 namespace QUESO {
 
@@ -216,7 +217,7 @@ ScalarSequence<T>::erasePositions(unsigned int initialPos, unsigned int numPos)
   if (initialPos < this->subSequenceSize()) std::advance(posIteratorBegin,initialPos);
   else                                      posIteratorBegin = m_seq.end();
 
-  unsigned int posEnd = initialPos + numPos - 1;
+  unsigned int posEnd = initialPos + numPos;
   seqScalarPositionIteratorTypedef posIteratorEnd = m_seq.begin();
   if (posEnd < this->subSequenceSize()) std::advance(posIteratorEnd,posEnd);
   else                                  posIteratorEnd = m_seq.end();
@@ -515,20 +516,11 @@ void
 ScalarSequence<T>::setGaussian(const T& meanValue, const T& stdDev)
 {
   unsigned int maxJ = this->subSequenceSize();
-  if (meanValue == 0.) {
-    for (unsigned int j = 0; j < maxJ; ++j) {
-      m_seq[j] = m_env.rngObject()->gaussianSample(stdDev);
-    }
-  }
-  else {
-    for (unsigned int j = 0; j < maxJ; ++j) {
-      m_seq[j] = meanValue + m_env.rngObject()->gaussianSample(stdDev);
-    }
+  for (unsigned int j = 0; j < maxJ; ++j) {
+    m_seq[j] = meanValue + m_env.rngObject()->gaussianSample(stdDev);
   }
 
   deleteStoredScalars();
-
-  return;
 }
 // --------------------------------------------------
 template <class T>
@@ -536,34 +528,11 @@ void
 ScalarSequence<T>::setUniform(const T& a, const T& b)
 {
   unsigned int maxJ = this->subSequenceSize();
-  if (a == 0.) {
-    if (b == 1.) {
-      for (unsigned int j = 0; j < maxJ; ++j) {
-        m_seq[j] = m_env.rngObject()->uniformSample();
-      }
-    }
-    else {
-      for (unsigned int j = 0; j < maxJ; ++j) {
-        m_seq[j] = b*m_env.rngObject()->uniformSample();
-      }
-    }
-  }
-  else {
-    if ((b-a) == 1.) {
-      for (unsigned int j = 0; j < maxJ; ++j) {
-        m_seq[j] = a + m_env.rngObject()->uniformSample();
-      }
-    }
-    else {
-      for (unsigned int j = 0; j < maxJ; ++j) {
-        m_seq[j] = a + (b-a)*m_env.rngObject()->uniformSample();
-      }
-    }
+  for (unsigned int j = 0; j < maxJ; ++j) {
+    m_seq[j] = a + (b-a)*m_env.rngObject()->uniformSample();
   }
 
   deleteStoredScalars();
-
-  return;
 }
 // --------------------------------------------------
 template <class T>
@@ -1366,21 +1335,10 @@ ScalarSequence<T>::autoCorrViaFft(
   unsigned int    maxLag,
   std::vector<T>& autoCorrs) const
 {
-  unsigned int fftSize = 0;
-  {
-#warning WTF are 4 lines of unused code doing here? - RHS
-    double tmp = log((double) maxLag)/log(2.);
-    double fractionalPart = tmp - ((double) ((unsigned int) tmp));
-    if (fractionalPart > 0.) tmp += (1. - fractionalPart);
-    unsigned int fftSize1 = (unsigned int) std::pow(2.,tmp+1.); // Yes, tmp+1
-
-    tmp = log((double) numPos)/log(2.);
-    fractionalPart = tmp - ((double) ((unsigned int) tmp));
-    if (fractionalPart > 0.) tmp += (1. - fractionalPart);
-    unsigned int fftSize2 = (unsigned int) std::pow(2.,tmp+1);
-
-    fftSize = fftSize2;
-  }
+  double tmp = log((double) numPos)/log(2.);
+  double fractionalPart = tmp - ((double) ((unsigned int) tmp));
+  if (fractionalPart > 0.) tmp += (1. - fractionalPart);
+  unsigned int fftSize = (unsigned int) std::pow(2.,tmp+1);
 
   std::vector<double> rawDataVec(numPos,0.);
   std::vector<std::complex<double> > resultData(0,std::complex<double>(0.,0.));
@@ -1747,7 +1705,7 @@ ScalarSequence<T>::unifiedHistogram(
 template <class T>
 void
 ScalarSequence<T>::subBasicHistogram(
-  unsigned int                initialPos,
+  unsigned int                /* initialPos */,
   const T&                    minHorizontalValue,
   const T&                    maxHorizontalValue,
   UniformOneDGrid<T>*& gridValues,
@@ -1772,14 +1730,14 @@ ScalarSequence<T>::subBasicHistogram(
   for (unsigned int j = 0; j < dataSize; ++j) {
     double value = m_seq[j];
     if (value < minHorizontalValue) {
-      bins[0] += value;
+      bins[0]++;
     }
     else if (value >= maxHorizontalValue) {
-      bins[bins.size()-1] += value;
+      bins[bins.size()-1]++;
     }
     else {
       unsigned int index = 1 + (unsigned int) ((value - minHorizontalValue)/horizontalDelta);
-      bins[index] += value;
+      bins[index]++;
     }
   }
 
@@ -1789,7 +1747,7 @@ ScalarSequence<T>::subBasicHistogram(
 template <class T>
 void
 ScalarSequence<T>::subWeightHistogram(
-  unsigned int                initialPos,
+  unsigned int                /* initialPos */,
   const T&                    minHorizontalValue,
   const T&                    maxHorizontalValue,
   UniformOneDGrid<T>*& gridValues,
@@ -1814,14 +1772,14 @@ ScalarSequence<T>::subWeightHistogram(
   for (unsigned int j = 0; j < dataSize; ++j) {
     double value = m_seq[j];
     if (value < minHorizontalValue) {
-      bins[0] += value;
+      bins[0]++;
     }
     else if (value >= maxHorizontalValue) {
-      bins[bins.size()-1] += value;
+      bins[bins.size()-1]++;
     }
     else {
       unsigned int index = 1 + (unsigned int) ((value - minHorizontalValue)/horizontalDelta);
-      bins[index] += value;
+      bins[index]++;
     }
   }
 
@@ -1831,7 +1789,7 @@ ScalarSequence<T>::subWeightHistogram(
 template <class T>
 void
 ScalarSequence<T>::subWeightHistogram(
-  unsigned int               initialPos,
+  unsigned int               /* initialPos */,
   const T&                   minHorizontalValue,
   const T&                   maxHorizontalValue,
   std::vector<T>&            gridValues,
@@ -1861,14 +1819,14 @@ ScalarSequence<T>::subWeightHistogram(
   for (unsigned int j = 0; j < dataSize; ++j) {
     double value = m_seq[j];
     if (value < minHorizontalValue) {
-      bins[0] += value;
+      bins[0]++;
     }
     else if (value >= maxHorizontalValue) {
-      bins[bins.size()-1] += value;
+      bins[bins.size()-1]++;
     }
     else {
       unsigned int index = 1 + (unsigned int) ((value - minHorizontalValue)/horizontalDelta);
-      bins[index] += value;
+      bins[index]++;
     }
   }
 
@@ -2469,8 +2427,8 @@ template <class T>
 T
 ScalarSequence<T>::brooksGelmanConvMeasure(
   bool         useOnlyInter0Comm,
-  unsigned int initialPos,
-  unsigned int spacing) const
+  unsigned int /* initialPos */,
+  unsigned int /* spacing */) const
 {
   double resultValue = 0.;
 
@@ -2593,14 +2551,61 @@ ScalarSequence<T>::subWriteContents(
                            false, // A 'true' causes problems when the user chooses (via options
                                   // in the input file) to use just one file for all outputs.
                            filePtrSet)) {
-    this->subWriteContents(initialPos,
-                           numPos,
-                           *filePtrSet.ofsVar,
-                           fileType);
+
+    if (fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT ||
+        fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT) {
+      this->subWriteContents(initialPos,
+                             numPos,
+                             *filePtrSet.ofsVar,
+                             fileType);
+    }
+#ifdef QUESO_HAS_HDF5
+    else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
+
+      // Create dataspace
+      hsize_t dims[1] = { this->subSequenceSize() };
+      hid_t dataspace_id = H5Screate_simple(1, dims, dims);
+      queso_require_greater_equal_msg(
+          dataspace_id,
+          0,
+          "error create dataspace with id: " << dataspace_id);
+
+      // Create dataset
+      hid_t dataset_id = H5Dcreate(filePtrSet.h5Var,
+                                   "data",
+                                   H5T_IEEE_F64LE,
+                                   dataspace_id,
+                                   H5P_DEFAULT,
+                                   H5P_DEFAULT,
+                                   H5P_DEFAULT);
+
+      queso_require_greater_equal_msg(
+          dataset_id,
+          0,
+          "error creating dataset with id: " << dataset_id);
+
+      // Write the dataset
+      herr_t status = H5Dwrite(
+          dataset_id,
+          H5T_NATIVE_DOUBLE,  // The type in memory
+          H5S_ALL,  // The dataspace in memory
+          dataspace_id,  // The file dataspace
+          H5P_DEFAULT,  // Xfer property list
+          &m_seq[0]);
+
+      queso_require_greater_equal_msg(
+          status,
+          0,
+          "error writing dataset to file with id: " << filePtrSet.h5Var);
+
+      // Clean up
+      H5Dclose(dataset_id);
+      H5Sclose(dataspace_id);
+    }
+#endif
+
     m_env.closeFile(filePtrSet,fileType);
   }
-
-  return;
 }
 // --------------------------------------------------
 template <class T>
@@ -2680,132 +2685,127 @@ ScalarSequence<T>::unifiedWriteContents(
   // As of 14/Nov/2009, this routine does *not* require sub sequences to have equal size. Good.
 
   if (m_env.inter0Rank() >= 0) {
-    for (unsigned int r = 0; r < (unsigned int) m_env.inter0Comm().NumProc(); ++r) {
-      if (m_env.inter0Rank() == (int) r) {
-        // My turn
-        FilePtrSetStruct unifiedFilePtrSet;
-        // bool writeOver = (r == 0);
-        bool writeOver = false; // A 'true' causes problems when the user chooses (via options
-                                // in the input file) to use just one file for all outputs.
-        //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 000 \n" << std::endl;
-        if (m_env.openUnifiedOutputFile(fileName,
-                                        fileType, // "m or hdf"
-                                        writeOver,
-                                        unifiedFilePtrSet)) {
-          //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 001 \n" << std::endl;
-
-          unsigned int chainSize = this->subSequenceSize();
-          if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
-              (fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT)) {
-
-            // Write header info
-            if (r == 0) {
-              if (fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) {
-                this->writeUnifiedMatlabHeader(*unifiedFilePtrSet.ofsVar,
-                    this->subSequenceSize()*m_env.inter0Comm().NumProc());
-              }
-              else {  // It's definitely txt if we get in here
-                this->writeTxtHeader(*unifiedFilePtrSet.ofsVar,
-                    this->subSequenceSize()*m_env.inter0Comm().NumProc());
-              }
-            }
-
-            for (unsigned int j = 0; j < chainSize; ++j) {
-              *unifiedFilePtrSet.ofsVar << m_seq[j]
-                                        << std::endl;
-            }
-
-            m_env.closeFile(unifiedFilePtrSet,fileType);
-          }
+    if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
 #ifdef QUESO_HAS_HDF5
-          else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
-            unsigned int numParams = 1; // m_vectorSpace.dimLocal();
-            if (r == 0) {
-              hid_t datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, data type created" << std::endl;
-              hsize_t dimsf[2];
-              dimsf[0] = numParams;
-              dimsf[1] = chainSize;
-              hid_t dataspace = H5Screate_simple(2, dimsf, NULL); // HDF5_rank = 2
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, data space created" << std::endl;
-              hid_t dataset = H5Dcreate2(unifiedFilePtrSet.h5Var,
-                                         "seq_of_vectors",
-                                         datatype,
-                                         dataspace,
-                                         H5P_DEFAULT,  // Link creation property list
-                                         H5P_DEFAULT,  // Dataset creation property list
-                                         H5P_DEFAULT); // Dataset access property list
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, data set created" << std::endl;
+      unsigned int chainSize = this->subSequenceSize();
+      unsigned int numChains = m_env.inter0Comm().NumProc();
 
-              struct timeval timevalBegin;
-              int iRC = UQ_OK_RC;
-              iRC = gettimeofday(&timevalBegin,NULL);
-              if (iRC) {}; // just to remove compiler warning
+      double * recvbuf;
+      recvbuf = (double *)malloc(chainSize * numChains * sizeof(double));
+      queso_require_msg(recvbuf, "couldn't allocate memory for recvbuf");
 
-              //double* dataOut[numParams]; // avoid compiler warning
-        std::vector<double*> dataOut((size_t) numParams,NULL);
-              dataOut[0] = (double*) malloc(numParams*chainSize*sizeof(double));
-              for (unsigned int i = 1; i < numParams; ++i) { // Yes, from '1'
-                dataOut[i] = dataOut[i-1] + chainSize; // Yes, just 'chainSize', not 'chainSize*sizeof(double)'
-              }
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, memory allocated" << std::endl;
-              for (unsigned int j = 0; j < chainSize; ++j) {
-                T tmpScalar = m_seq[j];
-                for (unsigned int i = 0; i < numParams; ++i) {
-                  dataOut[i][j] = tmpScalar;
+      m_env.inter0Comm().template Gather<double>(&m_seq[0],
+                                                 chainSize,
+                                                 recvbuf,
+                                                 chainSize,
+                                                 0,
+                                                 "",
+                                                 "");
+
+      // Only rank 0 writes the file
+      if (m_env.inter0Rank() == 0) {
+        FilePtrSetStruct unifiedFilePtrSet;
+        m_env.openUnifiedOutputFile(fileName,
+                                    fileType,
+                                    false,
+                                    unifiedFilePtrSet);
+
+        hsize_t dimsf[1];
+        dimsf[0] = chainSize;
+
+        hid_t datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
+        hid_t dataspace = H5Screate_simple(1, dimsf, NULL); // HDF5_rank = 2
+
+        queso_require_greater_equal_msg(
+            dataspace, 0,
+            "error creating dataspace of size " << dimsf[0]);
+
+        std::vector<hid_t> datasets(numChains, -1);
+        for (unsigned int c = 0; c < numChains; c++) {
+          std::ostringstream dataset_name;
+          dataset_name << "sub_" << c;
+
+          datasets[c] = H5Dcreate2(unifiedFilePtrSet.h5Var,
+                                   dataset_name.str().c_str(),
+                                   datatype,
+                                   dataspace,
+                                   H5P_DEFAULT,  // Link creation property list
+                                   H5P_DEFAULT,  // Dataset creation property list
+                                   H5P_DEFAULT); // Dataset access property list
+
+          queso_require_greater_equal_msg(
+              datasets[c], 0,
+              "error creating dataset `" << dataset_name.str() << "`");
+
+          herr_t status;
+          status = H5Dwrite(datasets[c],
+                            H5T_NATIVE_DOUBLE,
+                            H5S_ALL,
+                            H5S_ALL,
+                            H5P_DEFAULT,
+                            recvbuf+(chainSize*c));
+
+          queso_require_greater_equal_msg(
+              status, 0,
+              "error writing to dataset on rank" << m_env.inter0Rank());
+
+          H5Dclose(datasets[c]);
+        }
+        H5Sclose(dataspace);
+        H5Tclose(datatype);
+        m_env.closeFile(unifiedFilePtrSet, fileType);
+      }
+      free(recvbuf);
+#endif  // QUESO_HAS_HDF5
+    }
+    else if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
+             (fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT)) {
+      for (unsigned int r = 0; r < (unsigned int) m_env.inter0Comm().NumProc(); ++r) {
+        if (m_env.inter0Rank() == (int) r) {
+          // My turn
+          FilePtrSetStruct unifiedFilePtrSet;
+          // bool writeOver = (r == 0);
+          bool writeOver = false; // A 'true' causes problems when the user chooses (via options
+                                  // in the input file) to use just one file for all outputs.
+          //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 000 \n" << std::endl;
+          if (m_env.openUnifiedOutputFile(fileName,
+                                          fileType, // "m or hdf"
+                                          writeOver,
+                                          unifiedFilePtrSet)) {
+            //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 001 \n" << std::endl;
+
+            unsigned int chainSize = this->subSequenceSize();
+            if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
+                (fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT)) {
+
+              // Write header info
+              if (r == 0) {
+                if (fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) {
+                  this->writeUnifiedMatlabHeader(*unifiedFilePtrSet.ofsVar,
+                      this->subSequenceSize()*m_env.inter0Comm().NumProc());
+                }
+                else {  // It's definitely txt if we get in here
+                  this->writeTxtHeader(*unifiedFilePtrSet.ofsVar,
+                      this->subSequenceSize()*m_env.inter0Comm().NumProc());
                 }
               }
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, memory filled" << std::endl;
 
-              herr_t status;
-              //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 002 \n" << std::endl;
-              status = H5Dwrite(dataset,
-                                H5T_NATIVE_DOUBLE,
-                                H5S_ALL,
-                                H5S_ALL,
-                                H5P_DEFAULT,
-                                (void*) dataOut[0]);
-              if (status) {}; // just to remove compiler warning
-
-              //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 003 \n" << std::endl;
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, data written" << std::endl;
-
-              double writeTime = MiscGetEllapsedSeconds(&timevalBegin);
-              if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 2)) {
-                *m_env.subDisplayFile() << "In ScalarSequence<T>::unifiedWriteContents()"
-                                        << ": worldRank "      << m_env.worldRank()
-                                        << ", fullRank "       << m_env.fullRank()
-                                        << ", subEnvironment " << m_env.subId()
-                                        << ", subRank "        << m_env.subRank()
-                                        << ", inter0Rank "     << m_env.inter0Rank()
-                                        << ", fileName = "     << fileName
-                                        << ", numParams = "    << numParams
-                                        << ", chainSize = "    << chainSize
-                                        << ", writeTime = "    << writeTime << " seconds"
-                                        << std::endl;
+              for (unsigned int j = 0; j < chainSize; ++j) {
+                *unifiedFilePtrSet.ofsVar << m_seq[j]
+                                          << std::endl;
               }
 
-              H5Dclose(dataset);
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, data set closed" << std::endl;
-              H5Sclose(dataspace);
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, data space closed" << std::endl;
-              H5Tclose(datatype);
-              //std::cout << "In ScalarSequence<T>::unifiedWriteContents(): h5 case, data type closed" << std::endl;
-              //free(dataOut[0]); // related to the changes above for compiler warning
-              for (unsigned int tmpIndex = 0; tmpIndex < dataOut.size(); tmpIndex++) {
-                free (dataOut[tmpIndex]);
-              }
+              m_env.closeFile(unifiedFilePtrSet,fileType);
             }
-            else {
-              queso_error_msg("hdf file type not supported for multiple sub-environments yet");
-            }
-          }
-#endif
-        } // if (m_env.openUnifiedOutputFile())
-        //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 004 \n" << std::endl;
-      } // if (m_env.inter0Rank() == (int) r)
-      m_env.inter0Comm().Barrier();
-    } // for r
+          } // if (m_env.openUnifiedOutputFile())
+          //std::cout << "\n In ScalarSequence<T>::unifiedWriteContents(), pos 004 \n" << std::endl;
+        } // if (m_env.inter0Rank() == (int) r)
+        m_env.inter0Comm().Barrier();
+      } // for r
+    }
+    else {
+      queso_error_msg("invalid file type");
+    }
 
     if (m_env.inter0Rank() == 0) {
       if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
@@ -2883,7 +2883,7 @@ ScalarSequence<T>::unifiedReadContents(
   const std::string& inputFileType,
   const unsigned int subReadSize)
 {
-  queso_require_not_equal_to_msg(inputFileType, UQ_FILE_EXTENSION_FOR_TXT_FORMAT, "reading txt files is not yet supported");
+  queso_require_not_equal_to_msg(inputFileType, std::string(UQ_FILE_EXTENSION_FOR_TXT_FORMAT), std::string("reading txt files is not yet supported"));
   std::string fileType(inputFileType);
 #ifdef QUESO_HAS_HDF5
   // Do nothing
@@ -2955,7 +2955,7 @@ ScalarSequence<T>::unifiedReadContents(
               // Read '=' sign
               *unifiedFilePtrSet.ifsVar >> tmpString;
           //std::cout << "Just read '" << tmpString << "'" << std::endl;
-              queso_require_equal_to_msg(tmpString, "=", "string should be the '=' sign");
+              queso_require_equal_to_msg(tmpString, std::string("="), std::string("string should be the '=' sign"));
 
               // Read 'zeros(n_positions,n_params)' string
               *unifiedFilePtrSet.ifsVar >> tmpString;
@@ -3023,7 +3023,7 @@ ScalarSequence<T>::unifiedReadContents(
               // Read '=' sign
               *unifiedFilePtrSet.ifsVar >> tmpString;
         //std::cout << "Core 0 just read '" << tmpString << "'" << std::endl;
-              queso_require_equal_to_msg(tmpString, "=", "in core 0, string should be the '=' sign");
+              queso_require_equal_to_msg(tmpString, std::string("="), std::string("in core 0, string should be the '=' sign"));
 
               // Take into account the ' [' portion
         std::streampos tmpPos = unifiedFilePtrSet.ifsVar->tellg();
@@ -3043,7 +3043,7 @@ ScalarSequence<T>::unifiedReadContents(
           else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
             if (r == 0) {
               hid_t dataset = H5Dopen2(unifiedFilePtrSet.h5Var,
-                                       "seq_of_vectors",
+                                       "data",
                                        H5P_DEFAULT); // Dataset access property list
               hid_t datatype  = H5Dget_type(dataset);
               H5T_class_t t_class = H5Tget_class(datatype);

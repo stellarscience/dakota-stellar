@@ -180,14 +180,14 @@ advance(
 
 /// A facade for iterators which implements some common behavior.
 /**
- * This imlements the operator != as !(==), the ++(int) i.t.o. ++(), and the
+ * This implements the operator != as !(==), the ++(int) i.t.o. ++(), and the
  * --(int) i.t.o. --().
  *
  * To use this facade, inherit it with the first template argument being the
  * most derived type, i.e. the type that is inheriting this.  The remaining
  * template arguments have the usual iterator meanings and are passed directly
  * to the std::iterator base class.  Node that MDT must be default
- * constructable.
+ * constructible.
  */
 template <
     typename MDT,
@@ -221,7 +221,7 @@ class iterator_facade :
 
         /// Returns true if rhs is not equal to this and false otherwise.
         /**
-         * \param rhs The iterator to compare to this for inequivolence.
+         * \param rhs The iterator to compare to this for inequivalence.
          * \return True if "rhs" does not point to the same element as
          *         this. false otherwise.
          */
@@ -278,7 +278,7 @@ class iterator_facade :
  * most derived type, i.e. the type that is inheriting this.  The remaining
  * template arguments have the usual iterator meanings and are passed directly
  * to the std::iterator base class.  Node that MDT must be default
- * constructable.
+ * constructible.
  */
 template <
     typename MDT,
@@ -338,7 +338,7 @@ class forward_iterator_facade :
  * most derived type, i.e. the type that is inheriting this.  The remaining
  * template arguments have the usual iterator meanings and are passed directly
  * to the std::iterator base class.  Node that MDT must be default
- * constructable.
+ * constructible.
  */
 template <
     typename MDT,
@@ -388,18 +388,18 @@ class bidirectional_iterator_facade :
 
 
 /**
- * \brief A facade for iterators which implements some common random accsss
+ * \brief A facade for iterators which implements some common random access
  *        type behavior along with basic bidirectional iterator behavior.
  *
  * This inherits all the bidirectional_iterator_facade methods and implements
  * operator >= as !(<), <= as !(>()), + i.t.o. ++ on a duplicate, and -
- * i.t.o. -- on a duplicate.  MDT must be default and copy constructable.
+ * i.t.o. -- on a duplicate.  MDT must be default and copy constructible.
  *
  * To use this facade, inherit it with the first template argument being the
  * most derived type, i.e. the type that is inheriting this.  The remaining
  * template arguments have the usual iterator meanings and are passed directly
  * to the std::iterator base class.  Node that MDT must be default
- * constructable.
+ * constructible.
  */
 template <
     typename MDT,

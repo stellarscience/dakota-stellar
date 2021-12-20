@@ -198,7 +198,7 @@ public:
   Ereal(const Ereal& num)
      : PackObject(num)
   {
-    static_cast<void>(registrations_complete);
+    static_cast<void>(&registrations_complete);
     val    = num.val;
     Finite = num.Finite;
   }
@@ -1032,7 +1032,7 @@ protected:
    * \param f_flag \p true is this Ereal is finite, \p false otherwise.
    */
   Ereal(const Type num, const bool f_flag) : val(num), Finite(f_flag) 
-  { static_cast<void>(registrations_complete); }
+  { static_cast<void>(&registrations_complete); }
 
 #ifdef DARWIN
  protected:

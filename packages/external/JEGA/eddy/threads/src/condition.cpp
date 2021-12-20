@@ -146,7 +146,7 @@ condition::wait(
     mutex_lock& lock
     )
 {
-    int success = pthread_cond_wait(&_condition, lock.get_mutex());
+    int success = pthread_cond_wait(&(this->_condition), lock.get_mutex());
     if(success != 0)
     {
         if(success == EINVAL)
@@ -183,15 +183,17 @@ condition::timed_wait(
     gettimeofday(&tp, 0);
     ts.tv_sec = tp.tv_sec + msecs/1000;
     // tp.tv_usec is in micro seconds (x10^-6);
-    // msecs is in milli seconds (x10^-3);
-    // need nano seconds (x10^-9);
+    // msecs is in milliseconds (x10^-3);
+    // need nanoseconds (x10^-9);
     ts.tv_nsec = ((msecs%1000)*1000+tp.tv_usec)*1000;
 #endif
 
     // now execute the wait
     // The status is ok if the wait is successful or just timed out.
     // the return is different however.
-    int success = pthread_cond_timedwait(&_condition, lock.get_mutex(), &ts);
+    int success = pthread_cond_timedwait(
+		&(this->_condition), lock.get_mutex(), &ts
+		);
     if((success != 0) && (success != ETIMEDOUT))
     {
         if(success == EINVAL)
@@ -207,7 +209,7 @@ void
 condition::notify_one(
     )
 {
-    if(pthread_cond_signal(&_condition) != 0)
+    if(pthread_cond_signal(&(this->_condition)) != 0)
         throw lock_error("condition::notify_one - signal failed.");
 
 } // condition::notify_one
@@ -216,7 +218,7 @@ void
 condition::notify_all(
     )
 {
-    if(pthread_cond_broadcast(&_condition) != 0)
+    if(pthread_cond_broadcast(&(this->_condition)) != 0)
         throw lock_error("condition::notify_all - broadcast failed.");
 
 } // condition::notify_all
@@ -283,7 +285,7 @@ condition::condition(
     if(pthread_condattr_init(&attributes) != 0)
         throw resource_error("condition::condition failed to init attributes.");
 
-    // if the seting of attributes fails, it means sharing is invalid
+    // if the setting of attributes fails, it means sharing is invalid
     if(pthread_condattr_setpshared(&attributes, sharing) != 0)
         throw logical_error("condition::condition invalid sharing argument");
 

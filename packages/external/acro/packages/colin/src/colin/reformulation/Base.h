@@ -25,7 +25,7 @@ namespace colin {
 
 class BasicReformulationApplication : virtual public Application_Base
 {
-   typedef std::list<boost::signals::connection>  reformulation_cb_list_t;
+   typedef std::list<boost::signals2::connection>  reformulation_cb_list_t;
 
 public:
    BasicReformulationApplication()
@@ -42,11 +42,11 @@ public:
 protected: // methods
    /// Called before changing the reformulated application; derived
    /// class should throw an exception if the reformulation is invalid
-   boost::signal<void(ApplicationHandle)> validate_reformulated_application;
+   boost::signals2::signal<void(ApplicationHandle)> validate_reformulated_application;
 
    /// Called after setting the remote_app to allow derived class to
    /// configure any linkages (i.e. property onChange callbacks).
-   boost::signal<void()> configure_reformulated_application;
+   boost::signals2::signal<void()> configure_reformulated_application;
 
    /// Reference properties from a wrapped application (NB: has side effects!)
    void reference_reformulated_application_properties

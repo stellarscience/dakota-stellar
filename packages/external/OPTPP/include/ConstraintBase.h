@@ -86,6 +86,11 @@ public:
    */
    virtual OptppArray<int> getConstraintMappingIndices() const = 0;
 
+   /**
+    * Reset values to allow multiple instantiations
+    */
+   virtual void reset() = 0;
+
   /**
     * Takes one argument and returns a ColumnVector.
     * @param xcurrent a ColumnVector

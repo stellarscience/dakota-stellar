@@ -29,7 +29,7 @@ namespace pebbl {
 
 utilib::RNG*    gRandomRNG();
 extern utilib::Uniform gRandom;
-extern size_t randomSeed;
+extern utilib::seed_t randomSeed;
 
 // The following commented-out code is the functionality we want.
 // Work around for gcc compiler is below

@@ -1,0 +1,28 @@
+/**
+ * \mainpage (SURFPACK)
+ *
+ * \image html peaks-points-surface.png "" width=5cm
+ *
+ * \section intro Introduction
+ *
+ * This is the introduction.
+ *
+ * \section features Features
+ * \subsection sgfeatures Sparse grid interpolation and quadrature
+ * Global polynomial interpolation for smooth functions using dimension adaptive
+ * generalised sparse grids,
+ * Piecewise continuous approximation of smooth or discontinous functions
+ * using simulataneously locally and dimension adaptive interpolation
+ * \subsection pcefeatures Polynomial chaos expansion approximation
+ * Compute Polynomial Chaos Expansions (PCE) from arbitrary data sets using
+ * least squares regression or \link csfeatures \endlink
+ * \subsection csfeatures Compressed sensing methods
+ * Least Absolute Shrinkage and Selection Operator (LASSO), Basis Pursuit (BP),
+ * Basis Pursuit Denoising (BPDN), Orthogonal Matching Pursuit (OMP),
+ * Least Angle Regression (LARS)
+ *
+ * \section install Installation
+ *
+ * \subsection step1 Step 1: Opening the box
+ *
+*/

@@ -125,7 +125,7 @@ PenaltyFitnessAssessorBase::SetMultiplier(
 
     JEGALOG_II(this->GetLogger(), lverbose(), this,
         ostream_entry(lverbose(),
-            this->GetName() + ": Penalty mutliplier now = "
+            this->GetName() + ": Penalty multiplier now = "
             ) << this->_multiplier
         )
 }

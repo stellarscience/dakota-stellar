@@ -124,9 +124,9 @@ In-Namespace Forward Declares
 ================================================================================
 */
 class StreamHijacker;
-MANAGED_CLASS_FORWARD_DECLARE(public, MStreamHijacker);
-MANAGED_CLASS_FORWARD_DECLARE(public, MCoutHijacker);
-MANAGED_CLASS_FORWARD_DECLARE(public, MCerrHijacker);
+ref class MStreamHijacker;
+ref class MCoutHijacker;
+ref class MCerrHijacker;
 
 
 
@@ -169,7 +169,7 @@ class StreamHijacker : public std::streambuf
 
         std::ostream& _hijacked;
         std::streambuf* _prevBuf;
-        gcroot<System::IO::TextWriter MOH> _out;
+        gcroot<System::IO::TextWriter^> _out;
 
     /*
     ============================================================================
@@ -195,7 +195,7 @@ class StreamHijacker : public std::streambuf
         }
 
         inline
-        System::IO::TextWriter MOH
+        System::IO::TextWriter^
         text_writer(
             ) const
         {
@@ -239,7 +239,7 @@ class StreamHijacker : public std::streambuf
 
         StreamHijacker(
             std::ostream& toHijack,
-            gcroot<System::IO::TextWriter MOH> hijackStr
+            gcroot<System::IO::TextWriter^> hijackStr
             );
 
         ~StreamHijacker(
@@ -251,7 +251,7 @@ class StreamHijacker : public std::streambuf
  *
  *
  */
-MANAGED_ABSTRACT_CLASS(public, MStreamHijacker)
+public ref class MStreamHijacker abstract
 {
 
     /*
@@ -278,7 +278,7 @@ MANAGED_ABSTRACT_CLASS(public, MStreamHijacker)
         reattach(
             );
 
-        System::IO::TextWriter MOH
+        System::IO::TextWriter^
         text_writer(
             );
 
@@ -296,7 +296,7 @@ MANAGED_ABSTRACT_CLASS(public, MStreamHijacker)
 
         MStreamHijacker(
             std::ostream& toHijack,
-            System::IO::TextWriter MOH hijackStr
+            System::IO::TextWriter^ hijackStr
             );
 
         ~MStreamHijacker(
@@ -309,7 +309,7 @@ MANAGED_ABSTRACT_CLASS(public, MStreamHijacker)
  *
  *
  */
-MANAGED_CLASS(public, MCoutHijacker) : public MStreamHijacker
+public ref class MCoutHijacker : public MStreamHijacker
 {
     /*
     ============================================================================
@@ -319,7 +319,7 @@ MANAGED_CLASS(public, MCoutHijacker) : public MStreamHijacker
     public:
 
         MCoutHijacker(
-            System::IO::TextWriter MOH hijackStr
+            System::IO::TextWriter^ hijackStr
             );
 };
 
@@ -328,7 +328,7 @@ MANAGED_CLASS(public, MCoutHijacker) : public MStreamHijacker
  *
  *
  */
-MANAGED_CLASS(public, MCerrHijacker) : public MStreamHijacker
+public ref class MCerrHijacker : public MStreamHijacker
 {
     /*
     ============================================================================
@@ -338,7 +338,7 @@ MANAGED_CLASS(public, MCerrHijacker) : public MStreamHijacker
     public:
 
         MCerrHijacker(
-            System::IO::TextWriter MOH hijackStr
+            System::IO::TextWriter^ hijackStr
             );
 };
 

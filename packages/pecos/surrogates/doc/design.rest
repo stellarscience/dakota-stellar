@@ -1,0 +1,151 @@
+Surrogate Model Library
+=======================
+Design Principles
+-----------------
+
+**Note:** This document is derived from an initial set of notes in
+SurrogateSurvey.org (Emacs Org mode) drafted by Brian and John
+
+**Project Scope:** A C++ surrogate (response surface) model library
+that unifies Dakota, Pecos, and Surfpack surrogates in a single
+package.
+
+
+High Level Requirements
++++++++++++++++++++++++
+
+ * Drop-in (to Dakota) replacement for existing surrogate models:
+
+   - Dakota: Gaussian Process, local Taylor, TANA3, Voronoi piecewse
+     surrogates (VPS)
+
+   - Surfpack: Kriging, neural network, polynomial, MARS, moving least
+     squares, radial basis functions
+
+   - Pecos: regression orthogonal polynomials, interpolation
+     polynomials, pseudospectral proection polynomials
+
+ * Clean public C++ API with Python bindings that allows users to
+   create, save, load, query surrogates.  Python drivers may suffice
+   for orchastrating these operations (may not need old surfpack.exe)
+
+ * Design must accommodate build once and adaptive surrogates;
+   unstructured vs. structued designs and interplay with model form;
+   local, global, and piecewise global surrogates.  Think ahead to
+   hierarchical approximations / discrepancy.
+
+ * Model features:
+
+   - Build, increment/adapt/update
+
+   - Quality metrics (some can wrap around model build; others are
+     intrinsic)
+
+   - Prediction variance / residuals
+   
+   - Minimum build points
+
+
+Initial Project Organization
+++++++++++++++++++++++++++++
+
+Top-level directory structure, roughly showing dependency order
+
+ * cmake: build system tools
+
+ * [tpl]: third-party tools to help with testing
+
+ * [utils]: I/O, exception helpers, primitive data structures
+
+ * math_utils: foundational math operations, linear algebra wrappers
+   (Cholesky, SVD, QR, pivoted LU, etc.), teuchos helper functions, etc.
+
+ * linear_solvers: linear (and nonlinear) solvers for Ax = b; maybe
+   call this driectory solvers
+
+   - compressive sensing, cross validation approach
+
+ * [optimizers]: optimization solvers for building models?  could
+   combine with linear_solvers and call it solvers.
+
+ * models: simulation and approximation models
+
+ * python: Python interfaces
+
+ * doc
+
+Each C++ source directory will contain::
+
+  src/
+  unit/
+
+For now, headers and implementation files will be contained in the
+same src/ directory.
+
+
+
+Key Classes
++++++++++++
+
+ * LinearSolver
+
+ * Builders: should regression or correlation builders be separate
+   from Models, or integral to models?
+
+ * Model
+   - SimulationModel
+
+   - ApproximationModel: Many models are well-represented by basis
+     with coefficients
+
+     + build, evaluate, quality metrics
+
+     + export / seralize model, including to human-readable format
+
+ * SurrogateData
+
+   - Lightweight container to store build data; easily serializable.
+
+   - Ability to take views/slices, or at least extract copies of data,
+     e.g., in a cross-validation loop...
+
+   - Model after Pecos? 
+
+   - How complex need fault tolerance be?
+
+ * PointGenerator?  Is this in scope?
+
+   - Random Sampler
+
+   - Structured designs
+
+ * Scalers?  Transformations for both data and models?
+
+
+Open Questions
+++++++++++++++
+
+ 1. How to treat multiple responses?  MultiResponseModel?  Some
+    surrogates can treat this case specially while others are an array
+    of single response models.
+
+ 2. TBD
+
+
+
+Work Sequencing
++++++++++++++++
+
+ 1. Design and organizing plan
+
+ 2. Stand up utilities, basic infrastrcuture, and import code
+
+ 3. Initial end-to-end example of monomial model, focusing on solvers,
+    bases, and model APIs.
+
+ 4. Concurrently mature build/test structure, Python bindings
+
+ 5. Extend to GP and Pecos use cases
+
+ 6. Generalize to other surrogate use cases (other model types)
+

@@ -175,7 +175,7 @@ Class Definition
  * entry fills it up to exactly the desired size).  Generally, it will be
  * met to within some portion (not all) of the size of the last entry that
  * "takes it over the top".  It will not split an entry in order to
- * enforce the file size.  Presumably the entry size is miniscule next to
+ * enforce the file size.  Presumably the entry size is minuscule next to
  * the overall file size and so this is no problem.
  *
  * Entries are only written if the stream is open and in good shape.
@@ -284,7 +284,7 @@ class EDDY_SL_IEDECL file_ring_log
         /// The maximum number of files to create before "ringing"
         std::size_t _max_fcount;
 
-        /// The maximumn size in bytes of each file.
+        /// The maximum size in bytes of each file.
         /**
          * This number will be exceeded in nearly all cases by some portion
          * of the size of the last entry.  Therefore it should be considered
@@ -511,7 +511,7 @@ class EDDY_SL_IEDECL file_ring_log
         /**
          * The pattern must include at least 1 # which is the only character
          * respected as special by this class.  It may include as many #'s as
-         * you like.  All occurrances will be replaced by the number of the
+         * you like.  All occurrences will be replaced by the number of the
          * file currently being created.
          *
          * \param pattern The filename pattern on which to base the names of

@@ -56,17 +56,14 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
+
   Real type1_value(Real x, unsigned short order);
 
-  /// return alphaPoly
-  Real alpha_polynomial() const;
-  /// return betaPoly
-  Real beta_polynomial() const;
-
-  /// set alphaStat (probability per trial)
-  void alpha_stat(Real alpha);
-  /// set betaStat (num_trials)
-  void beta_stat(Real beta);
+  void pull_parameter(short dist_param, Real& param) const;
+  void pull_parameter(short dist_param, unsigned int& param) const;
+  void push_parameter(short dist_param, Real  param);
+  void push_parameter(short dist_param, unsigned int  param);
+  bool parameterized() const;
 
 private:
 
@@ -74,21 +71,52 @@ private:
   //- Heading: Data
   //
 
+  /// naming convention consistent with Binomial distribution
+
   /// the probability of a "success" for each experiment
-  Real alphaPoly;
+  Real probPerTrial;
   /// the number of discrete points on which to base the polynomial 
-  short betaPoly;
+  unsigned int numTrials;
 };
 
 
 inline KrawtchoukOrthogPolynomial::KrawtchoukOrthogPolynomial() :
-  alphaPoly(-1.0), betaPoly(-1.0)
+  probPerTrial(0.), numTrials(0) // dummy values prior to update
 { }
+
 
 inline KrawtchoukOrthogPolynomial::~KrawtchoukOrthogPolynomial()
 { }
 
-inline void KrawtchoukOrthogPolynomial::alpha_stat(Real alpha)
+
+inline void KrawtchoukOrthogPolynomial::
+pull_parameter(short dist_param, Real& param) const
+{
+  switch (dist_param) {
+  case BI_P_PER_TRIAL: param = probPerTrial;    break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in KrawtchoukOrthog"
+	  << "Polynomial::pull_parameter(Real)." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void KrawtchoukOrthogPolynomial::
+pull_parameter(short dist_param, unsigned int& param) const
+{
+  switch (dist_param) {
+  case BI_TRIALS: param = numTrials; break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in KrawtchoukOrthog"
+	  << "Polynomial::pull_parameter(unsigned int)." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void KrawtchoukOrthogPolynomial::
+push_parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -96,17 +124,24 @@ inline void KrawtchoukOrthogPolynomial::alpha_stat(Real alpha)
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    alphaPoly = alpha;
+    switch (dist_param) {
+    case BI_P_PER_TRIAL: probPerTrial = param;   break;
+    }
   }
   else {
     parametricUpdate = false;
-    Real ap = alpha;
-    if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+    switch (dist_param) {
+    case BI_P_PER_TRIAL:
+      if (!real_compare(probPerTrial, param))
+	{ probPerTrial = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    }
   }
 }
 
-inline void KrawtchoukOrthogPolynomial::beta_stat(Real beta)
+
+inline void KrawtchoukOrthogPolynomial::
+push_parameter(short dist_param, unsigned int param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -114,21 +149,23 @@ inline void KrawtchoukOrthogPolynomial::beta_stat(Real beta)
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    betaPoly = beta;
+    switch (dist_param) {
+    case BI_TRIALS: numTrials = param; break;
+    }
   }
   else {
-    parametricUpdate = false;
-    Real bp = beta;
-    if (!real_compare(betaPoly, bp))
-      { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
+    switch (dist_param) {
+    case BI_TRIALS:
+      if (numTrials   == param) parametricUpdate = false;
+      else { numTrials = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    }
   }
 }
 
-inline Real KrawtchoukOrthogPolynomial::alpha_polynomial() const
-{ return alphaPoly; }
 
-inline Real KrawtchoukOrthogPolynomial::beta_polynomial() const
-{ return betaPoly; }
+inline bool KrawtchoukOrthogPolynomial::parameterized() const
+{ return true; }
 
 } // namespace Pecos
 

@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -47,6 +47,15 @@ VectorSpace<V,M>::VectorSpace(const BaseEnvironment& env, const char* prefix,
     m_emptyComponentName(""),
     m_zeroVector(new V(m_env,*m_map))
 {
+  V mins(*m_zeroVector);
+  mins.cwSet(-INFINITY);
+
+  V maxs(*m_zeroVector);
+  maxs.cwSet(INFINITY);
+
+  this->setMinValues(mins);  // Copied, so no UB.
+  this->setMaxValues(maxs);
+
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 5)) {
     *m_env.subDisplayFile() << "Entering VectorSpace<V,M>::constructor(1)"
                             << ", with m_prefix = "                << m_prefix
@@ -109,21 +118,6 @@ VectorSpace<V,M>::VectorSpace(const VectorSpace<V,M>& aux)
     m_emptyComponentName(""),
     m_zeroVector(new V(m_env,*m_map))
 {
-  if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 5)) {
-    *m_env.subDisplayFile() << "Entering VectorSpace<V,M>::constructor(2)"
-                            << ": aux.m_componentsNamesArray = " << aux.m_componentsNamesArray
-                            << ", aux.m_componentsNamesVec = "   << aux.m_componentsNamesVec
-                            << std::endl;
-  }
-
-  if (aux.m_componentsNamesArray != NULL) {
-    m_componentsNamesArray = new DistArray<std::string>(*(aux.m_componentsNamesArray));
-  }
-
-  if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 5)) {
-    *m_env.subDisplayFile() << "Leaving VectorSpace<V,M>::constructor(2)"
-                            << std::endl;
-  }
 }
 
 // Destructor
@@ -255,10 +249,31 @@ const VectorSpace<V,M>& VectorSpace<V,M>::vectorSpace() const
 }
 
 template <class V, class M>
-bool VectorSpace<V,M>::contains(const V& vec) const
+bool VectorSpace<V,M>::contains(const V& /* vec */) const
 {
-  if (vec[0]) {}; // just to remove compiler warning
   return true;
+}
+
+template <class V, class M>
+void VectorSpace<V,M>::centroid(V& vec) const
+{
+  queso_assert_equal_to (m_dimLocal, vec.sizeLocal());
+
+  for (unsigned int i = 0; i < m_dimLocal; ++i) {
+    vec[i] = INFINITY;
+  }
+}
+
+template <class V, class M>
+void VectorSpace<V,M>::moments(M& mat) const
+{
+  queso_assert_equal_to (m_dimLocal, mat.numCols());
+
+  mat.zeroLower();
+  mat.zeroUpper();
+  for (unsigned int i = 0; i < m_dimLocal; ++i) {
+    mat(i,i) = INFINITY;
+  }
 }
 
 template <class V, class M>

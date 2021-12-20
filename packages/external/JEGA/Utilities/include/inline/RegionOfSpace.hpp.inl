@@ -84,33 +84,33 @@ Inline Mutators
 inline
 void
 RegionOfSpace::SetLowerLimit(
-    eddy::utilities::DoubleExtremes::size_type dim,
-    double value
+    eddy::utilities::extremes<var_rep_t>::size_type dim,
+    var_rep_t value
     )
 {
-    _limits.set_min(dim, value);
+    this->_limits.set_min(dim, value);
 }
 
 inline
 void
 RegionOfSpace::SetUpperLimit(
-    eddy::utilities::DoubleExtremes::size_type dim,
-    double value
+    eddy::utilities::extremes<var_rep_t>::size_type dim,
+    var_rep_t value
     )
 {
-    _limits.set_max(dim, value);
+    this->_limits.set_max(dim, value);
 }
 
 inline
 void
 RegionOfSpace::SetLimits(
-    eddy::utilities::DoubleExtremes::size_type dim,
-    double lowerLimit,
-    double upperLimit
+    eddy::utilities::extremes<var_rep_t>::size_type dim,
+    var_rep_t lowerLimit,
+    var_rep_t upperLimit
     )
 {
-    _limits.set_min(dim, lowerLimit);
-    _limits.set_max(dim, upperLimit);
+    this->_limits.set_min(dim, lowerLimit);
+    this->_limits.set_max(dim, upperLimit);
 }
 
 
@@ -138,45 +138,45 @@ Inline Public Methods
 ================================================================================
 */
 inline
-eddy::utilities::DoubleExtremes::size_type
+eddy::utilities::extremes<var_rep_t>::size_type
 RegionOfSpace::Dimensionality(
     ) const
 {
-    return _limits.size();
+    return this->_limits.size();
 }
 
 inline
-JEGA::DoubleVector
+std::vector<var_rep_t>
 RegionOfSpace::GetLowerLimits(
     ) const
 {
-    return _limits.get_mins();
+    return this->_limits.get_mins();
 }
 
 inline
-JEGA::DoubleVector
+std::vector<var_rep_t>
 RegionOfSpace::GetUpperLimits(
     ) const
 {
-    return _limits.get_maxs();
+    return this->_limits.get_maxs();
 }
 
 inline
-double
+var_rep_t
 RegionOfSpace::GetLowerLimit(
-    eddy::utilities::DoubleExtremes::size_type dim
+    eddy::utilities::extremes<var_rep_t>::size_type dim
     ) const
 {
-    return _limits.get_min(dim);
+    return this->_limits.get_min(dim);
 }
 
 inline
-double
+var_rep_t
 RegionOfSpace::GetUpperLimit(
-    eddy::utilities::DoubleExtremes::size_type dim
+    eddy::utilities::extremes<var_rep_t>::size_type dim
     ) const
 {
-    return _limits.get_max(dim);
+    return this->_limits.get_max(dim);
 }
 
 

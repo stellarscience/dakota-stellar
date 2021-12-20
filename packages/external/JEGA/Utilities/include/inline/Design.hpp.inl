@@ -186,7 +186,7 @@ inline
 void
 Design::SetObjective(
     std::size_t num,
-    double val
+    const obj_val_t& val
     )
 {
     this->_objectives[num] = val;
@@ -196,7 +196,7 @@ inline
 void
 Design::SetConstraint(
     std::size_t num,
-    double val
+    const con_val_t& val
     )
 {
     this->_constraints[num] = val;
@@ -206,7 +206,7 @@ inline
 void
 Design::SetVariableRep(
     std::size_t num,
-    double rep
+    const var_rep_t& rep
     )
 {
     this->_variables[num] = rep;
@@ -219,7 +219,7 @@ Design::SetVariableValue(
     )
 {
     this->_variables[num] = this->_target.GetDesignVariableInfos(
-        )[num]->GetDoubleRepOf(val);
+        )[num]->GetRepOf(val);
 }
 
 inline
@@ -280,7 +280,7 @@ Design::GetPreviousClone(
 }
 
 inline
-double
+const var_rep_t&
 Design::GetVariableRep(
     std::size_t num
     ) const
@@ -289,7 +289,7 @@ Design::GetVariableRep(
 }
 
 inline
-double
+const obj_val_t&
 Design::GetObjective(
     std::size_t num
     ) const
@@ -298,7 +298,7 @@ Design::GetObjective(
 }
 
 inline
-double
+const con_val_t&
 Design::GetConstraint(
     std::size_t num
     ) const

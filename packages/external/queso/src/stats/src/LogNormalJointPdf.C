@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/LogNormalJointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -103,22 +104,28 @@ LogNormalJointPdf<V,M>::actualValue(
 
   queso_require_equal_to_msg(domainVector.sizeLocal(), this->m_domainSet.vectorSpace().dimLocal(), "invalid input");
 
-  queso_require_msg(!(gradVector || hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
+  queso_require_msg(!(hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
 
   double returnValue = 0.;
 
   V zeroVector(domainVector);
   zeroVector.cwSet(0.);
   if (domainVector.atLeastOneComponentSmallerOrEqualThan(zeroVector)) {
+    // What should the gradient be here?
     returnValue = 0.;
   }
-  else if (this->m_domainSet.contains(domainVector) == false) { // prudenci 2011-Oct-04
+  else if (this->m_domainSet.contains(domainVector) == false) {
+    // What should the gradient be here?
     returnValue = 0.;
   }
   else {
+    // Already normalised
     returnValue = std::exp(this->lnValue(domainVector,domainDirection,gradVector,hessianMatrix,hessianEffect));
+
+    if (gradVector) {
+      (*gradVector) *= returnValue;
+    }
   }
-  //returnValue *= exp(m_logOfNormalizationFactor); // No need, because 'lnValue()' is called right above // [PDF-10]
 
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 55)) {
     *m_env.subDisplayFile() << "Leaving LogNormalJointPdf<V,M>::actualValue()"
@@ -147,18 +154,18 @@ LogNormalJointPdf<V,M>::lnValue(
                             << std::endl;
   }
 
-  queso_require_msg(!(gradVector || hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
-
-  if (domainDirection) {}; // just to remove compiler warning
+  queso_require_msg(!(domainDirection || hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
 
   double returnValue = 0.;
 
   V zeroVector(domainVector);
   zeroVector.cwSet(0.);
   if (domainVector.atLeastOneComponentSmallerOrEqualThan(zeroVector)) {
+    // What should the gradient be here?
     returnValue = -INFINITY;
   }
-  else if (this->m_domainSet.contains(domainVector) == false) { // prudenci 2011-Oct-04
+  else if (this->m_domainSet.contains(domainVector) == false) {
+    // What should the gradient be here?
     returnValue = -INFINITY;
   }
   else {
@@ -166,19 +173,31 @@ LogNormalJointPdf<V,M>::lnValue(
       V diffVec(zeroVector);
       for (unsigned int i = 0; i < domainVector.sizeLocal(); ++i) {
         diffVec[i] = std::log(domainVector[i]) - this->lawExpVector()[i];
+
+        // Compute the gradient of log of the PDF
+        // The log of a log normal pdf is:
+        // f(x) = -log(x \sigma sqrt(2 \pi)) - ((log(x) - \mu)^2 / (2 \sigma^2))
+        // Therefore
+        // \frac{df}{dx}(x) = -1/x - (log(x) - \mu) / (x \sigma^2)
+        if (gradVector) {
+          (*gradVector)[i] = -(1.0 / domainVector[i]) -
+            diffVec[i] / (domainVector[i] * this->lawVarVector()[i]);
+        }
       }
       returnValue = ((diffVec*diffVec)/this->lawVarVector()).sumOfComponents();
       returnValue *= -0.5;
-      if (m_normalizationStyle == 0) {
-        for (unsigned int i = 0; i < domainVector.sizeLocal(); ++i) {
-          returnValue -= std::log(domainVector[i] * std::sqrt(2. * M_PI * this->lawVarVector()[i])); // Contribution of 1/(x\sqrt{2\pi\sigma^2})
+
+      for (unsigned int i = 0; i < domainVector.sizeLocal(); ++i) {
+        returnValue -= std::log(domainVector[i]);
+        if (m_normalizationStyle == 0) {
+          returnValue -= std::log(std::sqrt(2. * M_PI * this->lawVarVector()[i])); // Contribution of 1/(x\sqrt{2\pi\sigma^2})
         }
       }
     }
     else {
       queso_error_msg("situation with a non-diagonal covariance matrix makes no sense");
     }
-    returnValue += m_logOfNormalizationFactor; // [PDF-10]
+    returnValue += m_logOfNormalizationFactor;
   }
 
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 55)) {
@@ -190,6 +209,52 @@ LogNormalJointPdf<V,M>::lnValue(
   }
 
   return returnValue;
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+LogNormalJointPdf<V,M>::distributionMean(V& meanVector) const
+{
+  // FIXME - this is the mean of a non-truncated lognormal
+  // distribution, and doesn't take into account a limited domainSet.
+
+  if (m_diagonalCovMatrix) {
+    unsigned int n_params = meanVector.sizeLocal();
+    queso_assert_equal_to (n_params, this->lawExpVector().sizeLocal());
+
+    for (unsigned int i = 0; i < n_params; ++i) {
+      meanVector[i] = std::exp(this->lawExpVector()[i] + 0.5*this->lawVarVector()[i]);
+    }
+  }
+  else {
+    queso_error_msg("situation with a non-diagonal covariance matrix makes no sense");
+  }
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+LogNormalJointPdf<V,M>::distributionVariance(M & covMatrix) const
+{
+  // FIXME - this is the variance of a non-truncated lognormal
+  // distribution, and doesn't take into account a limited domainSet.
+
+  if (m_diagonalCovMatrix) {
+    unsigned int n_params = this->lawExpVector().sizeLocal();
+    queso_assert_equal_to (n_params, this->lawVarVector().sizeLocal());
+    queso_assert_equal_to (n_params, covMatrix.numCols());
+    queso_assert_equal_to (covMatrix.numCols(), covMatrix.numRowsGlobal());
+
+    covMatrix.zeroLower();
+    covMatrix.zeroUpper();
+
+    for (unsigned int i = 0; i < n_params; ++i) {
+      covMatrix(i,i) = (std::exp(this->lawVarVector()[i]) - 1) *
+                       std::exp(2*this->lawExpVector()[i] + this->lawVarVector()[i]);
+    }
+  }
+  else {
+    queso_error_msg("situation with a non-diagonal covariance matrix makes no sense");
+  }
 }
 //--------------------------------------------------
 template<class V, class M>

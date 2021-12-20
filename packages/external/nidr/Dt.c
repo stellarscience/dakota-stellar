@@ -61,7 +61,11 @@ usage: Dt [-[dfmtux]{prefix} [-[dfmtux]{prefix} ...]] file [file...]
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
+#if defined(_WIN32) || defined(_WIN64)
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
  static char *progname;
 

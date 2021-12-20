@@ -42,22 +42,25 @@ ELSE (MPI_FOUND)
 ENDIF (MPI_FOUND)
 
 #---- List the source files to be built.
-ADD_EXECUTABLE (
-  ${HOPSPACK_EXEC_NAME}
-    ${HOPSPACK_EXEC_NAME}.cpp
-)
+## BMA, 20170904: Disabled in Dakota build 
+##ADD_EXECUTABLE (
+##  ${HOPSPACK_EXEC_NAME}
+##    ${HOPSPACK_EXEC_NAME}.cpp
+##)
 
 #---- List libraries needed to link the target.
 #---- Variables like LAPACK_LIB were defined in the top-level CMakeLists.txt.
 #---- The order of libraries is important because this is a static build.
-TARGET_LINK_LIBRARIES (
-  ${HOPSPACK_EXEC_NAME}
-    hopspack
-    ${LAPACK_LIBS}
-    ${LAPACK_ADD_LIBS}
-    ${OPSYS_LIBRARIES}
-)
+## BMA, 20170904: Disabled in Dakota build 
+##TARGET_LINK_LIBRARIES (
+##  ${HOPSPACK_EXEC_NAME}
+##    hopspack
+##    ${LAPACK_LIBS}
+##    ${LAPACK_ADD_LIBS}
+##    ${OPSYS_LIBRARIES}
+##)
 
 #---- Installation instructions.
-INSTALL (TARGETS ${HOPSPACK_EXEC_NAME}
-         DESTINATION ${HOPSPACK_EXEC_DEST})
+## BMA, 20170904: Disabled in Dakota build 
+##INSTALL (TARGETS ${HOPSPACK_EXEC_NAME}
+##         DESTINATION ${HOPSPACK_EXEC_DEST})

@@ -1,0 +1,1616 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug_mt_dl|Win32">
+      <Configuration>Debug_mt_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_dl|x64">
+      <Configuration>Debug_mt_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl_for_dl_WSTAT|Win32">
+      <Configuration>Debug_mt_sl_for_dl_WSTAT</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl_for_dl_WSTAT|x64">
+      <Configuration>Debug_mt_sl_for_dl_WSTAT</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl_for_dl|Win32">
+      <Configuration>Debug_mt_sl_for_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl_for_dl|x64">
+      <Configuration>Debug_mt_sl_for_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl|Win32">
+      <Configuration>Debug_mt_sl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl|x64">
+      <Configuration>Debug_mt_sl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_st_dl|Win32">
+      <Configuration>Debug_st_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_st_dl|x64">
+      <Configuration>Debug_st_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_st_sl_for_dl|Win32">
+      <Configuration>Debug_st_sl_for_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_st_sl_for_dl|x64">
+      <Configuration>Debug_st_sl_for_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_st_sl|Win32">
+      <Configuration>Debug_st_sl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_st_sl|x64">
+      <Configuration>Debug_st_sl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_dl|Win32">
+      <Configuration>Release_mt_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_dl|x64">
+      <Configuration>Release_mt_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_sl_for_dl_WSTAT|Win32">
+      <Configuration>Release_mt_sl_for_dl_WSTAT</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_sl_for_dl_WSTAT|x64">
+      <Configuration>Release_mt_sl_for_dl_WSTAT</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_sl_for_dl|Win32">
+      <Configuration>Release_mt_sl_for_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_sl_for_dl|x64">
+      <Configuration>Release_mt_sl_for_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_sl|Win32">
+      <Configuration>Release_mt_sl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_mt_sl|x64">
+      <Configuration>Release_mt_sl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_st_dl|Win32">
+      <Configuration>Release_st_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_st_dl|x64">
+      <Configuration>Release_st_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_st_sl_for_dl|Win32">
+      <Configuration>Release_st_sl_for_dl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_st_sl_for_dl|x64">
+      <Configuration>Release_st_sl_for_dl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_st_sl|Win32">
+      <Configuration>Release_st_sl</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_st_sl|x64">
+      <Configuration>Release_st_sl</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{201D82A8-BB6D-4999-91F7-D2595E37638A}</ProjectGuid>
+    <RootNamespace>JEGA</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <CLRSupport>false</CLRSupport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>11.0.60315.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <TargetName>libjega_d_mt_sl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <TargetName>libjega_d_mt_sl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <GenerateManifest>true</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <GenerateManifest>true</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <TargetName>libjega_r_mt_sl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>libjega_r_mt_sl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <TargetName>libjega_d_mt_sl_for_dl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <TargetName>libjega_d_mt_sl_for_dl_WSTAT</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <TargetName>libjega_d_mt_sl_for_dl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
+    <TargetName>libjega_d_mt_sl_for_dl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>libjega_r_mt_sl_for_dl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>libjega_r_mt_sl_for_dl_WSTAT</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>libjega_r_mt_sl_for_dl</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <TargetName>libjega_r_mt_sl_for_dl_WSTAT</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <ProgramDataBaseFileName>$(OutDir)vc120.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_st_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\utilities\vc120\$(Configuration)\libeutils_d_st_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <ProgramDataBaseFileName>$(OutDir)vc120.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_st_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\utilities\vc120\$(Configuration)\libeutils_d_st_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_st_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\utilities\vc120\$(Configuration)\libeutils_r_st_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_st_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\utilities\vc120\$(Configuration)\libeutils_r_st_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)libjega_d_st_dl.dll</OutputFile>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\bin\boost\libs\program_options\build\libboost_program_options.lib\vc-8_0\debug\threading-multi;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AssemblyDebug>true</AssemblyDebug>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)libjega_d_st_dl.dll</OutputFile>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\bin\boost\libs\program_options\build\libboost_program_options.lib\vc-8_0\debug\threading-multi;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AssemblyDebug>true</AssemblyDebug>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_THREADSAFE;JEGA_HAVE_BOOST;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_mt_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\threads\vc110\$(Configuration)\libethreads_d_mt_sl.lib" "..\..\eddy\utilities\vc110\$(Configuration)\libeutils_d_mt_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_THREADSAFE;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;JEGA_HAVE_BOOST;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_mt_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\threads\vc120\$(Platform)\$(Configuration)\libethreads_d_mt_sl.lib" "..\..\eddy\utilities\vc120\$(Platform)\$(Configuration)\libeutils_d_mt_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libeutils_d_mt_dl.lib;libethreads_d_mt_dl.lib;pthreadVC2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)libjega_d_mt_dl.dll</OutputFile>
+      <AdditionalLibraryDirectories>..\..\eddy\threads\pthreads\lib;..\..\eddy\utilities\vc120\Debug_mt_dl;..\..\eddy\threads\vc120\Debug_mt_dl;$(BOOST_ROOT)\bin\boost\libs\program_options\build\libboost_program_options.lib\vc-8_0\debug\runtime-link-static\threading-multi;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+    </Link>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libeutils_d_mt_dl.lib;libethreads_d_mt_dl.lib;pthreadVC2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)libjega_d_mt_dl.dll</OutputFile>
+      <AdditionalLibraryDirectories>..\..\eddy\threads\pthreads\lib;..\..\eddy\utilities\vc120\Debug_mt_dl;..\..\eddy\threads\vc120\Debug_mt_dl;$(BOOST_ROOT)\bin\boost\libs\program_options\build\libboost_program_options.lib\vc-8_0\debug\runtime-link-static\threading-multi;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_LOGGING_ON;JEGA_SL;JEGA_EXPORTING;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)libjega_r_st_dl.dll</OutputFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_LOGGING_ON;JEGA_SL;JEGA_EXPORTING;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)libjega_r_st_dl.dll</OutputFile>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>pthreadVC2.lib;libethreads_r_mt_dl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)libjega_r_mt_dl.dll</OutputFile>
+      <AdditionalLibraryDirectories>..\..\eddy\threads\pthreads\lib;..\..\eddy\threads\vc120\Release_mt_dl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>pthreadVC2.lib;libethreads_r_mt_dl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)libjega_r_mt_dl.dll</OutputFile>
+      <AdditionalLibraryDirectories>..\..\eddy\threads\pthreads\lib;..\..\eddy\threads\vc120\Release_mt_dl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_THREADSAFE;JEGA_LOGGING_ON;JEGA_HAVE_BOOST;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <OpenMPSupport>false</OpenMPSupport>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_mt_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\threads\vc110\$(Configuration)\libethreads_r_mt_sl.lib" "..\..\eddy\utilities\vc110\$(Configuration)\libeutils_r_mt_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_THREADSAFE;JEGA_LOGGING_ON;JEGA_HAVE_BOOST;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_mt_sl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Message>Combining all sub-libraries into "$(OutDir)libjega.lib"</Message>
+      <Command>del /F "$(OutDir)libjega.lib"
+lib.exe /OUT:"$(OutDir)libjega.lib" "..\..\eddy\threads\vc120\x64\$(Configuration)\libethreads_r_mt_sl.lib" "..\..\eddy\utilities\vc120\x64\$(Configuration)\libeutils_r_mt_sl.lib" "$(TargetPath)"
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_st_sl_for_dl.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl_for_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_OPTION_DEBUG;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_st_sl_for_dl.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_st_sl_for_dl.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_st_sl_for_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_st_sl_for_dl.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_OPTION_DEBUG;JEGA_HAVE_BOOST;JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_mt_sl_for_dl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>X_TYPE=unsigned short;JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_OPTION_DEBUG;JEGA_HAVE_BOOST;JEGA_LOGGING_ON;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation>
+      </AssemblerListingLocation>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_mt_sl_for_dl_WSTAT.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_OPTION_DEBUG;JEGA_LOGGING_ON;JEGA_HAVE_BOOST;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation />
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_mt_sl_for_dl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_THREADSAFE;JEGA_OPTION_DEBUG;JEGA_LOGGING_ON;JEGA_HAVE_BOOST;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AssemblerListingLocation>
+      </AssemblerListingLocation>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_d_mt_sl_for_dl.lib</OutputFile>
+    </Lib>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PtW32NoCatchWarn;JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_THREADSAFE;JEGA_LOGGING_NO_CONSOLE;JEGA_HAVE_BOOST;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)JEGA.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_mt_sl_for_dl.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>X_TYPE=unsigned short;PtW32NoCatchWarn;JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_THREADSAFE;JEGA_LOGGING_NO_CONSOLE;JEGA_HAVE_BOOST;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)JEGA.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_mt_sl_for_dl_WSTAT.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_THREADSAFE;JEGA_HAVE_BOOST;JEGA_LOGGING_NO_CONSOLE;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)JEGA.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_mt_sl_for_dl.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <AdditionalIncludeDirectories>..\..\eddy;..\..\include;..\..\eddy\threads\pthreads\include;$(BOOST_ROOT);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>X_TYPE=unsigned short;JEGA_SL;JEGA_EXPORTING;JEGA_LOGGING_ON;JEGA_THREADSAFE;JEGA_HAVE_BOOST;JEGA_LOGGING_NO_CONSOLE;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
+      <ProgramDataBaseFileName>$(IntDir)JEGA.pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4344;4251;4275;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libjega_r_mt_sl_for_dl_WSTAT.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\RandomNichePressureApplicator.cpp" />
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\SpaceFillingNicher.cpp" />
+    <ClCompile Include="..\..\src\BitManipulator.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'">false</PreprocessToFile>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'">false</PreprocessToFile>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'">false</PreprocessSuppressLineNumbers>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\MaxGenEvalTimeConverger.cpp" />
+    <ClCompile Include="..\..\src\Convergers\MaximumWallClockTimeConverger.cpp" />
+    <ClCompile Include="..\..\src\Crossers\SMOCrosser.cpp" />
+    <ClCompile Include="..\..\src\FitnessRecord.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithm.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmConverger.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmCrosser.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmEvaluator.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmFitnessAssessor.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmInitializer.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmMainLoop.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmMutator.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmNichePressureApplicator.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmOperator.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmOperatorGroup.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmOperatorSet.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'">false</PreprocessToFile>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'">false</PreprocessToFile>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'">false</PreprocessSuppressLineNumbers>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmPostProcessor.cpp" />
+    <ClCompile Include="..\..\src\GeneticAlgorithmSelector.cpp" />
+    <ClCompile Include="..\..\src\Initializers\SMOInitializer.cpp" />
+    <ClCompile Include="..\..\src\MetricTracker.cpp" />
+    <ClCompile Include="..\..\src\Convergers\AverageFitnessTrackerConverger.cpp" />
+    <ClCompile Include="..\..\src\Convergers\BestFitnessTrackerConverger.cpp" />
+    <ClCompile Include="..\..\src\Convergers\MaxGenEvalConverger.cpp" />
+    <ClCompile Include="..\..\src\Convergers\MaximumEvaluationConverger.cpp" />
+    <ClCompile Include="..\..\src\Convergers\MaximumGenerationConverger.cpp" />
+    <ClCompile Include="..\..\src\Convergers\MetricTrackerConvergerBase.cpp" />
+    <ClCompile Include="..\..\src\Convergers\NullConverger.cpp" />
+    <ClCompile Include="..\..\src\Crossers\NPointBinaryCrosser.cpp" />
+    <ClCompile Include="..\..\src\Crossers\NPointCrosserBase.cpp" />
+    <ClCompile Include="..\..\src\Crossers\NPointParameterizedBinaryCrosser.cpp" />
+    <ClCompile Include="..\..\src\Crossers\NPointRealCrosser.cpp" />
+    <ClCompile Include="..\..\src\Crossers\NullCrosser.cpp" />
+    <ClCompile Include="..\..\src\Crossers\RandomDesignVariableCrosser.cpp" />
+    <ClCompile Include="..\..\src\Evaluators\ExternalEvaluator.cpp" />
+    <ClCompile Include="..\..\src\Evaluators\NullEvaluator.cpp" />
+    <ClCompile Include="..\..\src\Evaluators\SimpleFunctorEvaluator.cpp" />
+    <ClCompile Include="..\..\src\FitnessAssessors\NullFitnessAssessor.cpp" />
+    <ClCompile Include="..\..\src\Initializers\DoubleMatrixInitializer.cpp" />
+    <ClCompile Include="..\..\src\Initializers\FlatFileInitializer.cpp" />
+    <ClCompile Include="..\..\src\Initializers\NullInitializer.cpp" />
+    <ClCompile Include="..\..\src\Initializers\RandomInitializer.cpp" />
+    <ClCompile Include="..\..\src\Initializers\RandomUniqueInitializer.cpp" />
+    <ClCompile Include="..\..\src\MainLoops\DuplicateRemovingMainLoop.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MainLoops\NullMainLoop.cpp" />
+    <ClCompile Include="..\..\src\MainLoops\StandardMainLoop.cpp" />
+    <ClCompile Include="..\..\src\Mutators\CauchyOffsetMutator.cpp" />
+    <ClCompile Include="..\..\src\Mutators\GaussianOffsetMutator.cpp" />
+    <ClCompile Include="..\..\src\Mutators\LocalDesignVariableMutator.cpp" />
+    <ClCompile Include="..\..\src\Mutators\NullMutator.cpp" />
+    <ClCompile Include="..\..\src\Mutators\OffsetMutatorBase.cpp" />
+    <ClCompile Include="..\..\src\Mutators\RandomBitMutator.cpp" />
+    <ClCompile Include="..\..\src\Mutators\RandomDesignVariableMutator.cpp" />
+    <ClCompile Include="..\..\src\Mutators\SMOMutator.cpp" />
+    <ClCompile Include="..\..\src\Mutators\UniformOffsetMutator.cpp" />
+    <ClCompile Include="..\..\src\OperatorGroups\AllOperators.cpp" />
+    <ClCompile Include="..\..\src\OperatorGroups\DuplicateFreeOperatorGroup.cpp" />
+    <ClCompile Include="..\..\src\OperatorGroups\NullOperatorGroup.cpp" />
+    <ClCompile Include="..\..\src\OperatorGroups\StandardOperatorGroup.cpp" />
+    <ClCompile Include="..\..\src\Selectors\BelowLimitSelector.cpp" />
+    <ClCompile Include="..\..\src\Selectors\ElitistSelector.cpp" />
+    <ClCompile Include="..\..\src\Selectors\NonDuplicatingRouletteWheelSelector.cpp" />
+    <ClCompile Include="..\..\src\Selectors\NullSelector.cpp" />
+    <ClCompile Include="..\..\src\Selectors\RouletteWheelSelector.cpp" />
+    <ClCompile Include="..\..\src\NichePressureApplicators\NullNichePressureApplicator.cpp" />
+    <ClCompile Include="..\..\src\PostProcessors\NullPostProcessor.cpp" />
+    <ClCompile Include="..\..\MOGA\src\MOGA.cpp" />
+    <ClCompile Include="..\..\MOGA\src\Convergers\MOGAConverger.cpp" />
+    <ClCompile Include="..\..\MOGA\src\FitnessAssessors\DominationCountFitnessAssessor.cpp" />
+    <ClCompile Include="..\..\MOGA\src\FitnessAssessors\LayerFitnessAssessor.cpp" />
+    <ClCompile Include="..\..\MOGA\src\OperatorGroups\DominationCountOperatorGroup.cpp" />
+    <ClCompile Include="..\..\MOGA\src\OperatorGroups\MOGAOperatorGroup.cpp" />
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\DistanceNichePressureApplicator.cpp" />
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\MaxDesignsNichePressureApplicator.cpp" />
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\RadialNichePressureApplicator.cpp" />
+    <ClCompile Include="..\..\MOGA\src\PostProcessors\DistanceNichingPostProcessor.cpp" />
+    <ClCompile Include="..\..\SOGA\src\SOGA.cpp" />
+    <ClCompile Include="..\..\SOGA\src\FitnessAssessors\ExteriorPenaltyFitnessAssessor.cpp" />
+    <ClCompile Include="..\..\SOGA\src\FitnessAssessors\PenaltyFitnessAssessorBase.cpp" />
+    <ClCompile Include="..\..\SOGA\src\FitnessAssessors\WeightedSumOnlyFitnessAssessor.cpp" />
+    <ClCompile Include="..\..\SOGA\src\OperatorGroups\FavorFeasibleOperatorGroup.cpp" />
+    <ClCompile Include="..\..\SOGA\src\OperatorGroups\SOGAOperatorGroup.cpp" />
+    <ClCompile Include="..\..\SOGA\src\Selectors\FavorFeasibleSelector.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_st_sl|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\core\src\AlgorithmConfig.cpp" />
+    <ClCompile Include="..\..\FrontEnd\core\src\ConfigHelper.cpp" />
+    <ClCompile Include="..\..\FrontEnd\core\src\Driver.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\core\src\ProblemConfig.cpp" />
+    <ClCompile Include="..\..\FrontEnd\core\src\SimpleFunctorEvaluatorCreator.cpp" />
+    <ClCompile Include="..\..\FrontEnd\ConfigFile\src\ConfigFileFrontEndApp.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl_for_dl_WSTAT|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\BasicParameterDatabaseImpl.cpp" />
+    <ClCompile Include="..\..\Utilities\src\BooleanDesignVariableType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ConstraintInfo.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ConstraintNatureBase.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ConstraintTypeBase.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ContinuumDesignVariableNature.cpp" />
+    <ClCompile Include="..\..\Utilities\src\Design.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignFileReader.cpp" />
+    <ClCompile Include="..\..\Utilities\src\DesignGroup.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Release_mt_sl|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignGroupVector.cpp" />
+    <ClCompile Include="..\..\Utilities\src\DesignStatistician.cpp" />
+    <ClCompile Include="..\..\Utilities\src\DesignTarget.cpp" />
+    <ClCompile Include="..\..\Utilities\src\DesignVariableInfo.cpp" />
+    <ClCompile Include="..\..\Utilities\src\DesignVariableNatureBase.cpp" />
+    <ClCompile Include="..\..\Utilities\src\DesignVariableTypeBase.cpp" />
+    <ClCompile Include="..\..\Utilities\src\DiscreteDesignVariableNature.cpp" />
+    <ClCompile Include="..\..\Utilities\src\EqualityConstraintType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\InequalityConstraintType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\InfoBase.cpp" />
+    <ClCompile Include="..\..\Utilities\src\IntegerDesignVariableType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\LinearConstraintNature.cpp" />
+    <ClCompile Include="..\..\Utilities\src\LinearObjectiveFunctionNature.cpp" />
+    <ClCompile Include="..\..\Utilities\src\Logging.cpp">
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|Win32'">false</PreprocessSuppressLineNumbers>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">false</PreprocessToFile>
+      <PreprocessSuppressLineNumbers Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl|x64'">false</PreprocessSuppressLineNumbers>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\LRUDesignCache.cpp" />
+    <ClCompile Include="..\..\Utilities\src\MaximizeObjectiveFunctionType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\MessageBoard.cpp" />
+    <ClCompile Include="..\..\Utilities\src\MinimizeObjectiveFunctionType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\MultiObjectiveStatistician.cpp" />
+    <ClCompile Include="..\..\Utilities\src\NonLinearConstraintNature.cpp" />
+    <ClCompile Include="..\..\Utilities\src\NonLinearObjectiveFunctionNature.cpp" />
+    <ClCompile Include="..\..\Utilities\src\NotEqualityConstraintType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ObjectiveFunctionInfo.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ObjectiveFunctionNatureBase.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ObjectiveFunctionTypeBase.cpp" />
+    <ClCompile Include="..\..\Utilities\src\ParameterExtractor.cpp" />
+    <ClCompile Include="..\..\Utilities\src\RealDesignVariableType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\RegionOfSpace.cpp" />
+    <ClCompile Include="..\..\Utilities\src\SeekRangeObjectiveFunctionType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\SeekValueObjectiveFunctionType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\SingleObjectiveStatistician.cpp" />
+    <ClCompile Include="..\..\Utilities\src\TwoSidedInequalityConstraintType.cpp" />
+    <ClCompile Include="..\..\Utilities\src\UnconstrainedStatistician.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\include\Convergers\inline\MaxGenEvalTimeConverger.hpp.inl" />
+    <None Include="..\..\include\Convergers\inline\MaximumWallClockTimeConverger.hpp.inl" />
+    <None Include="..\..\include\Crossers\inline\SMOCrosser.hpp.inl" />
+    <None Include="..\..\include\Initializers\inline\SMOInitializer.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\SMOMutator.hpp.inl" />
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\RandomNichePressureApplicator.hpp.inl" />
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\SpaceFillingNicher.hpp.inl" />
+    <None Include="..\..\src\Makefile.am" />
+    <None Include="..\..\include\Convergers\inline\AverageFitnessTrackerConverger.hpp.inl" />
+    <None Include="..\..\include\Convergers\inline\BestFitnessTrackerConverger.hpp.inl" />
+    <None Include="..\..\include\Convergers\inline\MaxGenEvalConverger.hpp.inl" />
+    <None Include="..\..\include\Convergers\inline\MaximumEvaluationConverger.hpp.inl" />
+    <None Include="..\..\include\Convergers\inline\MaximumGenerationConverger.hpp.inl" />
+    <None Include="..\..\include\Convergers\inline\MetricTrackerConvergerBase.hpp.inl" />
+    <None Include="..\..\include\Convergers\inline\NullConverger.hpp.inl" />
+    <None Include="..\..\include\Crossers\inline\NPointBinaryCrosser.hpp.inl" />
+    <None Include="..\..\include\Crossers\inline\NPointCrosserBase.hpp.inl" />
+    <None Include="..\..\include\Crossers\inline\NPointParameterizedBinaryCrosser.hpp.inl" />
+    <None Include="..\..\include\Crossers\inline\NPointRealCrosser.hpp.inl" />
+    <None Include="..\..\include\Crossers\inline\NullCrosser.hpp.inl" />
+    <None Include="..\..\include\Crossers\inline\RandomDesignVariableCrosser.hpp.inl" />
+    <None Include="..\..\include\Evaluators\inline\ExternalEvaluator.hpp.inl" />
+    <None Include="..\..\include\Evaluators\inline\NullEvaluator.hpp.inl" />
+    <None Include="..\..\include\Evaluators\inline\SimpleFunctorEvaluator.hpp.inl" />
+    <None Include="..\..\include\FitnessAssessors\inline\NullFitnessAssessor.hpp.inl" />
+    <None Include="..\..\include\Initializers\inline\DoubleMatrixInitializer.hpp.inl" />
+    <None Include="..\..\include\Initializers\inline\FlatFileInitializer.hpp.inl" />
+    <None Include="..\..\include\Initializers\inline\NullInitializer.hpp.inl" />
+    <None Include="..\..\include\Initializers\inline\RandomInitializer.hpp.inl" />
+    <None Include="..\..\include\Initializers\inline\RandomUniqueInitializer.hpp.inl" />
+    <None Include="..\..\include\MainLoops\inline\DuplicateRemovingMainLoop.hpp.inl" />
+    <None Include="..\..\include\MainLoops\inline\NullMainLoop.hpp.inl" />
+    <None Include="..\..\include\MainLoops\inline\StandardMainLoop.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\CauchyOffsetMutator.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\GaussianOffsetMutator.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\LocalDesignVariableMutator.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\NullMutator.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\OffsetMutatorBase.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\RandomBitMutator.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\RandomDesignVariableMutator.hpp.inl" />
+    <None Include="..\..\include\Mutators\inline\UniformOffsetMutator.hpp.inl" />
+    <None Include="..\..\include\OperatorGroups\inline\AllOperators.hpp.inl" />
+    <None Include="..\..\include\OperatorGroups\inline\DuplicateFreeOperatorGroup.hpp.inl" />
+    <None Include="..\..\include\OperatorGroups\inline\NullOperatorGroup.hpp.inl" />
+    <None Include="..\..\include\OperatorGroups\inline\StandardOperatorGroup.hpp.inl" />
+    <None Include="..\..\include\Selectors\inline\BelowLimitSelector.hpp.inl" />
+    <None Include="..\..\include\Selectors\inline\ElitistSelector.hpp.inl" />
+    <None Include="..\..\include\Selectors\inline\NonDuplicatingRouletteWheelSelector.hpp.inl" />
+    <None Include="..\..\include\Selectors\inline\NullSelector.hpp.inl" />
+    <None Include="..\..\include\Selectors\inline\RouletteWheelSelector.hpp.inl" />
+    <None Include="..\..\include\inline\BitManipulator.hpp.inl" />
+    <None Include="..\..\include\inline\FitnessRecord.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithm.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmConverger.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmCrosser.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmEvaluator.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmFitnessAssessor.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmInitializer.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmInjector.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmMainLoop.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmMutator.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmNichePressureApplicator.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmOperator.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmOperatorGroup.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmOperatorSet.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmPostProcessor.hpp.inl" />
+    <None Include="..\..\include\inline\GeneticAlgorithmSelector.hpp.inl" />
+    <None Include="..\..\include\inline\MetricTracker.hpp.inl" />
+    <None Include="..\..\include\NichePressureApplicators\inline\NullNichePressureApplicator.hpp.inl" />
+    <None Include="..\..\include\PostProcessors\inline\NullPostProcessor.hpp.inl" />
+    <None Include="..\..\MOGA\src\Makefile.in" />
+    <None Include="..\..\MOGA\include\inline\MOGA.hpp.inl" />
+    <None Include="..\..\MOGA\include\Convergers\inline\MOGAConverger.hpp.inl" />
+    <None Include="..\..\MOGA\include\FitnessAssessors\inline\DominationCountFitnessAssessor.hpp.inl" />
+    <None Include="..\..\MOGA\include\FitnessAssessors\inline\LayerFitnessAssessor.hpp.inl" />
+    <None Include="..\..\MOGA\include\OperatorGroups\inline\DominationCountOperatorGroup.hpp.inl" />
+    <None Include="..\..\MOGA\include\OperatorGroups\inline\MOGAOperatorGroup.hpp.inl" />
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\DistanceNichePressureApplicator.hpp.inl" />
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\MaxDesignsNichePressureApplicator.hpp.inl" />
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\RadialNichePressureApplicator.hpp.inl" />
+    <None Include="..\..\MOGA\include\PostProcessors\inline\DistanceNichingPostProcessor.hpp.inl" />
+    <None Include="..\..\SOGA\Makefile.am" />
+    <None Include="..\..\SOGA\include\inline\SOGA.hpp.inl" />
+    <None Include="..\..\SOGA\include\FitnessAssessors\inline\ExteriorPenaltyFitnessAssessor.hpp.inl" />
+    <None Include="..\..\SOGA\include\FitnessAssessors\inline\PenaltyFitnessAssessorBase.hpp.inl" />
+    <None Include="..\..\SOGA\include\FitnessAssessors\inline\WeightedSumOnlyFitnessAssessor.hpp.inl" />
+    <None Include="..\..\SOGA\include\OperatorGroups\inline\FavorFeasibleOperatorGroup.hpp.inl" />
+    <None Include="..\..\SOGA\include\OperatorGroups\inline\SOGAOperatorGroup.hpp.inl" />
+    <None Include="..\..\SOGA\include\Selectors\inline\FavorFeasibleSelector.hpp.inl" />
+    <None Include="..\..\docs\Changes.dox" />
+    <None Include="..\..\docs\Doxyfile-changes" />
+    <None Include="..\..\docs\Doxyfile-jega" />
+    <None Include="..\..\docs\JEGA.dox" />
+    <None Include="..\..\FrontEnd\Makefile.am" />
+    <None Include="..\..\FrontEnd\Core\Makefile.am" />
+    <None Include="..\..\FrontEnd\core\include\inline\AlgorithmConfig.hpp.inl" />
+    <None Include="..\..\FrontEnd\core\include\inline\ConfigHelper.hpp.inl" />
+    <None Include="..\..\FrontEnd\core\include\inline\Driver.hpp.inl" />
+    <None Include="..\..\FrontEnd\core\include\inline\ProblemConfig.hpp.inl" />
+    <None Include="..\..\FrontEnd\core\include\inline\SimpleFunctorEvaluatorCreator.hpp.inl" />
+    <None Include="..\..\FrontEnd\ConfigFile\include\inline\ConfigFileFrontEndApp.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\LRUDesignCache.hpp.inl" />
+    <None Include="..\..\Utilities\Makefile.am" />
+    <None Include="..\..\Utilities\include\inline\BasicParameterDatabaseImpl.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\BooleanDesignVariableType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ConstraintInfo.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ConstraintNatureBase.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ConstraintTypeBase.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ContinuumDesignVariableNature.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\Design.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignDoubleValueMap.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignFileReader.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignGroup.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignGroupVector.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignModel.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignMultiSet.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignStatistician.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignTarget.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignValueMap.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignVariableInfo.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignVariableNatureBase.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DesignVariableTypeBase.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\DiscreteDesignVariableNature.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\EqualityConstraintType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\InequalityConstraintType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\InfoBase.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\IntegerDesignVariableType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\LinearConstraintNature.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\LinearObjectiveFunctionNature.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\MaximizeObjectiveFunctionType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\MessageBoard.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\MinimizeObjectiveFunctionType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\MultiObjectiveStatistician.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\NonLinearConstraintNature.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\NonLinearObjectiveFunctionNature.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\NotEqualityConstraintType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ObjectiveFunctionInfo.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ObjectiveFunctionNatureBase.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ObjectiveFunctionTypeBase.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\ParameterExtractor.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\RealDesignVariableType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\RegionOfSpace.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\SeekRangeObjectiveFunctionType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\SeekValueObjectiveFunctionType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\SingleObjectiveStatistician.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\TwoSidedInequalityConstraintType.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\UnconstrainedStatistician.hpp.inl" />
+    <None Include="..\..\Utilities\include\inline\WeightedSumMap.hpp.inl" />
+    <None Include="..\..\configure.ac" />
+    <None Include="..\..\FGENFILE" />
+    <None Include="..\..\LICENSE" />
+    <None Include="..\..\Makefile.am" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\BitManipulator.hpp" />
+    <ClInclude Include="..\..\include\Convergers\MaxGenEvalTimeConverger.hpp" />
+    <ClInclude Include="..\..\include\Convergers\MaximumWallClockTimeConverger.hpp" />
+    <ClInclude Include="..\..\include\Crossers\SMOCrosser.hpp" />
+    <ClInclude Include="..\..\include\FitnessRecord.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithm.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmConverger.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmCrosser.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmEvaluator.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmFitnessAssessor.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmInitializer.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmMainLoop.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmMutator.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmNichePressureApplicator.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmOperator.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmOperatorGroup.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmOperatorSet.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmPostProcessor.hpp" />
+    <ClInclude Include="..\..\include\GeneticAlgorithmSelector.hpp" />
+    <ClInclude Include="..\..\include\Initializers\SMOInitializer.hpp" />
+    <ClInclude Include="..\..\include\MetricTracker.hpp" />
+    <ClInclude Include="..\..\include\Convergers\AverageFitnessTrackerConverger.hpp" />
+    <ClInclude Include="..\..\include\Convergers\BestFitnessTrackerConverger.hpp" />
+    <ClInclude Include="..\..\include\Convergers\MaxGenEvalConverger.hpp" />
+    <ClInclude Include="..\..\include\Convergers\MaximumEvaluationConverger.hpp" />
+    <ClInclude Include="..\..\include\Convergers\MaximumGenerationConverger.hpp" />
+    <ClInclude Include="..\..\include\Convergers\MetricTrackerConvergerBase.hpp" />
+    <ClInclude Include="..\..\include\Convergers\NullConverger.hpp" />
+    <ClInclude Include="..\..\include\Crossers\NPointBinaryCrosser.hpp" />
+    <ClInclude Include="..\..\include\Crossers\NPointCrosserBase.hpp" />
+    <ClInclude Include="..\..\include\Crossers\NPointParameterizedBinaryCrosser.hpp" />
+    <ClInclude Include="..\..\include\Crossers\NPointRealCrosser.hpp" />
+    <ClInclude Include="..\..\include\Crossers\NullCrosser.hpp" />
+    <ClInclude Include="..\..\include\Crossers\RandomDesignVariableCrosser.hpp" />
+    <ClInclude Include="..\..\include\Evaluators\ExternalEvaluator.hpp" />
+    <ClInclude Include="..\..\include\Evaluators\NullEvaluator.hpp" />
+    <ClInclude Include="..\..\include\Evaluators\SimpleFunctorEvaluator.hpp" />
+    <ClInclude Include="..\..\include\FitnessAssessors\NullFitnessAssessor.hpp" />
+    <ClInclude Include="..\..\include\Initializers\DoubleMatrixInitializer.hpp" />
+    <ClInclude Include="..\..\include\Initializers\FlatFileInitializer.hpp" />
+    <ClInclude Include="..\..\include\Initializers\NullInitializer.hpp" />
+    <ClInclude Include="..\..\include\Initializers\RandomInitializer.hpp" />
+    <ClInclude Include="..\..\include\Initializers\RandomUniqueInitializer.hpp" />
+    <ClInclude Include="..\..\include\MainLoops\DuplicateRemovingMainLoop.hpp" />
+    <ClInclude Include="..\..\include\MainLoops\NullMainLoop.hpp" />
+    <ClInclude Include="..\..\include\MainLoops\StandardMainLoop.hpp" />
+    <ClInclude Include="..\..\include\Mutators\CauchyOffsetMutator.hpp" />
+    <ClInclude Include="..\..\include\Mutators\GaussianOffsetMutator.hpp" />
+    <ClInclude Include="..\..\include\Mutators\LocalDesignVariableMutator.hpp" />
+    <ClInclude Include="..\..\include\Mutators\NullMutator.hpp" />
+    <ClInclude Include="..\..\include\Mutators\OffsetMutatorBase.hpp" />
+    <ClInclude Include="..\..\include\Mutators\RandomBitMutator.hpp" />
+    <ClInclude Include="..\..\include\Mutators\RandomDesignVariableMutator.hpp" />
+    <ClInclude Include="..\..\include\Mutators\SMOMutator.hpp" />
+    <ClInclude Include="..\..\include\Mutators\UniformOffsetMutator.hpp" />
+    <ClInclude Include="..\..\include\OperatorGroups\AllOperators.hpp" />
+    <ClInclude Include="..\..\include\OperatorGroups\DuplicateFreeOperatorGroup.hpp" />
+    <ClInclude Include="..\..\include\OperatorGroups\NullOperatorGroup.hpp" />
+    <ClInclude Include="..\..\include\OperatorGroups\StandardOperatorGroup.hpp" />
+    <ClInclude Include="..\..\include\Selectors\BelowLimitSelector.hpp" />
+    <ClInclude Include="..\..\include\Selectors\ElitistSelector.hpp" />
+    <ClInclude Include="..\..\include\Selectors\NonDuplicatingRouletteWheelSelector.hpp" />
+    <ClInclude Include="..\..\include\Selectors\NullSelector.hpp" />
+    <ClInclude Include="..\..\include\Selectors\RouletteWheelSelector.hpp" />
+    <ClInclude Include="..\..\include\NichePressureApplicators\NullNichePressureApplicator.hpp" />
+    <ClInclude Include="..\..\include\PostProcessors\NullPostProcessor.hpp" />
+    <ClInclude Include="..\..\MOGA\include\MOGA.hpp" />
+    <ClInclude Include="..\..\MOGA\include\Convergers\MOGAConverger.hpp" />
+    <ClInclude Include="..\..\MOGA\include\FitnessAssessors\DominationCountFitnessAssessor.hpp" />
+    <ClInclude Include="..\..\MOGA\include\FitnessAssessors\LayerFitnessAssessor.hpp" />
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\RandomNichePressureApplicator.hpp" />
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\SpaceFillingNicher.hpp" />
+    <ClInclude Include="..\..\MOGA\include\OperatorGroups\DominationCountOperatorGroup.hpp" />
+    <ClInclude Include="..\..\MOGA\include\OperatorGroups\MOGAOperatorGroup.hpp" />
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\DistanceNichePressureApplicator.hpp" />
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\MaxDesignsNichePressureApplicator.hpp" />
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\RadialNichePressureApplicator.hpp" />
+    <ClInclude Include="..\..\MOGA\include\PostProcessors\DistanceNichingPostProcessor.hpp" />
+    <ClInclude Include="..\..\SOGA\include\SOGA.hpp" />
+    <ClInclude Include="..\..\SOGA\include\FitnessAssessors\ExteriorPenaltyFitnessAssessor.hpp" />
+    <ClInclude Include="..\..\SOGA\include\FitnessAssessors\PenaltyFitnessAssessorBase.hpp" />
+    <ClInclude Include="..\..\SOGA\include\FitnessAssessors\WeightedSumOnlyFitnessAssessor.hpp" />
+    <ClInclude Include="..\..\SOGA\include\OperatorGroups\FavorFeasibleOperatorGroup.hpp" />
+    <ClInclude Include="..\..\SOGA\include\OperatorGroups\SOGAOperatorGroup.hpp" />
+    <ClInclude Include="..\..\SOGA\include\Selectors\FavorFeasibleSelector.hpp" />
+    <ClInclude Include="..\..\FrontEnd\core\include\AlgorithmConfig.hpp" />
+    <ClInclude Include="..\..\FrontEnd\core\include\ConfigHelper.hpp" />
+    <ClInclude Include="..\..\FrontEnd\core\include\Driver.hpp" />
+    <ClInclude Include="..\..\FrontEnd\core\include\EvaluatorCreator.hpp" />
+    <ClInclude Include="..\..\FrontEnd\core\include\GenericEvaluatorCreator.hpp" />
+    <ClInclude Include="..\..\FrontEnd\Core\include\InjectorCreator.hpp" />
+    <ClInclude Include="..\..\FrontEnd\core\include\ProblemConfig.hpp" />
+    <ClInclude Include="..\..\FrontEnd\core\include\SimpleFunctorEvaluatorCreator.hpp" />
+    <ClInclude Include="..\..\FrontEnd\ConfigFile\include\ConfigFileFrontEndApp.hpp" />
+    <ClInclude Include="..\..\Utilities\include\BasicParameterDatabaseImpl.hpp" />
+    <ClInclude Include="..\..\Utilities\include\BooleanDesignVariableType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ConstraintInfo.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ConstraintNatureBase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ConstraintTypeBase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ContinuumDesignVariableNature.hpp" />
+    <ClInclude Include="..\..\Utilities\include\Design.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignDoubleValueMap.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignFileReader.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignGroup.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignGroupVector.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignMultiSet.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignStatistician.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignTarget.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignValueMap.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignVariableInfo.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignVariableNatureBase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DesignVariableTypeBase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\DiscreteDesignVariableNature.hpp" />
+    <ClInclude Include="..\..\Utilities\include\EqualityConstraintType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\InequalityConstraintType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\InfoBase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\IntegerDesignVariableType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\JEGAConfig.hpp" />
+    <ClInclude Include="..\..\Utilities\include\JEGATypes.hpp" />
+    <ClInclude Include="..\..\Utilities\include\LinearConstraintNature.hpp" />
+    <ClInclude Include="..\..\Utilities\include\LinearObjectiveFunctionNature.hpp" />
+    <ClInclude Include="..\..\Utilities\include\Logging.hpp" />
+    <ClInclude Include="..\..\Utilities\include\LRUDesignCache.hpp" />
+    <ClInclude Include="..\..\Utilities\include\MaximizeObjectiveFunctionType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\MessageBoard.hpp" />
+    <ClInclude Include="..\..\Utilities\include\MinimizeObjectiveFunctionType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\MultiObjectiveStatistician.hpp" />
+    <ClInclude Include="..\..\Utilities\include\NonLinearConstraintNature.hpp" />
+    <ClInclude Include="..\..\Utilities\include\NonLinearObjectiveFunctionNature.hpp" />
+    <ClInclude Include="..\..\Utilities\include\NotEqualityConstraintType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ObjectiveFunctionInfo.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ObjectiveFunctionNatureBase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ObjectiveFunctionTypeBase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ParameterDatabase.hpp" />
+    <ClInclude Include="..\..\Utilities\include\ParameterExtractor.hpp" />
+    <ClInclude Include="..\..\Utilities\include\RealDesignVariableType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\RegionOfSpace.hpp" />
+    <ClInclude Include="..\..\Utilities\include\SeekRangeObjectiveFunctionType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\SeekValueObjectiveFunctionType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\SingleObjectiveStatistician.hpp" />
+    <ClInclude Include="..\..\Utilities\include\TwoSidedInequalityConstraintType.hpp" />
+    <ClInclude Include="..\..\Utilities\include\UnconstrainedStatistician.hpp" />
+    <ClInclude Include="..\..\Utilities\include\WeightedSumMap.hpp" />
+    <ClInclude Include="..\..\jega_config.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

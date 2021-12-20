@@ -217,8 +217,7 @@ OffsetMutatorBase::Mutate(
     const size_t ndv = target.GetNDV();
 
     // extract the design variable information
-    const DesignVariableInfoVector& dvis =
-      target.GetDesignVariableInfos();
+    const DesignVariableInfoVector& dvis = target.GetDesignVariableInfos();
 
     // Get the mutation rate.
     const double rate = this->GetRate();
@@ -257,21 +256,21 @@ OffsetMutatorBase::Mutate(
         // perform the mutation.
 
         // get the old representation to modify it.
-        double varrep = chosen->GetVariableRep(dv);
+        var_rep_t varrep = chosen->GetVariableRep(dv);
 
         // get the offset amount
-        double offset = this->GetOffsetAmount(*dvis[dv]);
+        const double offset = this->GetOffsetAmount(*dvis[dv]);
 
         // if the offset will not change the design, forget about it.
         if(offset == 0.0) continue;
 
         // otherwise, apply it.
-        varrep += offset;
+        varrep += static_cast<var_rep_t>(offset);
 
-        // Note that there is a strong likelyhood that this will produce invalid
+        // Note that there is a strong likelihood that this will produce invalid
         // variable representations especially for discrete variables.
         // Just a warning.
-        JEGAIFLOG_II(!dvis[dv]->IsValidDoubleRep(varrep),
+        JEGAIFLOG_II(!dvis[dv]->IsValidRep(varrep),
             this->GetLogger(), lquiet(), this,
             ostream_entry(lquiet(), this->GetName() + ": Produced invalid "
                 " variable representation ") << varrep << ". Mutation"

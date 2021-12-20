@@ -27,6 +27,7 @@ int AMPL_driver(int argc, char* argv[], const char* codename)
 {
    EXCEPTION_MNGR(std::runtime_error,
                   "AMPL_driver(): Configured withough AMPL support.");
+   return 0;
 }
 
 } // namespace colin

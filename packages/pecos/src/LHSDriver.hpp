@@ -9,9 +9,8 @@
 #ifndef LHS_DRIVER_H
 #define LHS_DRIVER_H
 
-#include "pecos_data_types.hpp"
-#include "pecos_global_defs.hpp"
-#include "DistributionParams.hpp"
+#include "pecos_stat_util.hpp"
+#include "RandomVariable.hpp"
 
 
 namespace Pecos {
@@ -63,83 +62,56 @@ public:
   /// reseed using a deterministic sequence
   void advance_seed_sequence();
 
-  /// generates the desired set of parameter samples from within general
-  /// user-specified probabilistic distributions (AleatoryDistParams and
-  /// EpistemicDistParams instances augmented with design and state variables)
-  void generate_samples(const RealVector& cd_l_bnds,
-			const RealVector& cd_u_bnds,
-			const IntVector& ddr_l_bnds,
-			const IntVector& ddr_u_bnds,
-			const IntSetArray& ddsi_values,
-			const StringSetArray& ddss_values,
-			const RealSetArray& ddsr_values,
-			const RealVector& cs_l_bnds,
-			const RealVector& cs_u_bnds,
-			const IntVector& dsr_l_bnds,
-			const IntVector& dsr_u_bnds,
-			const IntSetArray& dssi_values,
-			const StringSetArray& dsss_values,
-			const RealSetArray& dssr_values,
-			const AleatoryDistParams& adp,
-			const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, RealMatrix& rank_array);
+  /// generates a set of parameter samples from RandomVariable distributions
+  void generate_samples(const std::vector<RandomVariable>& random_vars,
+			const RealSymMatrix& corr, int num_samples,
+			RealMatrix& samples, RealMatrix& sample_ranks,
+			const BitArray& active_vars = BitArray(),
+			const BitArray& active_corr = BitArray());
+  /// Similar to generate_samples, but this function seeks uniqueness in
+  /// discrete samples through iterative replacement of duplicates
+  void generate_unique_samples(const std::vector<RandomVariable>& random_vars,
+			       const RealSymMatrix& corr, int num_samples,
+			       RealMatrix& samples, RealMatrix& sample_ranks,
+			       const BitArray& active_vars = BitArray(),
+			       const BitArray& active_corr = BitArray());
 
-  /// generates the desired set of parameter samples from within
-  /// AleatoryDistParams and EpistemicDistParams specifications
-  void generate_samples(const AleatoryDistParams&  adp,
-			const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, bool backfill_flag=false);
-  /// generates the desired set of parameter samples from within an
-  /// AleatoryDistParams specification
-  void generate_samples(const AleatoryDistParams& adp, int num_samples,
-			RealMatrix& samples_array, bool backfill_flag=false);
-  /// generates the desired set of parameter samples from within a
-  /// EpistemicDistParams specification
-  void generate_samples(const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, bool backfill_flag=false);
+  /*
+  /// generates a set of parameter samples from RandomVariable distributions
+  /// for the uncertain variable subset
+  void generate_uncertain_samples(
+    const std::vector<RandomVariable>& random_vars, const RealSymMatrix& corr,
+    int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
+  /// generates a set of parameter samples from RandomVariable distributions
+  /// for the aleatory uncertain variable subset
+  void generate_aleatory_samples(
+    const std::vector<RandomVariable>& random_vars,
+    const RealSymMatrix& corr, int num_samples, RealMatrix& samples_array,
+    bool backfill_flag = false);
+  /// generates a set of parameter samples from RandomVariable distributions
+  /// for the epistemic uncertain variable subset
+  void generate_epistemic_samples(
+    const std::vector<RandomVariable>& random_vars, const RealSymMatrix& corr,
+    int num_samples, RealMatrix& samples_array, bool backfill_flag = false);
+  */
 
-  /// generates the desired set of parameter samples from within
-  /// uncorrelated normal distributions
+  /// generates a set of parameter samples for a set of (correlated)
+  /// normal distributions
   void generate_normal_samples(const RealVector& n_means,
-			       const RealVector& n_std_devs,
-			       const RealVector& n_l_bnds,
-			       const RealVector& n_u_bnds, int num_samples,
-                               RealSymMatrix& correl_matrix,
-			       RealMatrix& samples_array);
-
-  /// generates the desired set of parameter samples from within
-  /// uncorrelated uniform distributions
+    const RealVector& n_std_devs, const RealVector& n_l_bnds,
+    const RealVector& n_u_bnds,	RealSymMatrix& corr, int num_samples,
+    RealMatrix& samples_array);
+  /// generates a set of parameter samples for a set of (correlated)
+  /// uniform distributions
   void generate_uniform_samples(const RealVector& u_l_bnds,
-				const RealVector& u_u_bnds, int num_samples,
-				RealMatrix& samples_array, 
-				bool backfill_flag=false);
+    const RealVector& u_u_bnds, RealSymMatrix& corr, int num_samples,
+    RealMatrix& samples_array);
 
   /// generates integer index samples from within uncorrelated uniform
-  /// distributions
+  /// discrete range distributions
   void generate_uniform_index_samples(const IntVector& index_l_bnds,
-    const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples);
-
-  /// generates unique integer index samples from within uncorrelated
-  /// uniform distributions (more expensive than non-unique case)
-  //  void generate_unique_index_samples(const IntVector& index_l_bnds,
-  //  const IntVector& index_u_bnds, int num_samples,
-    //				     std::set<IntArray>& sorted_samples);
-  void generate_unique_index_samples(const IntVector& index_l_bnds,
-    const IntVector& index_u_bnds, int num_samples,
-    IntMatrix& sorted_samples);
-
-  /// Similar to generate_samples but this function ensures that all discrete 
-  /// samples are unique
-  void generate_unique_samples( const RealVector& cd_l_bnds,
-     const RealVector& cd_u_bnds, const IntVector&  ddri_l_bnds, 
-     const IntVector&  ddri_u_bnds, const IntSetArray& ddsi_values,
-     const StringSetArray& ddss_values, const RealSetArray& ddsr_values,
-     const RealVector& cs_l_bnds, const RealVector& cs_u_bnds,
-     const IntVector&  dsri_l_bnds, const IntVector&  dsri_u_bnds,
-     const IntSetArray& dssi_values, const StringSetArray& dsss_values,
-     const RealSetArray& dssr_values, const AleatoryDistParams& adp,
-     const EpistemicDistParams& edp, int num_samples,
-     RealMatrix& samples, RealMatrix& sample_ranks );
+    const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples,
+    bool backfill_flag = false);
 
 private:
 
@@ -150,9 +122,35 @@ private:
   /// checks whether LHS is enabled in the build and aborts if not
   static void abort_if_no_lhs();
 
-  /// checks the return codes from LHS routines and aborts if an
-  /// error is returned
-  void check_error(int err_code, const char* err_source) const;
+  /// check for valid range for type T
+  template <typename T>
+  void check_range(T l_bnd, T u_bnd, bool allow_equal) const;
+  /// check for finite bounds for type T
+  template <typename T>
+  void check_finite(T l_bnd, T u_bnd) const;
+  /// checks the return codes from LHS routines and aborts with an
+  /// error message if an error was returned
+  void check_error(int err_code, const char* err_source = NULL,
+		   const char* err_case = NULL) const;
+
+  /// register a random variable with LHS using the DIST format
+  void lhs_dist_register(const char* var_name, const char* dist_name,
+			 size_t rv, const RealArray& dist_params);
+  /// register a random variable with LHS using the UDIST format
+  void lhs_udist_register(const char* var_name, const char* dist_name,
+			  size_t rv, const RealArray& x_val,
+			  const RealArray& y_val);
+  /// register a random variable with LHS using the CONST format
+  void lhs_const_register(const char* var_name, size_t rv, Real val);
+
+  /// create F77 string label from base name + tag + padding (field = 16 chars)
+  void f77name16(const char* name, size_t index, String& label);
+  /// create F77 string label from base name + padding (field = 32 chars)
+  void f77name32(const char* name, String& label);
+
+  bool test_unique(const std::vector<RandomVariable>& random_vars,
+		   const BitArray& active_vars, const Real* new_samp,
+		   std::set<RealArray>& unique_samples);
 
   //
   //- Heading: Data
@@ -161,8 +159,8 @@ private:
   /// type of sampling: random, lhs, incremental_lhs, or incremental_random
   String sampleType;
 
-  /// the current random number seed
-  int randomSeed;
+  /// variable labels passed to LHS; required for specification of correlations
+  StringArray lhsNames;
 
   /// mode of sample ranks I/O: IGNORE_RANKS, SET_RANKS, GET_RANKS, or
   /// SET_GET_RANKS
@@ -171,21 +169,12 @@ private:
   /// flag for generating LHS report output
   bool reportFlag;
 
+  /// the current random number seed
+  int randomSeed;
   /// for honoring advance_seed_sequence() calls
   short allowSeedAdvance; // bit 1 = first-time flag
 		          // bit 2 = allow repeated seed update
 };
-
-
-inline LHSDriver::LHSDriver() : sampleType("lhs"), randomSeed(0),
-  sampleRanksMode(IGNORE_RANKS), reportFlag(true), allowSeedAdvance(1)
-{
-  abort_if_no_lhs();
-}
-
-
-inline LHSDriver::~LHSDriver()
-{}
 
 
 inline void LHSDriver::
@@ -197,6 +186,12 @@ initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 }
 
 
+inline LHSDriver::LHSDriver():
+  sampleType("lhs"), sampleRanksMode(IGNORE_RANKS), reportFlag(true),
+  randomSeed(0), allowSeedAdvance(1)
+{ abort_if_no_lhs(); }
+
+
 inline LHSDriver::LHSDriver(const String& sample_type,
 			    short sample_ranks_mode, bool reports) :
   allowSeedAdvance(1)
@@ -204,6 +199,10 @@ inline LHSDriver::LHSDriver(const String& sample_type,
   abort_if_no_lhs();
   initialize(sample_type, sample_ranks_mode, reports);
 }
+
+
+inline LHSDriver::~LHSDriver()
+{ }
 
 
 inline int LHSDriver::seed() const
@@ -226,178 +225,229 @@ inline void LHSDriver::advance_seed_sequence()
 }
 
 
+/*
 inline void LHSDriver::
-generate_samples(const AleatoryDistParams& adp, const EpistemicDistParams& edp,
-		 int num_samples, RealMatrix& samples_array, bool backfill_flag)
+generate_uncertain_samples(const std::vector<RandomVariable>& random_vars,
+			   const RealSymMatrix& corr, int num_samples,
+			   RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
-    PCerr << "Error: generate_samples(AleatoryDistParams&, "
-	  << "EpistemicDistParams&) does not support sample rank input/output."
-	  << std::endl;
-    abort_handler(-1);
-  }
-  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
-  else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
-}
-
-inline void LHSDriver::
-generate_samples(const AleatoryDistParams& adp, int num_samples,
-		 RealMatrix& samples_array, bool backfill_flag)
-{
-  if (sampleRanksMode) {
-    PCerr << "Error: generate_samples(AleatoryDistParams&) does not support "
+    PCerr << "Error: LHSDriver::generate_uncertain_samples() does not support "
 	  << "sample rank input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  EpistemicDistParams edp;
+  RealMatrix ranks;
+  // Note: insufficient to identify source x type if in transformed u space
+  BitArray active_rv;            uncertain_subset(random_vars, active_rv);
+  BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
   if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
+    generate_unique_samples(random_vars, corr, num_samples, samples_array,
+			    ranks, active_rv, active_corr);
   else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
+    generate_samples(random_vars, corr, num_samples, samples_array, ranks,
+		     active_rv, active_corr);
 }
 
+
 inline void LHSDriver::
-generate_samples(const EpistemicDistParams& edp, int num_samples,
-		 RealMatrix& samples_array, bool backfill_flag)
+generate_aleatory_samples(const std::vector<RandomVariable>& random_vars,
+			  const RealSymMatrix& corr, int num_samples,
+			  RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
-    PCerr << "Error: generate_samples(EpistemicDistParams&) does not support "
-	  << "sample rank input/output." << std::endl;
+    PCerr << "Error: generate_aleatory_samples() does not support sample rank "
+	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  AleatoryDistParams adp;
+  RealMatrix ranks;
+  // Note: insufficient to identify source x type if in transformed u space
+  BitArray active_rv; aleatory_uncertain_subset(random_vars, active_rv);
   if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv,
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
+    generate_unique_samples(random_vars, corr, num_samples, samples_array,
+			    ranks, active_rv, active_rv);
   else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa,empty_rsa, empty_rv, empty_rv, empty_iv,
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-		     num_samples, samples_array, empty_rm);
+    generate_samples(random_vars, corr, num_samples, samples_array, ranks,
+		     active_rv, active_rv);
 }
+
+
+inline void LHSDriver::
+generate_epistemic_samples(const std::vector<RandomVariable>& random_vars,
+			   const RealSymMatrix& corr, int num_samples,
+			   RealMatrix& samples_array, bool backfill_flag)
+{
+  if (sampleRanksMode) {
+    PCerr << "Error: generate_epistemic_samples() does not support sample rank "
+	  << "input/output." << std::endl;
+    abort_handler(-1);
+  }
+  RealMatrix ranks;
+  // Note: insufficient to identify source x type if in transformed u space
+  BitArray active_rv;  epistemic_uncertain_subset(random_vars, active_rv);
+  BitArray active_corr; aleatory_uncertain_subset(random_vars, active_corr);
+  if (backfill_flag)
+    generate_unique_samples(random_vars, corr, num_samples, samples_array,
+			    ranks, active_rv, active_corr);
+  else
+    generate_samples(random_vars, corr, num_samples,
+		     samples_array, ranks, active_rv, active_corr);
+}
+*/
 
 
 inline void LHSDriver::
 generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
-			int num_samples, RealSymMatrix& correl, RealMatrix& samples_array)
+			RealSymMatrix& corr, int num_samples,
+			RealMatrix& samples_array)//, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_normal_samples() does not support sample rank "
   	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector     empty_rv;  IntVector          empty_iv;
-  RealMatrix     empty_rm;  //RealSymMatrix      empty_rsm;
-  IntSetArray    empty_isa; IntRealMapArray    empty_irma;
-  StringSetArray empty_ssa; StringRealMapArray empty_srma;
-  RealSetArray   empty_rsa; RealRealMapArray   empty_rrma;
-  AleatoryDistParams adp(n_means, n_std_devs, n_l_bnds, n_u_bnds, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rrma, empty_rv, empty_rv, empty_iv,
-			 empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			 empty_iv, empty_irma, empty_srma, empty_rrma,
-			 correl);
-  EpistemicDistParams edp;
-  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
-		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
-		   empty_ssa, empty_rsa, adp, edp, num_samples, samples_array,
-		   empty_rm);
+  size_t i, num_rv = n_means.length();
+  std::vector<RandomVariable> random_vars(num_rv);
+  bool l_bnds = !n_l_bnds.empty(), u_bnds = !n_u_bnds.empty(), l_bnd, u_bnd;
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  for (i=0; i<num_rv; ++i) {
+    l_bnd = (l_bnds && n_l_bnds[i] > -dbl_inf);
+    u_bnd = (u_bnds && n_u_bnds[i] <  dbl_inf);
+    RandomVariable& rv_i = random_vars[i];
+    rv_i = (l_bnd || u_bnd) ? RandomVariable(BOUNDED_NORMAL)
+                            : RandomVariable(NORMAL);
+    rv_i.push_parameter(N_MEAN,    n_means[i]);
+    rv_i.push_parameter(N_STD_DEV, n_std_devs[i]);
+    if (l_bnd) rv_i.push_parameter(N_LWR_BND, n_l_bnds[i]);
+    if (u_bnd) rv_i.push_parameter(N_UPR_BND, n_u_bnds[i]);
+  }
+  RealMatrix ranks;
+  // All variables are continuous normal --> no need for backfill
+  //if (backfill_flag)
+  //  generate_unique_samples(random_vars,corr,num_samples,samples_array,ranks);
+  //else
+  generate_samples(random_vars, corr, num_samples, samples_array, ranks);
 }
 
 
 inline void LHSDriver::
 generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
-			 int num_samples, RealMatrix& samples_array, 
-			 bool backfill_flag)
+			 RealSymMatrix& corr, int num_samples,
+			 RealMatrix& samples_array)//, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_samples() does not support sample rank "
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector     empty_rv;  IntVector          empty_iv;
-  RealMatrix     empty_rm;  RealSymMatrix      empty_rsm; 
-  IntSetArray    empty_isa; IntRealMapArray    empty_irma;
-  StringSetArray empty_ssa; StringRealMapArray empty_srma;
-  RealSetArray   empty_rsa; RealRealMapArray   empty_rrma;
-  AleatoryDistParams adp(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, u_l_bnds, u_u_bnds, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rrma, empty_rv, empty_rv, empty_iv,
-			 empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			 empty_iv, empty_irma, empty_srma, empty_rrma,
-			 empty_rsm);
-  EpistemicDistParams edp;
-  if (backfill_flag)
-    generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-			    num_samples, samples_array, empty_rm);
-  else
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
+  size_t i, num_rv = u_l_bnds.length();
+  std::vector<RandomVariable> random_vars(num_rv);
+  for (i=0; i<num_rv; ++i) {
+    RandomVariable& rv_i = random_vars[i];
+    rv_i = RandomVariable(UNIFORM);
+    rv_i.push_parameter(U_LWR_BND, u_l_bnds[i]);
+    rv_i.push_parameter(U_UPR_BND, u_u_bnds[i]);
+  }
+  RealMatrix ranks;
+  // All variables are continuous uniform --> no need for backfill
+  //if (backfill_flag)
+  //  generate_unique_samples(random_vars,corr,num_samples,samples_array,ranks);
+  //else
+  generate_samples(random_vars, corr, num_samples, samples_array, ranks);
 }
+
 
 inline void LHSDriver::
 generate_uniform_index_samples(const IntVector& index_l_bnds,
-			       const IntVector& index_u_bnds,
-			       int num_samples, IntMatrix& index_samples)
+			       const IntVector& index_u_bnds, int num_samples,
+			       IntMatrix& index_samples, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_index_samples() does not support sample "
 	  << "rank input/output." << std::endl;
     abort_handler(-1);
   }
-  // For    uniform probability, model as discrete design range (this fn).
+  // For    uniform probability, model as discrete range (this fn).
   // For nonuniform probability, model as discrete uncertain set integer.
-  RealVector empty_rv; IntVector empty_iv; RealMatrix empty_rm, samples_rm;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  AleatoryDistParams adp; EpistemicDistParams edp;
-  generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
-		   empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
-		   empty_isa, empty_ssa, empty_rsa, adp, edp, num_samples,
-		   samples_rm, empty_rm);
+  size_t i, num_rv = index_l_bnds.length();
+  std::vector<RandomVariable> random_vars(num_rv);
+  for (i=0; i<num_rv; ++i) {
+    RandomVariable& rv_i = random_vars[i];
+    rv_i = RandomVariable(DISCRETE_RANGE);
+    rv_i.push_parameter(DR_LWR_BND, index_l_bnds[i]);
+    rv_i.push_parameter(DR_UPR_BND, index_u_bnds[i]);
+  }
+  RealMatrix ranks, samples_rm;  RealSymMatrix corr; // assume uncorrelated
+  if (backfill_flag)
+    generate_unique_samples(random_vars, corr, num_samples, samples_rm, ranks);
+  else
+    generate_samples(random_vars, corr, num_samples, samples_rm, ranks);
   copy_data(samples_rm, index_samples);
 }
 
 
-inline void LHSDriver::check_error(int err_code, const char* err_source) const
+/** Helper function to create labels with appended tags that Fortran
+    will see as character*16 values which are NOT null-terminated. */
+inline void LHSDriver::f77name16(const char* name, size_t index, String& label)
+{
+  label = name + boost::lexical_cast<String>(index+1);
+  label.resize(16, ' '); // NOTE: no NULL terminator
+}
+
+
+/** Helper function to create labels that Fortran will see as character*32
+    values which are NOT null-terminated. */
+inline void LHSDriver::f77name32(const char* name, String& label)
+{
+  label = name;
+  label.resize(32, ' '); // NOTE: no NULL terminator
+}
+
+
+template <typename T>
+void LHSDriver::check_range(T l_bnd, T u_bnd, bool allow_equal) const
+{
+  if (l_bnd > u_bnd) {
+    PCerr << "\nError: lower bound exceeds upper bound in Pecos::LHSDriver."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  else if (!allow_equal && l_bnd == u_bnd) {
+    PCerr << "\nError: Pecos::LHSDriver requires non-zero range between lower "
+	  << "and upper bounds." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+template <typename T>
+void LHSDriver::check_finite(T l_bnd, T u_bnd) const
+{
+  if (std::numeric_limits<T>::has_infinity) { // floating point types
+    T T_inf = std::numeric_limits<T>::infinity();
+    if (l_bnd <= -T_inf || u_bnd >= T_inf) {
+      PCerr << "\nError: Pecos::LHSDriver requires finite bounds to sample a "
+	    << "continuous range." << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else if (l_bnd <= std::numeric_limits<T>::min() ||
+	   u_bnd >= std::numeric_limits<T>::max()) { // INT_{MIN,MAX}
+    PCerr << "\nError: Pecos::LHSDriver requires finite bounds to sample a "
+	  << "discrete range." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void LHSDriver::
+check_error(int err_code, const char* err_source, const char* err_case) const
 {
   if (err_code) {
-    PCerr << "Error: code " << err_code << " returned from " << err_source 
-	  << " in LHSDriver." << std::endl;
+    PCerr << "Error: code " << err_code << " in LHSDriver";
+    if (err_source != NULL) PCerr << " returned from " << err_source;
+    if (err_case   != NULL) PCerr << " for case "      << err_case;
+    PCerr << "." << std::endl;
     abort_handler(-1);
   }
 }

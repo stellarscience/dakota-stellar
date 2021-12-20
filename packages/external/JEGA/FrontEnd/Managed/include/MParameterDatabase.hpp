@@ -158,7 +158,7 @@ Class Definition
  * manifestation to a JEGA::Utilities::ParameterDatabase be possible for
  * extraction of parameters from within JEGA core.
  */
-MANAGED_INTERFACE(public, MParameterDatabase) :
+public interface class MParameterDatabase :
     public System::IDisposable
 {
     /*
@@ -193,7 +193,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasIntegralParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Tests the short param map for a value mapped to the supplied tag.
@@ -204,7 +204,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasShortParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Tests the double param map for a value mapped to the supplied tag.
@@ -215,7 +215,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasDoubleParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Tests the size_t param map for a value mapped to the supplied tag.
@@ -226,18 +226,18 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasSizeTypeParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
-        /// Tests the boolean param map for a value mapped to the supplied tag.
+        /// Tests the Boolean param map for a value mapped to the supplied tag.
         /**
-         * \param tag The key to search for in the boolean param map.
+         * \param tag The key to search for in the Boolean param map.
          * \return true if \a tag is found as a key and false otherwise.
          */
         virtual
         bool
         HasBooleanParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Tests the string param map for a value mapped to the supplied tag.
@@ -248,7 +248,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasStringParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /**
@@ -261,7 +261,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasDoubleVectorParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /**
@@ -274,7 +274,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasIntVectorParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /**
@@ -287,7 +287,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasDoubleMatrixParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /**
@@ -300,7 +300,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         HasStringVectorParam(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as an integer from this DB.
@@ -313,7 +313,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         int
         GetIntegral(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a short from this DB.
@@ -326,7 +326,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         short
         GetShort(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a double from this DB.
@@ -339,7 +339,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         double
         GetDouble(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a size_t from this DB.
@@ -352,7 +352,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         eddy::utilities::uint64_t
         GetSizeType(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a bool from this DB.
@@ -365,7 +365,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         GetBoolean(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a string from this DB.
@@ -376,9 +376,9 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
          *                                 string value.
          */
         virtual
-        System::String MOH
+        System::String^
         GetString(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a DoubleVector from this DB.
@@ -389,9 +389,9 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
          *                                 DoubleVector value.
          */
         virtual
-        JEGA::FrontEnd::Managed::DoubleVector MOH
+        JEGA::FrontEnd::Managed::DoubleVector^
         GetDoubleVector(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as an IntVector from this DB.
@@ -402,9 +402,9 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
          *                                 IntVector value.
          */
         virtual
-        JEGA::FrontEnd::Managed::IntVector MOH
+        JEGA::FrontEnd::Managed::IntVector^
         GetIntVector(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a DoubleMatrix from this DB.
@@ -415,9 +415,9 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
          *                                 DoubleMatrix value.
          */
         virtual
-        JEGA::FrontEnd::Managed::DoubleMatrix MOH
+        JEGA::FrontEnd::Managed::DoubleMatrix^
         GetDoubleMatrix(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Supplies the requested parameter as a StringVector from this DB.
@@ -428,9 +428,9 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
          *                                 StringVector value.
          */
         virtual
-        JEGA::FrontEnd::Managed::StringVector MOH
+        JEGA::FrontEnd::Managed::StringVector^
         GetStringVector(
-            System::String MOH tag
+            System::String^ tag
             ) = 0;
 
         /// Maps the supplied integer value to the supplied tag.
@@ -445,7 +445,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddIntegralParam(
-            System::String MOH tag,
+            System::String^ tag,
             int value
             ) = 0;
 
@@ -461,7 +461,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddDoubleParam(
-            System::String MOH tag,
+            System::String^ tag,
             double value
             ) = 0;
 
@@ -477,14 +477,14 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddSizeTypeParam(
-            System::String MOH tag,
+            System::String^ tag,
             eddy::utilities::uint64_t value
             ) = 0;
 
-        /// Maps the supplied boolean value to the supplied tag.
+        /// Maps the supplied Boolean value to the supplied tag.
         /**
          * The mapping will only succeed if \a tag is not already the key for
-         * some other boolean value.
+         * some other Boolean value.
          *
          * \param tag The key to which the requested value is to be mapped.
          * \param value The value that is to be mapped by key.
@@ -493,7 +493,7 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddBooleanParam(
-            System::String MOH tag,
+            System::String^ tag,
             bool value
             ) = 0;
 
@@ -509,8 +509,8 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddStringParam(
-            System::String MOH tag,
-            System::String MOH value
+            System::String^ tag,
+            System::String^ value
             ) = 0;
 
         /// Maps the supplied vector of doubles value to the supplied tag.
@@ -525,8 +525,8 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddDoubleVectorParam(
-            System::String MOH tag,
-            DoubleVector MOH value
+            System::String^ tag,
+            DoubleVector^ value
             ) = 0;
 
         /// Maps the supplied vector of ints value to the supplied tag.
@@ -541,8 +541,8 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddIntVectorParam(
-            System::String MOH tag,
-            IntVector MOH value
+            System::String^ tag,
+            IntVector^ value
             ) = 0;
 
         /// Maps the supplied matrix of doubles value to the supplied tag.
@@ -557,8 +557,8 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddDoubleMatrixParam(
-            System::String MOH tag,
-            DoubleMatrix MOH value
+            System::String^ tag,
+            DoubleMatrix^ value
             ) = 0;
 
         /// Maps the supplied vector of strings value to the supplied tag.
@@ -573,8 +573,8 @@ MANAGED_INTERFACE(public, MParameterDatabase) :
         virtual
         bool
         AddStringVectorParam(
-            System::String MOH tag,
-            StringVector MOH value
+            System::String^ tag,
+            StringVector^ value
             ) = 0;
 
 }; // class MParameterDatabase

@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -27,6 +27,7 @@
 #include <queso/InvLogitGaussianJointPdf.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
+#include <queso/VectorSet.h>
 
 namespace QUESO {
 
@@ -34,11 +35,11 @@ namespace QUESO {
 template<class V, class M>
 InvLogitGaussianVectorRV<V,M>::InvLogitGaussianVectorRV(
     const char * prefix,
-    const BoxSubset<V, M> & imageBoxSubset,
+    const VectorSet<V, M> & imageSet,
     const V & lawExpVector,
     const V & lawVarVector)
   : BaseVectorRV<V, M>(((std::string)(prefix)+"invlogit_gau").c_str(),
-      imageBoxSubset)
+      imageSet)
 {
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 54)) {
     *m_env.subDisplayFile() << "Entering InvLogitGaussianVectorRV<V,M>::constructor() [1]"
@@ -48,9 +49,8 @@ InvLogitGaussianVectorRV<V,M>::InvLogitGaussianVectorRV(
 
   queso_require_greater_msg(lawVarVector.getMinValue(), 0.0, "Covariance matrix is not symmetric positive definite.");
 
-  m_pdf = new InvLogitGaussianJointPdf<V,M>(m_prefix.c_str(),
-      dynamic_cast<const BoxSubset<V, M> & >(m_imageSet), lawExpVector,
-      lawVarVector);
+  m_pdf = new InvLogitGaussianJointPdf<V,M>(m_prefix.c_str(), m_imageSet,
+      lawExpVector, lawVarVector);
 
   V cholDiag(lawVarVector);
   cholDiag.cwSqrt();
@@ -58,8 +58,7 @@ InvLogitGaussianVectorRV<V,M>::InvLogitGaussianVectorRV(
   lowerCholLawCovMatrix.zeroUpper(false);
 
   m_realizer = new InvLogitGaussianVectorRealizer<V,M>(m_prefix.c_str(),
-      dynamic_cast<const BoxSubset<V, M> & >(m_imageSet), lawExpVector,
-      lowerCholLawCovMatrix);
+      m_imageSet, lawExpVector, lowerCholLawCovMatrix);
 
   m_subCdf     = NULL; // FIX ME: complete code
   m_unifiedCdf = NULL; // FIX ME: complete code
@@ -75,11 +74,11 @@ InvLogitGaussianVectorRV<V,M>::InvLogitGaussianVectorRV(
 template<class V, class M>
 InvLogitGaussianVectorRV<V, M>::InvLogitGaussianVectorRV(
     const char * prefix,
-    const BoxSubset<V, M> & imageBoxSubset,
+    const VectorSet<V, M> & imageSet,
     const V & lawExpVector,
     const M & lawCovMatrix)
   : BaseVectorRV<V, M>(((std::string)(prefix)+"invlogit_gau").c_str(),
-      imageBoxSubset)
+      imageSet)
 {
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 54)) {
     *m_env.subDisplayFile() << "Entering InvLogitGaussianVectorRV<V,M>::constructor() [2]"
@@ -87,8 +86,7 @@ InvLogitGaussianVectorRV<V, M>::InvLogitGaussianVectorRV(
                             << std::endl;
   }
 
-  m_pdf = new InvLogitGaussianJointPdf<V, M>(m_prefix.c_str(),
-      dynamic_cast<const BoxSubset<V, M> & >(m_imageSet),
+  m_pdf = new InvLogitGaussianJointPdf<V, M>(m_prefix.c_str(), m_imageSet,
       lawExpVector, lawCovMatrix);
 
   M lowerCholLawCovMatrix(lawCovMatrix);
@@ -109,12 +107,11 @@ InvLogitGaussianVectorRV<V, M>::InvLogitGaussianVectorRV(
 
     vecS.cwSqrt();
     m_realizer = new InvLogitGaussianVectorRealizer<V,M>(m_prefix.c_str(),
-        dynamic_cast<const BoxSubset<V, M> & >(m_imageSet), lawExpVector, matU,
-        vecS, matVt);
+        m_imageSet, lawExpVector, matU, vecS, matVt);
   }
   else {
     m_realizer = new InvLogitGaussianVectorRealizer<V, M>(m_prefix.c_str(),
-        dynamic_cast<const BoxSubset<V, M> & >(m_imageSet), lawExpVector, lowerCholLawCovMatrix);
+        m_imageSet, lawExpVector, lowerCholLawCovMatrix);
   }
 
   m_subCdf     = NULL; // FIX ME: complete code

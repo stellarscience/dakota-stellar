@@ -91,8 +91,6 @@ Pre-Namespace Forward Declares
 
 
 
-
-
 /*
 ================================================================================
 Namespace Aliases
@@ -166,7 +164,7 @@ class JEGA_SL_IEDECL Design
             /// Indicates that a Design has been evaluated.
             /**
              * The variables and constraints of an evaluated design must be
-             * valid and correct unless the Illconditioned attribute is also
+             * valid and correct unless the Ill-conditioned attribute is also
              * set.
              */
             Evaluated = 0,
@@ -204,7 +202,7 @@ class JEGA_SL_IEDECL Design
     public:
 
         /**
-         * \brief The mask of bits used to store the boolean style attributes
+         * \brief The mask of bits used to store the Boolean style attributes
          *        of a Design class object.
          */
         typedef
@@ -212,7 +210,6 @@ class JEGA_SL_IEDECL Design
         AttributeMask;
 
         typedef void (*DisposeCallback)(Design*);
-
 
     /*
     ============================================================================
@@ -326,10 +323,10 @@ class JEGA_SL_IEDECL Design
 
 #define DESIGN_BOOL_PRED_STRUCT(desMeth) \
         struct desMeth##Pred : std::unary_function<Design, bool> { \
-            bool operator()(const Design& des) const { \
+            inline bool operator()(const Design& des) const { \
                 return des.desMeth(); \
             } \
-            bool operator()(const Design* des) const { \
+            inline bool operator()(const Design* des) const { \
                 return des->desMeth(); \
             } \
         };
@@ -464,13 +461,13 @@ class JEGA_SL_IEDECL Design
         std::size_t _id;
 
         /// The design variable values for this Design.
-        double* _variables;
+        var_rep_t* _variables;
 
         /// The objective function values for this Design.
-        double* _objectives;
+        obj_val_t* _objectives;
 
         /// The constraint function values for this Design.
-        double* _constraints;
+        con_val_t* _constraints;
 
         /// A bitmask of attributes used to eliminate the need for many bools.
         AttributeMask _attributes;
@@ -481,7 +478,7 @@ class JEGA_SL_IEDECL Design
         /// The next Design in this ones clone list.
         Design* _nClone;
 
-        /// The preceeding Design in this ones clone list.
+        /// The preceding Design in this ones clone list.
         Design* _pClone;
 
         void* _tag;
@@ -505,7 +502,7 @@ class JEGA_SL_IEDECL Design
         void
         SetObjective(
             std::size_t num,
-            double val
+            const obj_val_t& val
             );
 
         /// Sets the indicated constraint function value.
@@ -520,7 +517,7 @@ class JEGA_SL_IEDECL Design
         void
         SetConstraint(
             std::size_t num,
-            double val
+            const con_val_t& val
             );
 
         /// Sets the entire set of attributes for this Design
@@ -598,7 +595,7 @@ class JEGA_SL_IEDECL Design
          * \return The objective value stored in the \a num'th location.
          */
         inline
-        double
+        const obj_val_t&
         GetObjective(
             std::size_t num
             ) const;
@@ -612,7 +609,7 @@ class JEGA_SL_IEDECL Design
          * \return The constraint value stored in the \a num'th location.
          */
         inline
-        double
+        const con_val_t&
         GetConstraint(
             std::size_t num
             ) const;
@@ -691,7 +688,7 @@ class JEGA_SL_IEDECL Design
          * \return The double representation stored in the \a num'th location.
          */
         inline
-        double
+        const var_rep_t&
         GetVariableRep(
             std::size_t num
             ) const;
@@ -723,7 +720,7 @@ class JEGA_SL_IEDECL Design
         void
         SetVariableRep(
             std::size_t num,
-            double rep
+            const var_rep_t& rep
             );
 
         /// Check to see if the indicated attribute is set for this Design.
@@ -811,7 +808,7 @@ class JEGA_SL_IEDECL Design
 
         /// Returns true if evaluation failed for this Design.
         /**
-         * \return true if this Design has the Illconditioned attribute
+         * \return true if this Design has the Ill-conditioned attribute
          *         bit set and false otherwise.
          */
         inline
@@ -1000,9 +997,9 @@ class JEGA_SL_IEDECL Design
             bool lval
             );
 
-        /// Marks this Design as being illconditioned.
+        /// Marks this Design as being ill-conditioned.
         /**
-         * \param lval True to set the Illconditioned bit and false to
+         * \param lval True to set the Ill-conditioned bit and false to
          *             unset it.
          */
         inline
@@ -1076,7 +1073,7 @@ class JEGA_SL_IEDECL Design
     private:
 
         /**
-         * \brief Allocates memory for design variables, objective fucntions,
+         * \brief Allocates memory for design variables, objective functions,
          *        and constraints.
          */
         void

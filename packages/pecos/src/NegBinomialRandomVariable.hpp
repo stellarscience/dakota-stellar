@@ -54,15 +54,19 @@ public:
 
   Real pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+  void pull_parameter(short dist_param, unsigned int& val) const;
+  void push_parameter(short dist_param, unsigned int  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
   Real mode() const;
   Real standard_deviation() const;
   Real variance() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   //
   //- Heading: Member functions
@@ -93,10 +97,10 @@ protected:
   //- Heading: Data
   //
 
-  /// r parameter of negative binomial random variable
-  unsigned int numTrials;
   /// p parameter of negative binomial random variable
   Real probPerTrial;
+  /// r parameter of negative binomial random variable
+  unsigned int numTrials;
 
   /// pointer to the Boost negative_binomial_distribution instance
   negative_binomial_dist* negBinomialDist;
@@ -104,7 +108,7 @@ protected:
 
 
 inline NegBinomialRandomVariable::NegBinomialRandomVariable():
-  RandomVariable(BaseConstructor()), numTrials(1), probPerTrial(1.),
+  RandomVariable(BaseConstructor()), probPerTrial(1.), numTrials(1),
   negBinomialDist(NULL)
 { ranVarType = NEGATIVE_BINOMIAL; }
 
@@ -112,7 +116,7 @@ inline NegBinomialRandomVariable::NegBinomialRandomVariable():
 inline NegBinomialRandomVariable::
 NegBinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
   RandomVariable(BaseConstructor()),
-  numTrials(num_trials), probPerTrial(prob_per_trial),
+  probPerTrial(prob_per_trial), numTrials(num_trials), 
   negBinomialDist(new negative_binomial_dist((Real)num_trials, prob_per_trial))
 { ranVarType = NEGATIVE_BINOMIAL; }
 
@@ -141,29 +145,66 @@ inline Real NegBinomialRandomVariable::pdf(Real x) const
 { return bmth::pdf(*negBinomialDist, x); }
 
 
-inline Real NegBinomialRandomVariable::parameter(short dist_param) const
+inline void NegBinomialRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case NBI_TRIALS:      return (Real)numTrials; break;
-  case NBI_P_PER_TRIAL: return probPerTrial;    break;
+  case NBI_P_PER_TRIAL:  val = probPerTrial;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in NegBinomialRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in NegBinomialRandomVariable::pull_parameter(Real)."<< std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void NegBinomialRandomVariable::parameter(short dist_param, Real val)
+inline void NegBinomialRandomVariable::
+push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case NBI_TRIALS:      numTrials = (unsigned int)std::floor(val+.5); break;
-  case NBI_P_PER_TRIAL: probPerTrial = val;                           break;
+  case NBI_P_PER_TRIAL:  probPerTrial = val;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in NegBinomialRandomVariable::parameter()." << std::endl;
+	  << " in NegBinomialRandomVariable::push_parameter(Real)."<< std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new binomialDist instance
+}
+
+
+inline void NegBinomialRandomVariable::
+pull_parameter(short dist_param, unsigned int& val) const
+{
+  switch (dist_param) {
+  case NBI_TRIALS:  val = numTrials;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in NegBinomialRandomVariable::pull_parameter(unsigned int)."
+	  << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline void NegBinomialRandomVariable::
+push_parameter(short dist_param, unsigned int val)
+{
+  switch (dist_param) {
+  case NBI_TRIALS:  numTrials = val;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in NegBinomialRandomVariable::push_parameter(unsigned int)."
+	  << std::endl;
+    abort_handler(-1); break;
+  }
+  update_boost(); // create a new negBinomialDist instance
+}
+
+
+inline void NegBinomialRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(NBI_P_PER_TRIAL, probPerTrial);
+  rv.pull_parameter(NBI_TRIALS,      numTrials);
   update_boost(); // create a new negBinomialDist instance
 }
 
@@ -188,7 +229,7 @@ inline Real NegBinomialRandomVariable::variance() const
 { return bmth::variance(*negBinomialDist); }
 
 
-inline RealRealPair NegBinomialRandomVariable::bounds() const
+inline RealRealPair NegBinomialRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

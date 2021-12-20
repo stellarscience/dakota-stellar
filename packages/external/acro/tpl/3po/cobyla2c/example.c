@@ -43,7 +43,7 @@ static char const rcsid[] =
 
 #include "cobyla.h"
 
-cobyla_function calcfc;
+cobyla_function acro_calcfc;
 
 typedef struct 
 {
@@ -189,7 +189,8 @@ int main(int argc, char **argv)
       }
       iprint = 1;
       maxfun = 3500;
-      rc = cobyla(n, m, x, rhobeg, rhoend, iprint, &maxfun, 0,calcfc, &state);
+      rc = acro_cobyla(n, m, x, rhobeg, rhoend, iprint, &maxfun, 0,acro_calcfc, 
+		  &state);
       if (state.nprob == 10) {
         tempa = x[0] + x[2] + x[4] + x[6];
         tempb = x[1] + x[3] + x[5] + x[7];
@@ -217,7 +218,7 @@ int main(int argc, char **argv)
 } /* main */
 
 /* ------------------------------------------------------------------------- */
-int calcfc(int n, int m, double *x, double *f, double *con, void *state_)
+int acro_calcfc(int n, int m, double *x, double *f, double *con, void *state_)
 {
   example_state *state = (example_state *)state_;
   /* System generated locals */

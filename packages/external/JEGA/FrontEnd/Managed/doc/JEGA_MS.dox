@@ -99,7 +99,7 @@ Specialize the Main Page
  *
  * The program is licensed under the GNU Lesser General Public License and so
  * is free of charge.  Each source file is prepended with the following
- * copyright disclaimer (or equivolent):
+ * copyright disclaimer (or equivalent):
  *
  * \verbatim
  
@@ -217,7 +217,7 @@ Specialize the Main Page
  
    \endcode
  *
- * Quite obviously, this is a rediculous example that means nothing and so it
+ * Quite obviously, this is a ridiculous example that means nothing and so it
  * is up to you to fill in meaningful evaluation code.
  *
  * Another thing that must be done is that a problem configuration object must

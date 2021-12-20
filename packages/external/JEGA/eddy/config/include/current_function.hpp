@@ -25,8 +25,8 @@
             http://www.boost.org/libs/utility/current_function.html
 
         The following is the Boost license provided in accordance with the
-        requirements set forth by its use.  It it not necessarily the
-        licence under which this code is being distributed.  See the section
+        requirements set forth by its use.  It is not necessarily the
+        license under which this code is being distributed.  See the section
         on COPYRIGHT for that information.
 
             Boost Software License - Version 1.0 - August 17th, 2003
@@ -121,7 +121,7 @@ Set Current Function Definition
 
 # define EDDY_CURRENT_FUNCTION __PRETTY_FUNCTION__
 
- // this clause handles the microsoft compilers.
+ // this clause handles the Microsoft compilers.
 #elif defined(__FUNCSIG__)
 
 /// Expands to the undecorated signature of the enclosing function

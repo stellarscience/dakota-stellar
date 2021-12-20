@@ -24142,7 +24142,7 @@ void r8vec_index_sorted_range ( int n, double r[], int indx[], double r_lo,
   if ( r_hi < r[indx[*i_hi]] )
   {
     *i_hi = *i_hi - 1;
-    if ( i_hi < 0 )
+    if ( *i_hi < 0 )
     {
       *i_lo = *i_hi + 1;
     }

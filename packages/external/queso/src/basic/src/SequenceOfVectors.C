@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,6 +25,9 @@
 #include <queso/SequenceOfVectors.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
+#include <queso/FilePtr.h>
+
+#include <sstream>
 
 namespace QUESO {
 
@@ -169,7 +172,7 @@ SequenceOfVectors<V,M>::erasePositions(unsigned int initialPos, unsigned int num
   if (initialPos < this->subSequenceSize()) std::advance(posIteratorBegin,initialPos);
   else                                      posIteratorBegin = m_seq.end();
 
-  unsigned int posEnd = initialPos + numPos - 1;
+  unsigned int posEnd = initialPos + numPos;
   seqVectorPositionIteratorTypedef posIteratorEnd = m_seq.begin();
   if (posEnd < this->subSequenceSize()) std::advance(posIteratorEnd,posEnd);
   else                                  posIteratorEnd = m_seq.end();
@@ -1313,20 +1316,96 @@ SequenceOfVectors<V,M>::subWriteContents(
   unsigned int        initialPos,
   unsigned int        numPos,
   FilePtrSetStruct& filePtrSet,
-  const std::string&  fileType) const // "m or hdf"
+  const std::string&  fileType) const
 {
-  queso_require_msg(filePtrSet.ofsVar, "filePtrSet.ofsVar should not be NULL");
-
   if (fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT ||
       fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT) {
+    queso_require_msg(filePtrSet.ofsVar, "filePtrSet.ofsVar should not be NULL");
     this->subWriteContents(initialPos,
                            numPos,
                            *filePtrSet.ofsVar,
                            fileType);
   }
+#ifdef QUESO_HAS_HDF5
   else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
-    queso_error_msg("hdf file type not supported yet");
+
+    // Check the file is still legit
+    queso_require_greater_equal_msg(
+        filePtrSet.h5Var,
+        0,
+        "filePtrSet.h5Var should not be non-negative");
+
+    // Sanity check extent
+    queso_require_less_equal_msg(
+        (initialPos+numPos),
+        this->subSequenceSize(),
+        "invalid routine input parameters");
+
+    unsigned int numParams = m_vectorSpace.dimLocal();
+    unsigned int chainSize = this->subSequenceSize();
+    hsize_t dims[2] = { chainSize, numParams };
+
+    // Create dataspace
+    hid_t dataspace_id = H5Screate_simple(2, dims, dims);
+
+    // Sanity check dataspace
+    queso_require_greater_equal_msg(
+        dataspace_id,
+        0,
+        "error creating dataspace with id: " << dataspace_id);
+
+    // Create dataset
+    hid_t dataset_id = H5Dcreate(filePtrSet.h5Var,
+                                 "data",
+                                 H5T_IEEE_F64LE,
+                                 dataspace_id,
+                                 H5P_DEFAULT,
+                                 H5P_DEFAULT,
+                                 H5P_DEFAULT);
+
+    // Sanity check dataset
+    queso_require_greater_equal_msg(
+        dataset_id,
+        0,
+        "error creating dataset with id: " << dataset_id);
+
+    // This is so egregiously awfully badly terribly horrific I want to die.
+    //
+    // And, of course, if any of the subsequent H5* sanity check fail we
+    // throw an exception and leak a metric fuckton of memory.
+    double * data = (double *)malloc(numParams * chainSize * sizeof(double));
+
+    for (unsigned int i = 0; i < chainSize; i++) {
+      V tmpVec(*(m_seq[i]));
+      for (unsigned int j = 0; j < numParams; j++) {
+        data[numParams*i+j] = tmpVec[j];
+      }
+    }
+
+    // Write the dataset
+    herr_t status = H5Dwrite(
+        dataset_id,
+        H5T_NATIVE_DOUBLE,  // The type in memory
+        H5S_ALL,  // The dataspace in memory
+        dataspace_id,  // The file dataspace
+        H5P_DEFAULT,  // Xfer property list
+        data);
+
+    // Sanity check the write
+    queso_require_greater_equal_msg(
+        status,
+        0,
+        "error writing dataset to file with id: " << filePtrSet.h5Var);
+
+    // Clean up
+    free(data);
+    H5Dclose(dataset_id);
+    H5Sclose(dataspace_id);
+
+    // Should we close the file too?  It's unclear.
+
   }
+#endif
   else {
     queso_error_msg("invalid file type");
   }
@@ -1459,31 +1538,93 @@ SequenceOfVectors<V,M>::unifiedWriteContents(
   }
 
   if (m_env.inter0Rank() >= 0) {
-    for (unsigned int r = 0; r < (unsigned int) m_env.inter0Comm().NumProc(); ++r) {
-      if (m_env.inter0Rank() == (int) r) {
-        // My turn
-        if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) {
-          *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
-                                  << ": worldRank "      << m_env.worldRank()
-                                  << ", fullRank "       << m_env.fullRank()
-                                  << ", subEnvironment " << m_env.subId()
-                                  << ", subRank "        << m_env.subRank()
-                                  << ", inter0Rank "     << m_env.inter0Rank()
-                                //<< ", m_env.inter0Comm().NumProc() = " << m_env.inter0Comm().NumProc()
-                                  << ", fileName = "     << fileName
-                                  << ", about to open file for r = " << r
-                                  << std::endl;
+    if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
+#ifdef QUESO_HAS_HDF5
+      unsigned int chainSize = this->subSequenceSize();
+      unsigned int numParams = m_vectorSpace.dimLocal();
+      std::vector<double> data(numParams * chainSize);
+
+      for (unsigned int i = 0; i < chainSize; ++i) {
+        V tmpVec(*(m_seq[i]));
+        for (unsigned int j = 0; j < numParams; ++j) {
+          data[numParams*i+j] = tmpVec[j];
+        }
+      }
+
+      int numChains = m_env.inter0Comm().NumProc();
+      int numrecv = numParams * chainSize * numChains;
+      std::vector<double> recvbuf(numrecv);
+
+      m_env.inter0Comm().template Gather<double>(&data[0],
+                                                 numParams * chainSize,
+                                                 &recvbuf[0],
+                                                 numParams * chainSize,
+                                                 0,
+                                                 "",
+                                                 "");
+
+      if (m_env.inter0Rank() == 0) {
+        FilePtrSetStruct unifiedFilePtrSet;
+        m_env.openUnifiedOutputFile(fileName,
+                                    fileType,
+                                    false,
+                                    unifiedFilePtrSet);
+
+        hsize_t dimsf[2];
+        dimsf[0] = chainSize;
+        dimsf[1] = numParams;
+
+        hid_t datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
+        hid_t dataspace = H5Screate_simple(2, dimsf, NULL); // HDF5_rank = 2
+
+        queso_require_greater_equal_msg(
+            dataspace, 0,
+            "error creating dataspace of size " << dimsf[0] << " x " << dimsf[1]);
+
+        std::vector<hid_t> datasets(numChains, -1);
+        for (int c = 0; c < numChains; c++) {
+          std::ostringstream dataset_name;
+          dataset_name << "sub_" << c;
+
+          datasets[c] = H5Dcreate2(unifiedFilePtrSet.h5Var,
+                                   dataset_name.str().c_str(),
+                                   datatype,
+                                   dataspace,
+                                   H5P_DEFAULT,  // Link creation property list
+                                   H5P_DEFAULT,  // Dataset creation property list
+                                   H5P_DEFAULT); // Dataset access property list
+
+          queso_require_greater_equal_msg(
+              datasets[c], 0,
+              "error creating dataset `" << dataset_name.str() << "`");
+
+          herr_t status;
+          status = H5Dwrite(datasets[c],
+                            H5T_NATIVE_DOUBLE,
+                            H5S_ALL,
+                            H5S_ALL,
+                            H5P_DEFAULT,
+                            &recvbuf[numParams*chainSize*c]);
+
+          queso_require_greater_equal_msg(
+              status, 0,
+              "error writing to dataset on rank" << m_env.inter0Rank());
+
+          H5Dclose(datasets[c]);
         }
 
-        // bool writeOver = (r == 0);
-        bool writeOver = false; // A 'true' causes problems when the user chooses (via options
-                                // in the input file) to use just one file for all outputs.
-        FilePtrSetStruct unifiedFilePtrSet;
-        if (m_env.openUnifiedOutputFile(fileName,
-                                        fileType, // "m or hdf"
-                                        writeOver,
-                                        unifiedFilePtrSet)) {
-          if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) { // 2013-02-23
+        H5Sclose(dataspace);
+        H5Tclose(datatype);
+        m_env.closeFile(unifiedFilePtrSet, fileType);
+      }
+#endif  // QUESO_HAS_HDF5
+    }
+    else if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
+             (fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT)) {
+      for (unsigned int r = 0; r < (unsigned int) m_env.inter0Comm().NumProc(); ++r) {
+        if (m_env.inter0Rank() == (int) r) {
+          // My turn
+          if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) {
             *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
                                     << ": worldRank "      << m_env.worldRank()
                                     << ", fullRank "       << m_env.fullRank()
@@ -1492,168 +1633,109 @@ SequenceOfVectors<V,M>::unifiedWriteContents(
                                     << ", inter0Rank "     << m_env.inter0Rank()
                                   //<< ", m_env.inter0Comm().NumProc() = " << m_env.inter0Comm().NumProc()
                                     << ", fileName = "     << fileName
-                                    << ", just opened file for r = " << r
+                                    << ", about to open file for r = " << r
                                     << std::endl;
           }
 
-          unsigned int chainSize = this->subSequenceSize();
-          if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
-              (fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT)) {
-            if (r == 0) {
-              if (fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) {
-                // Need unified matlab header here since this is unifiedWriteContents
-                writeUnifiedMatlabHeader(*unifiedFilePtrSet.ofsVar,
-                    this->subSequenceSize()*m_env.inter0Comm().NumProc(),
-                    this->vectorSizeLocal());
-              }
-              else {  // If we get here it's definitely a txt file not matlab
-                writeTxtHeader(*unifiedFilePtrSet.ofsVar,
-                    this->subSequenceSize()*m_env.inter0Comm().NumProc(),
-                    this->vectorSizeLocal());
-              }
+          // bool writeOver = (r == 0);
+          bool writeOver = false; // A 'true' causes problems when the user chooses (via options
+                                  // in the input file) to use just one file for all outputs.
+          FilePtrSetStruct unifiedFilePtrSet;
+          if (m_env.openUnifiedOutputFile(fileName,
+                                          fileType, // "m or hdf"
+                                          writeOver,
+                                          unifiedFilePtrSet)) {
+            if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) { // 2013-02-23
+              *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
+                                      << ": worldRank "      << m_env.worldRank()
+                                      << ", fullRank "       << m_env.fullRank()
+                                      << ", subEnvironment " << m_env.subId()
+                                      << ", subRank "        << m_env.subRank()
+                                      << ", inter0Rank "     << m_env.inter0Rank()
+                                    //<< ", m_env.inter0Comm().NumProc() = " << m_env.inter0Comm().NumProc()
+                                      << ", fileName = "     << fileName
+                                      << ", just opened file for r = " << r
+                                      << std::endl;
             }
 
-            for (unsigned int j = 0; j < chainSize; ++j) { // 2013-02-23
-        //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): m_seq[" << j << "] = " << m_seq[j]
-              //          << std::endl;
-            //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): &(m_seq[" << j << "].map()) = " << &(m_seq[j]->map())
-              //          << std::endl;
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): (m_seq[" << j << "].map().NumMyElements = " << m_seq[j]->map().NumMyElements()
-              //          << std::endl;
-              //V tmpVec(*(m_seq[j]));
-        //std::cout << "*(m_seq[" << j << "]) = " << tmpVec
-              //          << std::endl;
-        //std::cout << "*(m_seq[" << j << "]) = " << *(m_seq[j])
-              //          << std::endl;
-
-              bool savedVectorPrintScientific = m_seq[j]->getPrintScientific();
-              bool savedVectorPrintState      = m_seq[j]->getPrintHorizontally();
-              m_seq[j]->setPrintScientific  (true);
-              m_seq[j]->setPrintHorizontally(true);
-
-              *unifiedFilePtrSet.ofsVar << *(m_seq[j])
-                                        << std::endl;
-
-              m_seq[j]->setPrintHorizontally(savedVectorPrintState);
-              m_seq[j]->setPrintScientific  (savedVectorPrintScientific);
-            }
-          }
-#ifdef QUESO_HAS_HDF5
-          else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
-            unsigned int numParams = m_vectorSpace.dimLocal();
-            if (r == 0) {
-              hid_t datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, data type created" << std::endl;
-              hsize_t dimsf[2];
-              dimsf[0] = numParams;
-              dimsf[1] = chainSize;
-              hid_t dataspace = H5Screate_simple(2, dimsf, NULL); // HDF5_rank = 2
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, data space created" << std::endl;
-              hid_t dataset = H5Dcreate2(unifiedFilePtrSet.h5Var,
-                                         "seq_of_vectors",
-                                         datatype,
-                                         dataspace,
-                                         H5P_DEFAULT,  // Link creation property list
-                                         H5P_DEFAULT,  // Dataset creation property list
-                                         H5P_DEFAULT); // Dataset access property list
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, data set created" << std::endl;
-
-              struct timeval timevalBegin;
-              int iRC = UQ_OK_RC;
-              iRC = gettimeofday(&timevalBegin,NULL);
-              if (iRC) {}; // just to remover compiler warning
-
-              //double* dataOut[numParams]; // avoid compiler warning
-        std::vector<double*> dataOut((size_t) numParams,NULL);
-              dataOut[0] = (double*) malloc(numParams*chainSize*sizeof(double));
-              for (unsigned int i = 1; i < numParams; ++i) { // Yes, from '1'
-                dataOut[i] = dataOut[i-1] + chainSize; // Yes, just 'chainSize', not 'chainSize*sizeof(double)'
-              }
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, memory allocated" << std::endl;
-              for (unsigned int j = 0; j < chainSize; ++j) {
-                V tmpVec(*(m_seq[j]));
-                for (unsigned int i = 0; i < numParams; ++i) {
-                  dataOut[i][j] = tmpVec[i];
+            unsigned int chainSize = this->subSequenceSize();
+            if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
+                (fileType == UQ_FILE_EXTENSION_FOR_TXT_FORMAT)) {
+              if (r == 0) {
+                if (fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) {
+                  // Need unified matlab header here since this is unifiedWriteContents
+                  writeUnifiedMatlabHeader(*unifiedFilePtrSet.ofsVar,
+                      this->subSequenceSize()*m_env.inter0Comm().NumProc(),
+                      this->vectorSizeLocal());
+                }
+                else {  // If we get here it's definitely a txt file not matlab
+                  writeTxtHeader(*unifiedFilePtrSet.ofsVar,
+                      this->subSequenceSize()*m_env.inter0Comm().NumProc(),
+                      this->vectorSizeLocal());
                 }
               }
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, memory filled" << std::endl;
 
-              herr_t status;
-              status = H5Dwrite(dataset,
-                                H5T_NATIVE_DOUBLE,
-                                H5S_ALL,
-                                H5S_ALL,
-                                H5P_DEFAULT,
-                                (void*) dataOut[0]);
-              if (status) {}; // just to remover compiler warning
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, data written" << std::endl;
+              for (unsigned int j = 0; j < chainSize; ++j) { // 2013-02-23
+          //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): m_seq[" << j << "] = " << m_seq[j]
+                //          << std::endl;
+              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): &(m_seq[" << j << "].map()) = " << &(m_seq[j]->map())
+                //          << std::endl;
+                //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): (m_seq[" << j << "].map().NumMyElements = " << m_seq[j]->map().NumMyElements()
+                //          << std::endl;
+                //V tmpVec(*(m_seq[j]));
+          //std::cout << "*(m_seq[" << j << "]) = " << tmpVec
+                //          << std::endl;
+          //std::cout << "*(m_seq[" << j << "]) = " << *(m_seq[j])
+                //          << std::endl;
 
-              double writeTime = MiscGetEllapsedSeconds(&timevalBegin);
-              if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 2)) {
-                *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
-                                        << ": worldRank "      << m_env.worldRank()
-                                        << ", fullRank "       << m_env.fullRank()
-                                        << ", subEnvironment " << m_env.subId()
-                                        << ", subRank "        << m_env.subRank()
-                                        << ", inter0Rank "     << m_env.inter0Rank()
-                                        << ", fileName = "     << fileName
-                                        << ", numParams = "    << numParams
-                                        << ", chainSize = "    << chainSize
-                                        << ", writeTime = "    << writeTime << " seconds"
-                                        << std::endl;
-              }
+                bool savedVectorPrintScientific = m_seq[j]->getPrintScientific();
+                bool savedVectorPrintState      = m_seq[j]->getPrintHorizontally();
+                m_seq[j]->setPrintScientific  (true);
+                m_seq[j]->setPrintHorizontally(true);
 
-              H5Dclose(dataset);
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, data set closed" << std::endl;
-              H5Sclose(dataspace);
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, data space closed" << std::endl;
-              H5Tclose(datatype);
-              //std::cout << "In SequenceOfVectors<V,M>::unifiedWriteContents(): h5 case, data type closed" << std::endl;
-              //free(dataOut[0]); // related to the changes above for compiler warning
-              for (unsigned int tmpIndex = 0; tmpIndex < dataOut.size(); tmpIndex++) {
-                free (dataOut[tmpIndex]);
+                *unifiedFilePtrSet.ofsVar << *(m_seq[j])
+                                          << std::endl;
+
+                m_seq[j]->setPrintHorizontally(savedVectorPrintState);
+                m_seq[j]->setPrintScientific  (savedVectorPrintScientific);
               }
             }
-            else {
-              queso_error_msg("hdf file type not supported for multiple sub-environments yet");
+
+            if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) {
+              *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
+                                      << ": worldRank "      << m_env.worldRank()
+                                      << ", fullRank "       << m_env.fullRank()
+                                      << ", subEnvironment " << m_env.subId()
+                                      << ", subRank "        << m_env.subRank()
+                                      << ", inter0Rank "     << m_env.inter0Rank()
+                                    //<< ", m_env.inter0Comm().NumProc() = " << m_env.inter0Comm().NumProc()
+                                      << ", fileName = "     << fileName
+                                      << ", about to close file for r = " << r
+                                      << std::endl;
             }
-          }
-#endif
-          else {
-            queso_error_msg("invalid file type");
-          }
 
-          if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) {
-            *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
-                                    << ": worldRank "      << m_env.worldRank()
-                                    << ", fullRank "       << m_env.fullRank()
-                                    << ", subEnvironment " << m_env.subId()
-                                    << ", subRank "        << m_env.subRank()
-                                    << ", inter0Rank "     << m_env.inter0Rank()
-                                  //<< ", m_env.inter0Comm().NumProc() = " << m_env.inter0Comm().NumProc()
-                                    << ", fileName = "     << fileName
-                                    << ", about to close file for r = " << r
-                                    << std::endl;
-          }
+            m_env.closeFile(unifiedFilePtrSet,fileType);
 
-          m_env.closeFile(unifiedFilePtrSet,fileType);
-
-          if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) {
-            *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
-                                    << ": worldRank "      << m_env.worldRank()
-                                    << ", fullRank "       << m_env.fullRank()
-                                    << ", subEnvironment " << m_env.subId()
-                                    << ", subRank "        << m_env.subRank()
-                                    << ", inter0Rank "     << m_env.inter0Rank()
-                                  //<< ", m_env.inter0Comm().NumProc() = " << m_env.inter0Comm().NumProc()
-                                    << ", fileName = "     << fileName
-                                    << ", just closed file for r = " << r
-                                    << std::endl;
-          }
-        } // if (m_env.openUnifiedOutputFile())
-      } // if (m_env.inter0Rank() == (int) r)
-      m_env.inter0Comm().Barrier();
-    } // for r
+            if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 10)) {
+              *m_env.subDisplayFile() << "In SequenceOfVectors<V,M>::unifiedWriteContents()"
+                                      << ": worldRank "      << m_env.worldRank()
+                                      << ", fullRank "       << m_env.fullRank()
+                                      << ", subEnvironment " << m_env.subId()
+                                      << ", subRank "        << m_env.subRank()
+                                      << ", inter0Rank "     << m_env.inter0Rank()
+                                    //<< ", m_env.inter0Comm().NumProc() = " << m_env.inter0Comm().NumProc()
+                                      << ", fileName = "     << fileName
+                                      << ", just closed file for r = " << r
+                                      << std::endl;
+            }
+          } // if (m_env.openUnifiedOutputFile())
+        } // if (m_env.inter0Rank() == (int) r)
+        m_env.inter0Comm().Barrier();
+      } // for r
+    }
+    else {
+      queso_error_msg("invalid file type");
+    }
 
     if (m_env.inter0Rank() == 0) {
       if ((fileType == UQ_FILE_EXTENSION_FOR_MATLAB_FORMAT) ||
@@ -1768,7 +1850,7 @@ SequenceOfVectors<V,M>::unifiedReadContents(
               // Read '=' sign
               *unifiedFilePtrSet.ifsVar >> tmpString;
           //std::cout << "Just read '" << tmpString << "'" << std::endl;
-              queso_require_equal_to_msg(tmpString, "=", "string should be the '=' sign");
+              queso_require_equal_to_msg(tmpString, std::string("="), std::string("string should be the '=' sign"));
 
               // Read 'zeros(n_positions,n_params)' string
               *unifiedFilePtrSet.ifsVar >> tmpString;
@@ -1836,7 +1918,7 @@ SequenceOfVectors<V,M>::unifiedReadContents(
               // Read '=' sign
               *unifiedFilePtrSet.ifsVar >> tmpString;
         //std::cout << "Core 0 just read '" << tmpString << "'" << std::endl;
-              queso_require_equal_to_msg(tmpString, "=", "in core 0, string should be the '=' sign");
+              queso_require_equal_to_msg(tmpString, std::string("="), std::string("in core 0, string should be the '=' sign"));
 
               // Take into account the ' [' portion
         std::streampos tmpPos = unifiedFilePtrSet.ifsVar->tellg();
@@ -1856,7 +1938,7 @@ SequenceOfVectors<V,M>::unifiedReadContents(
           else if (fileType == UQ_FILE_EXTENSION_FOR_HDF_FORMAT) {
             if (r == 0) {
               hid_t dataset = H5Dopen2(unifiedFilePtrSet.h5Var,
-                                       "seq_of_vectors",
+                                       "data",
                                        H5P_DEFAULT); // Dataset access property list
               hid_t datatype  = H5Dget_type(dataset);
               H5T_class_t t_class = H5Tget_class(datatype);

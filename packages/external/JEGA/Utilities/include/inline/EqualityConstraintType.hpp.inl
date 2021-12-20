@@ -87,10 +87,10 @@ Inline Mutators
 inline
 void
 EqualityConstraintType::SetTargetValue(
-    double val
+    con_val_t val
     )
 {
-    _value = val;
+    this->_value = val;
 }
 
 inline
@@ -99,7 +99,7 @@ EqualityConstraintType::SetAllowableViolation(
     double viol
     )
 {
-    _viol = viol;
+    this->_viol = viol;
 }
 
 
@@ -113,11 +113,11 @@ Inline Accessors
 */
 
 inline
-double
+con_val_t
 EqualityConstraintType::GetTargetValue(
     ) const
 {
-    return _value;
+    return this->_value;
 }
 
 inline
@@ -125,7 +125,7 @@ double
 EqualityConstraintType::GetAllowableViolation(
     ) const
 {
-    return _viol;
+    return this->_viol;
 }
 
 

@@ -521,11 +521,11 @@ class JEGA_SL_IEDECL ParameterDatabase
             ) = 0;
 
         /**
-         * \brief Override to map the supplied boolean value to the supplied
+         * \brief Override to map the supplied Boolean value to the supplied
          *        tag.
          *
          * Generally, the mapping should always succeed.  If \a tag is already
-         * the key for some other boolean value, this should do a replacement.
+         * the key for some other Boolean value, this should do a replacement.
          *
          * \param tag The key to which the requested value is to be mapped.
          * \param value The value that is to be mapped by key.

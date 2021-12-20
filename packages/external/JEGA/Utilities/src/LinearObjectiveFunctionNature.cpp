@@ -265,7 +265,8 @@ LinearObjectiveFunctionNature::EvaluateObjective(
         result += this->_coeffs[i] * des.GetVariableRep(i);
 
     des.SetObjective(
-        this->GetType().GetObjectiveFunctionInfo().GetNumber(), result
+        this->GetType().GetObjectiveFunctionInfo().GetNumber(),
+        static_cast<obj_val_t>(result)
         );
     return true;
 

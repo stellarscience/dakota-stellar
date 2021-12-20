@@ -143,6 +143,11 @@ public:
   OptppArray<int> getConstraintMappingIndices() const 
   		{ return constraintMappingIndices_; }
 
+  /**
+   * Reset values to allow multiple instantiations
+   */
+  void reset() {;}
+
   
 /**
  * Assigns a value to the constraint matrix.

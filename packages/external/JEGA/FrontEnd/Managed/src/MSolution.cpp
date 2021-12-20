@@ -136,9 +136,16 @@ MSolution::GetVariable(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return Convert::ToDouble(MANAGED_LIST_ITEM(
-		this->_X, static_cast<int>(num)
-		));
+    return Convert::ToDouble(this->_X[static_cast<int>(num)]);
+}
+
+double
+MSolution::GetVariableRep(
+    eddy::utilities::uint64_t num
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return Convert::ToDouble(this->_X[static_cast<int>(num)]);
 }
 
 double
@@ -147,9 +154,7 @@ MSolution::GetObjective(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return Convert::ToDouble(MANAGED_LIST_ITEM(
-		this->_F, static_cast<int>(num)
-		));
+    return Convert::ToDouble(this->_F[static_cast<int>(num)]);
 }
 
 double
@@ -158,9 +163,7 @@ MSolution::GetConstraint(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return Convert::ToDouble(MANAGED_LIST_ITEM(
-        this->_G, static_cast<int>(num)
-		));
+    return Convert::ToDouble(this->_G[static_cast<int>(num)]);
 }
 
 eddy::utilities::uint64_t
@@ -320,31 +323,31 @@ Structors
 MSolution::MSolution(
     const JEGA::Utilities::Design& des
     ) :
-        _X(MANAGED_GCNEW DoubleVector(static_cast<int>(des.GetNDV()))),
-        _F(MANAGED_GCNEW DoubleVector(static_cast<int>(des.GetNOF()))),
-        _G(MANAGED_GCNEW DoubleVector(static_cast<int>(des.GetNCN()))),
+        _X(gcnew DoubleVector(static_cast<int>(des.GetNDV()))),
+        _F(gcnew DoubleVector(static_cast<int>(des.GetNOF()))),
+        _G(gcnew DoubleVector(static_cast<int>(des.GetNCN()))),
         _attributes(static_cast<eddy::utilities::bitmask8_t>(
             des.GetRawAttributes().to_ulong()
             )),
         _id(des.GetID()),
-        _tag(MANAGED_NULL_HANDLE)
+        _tag(nullptr)
 {
     EDDY_FUNC_DEBUGSCOPE
 
     // record the design variables first.
     const std::size_t ndv = des.GetNDV();
     for(std::size_t i=0; i<ndv; ++i)
-        this->_X->Add(MANAGED_BOX(des.GetVariableValue(i)));
+        this->_X->Add(des.GetVariableValue(i));
 
     // now the objective function values.
     const std::size_t nof = des.GetNOF();
     for(std::size_t i=0; i<nof; ++i)
-        this->_F->Add(MANAGED_BOX(des.GetObjective(i)));
+        this->_F->Add(des.GetObjective(i));
 
     // and now the constraint values.
     const std::size_t ncn = des.GetNCN();
     for(std::size_t i=0; i<ncn; ++i)
-        this->_G->Add(MANAGED_BOX(des.GetConstraint(i)));
+        this->_G->Add(des.GetConstraint(i));
 
     void* tag = des.GetTag();
     if(tag != 0x0) this->_tag = GCHandle::FromIntPtr(IntPtr(tag)).Target;
@@ -352,16 +355,16 @@ MSolution::MSolution(
 
 
 MSolution::MSolution(
-    MDesign MOH mDes
+    MDesign^ mDes
     ) :
-        _X(MANAGED_GCNEW DoubleVector(static_cast<int>(mDes->GetNDV()))),
-        _F(MANAGED_GCNEW DoubleVector(static_cast<int>(mDes->GetNOF()))),
-        _G(MANAGED_GCNEW DoubleVector(static_cast<int>(mDes->GetNCN()))),
+        _X(gcnew DoubleVector(static_cast<int>(mDes->GetNDV()))),
+        _F(gcnew DoubleVector(static_cast<int>(mDes->GetNOF()))),
+        _G(gcnew DoubleVector(static_cast<int>(mDes->GetNCN()))),
         _attributes(static_cast<eddy::utilities::bitmask8_t>(
             mDes->Manifest().GetRawAttributes().to_ulong()
             )),
         _id(static_cast<size_t>(mDes->GetID())),
-        _tag(MANAGED_NULL_HANDLE)
+        _tag(nullptr)
 {
     EDDY_FUNC_DEBUGSCOPE
 
@@ -370,17 +373,17 @@ MSolution::MSolution(
     // record the design variables first.
     const std::size_t ndv = des.GetNDV();
     for(std::size_t i=0; i<ndv; ++i)
-        this->_X->Add(MANAGED_BOX(des.GetVariableValue(i)));
+        this->_X->Add(des.GetVariableValue(i));
 
     // now the objective function values.
     const std::size_t nof = des.GetNOF();
     for(std::size_t i=0; i<nof; ++i)
-        this->_F->Add(MANAGED_BOX(des.GetObjective(i)));
+        this->_F->Add(des.GetObjective(i));
 
     // and now the constraint values.
     const std::size_t ncn = des.GetNCN();
     for(std::size_t i=0; i<ncn; ++i)
-        this->_G->Add(MANAGED_BOX(des.GetConstraint(i)));
+        this->_G->Add(des.GetConstraint(i));
 
     void* tag = des.GetTag();
     if(tag != 0x0) this->_tag = GCHandle::FromIntPtr(IntPtr(tag)).Target;

@@ -277,7 +277,7 @@ if (num_xovers > 0) {
      this->apply_xover(this->population(map[(size_t)2*i]), 
 	      this->population(map[(size_t)2*i+1]),
               this->trial(i));
-     if (this->trial(i).eval_flag == ON) {
+     if (this->trial(i).eval_flag == utilib::ON) {
         this->trial(i).parent1_id = map[(size_t)2*i];
         this->trial(i).parent2_id = map[(size_t)2*i+1];
         this->trial(i).gen_status = 2;
@@ -341,7 +341,7 @@ if (num_mutations > 0) {
      bool status = this->apply_mutation(this->trial(trial_order[i]), 
 		(trial_order[i] >= (int)num_xovers ? map[(size_t)trial_order[i]-num_xovers] : -1));
      if (status) {
-        this->trial(trial_order[i]).eval_flag == ON;
+       this->trial(trial_order[i]).eval_flag == utilib::ON;
         this->trial(trial_order[i]).gen_status += 1;
         }
      OUTPUTPR(3, ucout << ")" << std::endl);

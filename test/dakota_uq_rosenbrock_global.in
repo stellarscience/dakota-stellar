@@ -4,7 +4,6 @@
 # DAKOTA INPUT FILE : dakota_uq_rosenbrock_global.in
 
 environment,
-	#graphics
 
 method,
 	global_reliability
@@ -15,6 +14,8 @@ method,
 #	  u_gaussian_process
 	  response_levels = .5 1. 5. 10. 50. 100. 500. 1000.
 	  seed = 123457
+#   historical default:
+    convergence_tolerance 0.001
 
 variables,
 	normal_uncertain = 2

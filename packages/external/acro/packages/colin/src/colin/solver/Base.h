@@ -31,7 +31,7 @@
 #include <utilib/AnyRNG.h>
 #include <utilib/PropertyDict.h>
 
-#include <boost/signals.hpp>
+#include <boost/signals2.hpp>
 #include <boost/bind.hpp>
 #ifdef ACRO_HAVE_MPI
 #include <mpi.h>
@@ -258,7 +258,7 @@ protected: // methods
    virtual const EvaluationManager& get_problem_evaluation_manager() = 0;
 
    /// The signal prototype for construct() element processing callbacks
-   typedef boost::signal< void(TiXmlElement*, bool) >  ConstructSignal_t;
+   typedef boost::signals2::signal< void(TiXmlElement*, bool) >  ConstructSignal_t;
 
    /// Register derived class callback function for construct()
    ConstructSignal_t& register_construct(std::string element);
@@ -310,10 +310,10 @@ protected: // data
    utilib::PropertyDict solver_statistics;
 
    /// Called by reset() to reset derived classes before call to optimize()
-   boost::signal<void()>               reset_signal;
+   boost::signals2::signal<void()>               reset_signal;
 
    /// Called by results() to collect the solver results from derived classes
-   boost::signal<void(utilib::PropertyDict&, int)>  results_signal;
+   boost::signals2::signal<void(utilib::PropertyDict&, int)>  results_signal;
 
    ///
    utilib::CommonIO commonio;

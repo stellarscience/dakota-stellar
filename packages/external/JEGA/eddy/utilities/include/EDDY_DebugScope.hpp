@@ -569,7 +569,7 @@ class EDDY_SL_IEDECL EDDY_Debug
         /// This method is in the expansion of the EDDY_ASSERT(cond) macro.
         /**
          * It causes the supplied message \a message which is the text
-         * equivolent of the \a cond if the EDDY_ASSERT macro is used to
+         * equivalent of the \a cond if the EDDY_ASSERT macro is used to
          * appear.  This method causes a scope trace print and program abort.
          *
          * \param message The message to display.

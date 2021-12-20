@@ -6,7 +6,8 @@
 
     CONTENTS:
 
-        Inline methods of exception classes used by the Eddy C++ Thread Safety Project.
+        Inline methods of exception classes used by the Eddy C++ Thread Safety
+		Project.
 
     NOTES:
 

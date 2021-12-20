@@ -104,37 +104,11 @@ Static Member Data Definitions
 
 
 
-
-/*
-================================================================================
-Mutators
-================================================================================
-*/
-
-
-
-
-
-
-
-/*
-================================================================================
-Accessors
-================================================================================
-*/
-
-
-
-
-
-
-
 /*
 ================================================================================
 Public Methods
 ================================================================================
 */
-
 const ProblemConfig&
 MProblemConfig::Manifest(
     )
@@ -177,235 +151,280 @@ MProblemConfig::GetMaxGuffSize(
 	return static_cast<System::UInt32>(this->_theConfig->GetMaxGuffSize());
 }
 
+void
+MProblemConfig::SetMaxDiscardCacheSize(
+    System::UInt32 maxSize
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    this->_theConfig->SetMaxDiscardCacheSize(maxSize);
+}
+
+System::UInt32
+MProblemConfig::GetMaxDiscardCacheSize(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+	return static_cast<System::UInt32>(
+        this->_theConfig->GetMaxDiscardCacheSize()
+        );
+}
+
 bool
 MProblemConfig::AddContinuumRealVariable(
-    System::String MOH label,
+    System::String^ label,
     double lowerBound,
     double upperBound,
     int precision
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddContinuumRealVariable(
+    return this->_theConfig->AddContinuumRealVariable(
         ToStdStr(label), lowerBound, upperBound, precision
         );
 }
 
 bool
 MProblemConfig::AddDiscreteRealVariable(
-    System::String MOH label,
-    DoubleVector MOH values
+    System::String^ label,
+    DoubleVector^ values
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddDiscreteRealVariable(
+    return this->_theConfig->AddDiscreteRealVariable(
         ToStdStr(label), ToStdDoubleVector(values)
         );
 }
 
 bool
 MProblemConfig::AddContinuumIntegerVariable(
-    System::String MOH label,
+    System::String^ label,
     int lowerBound,
     int upperBound
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddContinuumIntegerVariable(
+    return this->_theConfig->AddContinuumIntegerVariable(
         ToStdStr(label), lowerBound, upperBound
         );
 }
 
 bool
 MProblemConfig::AddDiscreteIntegerVariable(
-    System::String MOH label,
-    IntVector MOH values
+    System::String^ label,
+    IntVector^ values
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddDiscreteIntegerVariable(
+    return this->_theConfig->AddDiscreteIntegerVariable(
         ToStdStr(label), ToStdIntVector(values)
         );
 }
 
 bool
 MProblemConfig::AddBooleanVariable(
-    System::String MOH label
+    System::String^ label
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddBooleanVariable(ToStdStr(label));
+    return this->_theConfig->AddBooleanVariable(ToStdStr(label));
 }
 
 bool
 MProblemConfig::AddLinearMinimizeObjective(
-    System::String MOH label,
-    DoubleVector MOH coeffs
+    System::String^ label,
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddLinearMinimizeObjective(
+    return this->_theConfig->AddLinearMinimizeObjective(
         ToStdStr(label), ToStdDoubleVector(coeffs)
         );
 }
 
 bool
 MProblemConfig::AddLinearMaximizeObjective(
-    System::String MOH label,
-    DoubleVector MOH coeffs
+    System::String^ label,
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddLinearMaximizeObjective(
+    return this->_theConfig->AddLinearMaximizeObjective(
         ToStdStr(label), ToStdDoubleVector(coeffs)
         );
 }
 
 bool
 MProblemConfig::AddLinearSeekValueObjective(
-    System::String MOH label,
+    System::String^ label,
     double value,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddLinearSeekValueObjective(
+    return this->_theConfig->AddLinearSeekValueObjective(
         ToStdStr(label), value, ToStdDoubleVector(coeffs)
         );
 }
 
 bool
 MProblemConfig::AddLinearSeekRangeObjective(
-    System::String MOH label,
+    System::String^ label,
     double lowerBound,
     double upperBound,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddLinearSeekRangeObjective(
-        ToStdStr(label), lowerBound, upperBound,
-        ToStdDoubleVector(coeffs)
+    return this->_theConfig->AddLinearSeekRangeObjective(
+        ToStdStr(label), lowerBound, upperBound, ToStdDoubleVector(coeffs)
         );
 }
 
 bool
 MProblemConfig::AddNonlinearMinimizeObjective(
-    System::String MOH label
+    System::String^ label
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddNonlinearMinimizeObjective(ToStdStr(label));
+    return this->_theConfig->AddNonlinearMinimizeObjective(ToStdStr(label));
 }
 
 bool
 MProblemConfig::AddNonlinearMaximizeObjective(
-    System::String MOH label
+    System::String^ label
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddNonlinearMaximizeObjective(ToStdStr(label));
+    return this->_theConfig->AddNonlinearMaximizeObjective(ToStdStr(label));
 }
 
 bool
 MProblemConfig::AddNonlinearSeekValueObjective(
-    System::String MOH label,
+    System::String^ label,
     double value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddNonlinearSeekValueObjective(ToStdStr(label), value);
+    return this->_theConfig->AddNonlinearSeekValueObjective(
+        ToStdStr(label), value
+        );
 }
 
 bool
 MProblemConfig::AddNonlinearSeekRangeObjective(
-    System::String MOH label,
+    System::String^ label,
     double lowerBound,
     double upperBound
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddNonlinearSeekRangeObjective(
+    return this->_theConfig->AddNonlinearSeekRangeObjective(
         ToStdStr(label), lowerBound, upperBound
         );
 }
 
 bool
 MProblemConfig::AddLinearInequalityConstraint(
-    System::String MOH label,
-    double upperLimit,
-    DoubleVector MOH coeffs
+    System::String^ label,
+    con_val_t upperLimit,
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddLinearInequalityConstraint(
+    return this->_theConfig->AddLinearInequalityConstraint(
         ToStdStr(label), upperLimit, ToStdDoubleVector(coeffs)
         );
 }
 
 bool
 MProblemConfig::AddLinearEqualityConstraint(
-    System::String MOH label,
-    double target,
+    System::String^ label,
+    con_val_t target,
     double allowedViol,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddLinearEqualityConstraint(
+    return this->_theConfig->AddLinearEqualityConstraint(
         ToStdStr(label), target, allowedViol, ToStdDoubleVector(coeffs)
         );
 }
 
 bool
 MProblemConfig::AddLinearTwoSidedInequalityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double lowerLimit,
     double upperLimit,
-    DoubleVector MOH coeffs
+    DoubleVector^ coeffs
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddLinearTwoSidedInequalityConstraint(
+    return this->_theConfig->AddLinearTwoSidedInequalityConstraint(
         ToStdStr(label), lowerLimit, upperLimit, ToStdDoubleVector(coeffs)
         );
 }
 
 bool
+MProblemConfig::AddLinearNotEqualityConstraint(
+    System::String^ label,
+    double target,
+    DoubleVector^ coeffs
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return this->_theConfig->AddLinearNotEqualityConstraint(
+        ToStdStr(label), target, ToStdDoubleVector(coeffs)
+        );
+}
+
+bool
 MProblemConfig::AddNonlinearInequalityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddNonlinearInequalityConstraint(
+    return this->_theConfig->AddNonlinearInequalityConstraint(
         ToStdStr(label), upperLimit
         );
 }
 
 bool
 MProblemConfig::AddNonlinearEqualityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double target,
     double allowedViol
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddNonlinearEqualityConstraint(
+    return this->_theConfig->AddNonlinearEqualityConstraint(
         ToStdStr(label), target, allowedViol
         );
 }
 
 bool
 MProblemConfig::AddNonlinearTwoSidedInequalityConstraint(
-    System::String MOH label,
+    System::String^ label,
     double lowerLimit,
     double upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return _theConfig->AddNonlinearTwoSidedInequalityConstraint(
+    return this->_theConfig->AddNonlinearTwoSidedInequalityConstraint(
         ToStdStr(label), lowerLimit, upperLimit
+        );
+}
+
+bool
+MProblemConfig::AddNonlinearNotEqualityConstraint(
+    System::String^ label,
+    double target
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return this->_theConfig->AddNonlinearNotEqualityConstraint(
+        ToStdStr(label), target
         );
 }
 
@@ -433,12 +452,12 @@ Subclass Overridable Methods
 ================================================================================
 */
 void
-MProblemConfig::MANAGED_DISPOSE(
+MProblemConfig::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    delete _theConfig;
-    _theConfig = 0x0;
+    delete this->_theConfig;
+    this->_theConfig = 0x0;
 }
 
 
@@ -474,7 +493,7 @@ MProblemConfig::~MProblemConfig(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    MANAGED_DISPOSE();
+    DoDispose();
 }
 
 

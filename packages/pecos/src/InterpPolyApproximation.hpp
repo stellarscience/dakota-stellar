@@ -16,6 +16,7 @@
 
 #include "PolynomialApproximation.hpp"
 #include "BasisPolynomial.hpp"
+#include "SharedInterpPolyApproxData.hpp"
 
 namespace Pecos {
 
@@ -48,15 +49,13 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// compute the coefficients for the expansion of multivariate
-  /// interpolation polynomials
-  void compute_coefficients();
-
 protected:
 
   //
   //- Heading: Virtual function redefinitions
   //
+
+  bool update_active_iterators(const UShortArray& key);
 
   int min_coefficients() const;
 
@@ -68,21 +67,21 @@ protected:
   void compute_total_sobol();
 
   /// compute numerical moments to order 4
-  void compute_moments();
+  void compute_moments(bool full_stats = true, bool combined_stats = false);
   /// compute numerical moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x);
+  void compute_moments(const RealVector& x, bool full_stats = true,
+		       bool combined_stats = false);
 
   //
   //- Heading: New virtual functions
   //
 
-  /// derived portion of compute_coefficients()
-  virtual void compute_expansion_coefficients() = 0;
-
   /// compute moments of response using numerical integration
-  virtual void integrate_response_moments(size_t num_moments) = 0;
+  virtual void integrate_response_moments(size_t num_moments,
+					  bool combined_stats) = 0;
   /// compute moments of expansion using numerical integration
-  virtual void integrate_expansion_moments(size_t num_moments) = 0;
+  virtual void integrate_expansion_moments(size_t num_moments,
+					   bool combined_stats) = 0;
 
   virtual void compute_total_sobol_indices() = 0;
   virtual void compute_partial_variance(const BitArray& set_value);
@@ -90,6 +89,9 @@ protected:
   //
   //- Heading: Convenience functions
   //
+
+  /// test accuracy of the interpolants
+  void test_interpolation();
 
   //
   //- Heading: Data
@@ -124,25 +126,56 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
 
 
-inline void InterpPolyApproximation::compute_moments()
+inline bool InterpPolyApproximation::
+update_active_iterators(const UShortArray& key)
 {
-  // standard variables mode supports four moments using the collocation rules
-  // as integration rules
-  integrate_response_moments(4);
+  surrData.active_key(key);
+  if (!modSurrData.is_null())
+    modSurrData.active_key(key);
 
-  // do this second so that clearing any existing rules does not cause rework
-  //if (expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
-    integrate_expansion_moments(4);
+  PolynomialApproximation::update_active_iterators(key);
+  return true;
 }
 
 
-inline void InterpPolyApproximation::compute_moments(const RealVector& x)
+inline void InterpPolyApproximation::
+compute_moments(bool full_stats, bool combined_stats)
+{
+  if (full_stats) {
+    // std variables mode supports four moments using the collocation rules
+    // as integration rules
+    integrate_response_moments(4, combined_stats);
+    // do this second so that clearing any existing rules does not cause rework
+    //if (expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
+    integrate_expansion_moments(4, combined_stats);
+  }
+  else { // only two moments required for incremental metrics
+    //integrate_response_moments(2, combined_stats);
+
+    // this approach utilizes bit trackers for computed moments:
+    numMomentsIter->second.resize(2);
+    if (combined_stats)
+      { combined_mean(); combined_variance(); }
+    else
+      {          mean();          variance(); }
+    expMomentsIter->second.resize(0);
+  }
+}
+
+
+inline void InterpPolyApproximation::
+compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
   // all variables mode only supports first two moments
-  mean(x); variance(x);
-  //standardize_moments(numericalMoments);
-  //integrate_expansion_moments(4, x);
+  numMomentsIter->second.resize(2);
+  if (combined_stats)
+    { combined_mean(x); combined_variance(x); }
+  else
+    {          mean(x);          variance(x); }
 
+  //if (full_stats) integrate_expansion_moments(4, x, combined_stats);
+  //else
+    expMomentsIter->second.resize(0);
   // Note: it would be feasible to implement an all_variables version of
   // integrate_expansion_moments() by evaluating the combined expansion at
   // {design/epistemic=initialPtU,aleatory=Gauss points}

@@ -10,12 +10,15 @@
     \brief A driver program for PECOS */
 
 #include "DataTransformation.hpp"
+#include "pecos_data_types.hpp"
 
 //#define TIMING
 
 #ifdef TIMING
 #include <ctime>
 #endif // TIMING
+
+using namespace Pecos;
 
 
 /// A driver program for PECOS.
@@ -27,28 +30,27 @@ int main(int argc, char* argv[])
 {
   // Instantiate/initialize the data transformation instance which manages
   // the ProbabilityTransformation and BasisFunction instances.
-  Pecos::DataTransformation
-    ifft_transform("inverse_fourier_shinozuka_deodatis");
+  DataTransformation ifft_transform("inverse_fourier_shinozuka_deodatis");
 
   // Constants for this problem
-  Pecos::Real vbar  = 5000.; // cut-off frequency (rad/s)
-  Pecos::Real T     = 10.;   // stop time (sec)
-  size_t      nseed = 314;   // random number seed
-  size_t      ns    = 100;   // number of samples
+  Real   vbar  = 5000.; // cut-off frequency (rad/s)
+  Real   T     = 10.;   // stop time (sec)
+  size_t nseed = 314;   // random number seed
+  size_t ns    = 100;   // number of samples
 
   // Demonstrate BLWN internally-defined PSD
   ifft_transform.initialize(T, vbar, nseed);
   ifft_transform.power_spectral_density("band_limited_white_noise", 2000.);
 
   // compute and return ns samples all at once
-  const Pecos::RealMatrix& samples = ifft_transform.compute_samples(ns);
+  const RealMatrix& samples = ifft_transform.compute_samples(ns);
 #ifndef TIMING
   PCout << "Sample matrix:\n" << samples << std::endl;
 #endif // TIMING
 
   // compute and return two more, one at a time
   for (size_t i=ns; i<ns+2; i++) {
-    const Pecos::RealVector& sample = ifft_transform.compute_sample();
+    const RealVector& sample = ifft_transform.compute_sample();
 #ifndef TIMING
     PCout << "Sample " << i+1 << ":\n" << sample << std::endl;
 #endif // TIMING
@@ -58,7 +60,7 @@ int main(int argc, char* argv[])
   // requires Matrix(i,:) -> Vector conversion
   //ifft_transform.compute_samples(ns);
   //for (size_t i=0; i<ns; i++) {
-  //  const Pecos::RealVector& sample = ifft_transform.sample(i);
+  //  const RealVector& sample = ifft_transform.sample(i);
   //  PCout << "Sample " << i+1 << ":\n" << sample_i << std::endl;
   //}
 

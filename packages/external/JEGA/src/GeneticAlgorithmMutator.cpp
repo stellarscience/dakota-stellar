@@ -60,6 +60,7 @@ Includes
 
 #include <utilities/include/Math.hpp>
 #include <GeneticAlgorithmMutator.hpp>
+#include <utilities/include/int_types.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <../Utilities/include/DesignGroup.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
@@ -189,13 +190,18 @@ Subclass Visible Methods
 vector<DesignDVSortSet::iterator>
 GeneticAlgorithmMutator::ChooseDesignsToMutate(
     size_t howMany,
-    DesignGroup& from
+    DesignGroup& from,
+    const bool& allowRepeats
     )
 {
+    if(howMany == 0) return vector<DesignDVSortSet::iterator>();
+
     vector<size_t> mutate_locs(howMany, 0U);
 
+    const size_t hiVal = from.SizeDV() - 1;
+
     for(size_t i=0; i<howMany; ++i) mutate_locs[i] =
-        RandomNumberGenerator::UniformInt<size_t>(0, from.SizeDV()-1);
+        RandomNumberGenerator::UniformInt<size_t>(0, hiVal);
 
     std::sort(mutate_locs.begin(), mutate_locs.end());
 
@@ -203,13 +209,18 @@ GeneticAlgorithmMutator::ChooseDesignsToMutate(
     toMutate.reserve(howMany);
 
     DesignDVSortSet::iterator tmIt(from.BeginDV());
-    size_t last = 0;
-    for(size_t i=0; i<howMany; ++i)
+    size_t iLoc = mutate_locs[0];
+    std::advance(tmIt, iLoc);
+    toMutate.push_back(tmIt);
+    eddy::utilities::int64_t last = static_cast<eddy::utilities::int64_t>(iLoc);
+
+    for(size_t i=1; i<howMany; ++i)
     {
-        if(mutate_locs[i] == last) continue;
-        std::advance(tmIt, mutate_locs[i] - last);
-        toMutate.push_back(tmIt);
-        last = mutate_locs[i];
+        size_t iLoc = mutate_locs[i];
+        if(!allowRepeats && iLoc == last) continue;
+		std::advance(tmIt, iLoc - last);
+		toMutate.push_back(tmIt);
+        last = static_cast<eddy::utilities::int64_t>(iLoc);
     }
 
     return toMutate;

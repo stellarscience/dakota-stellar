@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -34,7 +34,7 @@ template<class V, class M>
 GaussianLikelihoodFullCovarianceRandomCoefficient<V, M>::GaussianLikelihoodFullCovarianceRandomCoefficient(
     const char * prefix, const VectorSet<V, M> & domainSet,
     const V & observations, const M & covariance)
-  : BaseGaussianLikelihood<V, M>(prefix, domainSet, observations),
+  : LikelihoodBase<V, M>(prefix, domainSet, observations),
     m_covariance(covariance)
 {
   if (covariance.numRowsLocal() != observations.sizeLocal()) {
@@ -49,25 +49,12 @@ GaussianLikelihoodFullCovarianceRandomCoefficient<V, M>::~GaussianLikelihoodFull
 
 template<class V, class M>
 double
-GaussianLikelihoodFullCovarianceRandomCoefficient<V, M>::actualValue(
-    const V & domainVector, const V * domainDirection, V * gradVector,
-    M * hessianMatrix, V * hessianEffect) const
-{
-  return std::exp(this->lnValue(domainVector, domainDirection, gradVector,
-        hessianMatrix, hessianEffect));
-}
-
-template<class V, class M>
-double
-GaussianLikelihoodFullCovarianceRandomCoefficient<V, M>::lnValue(
-    const V & domainVector, const V * domainDirection, V * gradVector,
-    M * hessianMatrix, V * hessianEffect) const
+GaussianLikelihoodFullCovarianceRandomCoefficient<V, M>::lnValue(const V & domainVector) const
 {
   V modelOutput(this->m_observations, 0, 0);  // At least it's not a copy
   V weightedMisfit(this->m_observations, 0, 0);  // At least it's not a copy
 
-  this->evaluateModel(domainVector, domainDirection, modelOutput, gradVector,
-      hessianMatrix, hessianEffect);
+  this->evaluateModel(domainVector, modelOutput);
 
   // Compute misfit G(x) - y
   modelOutput -= this->m_observations;
@@ -81,9 +68,18 @@ GaussianLikelihoodFullCovarianceRandomCoefficient<V, M>::lnValue(
   // This is square of 2-norm
   double norm2_squared = modelOutput.sumOfComponents();
 
+  // Get the determinant of the covariance matrix |\Sigma|
+  double deter_cov = this->m_covariance.determinant();
+
+  deter_cov = std::sqrt(deter_cov);
+
+  // Set the right hyperparameter coefficient
   // The last element of domainVector is the multiplicative coefficient of the
   // covariance matrix
-  return -0.5 * norm2_squared / (domainVector[domainVector.sizeLocal()-1]);
+  double cov_coeff = domainVector[domainVector.sizeLocal()-1];
+  cov_coeff = std::pow(std::sqrt(cov_coeff), this->m_observations.sizeLocal());
+
+  return -0.5 * norm2_squared / cov_coeff - std::log(cov_coeff * deter_cov);
 }
 
 }  // End namespace QUESO

@@ -1,0 +1,65 @@
+Surrogate Model Library
+=======================
+Software Quality Assurance Practices
+------------------------------------
+
+Coding Style
+++++++++++++
+
+ * Adopt Dakota's coding style conventions as a start, particularly
+   for naming conventions
+   https://dakota.sandia.gov//sites/default/files/docs/6.4/html-dev/StyleConventions.html
+
+ * Consider Google C++ Style Guide, or similar:
+   http://google.github.io/styleguide/cppguide.html
+
+ * Consider using a code formatting tool, e.g.,
+
+   - clang-format (has LLVM and Google modes, integrates with
+     Emacs/VIM); also clang-check, clang-tidy, clang-analyzer
+
+   - Artistic Style
+
+ * Code comments: Should they be in Doxygen or Sphinx?  Sphinx more
+   prevalent with Python
+
+
+Code Organization
++++++++++++++++++
+
+ * Organize source code into self-contained directories with clear
+   dependency graph
+
+ * Place unit tests near the source code they test, minimizing dependencies
+
+
+Code Correctness
+++++++++++++++++
+
+ * Write warning-free code.  Enable strong compiler warnings:
+
+   - Minimum (GCC/Clang): -Wall
+
+   - Ideally: -Wpedantic -Wextra -Werror (both); -Weverything (Clang)
+
+ * Dynamic analysis: include in the build/test system (in priority order)
+ 
+   1. Memory: Valgrind and/or Clang sanitizers
+
+   2. Coverage: gcov/lcov or Clang coverage sanitizer
+
+   3. Performance
+
+ * Static analysis: include cpplint (Google standards) or Clang
+   scan-build in build system; online with Coverity if possible
+
+
+Principles
+++++++++++
+
+ * Avoid premature optimization; write clear self-documenting code
+   whenever possible
+
+ * Prefer composition to inheritance where possible
+
+ 

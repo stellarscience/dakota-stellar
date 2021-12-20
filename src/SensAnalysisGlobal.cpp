@@ -18,7 +18,6 @@
 #include "dakota_linear_algebra.hpp"
 #include <algorithm>
 #include <boost/iterator/counting_iterator.hpp>
-#include <boost/math/special_functions/fpclassify.hpp>
 
 static const char rcsId[]="@(#) $Id: SensAnalysisGlobal.cpp 6170 2009-10-06 22:42:15Z lpswile $";
 
@@ -37,7 +36,7 @@ find_valid_samples(const IntResponseMap& resp_samples, BoolDeque& valid_sample)
 {
   // TODO: later compute correlation on per-response basis to keep
   // partial faults
-  using boost::math::isfinite;
+  using std::isfinite;
 
   size_t num_obs = resp_samples.size(), num_valid_samples = 0;
   IntRespMCIter it = resp_samples.begin();
@@ -150,7 +149,7 @@ void SensAnalysisGlobal::center_rows(RealMatrix& data_matrix)
 
 void SensAnalysisGlobal::correl_adjust(Real& corr_value)
 {
-  if (boost::math::isfinite(corr_value) && std::abs(corr_value) > 1.0)
+  if (std::isfinite(corr_value) && std::abs(corr_value) > 1.0)
     corr_value = corr_value / std::abs(corr_value);
 }
 
@@ -310,7 +309,7 @@ simple_corr(RealMatrix& total_data, const int& num_in, RealMatrix& corr_matrix)
 			   total_data, total_data, 0.0);
       for (int i=0; i<num_corr; ++i) {
 	// set finite diagonal values to 1.0
-	if (boost::math::isfinite(corr_matrix(i,i)))
+	if (std::isfinite(corr_matrix(i,i)))
 	  corr_matrix(i,i) = 1.0;
 	// snap all finite values to [-1.0, 1.0]
 	for (int j=0; j<i; ++j) {
@@ -482,6 +481,15 @@ partial_corr(RealMatrix& total_data, const int num_in,
       correl_adjust(corr_matrix(i,j));
 }
 
+// Return true if any correlation coefficient is NaN or Inf, false otherwise
+bool SensAnalysisGlobal::has_nan_or_inf(const RealMatrix &corr) const {
+  int num_rows = corr.numRows(), num_cols = corr.numCols();
+  for(int j = 0; j < num_cols; ++j) 
+    for(int i = 0; i < num_rows; ++i) 
+      if( ! std::isfinite(corr(i,j)))
+        return true;
+  return false;
+}
 
 // TODO: combine archive with print
 void SensAnalysisGlobal::
@@ -491,13 +499,42 @@ archive_correlations(const StrStrSizet& run_identifier,
 		     StringMultiArrayConstView div_labels,
 		     StringMultiArrayConstView dsv_labels,
 		     StringMultiArrayConstView drv_labels,
-		     const StringArray& resp_labels) const
+		     const StringArray& resp_labels,
+         const size_t &inc_id) const
 {
   if (!iterator_results.active())  return;
 
   int num_in_out = numVars + numFns;
+
+  // Get pointers to the variables and response names to create scales
+  std::vector<const char *> combined_desc;
+  for (size_t i=0; i<cv_labels.size(); ++i)
+    combined_desc.push_back(cv_labels[i].c_str());
+  for (size_t i=0; i<div_labels.size(); ++i)
+    combined_desc.push_back(div_labels[i].c_str());
+  for (size_t i=0; i<dsv_labels.size(); ++i)
+    combined_desc.push_back(dsv_labels[i].c_str());
+  for (size_t i=0; i<drv_labels.size(); ++i)
+    combined_desc.push_back(drv_labels[i].c_str());
+  for (size_t i=0; i<resp_labels.size(); ++i)
+    combined_desc.push_back(resp_labels[i].c_str());
+  // Copy the variable and function labels
+  std::vector<const char *> variables_desc(combined_desc.begin(), 
+      combined_desc.begin() + numVars);
+  std::vector<const char *> functions_desc(combined_desc.begin() + numVars, 
+      combined_desc.end());
+
+  StringArray location;
+  size_t r_index = 0; 
+  if(inc_id) {
+    location.push_back(String("increment:") + std::to_string(inc_id));
+    r_index = 1;
+  } 
+  location.push_back("");
+  location[r_index] = "simple_correlations";
   if (simpleCorr.numRows() == num_in_out &&
       simpleCorr.numCols() == num_in_out) {
+    // CoreDB
     MetaDataType md;
     md["Row labels"] = 
       make_metadatavalue(cv_labels, div_labels, dsv_labels, drv_labels, resp_labels);
@@ -506,9 +543,17 @@ archive_correlations(const StrStrSizet& run_identifier,
     iterator_results.insert(run_identifier, 
 			    iterator_results.results_names.correl_simple_all,
 			    simpleCorr, md);
+    // HDF5
+    DimScaleMap scales;
+    scales.emplace(0, StringScale("factors", combined_desc));
+    scales.emplace(1, StringScale("factors", combined_desc));
+    iterator_results.insert(run_identifier,location, 
+        simpleCorr, scales);
+
   }
   else if (simpleCorr.numRows() == numVars &&
 	   simpleCorr.numCols() == numFns) {
+    // CoreDB
     MetaDataType md;
     md["Row labels"] = 
       make_metadatavalue(cv_labels, div_labels, dsv_labels, drv_labels, StringArray());
@@ -516,23 +561,20 @@ archive_correlations(const StrStrSizet& run_identifier,
     iterator_results.insert(run_identifier, 
 			    iterator_results.results_names.correl_simple_io,
 			    simpleCorr, md);
+    // HDF5
+    DimScaleMap scales;
+    scales.emplace(0, StringScale("variables", variables_desc));
+    scales.emplace(1, StringScale("responses", functions_desc));
+    iterator_results.insert(run_identifier,location, 
+        simpleCorr, scales);
   }
 
-  if (partialCorr.numRows() == numVars &&
-      partialCorr.numCols() == numFns) {
-    MetaDataType md;
-    md["Row labels"] = 
-      make_metadatavalue(cv_labels, div_labels, dsv_labels, drv_labels, StringArray());
-    md["Column labels"] = make_metadatavalue(resp_labels);
-    iterator_results.insert(run_identifier, 
-			    iterator_results.results_names.correl_partial_io,
-			    partialCorr, md);
-  }
   // TODO: metadata
   //  if (numericalIssuesRaw)
-
+  location[r_index] = "simple_rank_correlations";
   if (simpleRankCorr.numRows() == num_in_out &&
       simpleRankCorr.numCols() == num_in_out) {
+    // CoreDB
     MetaDataType md;
     md["Row labels"] = 
       make_metadatavalue(cv_labels, div_labels, dsv_labels, drv_labels, resp_labels);
@@ -541,9 +583,17 @@ archive_correlations(const StrStrSizet& run_identifier,
     iterator_results.insert(run_identifier, 
 			    iterator_results.results_names.correl_simple_rank_all,
 			    simpleRankCorr, md);
+    // HDF5
+    DimScaleMap scales;
+    scales.emplace(0, StringScale("factors", combined_desc));
+    scales.emplace(1, StringScale("factors", combined_desc));
+    iterator_results.insert(run_identifier,location, 
+        simpleRankCorr, scales);
+ 
   }
   else if (simpleRankCorr.numRows() == numVars &&
 	   simpleRankCorr.numCols() == numFns) {
+    // CoreDB
     MetaDataType md;
     md["Row labels"] = 
       make_metadatavalue(cv_labels, div_labels, dsv_labels, drv_labels, StringArray());
@@ -551,12 +601,39 @@ archive_correlations(const StrStrSizet& run_identifier,
     iterator_results.insert(run_identifier, 
 			    iterator_results.results_names.correl_simple_rank_io,
 			    simpleRankCorr, md);
-
-
+    // HDF5
+    DimScaleMap scales;
+    scales.emplace(0, StringScale("variables", variables_desc));
+    scales.emplace(1, StringScale("responses", functions_desc));
+    iterator_results.insert(run_identifier,location, 
+        simpleRankCorr, scales);
   }
 
+  location.push_back("");
+  location[r_index] = "partial_correlations";
+  if (partialCorr.numRows() == numVars &&
+      partialCorr.numCols() == numFns) {
+    // CoreDB
+    MetaDataType md;
+    md["Row labels"] = 
+      make_metadatavalue(cv_labels, div_labels, dsv_labels, drv_labels, StringArray());
+    md["Column labels"] = make_metadatavalue(resp_labels);
+    iterator_results.insert(run_identifier, 
+			    iterator_results.results_names.correl_partial_io,
+			    partialCorr, md);
+    // HDF5
+    DimScaleMap scales;
+    scales.emplace(0, StringScale("variables", variables_desc));
+    for (size_t i=0; i<resp_labels.size(); ++i) {
+      location.back() = resp_labels[i];
+      iterator_results.insert(run_identifier,location,
+          Teuchos::getCol<int,Real>(Teuchos::View, *const_cast<RealMatrix*>(&partialCorr), i), scales);
+    }
+  }
+  location[r_index] = "partial_rank_correlations";
   if (partialRankCorr.numRows() == numVars &&
       partialRankCorr.numCols() == numFns) {
+    // CoreDB
     MetaDataType md;
     md["Row labels"] = 
       make_metadatavalue(cv_labels, div_labels, dsv_labels, drv_labels, StringArray());
@@ -564,6 +641,14 @@ archive_correlations(const StrStrSizet& run_identifier,
     iterator_results.insert(run_identifier, 
 			    iterator_results.results_names.correl_partial_rank_io,
 			    partialRankCorr, md);
+    // HDF5
+    DimScaleMap scales;
+    scales.emplace(0, StringScale("variables", variables_desc));
+    for (size_t i=0; i<resp_labels.size(); ++i) {
+      location.back() = resp_labels[i];
+      iterator_results.insert(run_identifier, location,
+          Teuchos::getCol<int,Real>(Teuchos::View, *const_cast<RealMatrix*>(&partialRankCorr), i), scales);
+    }
   }
 }
 
@@ -582,6 +667,17 @@ print_correlations(std::ostream& s, StringMultiArrayConstView cv_labels,
     return;
   }
 
+  if( has_nan_or_inf(simpleCorr) ||
+      has_nan_or_inf(partialCorr) ||
+      has_nan_or_inf(simpleRankCorr) ||
+      has_nan_or_inf(partialRankCorr) )
+    s << "\n\nAt least one correlation coefficient is nan or inf. This " <<
+      "commonly occurs when\ndiscrete variables (including histogram " <<
+      "variables) are present, a response is\ncompletely insensitive to " <<
+      "variables (response variance equal to 0), there are\nfewer samples " <<
+      "than variables, or some samples are approximately collinear." << 
+      std::endl;
+  
   s << std::scientific << std::setprecision(5);
 
   if (resp_labels.size() != numFns) { 
@@ -676,13 +772,14 @@ print_correlations(std::ostream& s, StringMultiArrayConstView cv_labels,
       s << '\n';
     }
   }
-
-  if (numericalIssuesRaw)
-    s << "\nThere may be some numerical issues associated with the calculation "
-      << "of the \npartial correlation coefficients above.  This can be due to "
-      << "very small \nnumbers of input samples, or to ill-conditioned matrices"
-      << ", \nin situations where the partials are very close to zero, -1, or "
-      << "+1.\n";
+  //  This warning message has been supplanted by more generic tests for NaNs and
+  //  Infs
+  //if (numericalIssuesRaw)
+  //  s << "\nThere may be some numerical issues associated with the calculation "
+  //    << "of the \npartial correlation coefficients above.  This can be due to "
+  //    << "very small \nnumbers of input samples, or to ill-conditioned matrices"
+  //    << ", \nin situations where the partials are very close to zero, -1, or "
+  //    << "+1.\n";
 
   if (simpleRankCorr.numRows() == num_in_out &&
       simpleRankCorr.numCols() == num_in_out) {
@@ -759,12 +856,14 @@ print_correlations(std::ostream& s, StringMultiArrayConstView cv_labels,
     }
   }
 
-  if (numericalIssuesRank)
-    s << "\nThere may be some numerical issues associated with the calculation "
-      << "of the \npartial rank correlation coefficients above.  This can be "
-      << "due to very small \nnumbers of input samples, or to ill-conditioned "
-      << "matrices, \nin situations where the partials are very close to zero, "
-      << "-1, or +1.\n";
+  //  This warning message has been supplanted by more generic tests for NaNs and
+  //  Infs
+  //if (numericalIssuesRank)
+  //  s << "\nThere may be some numerical issues associated with the calculation "
+  //    << "of the \npartial rank correlation coefficients above.  This can be "
+  //    << "due to very small \nnumbers of input samples, or to ill-conditioned "
+  //    << "matrices, \nin situations where the partials are very close to zero, "
+  //    << "-1, or +1.\n";
    
   s << std::setprecision(write_precision)  // return to previous precision
     << std::endl;

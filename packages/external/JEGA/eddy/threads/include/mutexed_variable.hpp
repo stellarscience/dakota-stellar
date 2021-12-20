@@ -131,7 +131,7 @@ class mutexed_variable;
 File Scope Typedefs
 ================================================================================
 */
-/// A mutex protected boolean type integer variable.
+/// A mutex protected Boolean type integer variable.
 typedef
 mutexed_variable<bool>
 MutexedBool;
@@ -324,7 +324,7 @@ class EDDY_SL_IEDECL mutexed_variable
         operator ()(
             ) const;
 
-        /// Allows for explicit casting from mutexed type to held type.
+        /// Allows for explicit casting from mutex protected type to held type.
         inline
         operator held_type(
             ) const;

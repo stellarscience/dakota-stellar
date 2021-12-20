@@ -474,7 +474,7 @@ class JEGA_SL_IEDECL DesignDoubleValueMap :
 
         /**
          * \brief Modifies by summation the values associated with \a of in the
-         *        ammounts \a amt1 and \a amt2.
+         *        amounts \a amt1 and \a amt2.
          *
          * \param of The Design whose values are to be modified.
          * \param amt1 The amount by which the first value should be modified.
@@ -489,7 +489,7 @@ class JEGA_SL_IEDECL DesignDoubleValueMap :
 
         /**
          * \brief Modifies by summation the values associated with \a of in the
-         *        ammounts \a amt1 and \a amt2.
+         *        amounts \a amt1 and \a amt2.
          *
          * \param of The Design whose values are to be modified.
          * \param amt1 The amount by which the first value should be modified.
@@ -504,7 +504,7 @@ class JEGA_SL_IEDECL DesignDoubleValueMap :
 
         /**
          * \brief Modifies by summation the first value associated with \a of
-         *        in the ammount \a amt.
+         *        in the amount \a amt.
          *
          * \param of The Design whose first value is to be modified.
          * \param amt The amount by which the first value should be modified.
@@ -517,7 +517,7 @@ class JEGA_SL_IEDECL DesignDoubleValueMap :
 
         /**
          * \brief Modifies by summation the first value associated with \a of
-         *        in the ammount \a amt.
+         *        in the amount \a amt.
          *
          * \param of The Design whose first value is to be modified.
          * \param amt The amount by which the first value should be modified.
@@ -530,7 +530,7 @@ class JEGA_SL_IEDECL DesignDoubleValueMap :
 
         /**
          * \brief Modifies by summation the second value associated with \a of
-         *        in the ammount \a amt.
+         *        in the amount \a amt.
          *
          * \param of The Design whose second value is to be modified.
          * \param amt The amount by which the second value should be modified.
@@ -543,7 +543,7 @@ class JEGA_SL_IEDECL DesignDoubleValueMap :
 
         /**
          * \brief Modifies by summation the second value associated with \a of
-         *        in the ammount \a amt.
+         *        in the amount \a amt.
          *
          * \param of The Design whose second value is to be modified.
          * \param amt The amount by which the second value should be modified.

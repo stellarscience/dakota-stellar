@@ -71,7 +71,7 @@ Includes
 // JEGAConfig.hpp should be the first include in all JEGA files.
 #include <../Utilities/include/JEGAConfig.hpp>
 
-#include <memory> // for auto_ptr
+#include <memory> // for unique_ptr
 #include <string>
 #include <FitnessRecord.hpp>
 #include <utilities/include/int_types.hpp>
@@ -195,10 +195,10 @@ Class Definition
  * generally require little code.
  *
  * The algorithm is conceptually separate from the operators used to implement
- * it.  The operators are therefore "plugable" and could in theory be changed
+ * it.  The operators are therefore "pluggable" and could in theory be changed
  * at any time.  This class keeps track of what operators are currently in
  * use by containing a GeneticAlgorithmOperatorSet as a member data.  In order
- * to ensure that the operators in use are compatable with one another, this
+ * to ensure that the operators in use are compatible with one another, this
  * class also keeps a current operator group.  The operator group is
  * automatically chosen from all groups registered with this algorithm as
  * obtained from a call the required override GetOperatorGroupRegistry.
@@ -296,7 +296,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         /// A flag set once AlgorithmInitialize has been called.
         bool _isInitialized;
 
-        std::auto_ptr<const FitnessRecord> _lastFtns;
+        std::unique_ptr<const FitnessRecord> _lastFtns;
 
         std::string _dataDir;
 
@@ -329,13 +329,13 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         /**
          * The name cannot be empty.  If it is, the default value is used.
          *
-         * This method replaces all occurances of the # character with the
+         * This method replaces all occurrences of the # character with the
          * instance number of this GA.
          *
          * This method prints out a verbose level log entry indicating the
          * new name.
          *
-         * \param name The new name for the final datafile name.
+         * \param name The new name for the final data file name.
          */
         void
         SetFinalDataFilename(
@@ -419,7 +419,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetDesignTarget(
             );
 
-        /// Returns the DesignTarget known by this algorithm (const).
+        /// Returns the DesignTarget known by this algorithm (constant).
         /**
          * \return An immutable reference to the know DesignTarget.
          */
@@ -437,7 +437,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetOperatorSet(
             );
 
-        /// Returns the current operator set for this algorithm (const)
+        /// Returns the current operator set for this algorithm (constant)
         /**
          * \return An immutable reference to the contained operator set.
          */
@@ -446,7 +446,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetOperatorSet(
             ) const;
 
-        /// Returns the operator group being used by this algorithm (const).
+        /// Returns the operator group being used by this algorithm (constant).
         /**
          * \return An immutable reference to the operator group currently in
          *         use.
@@ -465,7 +465,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetPopulation(
             );
 
-        /// Returns the current population of Designs (const)
+        /// Returns the current population of Designs (constant)
         /**
          * \return An immutable reference to the current population of designs.
          */
@@ -483,7 +483,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetOffspring(
             );
 
-        /// Returns the current set of offspring Designs (const)
+        /// Returns the current set of offspring Designs (constant)
         /**
          * \return An immutable reference to the current set of children
          *         designs.
@@ -596,7 +596,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetLogger(
             ) const;
 
-        /// Returns the mutator being used by this algorithm (const).
+        /// Returns the mutator being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current mutator.
          */
@@ -605,7 +605,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetMutator(
             ) const;
 
-        /// Returns the converger being used by this algorithm (const).
+        /// Returns the converger being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current converger.
          */
@@ -614,7 +614,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetConverger(
             ) const;
 
-        /// Returns the crosser being used by this algorithm (const).
+        /// Returns the crosser being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current crosser.
          */
@@ -623,7 +623,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetCrosser(
             ) const;
 
-        /// Returns the fitness assessor being used by this algorithm (const).
+        /// Returns the fitness assessor being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current fitness assessor.
          */
@@ -632,7 +632,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetFitnessAssessor(
             ) const;
 
-        /// Returns the initializer being used by this algorithm (const).
+        /// Returns the initializer being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current initializer.
          */
@@ -641,7 +641,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetInitializer(
             ) const;
 
-        /// Returns the selector being used by this algorithm (const).
+        /// Returns the selector being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current selector.
          */
@@ -650,7 +650,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetSelector(
             ) const;
 
-        /// Returns the post processor being used by this algorithm (const).
+        /// Returns the post processor being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current post processor.
          */
@@ -659,7 +659,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetPostProcessor(
             ) const;
 
-        /// Returns the evaluator being used by this algorithm (const).
+        /// Returns the evaluator being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current evaluator.
          */
@@ -670,7 +670,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
 
         /**
          * \brief Returns the niche pressure applicator being used by this
-         *        algorithm (const).
+         *        algorithm (constant).
          *
          * \return An immutable reference to the current niche pressure
          *         applicator.
@@ -680,7 +680,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         GetNichePressureApplicator(
             ) const;
 
-        /// Returns the main loop being used by this algorithm (const).
+        /// Returns the main loop being used by this algorithm (constant).
         /**
          * \return An immutable reference to the current main loop.
          */
@@ -1250,7 +1250,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
         /**
          * This should return whatever this algorithm would claim to be the
          * optimal solutions if it had to stop on the spot.  This can be
-         * an expensive call and is meant primarly for use after the call
+         * an expensive call and is meant primarily for use after the call
          * to AlgorithmFinalize at which time this should return the final
          * solution found by the algorithm.
          *
@@ -1310,7 +1310,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
          * Note that the selection operators are not just the
          * GeneticAlgorithmSelector but are each of the fitness assessor,
          * selector, and niche pressure applicator.  This call is issued just
-         * prior tofitness assessment.
+         * prior to fitness assessment.
          */
         virtual
         void
@@ -1458,7 +1458,7 @@ class JEGA_SL_IEDECL GeneticAlgorithm
          * \brief Override to look through the current designs and remove
          *        any that are not optimal.
          *
-         * Removeed designs should be placed into the targets discards.
+         * Removed designs should be placed into the targets discards.
          */
         virtual
         void

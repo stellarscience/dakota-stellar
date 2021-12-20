@@ -128,9 +128,9 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MSolution);
-MANAGED_CLASS_FORWARD_DECLARE(public, MAlgorithmConfig);
-MANAGED_CLASS_FORWARD_DECLARE(public, MGeneticAlgorithm);
+ref class MSolution;
+ref class MAlgorithmConfig;
+ref class MGeneticAlgorithm;
 
 
 
@@ -161,7 +161,7 @@ Class Definition
  * work along to it.  It will also provide a reference to that instance if
  * so desired with a call to the Manifest method.
  */
-MANAGED_CLASS(public, MDriver) :
+public ref class MDriver :
     public System::IDisposable
 {
     /*
@@ -220,7 +220,7 @@ MANAGED_CLASS(public, MDriver) :
          *        number generator.
          *
          * This is not necessarily the same as the value provided to the
-         * InitializeJEGA method.  When that method is provided with a sentinal
+         * InitializeJEGA method.  When that method is provided with a sentinel
          * seed value, a seed is generated based on the clock and the time.
          * Therefore, this method provides access to whatever value was
          * actually used.
@@ -237,15 +237,30 @@ MANAGED_CLASS(public, MDriver) :
          *        for log messages.
          *
          * This will be the same name that was provided to the InitializeJEGA
-         * method.  It is provided as a convenience so that that information
+         * method.  It is provided as a convenience so that the information
          * does not have to be remembered externally.
          *
          * \return The name of the file to which the global log is logging if
          *         file logging is enabled.
          */
         static
-        System::String MOH
+        System::String^
         GetGlobalLogFilename(
+            );
+        
+        static
+        System::String^
+        GetXType(
+            );
+        
+        static
+        System::String^
+        GetGType(
+            );
+        
+        static
+        System::String^
+        GetFType(
             );
 
     protected:
@@ -277,7 +292,7 @@ MANAGED_CLASS(public, MDriver) :
          * \brief Allows access to the proxied JEGA front end Driver wrapped by
          *        this object.
          *
-         * \returm The JEGA::FrontEnd::Driver that is underlying this managed
+         * \return The JEGA::FrontEnd::Driver that is underlying this managed
          *         wrapper.
          */
         JEGA::FrontEnd::Driver&
@@ -314,10 +329,11 @@ MANAGED_CLASS(public, MDriver) :
         static
         bool
         InitializeJEGA(
-            System::String MOH globalLogFilename,
+            System::String^ globalLogFilename,
             JEGA::Logging::LogLevel globalLogDefLevel,
             System::UInt32 rSeed,
-            MAlgorithmConfig::FatalBehavior fatalBehavior
+            MAlgorithmConfig::FatalBehavior fatalBehavior,
+			bool registerSignalHandlers
             );
 
         /**
@@ -330,7 +346,7 @@ MANAGED_CLASS(public, MDriver) :
          * \param rSeed The seed to supply the random number generator.  A
          *              supplied value of 0 causes the seed to be randomized
          *              by time() and clock().
-         * \return The seed that was acutally used in re-seeding.  This may be
+         * \return The seed that was actually used in re-seeding.  This may be
          *         the value passed in or if 0 is supplied, it will be the value
          *         generated using time() and clock().
          */
@@ -359,24 +375,24 @@ MANAGED_CLASS(public, MDriver) :
          *               run.
          * \return A collection of the final solutions found by the algorithm.
          */
-        SolutionVector MOH
+        SolutionVector^
         ExecuteAlgorithm(
-            MAlgorithmConfig MOH config
+            MAlgorithmConfig^ config
             );
 
-        MGeneticAlgorithm MOH
+        MGeneticAlgorithm^
         InitializeAlgorithm(
-            MAlgorithmConfig MOH config
+            MAlgorithmConfig^ config
             );
 
         bool
         PerformNextIteration(
-            MGeneticAlgorithm MOH theGA
+            MGeneticAlgorithm^ theGA
             );
 
-        SolutionVector MOH
+        SolutionVector^
         FinalizeAlgorithm(
-            MGeneticAlgorithm MOH theGA
+            MGeneticAlgorithm^ theGA
             );
 
         /**
@@ -395,7 +411,7 @@ MANAGED_CLASS(public, MDriver) :
          */
         void
         DestroyAlgorithm(
-            MGeneticAlgorithm MOH theGA
+            MGeneticAlgorithm^ theGA
             );
 
 
@@ -427,7 +443,7 @@ MANAGED_CLASS(public, MDriver) :
          */
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
 
@@ -460,7 +476,7 @@ MANAGED_CLASS(public, MDriver) :
          *                   to be solved by this driver.
          */
         MDriver(
-            MProblemConfig MOH probConfig
+            MProblemConfig^ probConfig
             );
 
         /// Destructs an MDriver.

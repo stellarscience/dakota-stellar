@@ -1,0 +1,326 @@
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
+# setup.py
+#from distutils.core import setup, Extension
+from setuptools import setup, Extension
+import distutils
+from os.path import join
+import numpy
+import os
+import subprocess
+import sysconfig
+import sys
+from distutils.sysconfig import get_python_inc
+
+include_pecos=True
+
+pecos_src = "@Pecos_SOURCE_DIR@"
+pecos_build = "@Pecos_BINARY_DIR@"
+cpp_src = join("@CMAKE_CURRENT_SOURCE_DIR@", "cpp_src")
+# semicolon-separated list of directories
+cmake_boost_inc_dirs = "@Boost_INCLUDE_DIRS@"
+
+vpisg_src = "@VPISparseGrid_SOURCE_DIR@/src"
+vpisg_build = "@VPISparseGrid_BINARY_DIR@/src"
+
+package_name="PyDakota"
+
+distutils.log.set_verbosity(1)
+try:
+    numpy_include = numpy.get_include()
+except AttributeError:
+    numpy_include  = numpy.get_numpy_include()
+
+# Generate swigpyrun.h which defines WIG_TypeQuery, SWIG_NewPointerObj, etc.
+subprocess.call(['swig','-python','-external-runtime','swigpyrun.h'])
+
+base_include_dirs = [ numpy_include ] + \
+    cmake_boost_inc_dirs.split(';') + \
+    [ cpp_src,
+      os.getcwd(),      #include swigpyrun.h generated above
+      get_python_inc()  #include Python.h
+  ]
+
+surrogates_include_dirs=[
+    join(pecos_src,'util','src'),
+    join(pecos_src,'surrogates','models','src'),
+    ]
+
+pecos_include_dirs=[
+    join(pecos_src,'src')
+]
+
+
+# NOTE: This assumes teuchos is built as part of Dakota or Pecos
+# TODO: Use Teuchos_INCLUDE_DIRS, Teuchos_LIBRARIES
+trilinos_src_dir = "@Trilinos_SOURCE_DIR@"
+trilinos_bin_dir = "@Trilinos_BINARY_DIR@"
+teuchos_src_dir = join(trilinos_src_dir, 'packages', 'teuchos')
+teuchos_build_dir = join(trilinos_bin_dir, 'packages', 'teuchos')
+
+teuchos_include_dirs = [
+    join(teuchos_src_dir,'core','src'),
+    join(teuchos_src_dir,'numerics','src'),
+    join(teuchos_build_dir,'core','src')     ## For TeuchosCore_config.h
+    ]
+teuchos_numerics_lib_dir = join(teuchos_build_dir,'numerics','src')
+
+pydakota_srcs = [join(cpp_src,'python_helpers.cpp')]
+
+def distutils_dir_name(dname):
+    """Returns the name of a distutils build directory"""
+    f = "{dirname}.{platform}-{version[0]}.{version[1]}"
+    return f.format(dirname=dname,
+                    platform=sysconfig.get_platform(),
+                    version=sys.version_info)
+
+# The location disutils will put the compiled extension files. 
+# I am not forcing this. If default location of library is not used base
+# directory for build library or changed by disutils in the future then 
+# this will be incorrect
+distutils_build_dir = join(os.getcwd(),'build', distutils_dir_name('lib'))
+if not os.path.exists(join(distutils_build_dir,package_name)):
+    os.makedirs(join(distutils_build_dir,package_name))
+
+base_swig_opts = ['-c++']
+# distutils puts module.py of a swig extension in the current folder
+# If we want module.py files producted by swig to be in a package
+# (so can be called using package.module) use
+package_swig_opts = base_swig_opts+[
+    '-outdir',
+    '%s'%join(distutils_build_dir,package_name)]
+
+options_list_include_dirs = base_include_dirs+[join(pecos_src,'util','src')]+surrogates_include_dirs + teuchos_include_dirs
+options_list_library_dirs = [teuchos_numerics_lib_dir]
+options_list_libraries = ['teuchosnumerics']
+options_list = Extension(
+    '_options_list',
+    [join(cpp_src,'OptionsList.i')]+pydakota_srcs,
+    include_dirs = options_list_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = options_list_library_dirs,
+    runtime_library_dirs = options_list_library_dirs,
+    libraries = options_list_libraries,
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in options_list_include_dirs]
+)
+
+# link to teuchos library dir need to get typeinfo for Teuchos::CompObject
+math_tools_include_dirs=base_include_dirs+[join(pecos_src,'util','src')]+surrogates_include_dirs+teuchos_include_dirs
+math_tools_library_dirs=[
+    join(pecos_build,'util','src'),
+   # join(pecos_build,'surrogates','models','src'),
+    teuchos_numerics_lib_dir]
+math_tools_libraries=['pecos_util','teuchosnumerics','lapack','blas']
+math_tools = Extension(
+    '_math_tools',
+    [join(cpp_src,'math_tools.i')],#+pydakota_srcs,
+    include_dirs = math_tools_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = math_tools_library_dirs,
+    runtime_library_dirs = math_tools_library_dirs,
+    libraries = math_tools_libraries,
+    extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
+    swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in math_tools_include_dirs])
+
+regression_include_dirs = base_include_dirs+surrogates_include_dirs+\
+  teuchos_include_dirs
+regression_library_dirs = [
+    join(pecos_build,'util','src'),
+    teuchos_numerics_lib_dir,
+    join(pecos_build,'surrogates','models','src')]
+regression = Extension(
+    '_regression',
+    [join(cpp_src,'regression.i')]+pydakota_srcs,
+    include_dirs = regression_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = regression_library_dirs,
+    runtime_library_dirs = regression_library_dirs,
+    libraries = ['pecos_models','pecos_util','teuchosnumerics','blas','lapack'],
+    extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
+    swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in regression_include_dirs])
+
+approximation_include_dirs=base_include_dirs+surrogates_include_dirs+\
+  teuchos_include_dirs
+approximation_library_dirs = regression_library_dirs
+approximation_libraries = ['pecos_models','pecos_util','teuchosnumerics','blas','lapack']
+if include_pecos:
+    approximation_include_dirs+=[join(pecos_src,'surrogates','pecos_wrapper','src')]+pecos_include_dirs+[join(teuchos_src_dir,'numerics','src'), vpisg_src]
+    approximation_library_dirs += [
+        join(pecos_build,'src'),
+	vpisg_build,
+        join(pecos_build,'surrogates','pecos_wrapper','src')]
+approximation_libraries = ['pecos_wrapper','pecos_src','sparsegrid']+approximation_libraries#order of libraries is important
+approximation_srcs=[join(cpp_src,'approximations.i')]+pydakota_srcs
+print approximation_srcs
+approximation = Extension(
+    '_approximation',
+    approximation_srcs,
+    include_dirs = approximation_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = approximation_library_dirs,
+    runtime_library_dirs = approximation_library_dirs,
+    libraries = approximation_libraries,
+    extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
+    swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in approximation_include_dirs])
+
+univariate_polynomials_include_dirs=base_include_dirs+pecos_include_dirs+teuchos_include_dirs+surrogates_include_dirs
+univariate_polynomials_library_dirs=[
+    join(pecos_build,'src'),
+    teuchos_numerics_lib_dir,
+    vpisg_build]
+univariate_polynomials = Extension(
+    '_univariate_polynomials',
+    [join(cpp_src,'univariate_polynomials.i')]+pydakota_srcs,
+    include_dirs = univariate_polynomials_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = univariate_polynomials_library_dirs,
+    runtime_library_dirs = univariate_polynomials_library_dirs,
+    libraries = ['pecos_src','sparsegrid','teuchosnumerics','lapack','blas'],
+    extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
+    swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in univariate_polynomials_include_dirs])
+
+subpackage_name = 'swig_examples'
+# The location disutils will put the compiled extension files. 
+# I am not forcing this. If default location of library is not used base
+# directory for build library or changed by disutils in the future then 
+# this will be incorrect
+if not os.path.exists(join(distutils_build_dir,package_name, subpackage_name)):
+    os.makedirs(join(distutils_build_dir,package_name,subpackage_name))
+
+std_vector_example_include_dirs=base_include_dirs+[join(cpp_src,'swig_examples_src')]
+swig_opts = ['-c++','-outdir','%s'%join(
+    distutils_build_dir,package_name,subpackage_name)]
+std_vector_example = Extension(
+    '%s._std_vector_example'%subpackage_name,
+    [join(cpp_src,'swig_examples_src','std_vector_example.i')],
+    include_dirs = std_vector_example_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = [],
+    libraries = [],
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=swig_opts+['-I%s'%include_dir for include_dir in std_vector_example_include_dirs])
+
+options_list_interface_include_dirs=[join(cpp_src,'swig_examples_src')]+options_list_include_dirs
+swig_opts = ['-c++','-outdir','%s'%join(
+    distutils_build_dir,package_name,subpackage_name)]
+options_list_interface = Extension(
+    '%s._options_list_interface'%subpackage_name,
+    [join(cpp_src,'swig_examples_src','options_list_interface.i'),
+     join(cpp_src,'swig_examples_src','options_list_interface.cpp')]+pydakota_srcs,
+    include_dirs = options_list_interface_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = [teuchos_numerics_lib_dir],
+    runtime_library_dirs = [teuchos_numerics_lib_dir],
+    libraries = ['teuchosnumerics'],
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=swig_opts+['-I%s'%include_dir for include_dir in options_list_interface_include_dirs])
+
+enum_example_include_dirs=[join(cpp_src,'swig_examples_src')]
+swig_opts = ['-c++','-outdir','%s'%join(
+    distutils_build_dir,package_name,subpackage_name)]
+enum_example = Extension(
+    '%s._enum_example'%subpackage_name,
+    [join(cpp_src,'swig_examples_src','enum_example.i')],
+    include_dirs = enum_example_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = [],
+    libraries = [],
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=swig_opts+['-I%s'%include_dir for include_dir in enum_example_include_dirs])
+
+dot_include_dirs=[join(cpp_src,'swig_examples_src')]+base_include_dirs
+swig_opts = ['-c++','-outdir','%s'%join(
+    distutils_build_dir,package_name,subpackage_name)]
+dot = Extension(
+    '%s._dot'%subpackage_name,
+    [join(cpp_src,'swig_examples_src','dot.i'),
+     join(cpp_src,'swig_examples_src','dot.cpp')],
+    include_dirs = dot_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = [],
+    libraries = [],
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=swig_opts+['-I%s'%include_dir for include_dir in dot_include_dirs])
+
+import unittest
+def PyDakota_test_suite():
+    test_loader = unittest.TestLoader()
+    test_suite = test_loader.discover(distutils_build_dir, pattern='test_*.py')
+    return test_suite
+
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
+setup(
+    name = package_name,
+    version = "1.0",
+    description="Python wrapper of Dakota surrogate and linear algebra utilities",
+    author="John Jakeman",
+    author_email='dakota-users@sandia.gov',
+    license='GNU Lesser General Public License (LGPL)',
+    url='https://dakota.sandia.gov',
+    keywords='Approximation, Surrogates, Uncertainty Quantification, Polynomial Chaos',
+    long_description=read(join("@CMAKE_CURRENT_SOURCE_DIR@", "README")),
+    packages=[package_name,package_name+'.unit',package_name+'.swig_examples',package_name+'.models'],
+    package_dir = {'': join('@CMAKE_CURRENT_SOURCE_DIR@', 'python_src')},
+    ext_package=package_name,
+    ext_modules=[
+        options_list,
+        math_tools,
+        regression,
+        approximation,
+        univariate_polynomials,
+        std_vector_example,
+        options_list_interface,
+        enum_example,
+        dot
+    ],
+    package_data={package_name:[join('unit','data/*.gz')]},
+    test_suite='setup.PyDakota_test_suite')
+
+print join(pecos_src,'surrogates','models','unit')
+
+print('Run python setup.py install to install to python site-packages')
+print('Run python setup.py install --prefix=<dir>to install to python dir>')
+string = 'export PYTHONPATH=$PYTHONPATH:%s'%distutils_build_dir
+print('If you choose not to install, then you can temporarily add the build python modules to the PYTHONPATH by running in the terminal')
+print (string)
+print ('To use dakota style sheets for jupyter notebook copy tutorials/pydakota.css to ~/.jupyter/custom/custom.css. You will likely have to create the directory custom/')
+
+# dont forget to set pythonpath
+#notes:
+# warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++ [enabled by default] is a bug with distutils
+
+#To create a module in a python package use
+# Extension(package_name+'.'+module_name)
+#To create a module in a subpackage of a python packages use
+# Extension(package_name+'.'+subpackage_name+'.'+module_name)
+
+# If get an error cannot import _modulename.so then this may be due to a
+# linking error. E.g. forgot to link in a required library using the libraries
+# keywork in Extension

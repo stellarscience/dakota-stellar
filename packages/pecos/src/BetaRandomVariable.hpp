@@ -67,8 +67,10 @@ public:
   //Real to_standard(Real x) const;
   //Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -126,14 +128,15 @@ protected:
 
 inline BetaRandomVariable::BetaRandomVariable():
   UniformRandomVariable(), alphaStat(1.), betaStat(1.), betaDist(NULL)
-{ ranVarType = BETA; }
+{ ranVarType = STD_BETA; }
 
 
 inline BetaRandomVariable::
 BetaRandomVariable(Real alpha, Real beta, Real lwr, Real upr):
   UniformRandomVariable(lwr, upr), alphaStat(alpha), betaStat(beta),
   betaDist(new beta_dist(alphaStat, betaStat))
-{ ranVarType = BETA; }
+{ ranVarType = (lwr == -1. && upr == 1.) ? STD_BETA : BETA; }
+// std distribution defined by scale params, while shape params may vary
 
 
 inline BetaRandomVariable::~BetaRandomVariable()
@@ -391,24 +394,25 @@ inline Real BetaRandomVariable::log_standard_pdf_hessian(Real z) const
 }
 
 
-inline Real BetaRandomVariable::parameter(short dist_param) const
+inline void BetaRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case BE_ALPHA:   return alphaStat; break;
-  case BE_BETA:    return betaStat;  break;
-  case BE_LWR_BND: return lowerBnd;  break;
-  case BE_UPR_BND: return upperBnd;  break;
+  case BE_ALPHA:   val = alphaStat; break;
+  case BE_BETA:    val = betaStat;  break;
+  case BE_LWR_BND: val = lowerBnd;  break;
+  case BE_UPR_BND: val = upperBnd;  break;
   //case BE_LOCATION: - TO DO
   //case BE_SCALE:    - TO DO
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in BetaRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void BetaRandomVariable::parameter(short dist_param, Real val)
+inline void BetaRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case BE_ALPHA:   alphaStat = val; update_boost(); break;
@@ -422,6 +426,17 @@ inline void BetaRandomVariable::parameter(short dist_param, Real val)
 	  << " in BetaRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void BetaRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(BE_ALPHA,   alphaStat);
+  rv.pull_parameter(BE_BETA,    betaStat);
+  //UniformRandomVariable::copy_parameters(rv); // different enums used
+  rv.pull_parameter(BE_LWR_BND, lowerBnd);
+  rv.pull_parameter(BE_UPR_BND, upperBnd);
+  update_boost();
 }
 
 

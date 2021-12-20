@@ -84,17 +84,30 @@ enum { ERR = -999 };
  *
  * Value used to indicate that an operation worked.
  */
+#if defined(__cplusplus)
+namespace utilib {
+constexpr int OK = 0;
+}
+#else
 #ifndef OK
 #define OK		0
 #endif
+#endif
+
 
 /**
  * \def TRUE
  *
  * The boolean value for true.
  */
+#if defined(__cplusplus)
+namespace utilib {
+constexpr int TRUE = 1;
+}
+#else
 #ifndef TRUE
 #define TRUE		1
+#endif
 #endif
 
 /**
@@ -102,8 +115,14 @@ enum { ERR = -999 };
  *
  * The boolean value for false.
  */
+#if defined(__cplusplus)
+namespace utilib {
+constexpr int FALSE = 0;
+}
+#else
 #ifndef FALSE
 #define FALSE		0
+#endif
 #endif
 
 /**
@@ -111,8 +130,14 @@ enum { ERR = -999 };
  *
  * Used to incidate the on state.
  */
+#if defined(__cplusplus)
+namespace utilib {
+constexpr int ON = 0;
+}
+#else
 #ifndef ON
 #define ON		1
+#endif
 #endif
 
 /**
@@ -120,8 +145,14 @@ enum { ERR = -999 };
  *
  * Used to incidate the off state.
  */
+#if defined(__cplusplus)
+namespace utilib {
+constexpr int OFF = 0;
+}
+#else
 #ifndef OFF
 #define OFF		0
+#endif
 #endif
 
 /**
@@ -129,8 +160,14 @@ enum { ERR = -999 };
  *
  * Used to incidate a yes response.
  */
+#if defined(__cplusplus)
+namespace utilib {
+constexpr int YES = 1;
+}
+#else
 #ifndef YES
 #define YES		1
+#endif
 #endif
 
 /**
@@ -138,8 +175,14 @@ enum { ERR = -999 };
  *
  * Used to incidate a no response.
  */
+#if defined(__cplusplus)
+namespace utilib {
+constexpr int NO = 0;
+}
+#else
 #ifndef NO
 #define NO		0
+#endif
 #endif
 
 /**
@@ -147,19 +190,25 @@ enum { ERR = -999 };
  *
  * Defines the value of empty pointers.
  */
-#ifdef NULL
-#undef NULL		/* Always override the definition of NULL */
-#endif
-#define NULL		0
+//#if defined(__cplusplus)
+//namespace utilib {
+//constexpr int NULL = 0;
+//}
+//#else
+//#ifdef NULL
+//#undef NULL		/* Always override the definition of NULL */
+//#endif
+//#define NULL		0
+//#endif
 
 /**
  * \def EOF
  *
  * The end-of-file value.
  */
-#ifndef EOF
-#define EOF		(-1)
-#endif
+//#ifndef EOF
+//#define EOF		(-1)
+//#endif
 
 /**
  * \def PAUSE

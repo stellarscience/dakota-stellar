@@ -1,5 +1,3 @@
-#include <memory>
-#include <sstream>
 #include <queso/Environment.h>
 
 #ifdef QUESO_HAVE_LIBMESH
@@ -13,9 +11,11 @@
 #include <queso/InfiniteDimensionalLikelihoodBase.h>
 #include <queso/InfiniteDimensionalMCMCSampler.h>
 #include <queso/InfiniteDimensionalMCMCSamplerOptions.h>
-#endif  // QUESO_HAVE_LIBMESH
 
-#ifdef QUESO_HAVE_LIBMESH
+#include <cstdlib>
+#include <memory>
+#include <sstream>
+
 class Likelihood : public QUESO::InfiniteDimensionalLikelihoodBase {
 public:
   Likelihood();
@@ -36,10 +36,14 @@ double Likelihood::evaluate(QUESO::FunctionBase &flow)
 }
 #endif
 
+#ifdef QUESO_HAVE_LIBMESH
 int main(int argc, char **argv)
 {
-#ifdef QUESO_HAVE_LIBMESH
-  const char * in_file_name = "test_infinite/inf_options";
+  std::string in_file_name = "test_infinite/inf_options";
+  const char * test_srcdir = std::getenv("srcdir");
+  if (test_srcdir)
+    in_file_name = test_srcdir + ('/' + in_file_name);
+
   const char * prefix = "";
   const unsigned int num_pairs = 5;
   const double alpha = 3.0;
@@ -85,11 +89,9 @@ int main(int argc, char **argv)
   QUESO::InfiniteDimensionalMCMCSamplerOptions opts(env, "");
   QUESO::InfiniteDimensionalMCMCSampler sampler(env, mu, llhd, &opts);
 
-  if (opts.m_num_iters != 10 ||  // Input file value is 10
-      opts.m_save_freq != 5 ||  // Ditto 5
-      opts.m_rwmh_step != 0.1) {
-    return 1;
-  }
+  queso_require_equal_to(opts.m_num_iters, 10);
+  queso_require_equal_to(opts.m_save_freq, 5);
+  queso_require_equal_to(opts.m_rwmh_step, 0.1);
 
   return 0;
 }
@@ -99,7 +101,11 @@ int main(int argc, char **argv)
   MPI_Finalize();
 #endif
   return 0;
-#else
-  return 77;
-#endif
 }
+#else
+int main()
+{
+  std::cout << "QUESO was configured without libMesh support." << std::endl;
+  return 77;
+}
+#endif

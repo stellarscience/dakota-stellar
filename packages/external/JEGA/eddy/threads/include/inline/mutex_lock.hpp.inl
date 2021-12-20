@@ -154,7 +154,7 @@ mutex&
 mutex_lock::get_mutex(
     )
 {
-    return *this->_mutex;
+    return *(this->_mutex);
 
 } // mutex_lock::get_mutex
 

@@ -146,7 +146,7 @@ protected:
   /// A protected constructor, which initializes elements in this class.
   SparseMatrix( void ) :
 	ncols(0), nrows(0), nnzeros(0) 
-   { (void)registrations_complete; }
+   { (void)&registrations_complete; }
 
   /// Dummy destructor
   virtual ~SparseMatrix() {}

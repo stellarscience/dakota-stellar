@@ -54,8 +54,10 @@ public:
 
   Real log_pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -63,7 +65,7 @@ public:
   Real standard_deviation() const;
   Real variance() const;
   
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
@@ -180,29 +182,37 @@ inline Real FrechetRandomVariable::log_pdf(Real x) const
 }
 
 
-inline Real FrechetRandomVariable::parameter(short dist_param) const
+inline void FrechetRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case F_ALPHA: return alphaStat; break;
-  case F_BETA:  return betaStat;  break;
+  case F_ALPHA: val = alphaStat; break;
+  case F_BETA:  val = betaStat;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in FrechetRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in FrechetRandomVariable::pull_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void FrechetRandomVariable::parameter(short dist_param, Real val)
+inline void FrechetRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case F_ALPHA: alphaStat = val; break;
   case F_BETA:  betaStat  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in FrechetRandomVariable::parameter()." << std::endl;
+	  << " in FrechetRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void FrechetRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(F_ALPHA, alphaStat);
+  rv.pull_parameter(F_BETA,  betaStat);
 }
 
 
@@ -232,7 +242,7 @@ inline Real FrechetRandomVariable::variance() const
 }
 
 
-inline RealRealPair FrechetRandomVariable::bounds() const
+inline RealRealPair FrechetRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

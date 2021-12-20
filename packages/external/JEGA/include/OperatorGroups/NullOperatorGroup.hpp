@@ -494,8 +494,7 @@ class NullOperatorGroup :
     ============================================================================
     */
     private:
-
-
+        
         /**
          * \brief This method performs the registration of the operators
          *        that are supposed to be part of this group.
@@ -507,10 +506,6 @@ class NullOperatorGroup :
         void
         AcquireOperators(
             );
-
-
-
-
 
     /*
     ============================================================================

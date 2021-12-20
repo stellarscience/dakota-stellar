@@ -11,7 +11,6 @@
 
 #include "ProbabilityTransformation.hpp"
 
-
 namespace Pecos {
 
 
@@ -117,6 +116,16 @@ protected:
 		      const SizetArray& acv_map1_indices,
 		      const ShortArray& acv_map2_targets);
 
+  /// Computes numerical dx/ds and dz/ds Jacobians as requested by xs
+  /// and zs booleans
+  void numerical_design_jacobian(const RealVector& x_vars,
+                                 bool xs, RealMatrix& num_jacobian_xs,
+                                 bool zs, RealMatrix& num_jacobian_zs,
+				 SizetMultiArrayConstView cv_ids,
+				 SizetMultiArrayConstView acv_ids,
+				 const SizetArray& acv_map1_indices,
+				 const ShortArray& acv_map2_targets);
+
   /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
   void hessian_d2X_dU2(const RealVector& x_vars,
 		       RealSymMatrixArray& hessian_xu);
@@ -158,6 +167,17 @@ private:
   /// Hessian of x(z) mapping obtained from differentiation of jacobian_dX_dZ()
   void hessian_d2X_dZ2(const RealVector& x_vars,
 		       RealSymMatrixArray& hessian_xz);
+
+  //
+  //- Heading: Data
+  //
+
+  /// Cholesky factor of the modified correlation matrix; computed in
+  /// transform_correlations().
+  /** Note that this is not a component of a MarginalsCorrDistribution, but
+      is rather a product of the Nataf transformation since it is defined
+      by the original correlation matrix + transformation context/targets. */
+  RealMatrix corrCholeskyFactorZ;
 };
 
 

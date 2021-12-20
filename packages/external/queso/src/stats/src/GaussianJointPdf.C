@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/GaussianJointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -119,6 +120,33 @@ GaussianJointPdf<V,M>::lawVarVector() const
 {
   return *m_lawVarVector;
 }
+
+template <class V, class M>
+void
+GaussianJointPdf<V, M>::print(std::ostream & os) const
+{
+  // Print m_env?
+
+  os << "Start printing GaussianJointPdf<V, M>" << std::endl;
+  os << "m_prefix:" << std::endl;
+  os << this->m_prefix << std::endl;
+  os << "m_domainSet:" << std::endl;
+  os << this->m_domainSet << std::endl;
+  os << "m_normalizationStyle:" << std::endl;
+  os << this->m_normalizationStyle << std::endl;
+  os << "m_logOfNormalizationFactor:" << std::endl;
+  os << this->m_logOfNormalizationFactor << std::endl;
+  os << "Mean:" << std::endl;
+  os << this->lawExpVector() << std::endl;
+  os << "Variance vector:" << std::endl;
+  os << this->lawVarVector() << std::endl;
+  os << "Covariance matrix:" << std::endl;
+  os << this->lawCovMatrix() << std::endl;
+  os << "Diagonal covariance?" << std::endl;
+  os << this->m_diagonalCovMatrix << std::endl;
+  os << "End printing GaussianJointPdf<V, M>" << std::endl;
+}
+
 //--------------------------------------------------
 template<class V, class M>
 double
@@ -139,17 +167,23 @@ GaussianJointPdf<V,M>::actualValue(
 
   queso_require_equal_to_msg(domainVector.sizeLocal(), this->m_domainSet.vectorSpace().dimLocal(), "invalid input");
 
-  queso_require_msg(!(gradVector || hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
+  queso_require_msg(!(hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
 
   double returnValue = 0.;
 
-  if (this->m_domainSet.contains(domainVector) == false) { // prudenci 2011-Oct-04
+  if (this->m_domainSet.contains(domainVector) == false) {
+    // What should the gradient be here?
     returnValue = 0.;
   }
   else {
+    // Already normalised (so the gradient will have the normalisation constant
+    // in it)
     returnValue = std::exp(this->lnValue(domainVector,domainDirection,gradVector,hessianMatrix,hessianEffect));
+
+    if (gradVector) {
+      (*gradVector) *= returnValue;
+    }
   }
-  //returnValue *= exp(m_logOfNormalizationFactor); // No need, because 'lnValue()' is called right above [PDF-03]
 
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 55)) {
     *m_env.subDisplayFile() << "Leaving GaussianJointPdf<V,M>::actualValue()"
@@ -180,41 +214,72 @@ GaussianJointPdf<V,M>::lnValue(
                             << std::endl;
   }
 
-  queso_require_msg(!(gradVector || hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
-
-  if (domainDirection) {}; // just to remove compiler warning
+  queso_require_msg(!(domainDirection || hessianMatrix || hessianEffect), "incomplete code for gradVector, hessianMatrix and hessianEffect calculations");
 
   double returnValue = 0.;
 
   double lnDeterminant = 0.;
-  if (this->m_domainSet.contains(domainVector) == false) { // prudenci 2011-Oct-04
+  if (this->m_domainSet.contains(domainVector) == false) {
+    // What should the gradient be here?
     returnValue = -INFINITY;
   }
   else {
     V diffVec(domainVector - this->lawExpVector());
     if (m_diagonalCovMatrix) {
       returnValue = ((diffVec*diffVec)/this->lawVarVector()).sumOfComponents();
+
+      // Compute the gradient of log of the pdf.
+      // The log of a Gaussian pdf is:
+      // f(x) = - 1/2 (x - \mu)^T \Sigma^{-1} (x - \mu)
+      // Therefore
+      // \frac{df}{dx}(x) = - (x - \mu)^T \Sigma^{-1}
+      //                  = - (\Sigma^{-1}^T (x - \mu))^T
+      //                  = - (\Sigma^{-1} (x - \mu))^T
+      //                  = - \Sigma^{-1} (x - \mu)  (row/column vector doesn't matter)
+      //
+      // So if \Sigma is diagonal we have a component-wise product of two
+      // vectors (x - \mu) and the diagonal elements of \Sigma^{-1}
+      if (gradVector) {
+        (*gradVector) = diffVec;  // Copy
+        (*gradVector) /= this->lawVarVector();
+        (*gradVector) *= -1.0;
+      }
+
       if (m_normalizationStyle == 0) {
         unsigned int iMax = this->lawVarVector().sizeLocal();
         for (unsigned int i = 0; i < iMax; ++i) {
-          lnDeterminant += log(this->lawVarVector()[i]);
+          lnDeterminant += std::log(this->lawVarVector()[i]);
         }
       }
     }
     else {
       V tmpVec = this->m_lawCovMatrix->invertMultiply(diffVec);
       returnValue = (diffVec*tmpVec).sumOfComponents();
+
+      // Compute the gradient of log of the pdf.
+      // The log of a Gaussian pdf is:
+      // f(x) = - 1/2 (x - \mu)^T \Sigma^{-1} (x - \mu)
+      // Therefore
+      // \frac{df}{dx}(x) = - (x - \mu)^T \Sigma^{-1}
+      //                  = - (\Sigma^{-1}^T (x - \mu))^T
+      //                  = - (\Sigma^{-1} (x - \mu))^T
+      //                  = - \Sigma^{-1} (x - \mu)  (row/column vector doesn't matter)
+      if (gradVector) {
+        (*gradVector) = tmpVec;
+        (*gradVector) *= -1.0;
+      }
+
       if (m_normalizationStyle == 0) {
         lnDeterminant = this->m_lawCovMatrix->lnDeterminant();
       }
     }
     if (m_normalizationStyle == 0) {
-      returnValue += ((double) this->lawVarVector().sizeLocal()) * log(2*M_PI);   // normalization of pdf
+      returnValue += ((double) this->lawVarVector().sizeLocal()) * std::log(2*M_PI);   // normalization of pdf
       returnValue += lnDeterminant; // normalization of pdf
     }
     returnValue *= -0.5;
   }
-  returnValue += m_logOfNormalizationFactor; // [PDF-03]
+  returnValue += m_logOfNormalizationFactor;
 
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 99)) {
     *m_env.subDisplayFile() << "Leaving GaussianJointPdf<V,M>::lnValue()"
@@ -230,6 +295,34 @@ GaussianJointPdf<V,M>::lnValue(
   }
 
   return returnValue;
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+GaussianJointPdf<V,M>::distributionMean(V& meanVector) const
+{
+  meanVector = this->lawExpVector();
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+GaussianJointPdf<V,M>::distributionVariance(M & covMatrix) const
+{
+  queso_assert_equal_to (covMatrix.numCols(), covMatrix.numRowsGlobal());
+
+  if (m_diagonalCovMatrix) {
+    covMatrix.zeroLower();
+    covMatrix.zeroUpper();
+
+    unsigned int n_comp = this->lawVarVector().sizeLocal();
+    queso_assert_equal_to (n_comp, covMatrix.numCols());
+
+    for (unsigned int i = 0; i < n_comp; ++i) {
+      covMatrix(i,i) = this->lawVarVector()[i];
+    }
+  } else {
+    covMatrix = *this->m_lawCovMatrix;
+  }
 }
 //--------------------------------------------------
 template<class V, class M>

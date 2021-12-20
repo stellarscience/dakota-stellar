@@ -1,7 +1,0 @@
-*~
-*.swp
-packages/LHS
-packages/VPISparseGrid
-packages/dfftpack
-packages/fftw
-packages/teuchos

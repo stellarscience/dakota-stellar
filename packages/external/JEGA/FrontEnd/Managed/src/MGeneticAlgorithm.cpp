@@ -156,18 +156,18 @@ MGeneticAlgorithm::DissociateGA(
     this->_theAlg = 0x0;
 }
 
-MSolution MOH
+MSolution^
 MGeneticAlgorithm::GetBestDesign(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_theAlg != 0x0)
     const Design* best = this->_theAlg->GetBestDesign();
-    if(best == 0x0) return MANAGED_NULL_HANDLE;
-    return MANAGED_GCNEW MSolution(*best);
+    if(best == 0x0) return nullptr;
+    return gcnew MSolution(*best);
 }
 
-SolutionVector MOH
+SolutionVector^
 MGeneticAlgorithm::GetCurrentSolution(
     )
 {
@@ -176,16 +176,16 @@ MGeneticAlgorithm::GetCurrentSolution(
 
     DesignOFSortSet solutions(this->_theAlg->GetCurrentSolution());
 
-    SolutionVector MOH ret =
-        MANAGED_GCNEW SolutionVector(static_cast<int>(solutions.size()));
+    SolutionVector^ ret =
+        gcnew SolutionVector(static_cast<int>(solutions.size()));
 
     for(DesignOFSortSet::const_iterator it(solutions.begin());
-        it!=solutions.end(); ++it) ret->Add(MANAGED_GCNEW MSolution(**it));
+        it!=solutions.end(); ++it) ret->Add(gcnew MSolution(**it));
 
     return ret;
 }
 
-SolutionVector MOH
+SolutionVector^
 MGeneticAlgorithm::GetCurrentPopulation(
     )
 {
@@ -195,11 +195,11 @@ MGeneticAlgorithm::GetCurrentPopulation(
     const DesignOFSortSet& solutions =
         this->_theAlg->GetPopulation().GetOFSortContainer();
 
-    SolutionVector MOH ret =
-        MANAGED_GCNEW SolutionVector(static_cast<int>(solutions.size()));
+    SolutionVector^ ret =
+        gcnew SolutionVector(static_cast<int>(solutions.size()));
 
     for(DesignOFSortSet::const_iterator it(solutions.begin());
-        it!=solutions.end(); ++it) ret->Add(MANAGED_GCNEW MSolution(**it));
+        it!=solutions.end(); ++it) ret->Add(gcnew MSolution(**it));
 
     return ret;
 }
@@ -252,17 +252,17 @@ MGeneticAlgorithm::FlushLogStreams(
     this->_theAlg->GetLogger().FlushStreams();
 }
 
-MGeneticAlgorithmEvaluator MOH
+MGeneticAlgorithmEvaluator^
 MGeneticAlgorithm::GetEvaluator(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    if(this->_wrappedEvaler == MANAGED_NULL_HANDLE)
+    if(this->_wrappedEvaler == nullptr)
     {
         const GeneticAlgorithmEvaluator* evaler =
             &this->_theAlg->GetOperatorSet().GetEvaluator();
 
-        this->_wrappedEvaler = MANAGED_GCNEW MGeneticAlgorithmEvaluator(evaler);
+        this->_wrappedEvaler = gcnew MGeneticAlgorithmEvaluator(evaler);
     }
 
     return this->_wrappedEvaler;
@@ -290,7 +290,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 void
-MGeneticAlgorithm::MANAGED_DISPOSE(
+MGeneticAlgorithm::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -328,7 +328,7 @@ MGeneticAlgorithm::MGeneticAlgorithm(
     GeneticAlgorithm* wrapped
     ) :
         _theAlg(wrapped),
-        _wrappedEvaler(MANAGED_NULL_HANDLE)
+        _wrappedEvaler(nullptr)
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(this->_theAlg != 0x0)
@@ -338,7 +338,7 @@ MGeneticAlgorithm::~MGeneticAlgorithm(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    this->MANAGED_DISPOSE();
+    this->DoDispose();
 }
 
 

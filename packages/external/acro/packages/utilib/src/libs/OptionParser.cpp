@@ -525,7 +525,7 @@ OptionParser::args_t& OptionParser::parse_args(int argc, char* _argv[])
       Parameter& param = get_param(argv[i].c_str(),posix);
       if (param.is_bool)
       {
-	if (tmp && (*tmp != '\000'))
+         if (strlen(tmp) >0)
             param.set_value_with_string(tmp);
          else
             param.set_value_with_string("");
@@ -534,7 +534,7 @@ OptionParser::args_t& OptionParser::parse_args(int argc, char* _argv[])
       {
          if (!using_equal && required_equals)
             EXCEPTION_MNGR(std::runtime_error, "Nonboolean parameter '" << argv[i] << "' specified without required argument.  Option parsing configured to require --option=value syntax.");
-         if (tmp && (*tmp != '\000'))
+         if (strlen(tmp) > 0)
             param.set_value_with_string(tmp);
          else
          {

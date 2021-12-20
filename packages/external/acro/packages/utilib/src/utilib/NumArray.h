@@ -76,7 +76,7 @@ public:
   
   /// Copy constructor.
   NumArray(const NumArray& array) : BasicArray<T>(array) 
-  { (void)registrations_complete; };
+  { (void)&registrations_complete; };
   
   /// Default destructor.
   virtual ~NumArray() {}

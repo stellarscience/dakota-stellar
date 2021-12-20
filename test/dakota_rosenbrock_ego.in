@@ -17,10 +17,13 @@ variables
     descriptors     'x1' 'x2'
 
 interface
-  direct
-    analysis_driver = 'rosenbrock'
+  analysis_drivers = 'rosenbrock'
+    direct
 
 responses
   objective_functions = 1
+# Verify same solution maximizing the negative objective
+#   weights  -1.0				#s1
+#   sense    'max'				#s1
   no_gradients
   no_hessians

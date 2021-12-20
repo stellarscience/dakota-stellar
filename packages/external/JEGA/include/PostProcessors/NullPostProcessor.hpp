@@ -262,11 +262,6 @@ class JEGA_SL_IEDECL NullPostProcessor :
             GeneticAlgorithm& algorithm
             );
 
-
-
-
-
-
     /*
     ============================================================================
     Subclass Visible Methods
@@ -328,7 +323,15 @@ class JEGA_SL_IEDECL NullPostProcessor :
 
 
     protected:
-
+        
+        virtual
+        bool
+        PollForParameters(
+            const JEGA::Utilities::ParameterDatabase& db
+            )
+        {
+            return true;
+        }
 
     private:
 

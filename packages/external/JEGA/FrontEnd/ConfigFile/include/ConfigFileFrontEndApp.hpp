@@ -528,7 +528,7 @@ class ConfigFileFrontEndApp
          * \brief Builds all double matrices from the supplied input.
          *
          * This is carried out by concatenating all double matrix entries with
-         * the same identifer as rows into a single matrix.  The resulting
+         * the same identifier as rows into a single matrix.  The resulting
          * matrices are added to the known parameter database.
          */
         void
@@ -536,7 +536,7 @@ class ConfigFileFrontEndApp
             );
 
         /**
-         * \brief Verifes that the input algorithm type string is one of MOGA
+         * \brief Verifies that the input algorithm type string is one of MOGA
          *        or SOGA.
          *
          * If the input string is not one of MOGA or SOGA, then a runtime_error
@@ -550,7 +550,7 @@ class ConfigFileFrontEndApp
          * \brief Converts the input logging level from the supplied string to
          *        an actual LogLevel value.
          *
-         * If the supplied level string is not recongized, then the default
+         * If the supplied level string is not recognized, then the default
          * logging level as defined by the dakota_levels level class will be
          * used.
          *
@@ -745,7 +745,7 @@ class ConfigFileFrontEndApp
          * \param index The index on which to key the inserted information
          *              object.
          * \param theInfo The information object to be inserted into the map.
-         * \param type The strign name of the type of the information object.
+         * \param type The string name of the type of the information object.
          *             This is used for error reporting.
          */
         template <typename InfoT>
@@ -768,7 +768,7 @@ class ConfigFileFrontEndApp
          *
          * \param tag The tag by which to retrieve the vectors to be
          *            concatenated.
-         * \return A vector composed of all the elments of all the vectors
+         * \return A vector composed of all the elements of all the vectors
          *         supplied for the given \a tag.
          */
         template <typename T, const char I>

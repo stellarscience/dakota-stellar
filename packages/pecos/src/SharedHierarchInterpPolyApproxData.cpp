@@ -15,7 +15,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "pecos_stat_util.hpp"
 
-//#define DEBUG
+#define DEBUG
 //#define VBD_DEBUG
 
 namespace Pecos {
@@ -70,7 +70,7 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 
     HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
     const UShort4DArray&      key        = hsg_driver->collocation_key();
-    switch (expConfigOptions.refinementControl) {
+    switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
       size_t lev = l1_norm(hsg_driver->trial_set());
       multi_index_to_sobol_index_map(key[lev].back());
@@ -93,6 +93,29 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
     assign_sobol_index_map_values();
   }
 }
+
+
+void SharedHierarchInterpPolyApproxData::pre_combine_data()
+{
+  // Don't mix additive approach for hierarchical interpolation with
+  // multiplicative/combined across multilevel-multifidelity
+  if (expConfigOptions.combineType == MULT_COMBINE) {
+    PCerr << "Error: only additive combinations supported in SharedHierarch"
+	  << "InterpPolyApproxData::pre_combine_data()." << std::endl;
+    abort_handler(-1);
+  }
+
+  // combine all multiIndex keys into combinedMultiIndex{,Map}
+  driverRep->combine_grid();
+  // Note: grid combination is only currently required in the hierarchical
+  // interpolation case, so there is not currently support at higher levels
+  // for an abstract call to Driver::combine_grid().  For now, our hook is
+  // in SharedPolyApproxData::pre_combine_data().
+}
+
+
+void SharedHierarchInterpPolyApproxData::combined_to_active(bool clear_combined)
+{ driverRep->combined_to_active(clear_combined); }
 
 
 size_t SharedHierarchInterpPolyApproxData::

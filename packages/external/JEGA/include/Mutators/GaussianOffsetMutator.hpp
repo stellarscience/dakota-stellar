@@ -261,7 +261,7 @@ class GaussianOffsetMutator :
 
         /**
          * \brief This method provides an appropriate offset amount for the
-         *        requested variable using a gaussian random distribution.
+         *        requested variable using a Gaussian random distribution.
          *
          * \param varInfo The information object describing the design variable
          *                currently being considered for mutation and for which

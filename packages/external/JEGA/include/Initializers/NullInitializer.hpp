@@ -295,13 +295,18 @@ class NullInitializer :
             ) const;
 
     protected:
-
+        
+        virtual
+        bool
+        PollForParameters(
+            const JEGA::Utilities::ParameterDatabase& db
+            )
+        {
+            return true;
+        }
 
     private:
-
-
-
-
+        
 
     /*
     ============================================================================

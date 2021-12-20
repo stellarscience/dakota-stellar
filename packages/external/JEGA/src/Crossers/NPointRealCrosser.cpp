@@ -168,7 +168,7 @@ NPointRealCrosser::Description(
         "set of real numbers.  Each design variable serves as a real "
         "number in the genome\n\n"
         "The rate is used to determine how many members of the "
-        "passed in group (population) should be given an oportunity to "
+        "passed in group (population) should be given an opportunity to "
         "participate in a crossover operation.  Each operation "
         "involves 2 members of the passed in group and creates 2 new "
         "designs.  So the number of operations is round(rate*size/2) "
@@ -313,7 +313,7 @@ NPointRealCrosser::Crossover(
         Design* child1 = this->GetAlgorithm().GetNewDesign();
 
         // Get the crossover points.
-		CrossPointSet cpts(this->GetCrossoverPoints(
+		const CrossPointSet cpts(this->GetCrossoverPoints(
 			1, static_cast<eddy::utilities::uint32_t>(ndv-1)
 			));
 

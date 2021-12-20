@@ -413,7 +413,7 @@ class EDDY_SL_IEDECL cb_level_log_gateway :
          *               requested.
          * \param e The entry to be logged to the known log.
          * \return True no matter what (return is only provided for
-         *         consistancy with other logging methods).
+         *         consistency with other logging methods).
          */
         template <typename ET>
         bool
@@ -502,7 +502,7 @@ class EDDY_SL_IEDECL cb_level_log_gateway :
         }
 
         /**
-         * \brief Sets the logging level for all obects of the supplied type
+         * \brief Sets the logging level for all objects of the supplied type
          * to the supplied level.
          *
          * Any individual objects for whom the level has been explicitly

@@ -167,7 +167,7 @@ Class Definition
  *
  *
  */
-MANAGED_CLASS(public, MFitnessRecord) :
+public ref class MFitnessRecord :
     public System::IDisposable
 {
     /*
@@ -244,16 +244,16 @@ MANAGED_CLASS(public, MFitnessRecord) :
          */
         bool
         AddFitness(
-            MDesign MOH des,
+            MDesign^ des,
             double fitness
             );
 
         /// Computes and returns the average fitness value in this record.
         /**
-         * If there are no records, the return is -DBL_MAX
+         * If there are no records, the return is -limits::max
          *
          * \return The average fitness of all designs in this record or
-         *         -DBL_MAX if no fitnesses are on record.
+         *         -limits::max if no fitnesses are on record.
          */
         double
         GetAverageFitness(
@@ -262,24 +262,24 @@ MANAGED_CLASS(public, MFitnessRecord) :
         /// Required override of this interface.
         /**
          * Implementations should return the fitness associated with
-         * the supplied design or -DBL_MAX if an error occurs.
+         * the supplied design or -limits::max if an error occurs.
          *
          * \param des The Design to retrieve the fitness of.
-         * \return The fitness recorded for des or -DBL_MAX if des is not
+         * \return The fitness recorded for des or -limits::max if des is not
          *         found.
          */
         double
         GetFitness(
-            MDesign MOH des
+            MDesign^ des
             );
 
         /// Required override of this interface.
         /**
          * Implementations should return the maximum fitness value in this
-         * record or -DBL_MAX if there are none.
+         * record or -limits::max if there are none.
          *
          * \return The largest fitness value recorded in this record or
-         *         -DBL_MAX if none.
+         *         -limits::max if none.
          */
         double
         GetMaxFitness(
@@ -288,10 +288,10 @@ MANAGED_CLASS(public, MFitnessRecord) :
         /// Required override of this interface.
         /**
          * Implementations should return the minimum fitness value in this
-         * record or DBL_MAX if there are none.
+         * record or limits::max if there are none.
          *
          * \return The smallest fitness value recorded in this record or
-         *         DBL_MAX if none.
+         *         limits::max if none.
          */
         double
         GetMinFitness(
@@ -345,7 +345,7 @@ MANAGED_CLASS(public, MFitnessRecord) :
 
         virtual
         void
-        MANAGED_DISPOSE(
+        DoDispose(
             );
 
 

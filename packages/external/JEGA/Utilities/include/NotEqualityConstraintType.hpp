@@ -153,7 +153,7 @@ Class Definition
 /// A type for not-equality constraints.
 /**
  * A not-equality constraint is one for which there is a particular value that
- * is forbidden and for which all other values are acceptale.
+ * is forbidden and for which all other values are acceptable.
  */
 class JEGA_SL_IEDECL NotEqualityConstraintType :
     public ConstraintTypeBase
@@ -187,7 +187,7 @@ class JEGA_SL_IEDECL NotEqualityConstraintType :
 
         /// This is the amount reported as the violation amount.
         /**
-         * This value will be a postive, non-zero multiple of 10 on the order
+         * This value will be a positive, non-zero multiple of 10 on the order
          * of magnitude of the \a _value.
          */
         double _viol;
@@ -305,7 +305,7 @@ class JEGA_SL_IEDECL NotEqualityConstraintType :
         virtual
         double
         GetViolationAmount(
-            double of
+            con_val_t of
             ) const;
 
         /// Returns an exact duplicate of this type object.

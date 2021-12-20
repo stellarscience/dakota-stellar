@@ -65,6 +65,7 @@ Includes
 #include <../Utilities/include/Logging.hpp>
 #include <GeneticAlgorithmFitnessAssessor.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
+#include <../Utilities/include/LRUDesignCache.hpp>
 #include <../Utilities/include/DesignGroupVector.hpp>
 #include <../Utilities/include/DesignStatistician.hpp>
 #include <../Utilities/include/ParameterExtractor.hpp>
@@ -221,11 +222,13 @@ SOGA::ReclaimOptimal(
     DesignTarget& target = this->GetDesignTarget();
 
     // store the discards for repeated use.
-    const DesignDVSortSet& discards = target.CheckoutDiscards();
+    const LRUDesignCache& discards = target.CheckoutDiscards();
 
     // separate the feasible from the discards because
     // That's all we're interested in.
-    DesignDVSortSet feasible(DesignStatistician::GetFeasible(discards));
+    DesignDVSortSet feasible(
+        DesignStatistician::GetFeasible(discards.DVSortSet())
+        );
 
     // if there are no feasible, get out.
     if(feasible.empty()) { target.CheckinDiscards(); return; }
@@ -291,7 +294,7 @@ SOGA::ReclaimOptimal(
     target.CheckinDiscards();
 
     JEGALOG_II(this->GetLogger(), lverbose(), this,
-        ostream_entry(lverbose(), this->GetName() + ": Relcaimed ")
+        ostream_entry(lverbose(), this->GetName() + ": Reclaimed ")
             << numReclaimed << " optimal designs from the discards."
             )
 }
@@ -396,12 +399,12 @@ SOGA::GetCurrentSolution(
         );
 
     // now figure out the bests of the discards.
-    const DesignDVSortSet& discards =
+    const LRUDesignCache& discards =
         this->GetDesignTarget().CheckoutDiscards();
 
     pair<double, itdvvec> disBests(
         SingleObjectiveStatistician::FindMinSumMinViolateDesigns(
-            discards, this->GetWeights()
+            discards.DVSortSet(), this->GetWeights()
             )
         );
 

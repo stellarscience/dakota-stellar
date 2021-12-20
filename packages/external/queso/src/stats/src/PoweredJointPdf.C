@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/PoweredJointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -139,12 +140,12 @@ PoweredJointPdf<V,M>::lnValue(
 //--------------------------------------------------
 template<class V, class M>
 double
-PoweredJointPdf<V,M>::computeLogOfNormalizationFactor(unsigned int numSamples, bool updateFactorInternally) const
+PoweredJointPdf<V,M>::computeLogOfNormalizationFactor(unsigned int /* numSamples */, bool /* updateFactorInternally */) const
 {
   double value = 0.;
 
   double volume = m_domainSet.volume();
-  if (((boost::math::isnan)(volume)) ||
+  if ((queso_isnan(volume)) ||
       (volume == -INFINITY         ) ||
       (volume ==  INFINITY         ) ||
       (volume <= 0.                )) {

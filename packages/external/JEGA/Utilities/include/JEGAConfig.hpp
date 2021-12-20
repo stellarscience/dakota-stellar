@@ -66,7 +66,7 @@ Configuration Includes
 ================================================================================
 */
 // First we must include the jega_config.h file created by autoconf if using
-// autoconf (ex. with dakota).  If not, this will be ignored and will cause
+// autoconf (ex. with DAKOTA).  If not, this will be ignored and will cause
 // no harm.
 #ifdef HAVE_CONFIG_H
 #include "jega_config.h"
@@ -109,15 +109,15 @@ Post Configuration Includes
 */
 #include <utilities/include/config.hpp>
 
-// This is to prevent warnings in the case where eddy_config.h has
-// previously been included.
+// This is to prevent warnings in the case where eddy_config.h has previously
+// been included.
 #ifndef EDDY_OPTION_DEBUG
 #   ifdef JEGA_OPTION_DEBUG
 #       define EDDY_OPTION_DEBUG
 #   endif
 #endif
 
-// Even if not threadsafe, must have threads config file so that macros
+// Even if not thread safe, must have threads config file so that macros
 // expand properly.  This probably already came in from utilities/config.hpp.
 #include <threads/include/config.hpp>
 #include <logging/include/config.hpp>
@@ -139,7 +139,7 @@ Version Information
 #endif
 
 #define JEGA_VERSION "2.7.0"
-#define JEGA_PACKAGE "JEGA v"JEGA_VERSION
+#define JEGA_PACKAGE "JEGA v" JEGA_VERSION
 
 
 /*

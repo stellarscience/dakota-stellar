@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class RandomInitializer.
+        Implementation of class RandomInitializer.
 
     NOTES:
 
@@ -76,8 +76,8 @@ Namespace Using Directives
 ================================================================================
 */
 using namespace std;
-using namespace JEGA::Utilities;
 using namespace JEGA::Logging;
+using namespace JEGA::Utilities;
 
 
 
@@ -259,8 +259,7 @@ RandomInitializer::Initialize(
     const size_t ndv = target.GetNDV();
 
     // extract the design variable information
-    const DesignVariableInfoVector& dvis =
-        target.GetDesignVariableInfos();
+    const DesignVariableInfoVector& dvis = target.GetDesignVariableInfos();
 
     // loop through and create the Designs
     for(size_t i=0; i<size; ++i)
@@ -270,7 +269,7 @@ RandomInitializer::Initialize(
 
         // create random values for each design variable
         for(size_t j=0; j<ndv; j++)
-            newdes->SetVariableRep(j, dvis[j]->GetRandomDoubleRep());
+            newdes->SetVariableRep(j, dvis[j]->GetRandomRep());
 
         // put the new Design into the population.
         into.Insert(newdes);

@@ -134,7 +134,16 @@ Inline Subclass Visible Methods
 Inline Private Methods
 ================================================================================
 */
-
+inline
+bool
+LocalDesignVariableMutator::DvIsVar(
+	const roadmap& rm,
+	const std::size_t& dvNum
+	) const
+{
+    return rm._hiOptVar < 0 ||
+        static_cast<int>(dvNum) > (rm._hiOptVar + rm._numSCOpts);
+}
 
 
 

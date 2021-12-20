@@ -55,8 +55,10 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -65,7 +67,7 @@ public:
   Real variance() const;
 
   RealRealPair moments() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real coefficient_of_variation() const;
 
@@ -237,22 +239,25 @@ inline Real BoundedNormalRandomVariable::log_pdf_hessian(Real x) const
 }
 
 
-inline Real BoundedNormalRandomVariable::parameter(short dist_param) const
+inline void BoundedNormalRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case N_MEAN:    case N_LOCATION: return gaussMean;   break;
-  case N_STD_DEV: case N_SCALE:    return gaussStdDev; break;
-  case N_LWR_BND:                  return lowerBnd; break;
-  case N_UPR_BND:                  return upperBnd; break;
+  case N_MEAN:    case N_LOCATION: val = gaussMean;   break;
+  case N_STD_DEV: case N_SCALE:    val = gaussStdDev; break;
+  case N_LWR_BND:                  val = lowerBnd;    break;
+  case N_UPR_BND:                  val = upperBnd;    break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BoundedNormalRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in BoundedNormalRandomVariable::pull_parameter(Real)."
+	  << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void BoundedNormalRandomVariable::parameter(short dist_param, Real val)
+inline void BoundedNormalRandomVariable::
+push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case N_MEAN:    gaussMean   = val; break;
@@ -265,9 +270,19 @@ inline void BoundedNormalRandomVariable::parameter(short dist_param, Real val)
   case N_UPR_BND: upperBnd = val;    break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in BoundedNormalRandomVariable::parameter()." << std::endl;
+	  << " in BoundedNormalRandomVariable::push_parameter(Real)."
+	  << std::endl;
     abort_handler(-1); break;
   }
+}
+
+
+inline void BoundedNormalRandomVariable::
+copy_parameters(const RandomVariable& rv)
+{
+  NormalRandomVariable::copy_parameters(rv); // same enums used
+  rv.pull_parameter(N_LWR_BND, lowerBnd);
+  rv.pull_parameter(N_UPR_BND, upperBnd);
 }
 
   
@@ -346,7 +361,7 @@ inline RealRealPair BoundedNormalRandomVariable::moments() const
 }
 
 
-inline RealRealPair BoundedNormalRandomVariable::bounds() const
+inline RealRealPair BoundedNormalRandomVariable::distribution_bounds() const
 { return RealRealPair(lowerBnd, upperBnd); }
 
 

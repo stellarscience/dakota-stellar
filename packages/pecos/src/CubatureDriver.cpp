@@ -15,7 +15,7 @@
 #include "CubatureDriver.hpp"
 #include "sandia_cubature.hpp"
 #include "SharedPolyApproxData.hpp"
-#include "DistributionParams.hpp"
+#include "MarginalsCorrDistribution.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 //#include "pecos_stat_util.hpp"
 
@@ -27,28 +27,26 @@ namespace Pecos {
 
 
 void CubatureDriver::
-initialize_grid(const ShortArray& u_types, unsigned short order,
+initialize_grid(const MultivariateDistribution& mv_dist, unsigned short order,
 		unsigned short rule)
 {
-  numVars = u_types.size();
+  const ShortArray&  rv_types = mv_dist.random_variable_types();
+  const BitArray& active_vars = mv_dist.active_variables();
+  numVars = (active_vars.empty()) ? rv_types.size() : active_vars.count();
+
   integrand_order(order);
   collocation_rule(rule); // size collocRules and define first entry
 
-  // check for isotropic u_types
-  short type0 = u_types[0];
-  for (size_t i=1; i<numVars; ++i)
-    if (u_types[i] != type0) {
-      PCerr << "Error: u_types must be isotropic in CubatureDriver::"
-	    << "initialize_grid(u_types)." << std::endl;
-      abort_handler(-1);
-    }
+  // check for isotropic rv_types
+  if (verify_homogeneity(rv_types)) {
+    PCerr << "Error: rv_types must be isotropic in CubatureDriver::"
+	  << "initialize_grid(mv_dist)." << std::endl;
+    abort_handler(-1);
+  }
 
   ShortArray basis_types;
   // Cubature used for numerical integration of PCE
   // TO DO: require OPA/IPA switch? (see IntegrationDriver::initialize_grid())
-  //BasisConfigOptions bc_options(false, false, false, false);
-  //SharedPolyApproxData::initialize_basis_types(u_types, bc_options,
-  //                                             basis_types);
   // TO DO: consider using a single BasisPolynomial for CubatureDriver (would
   // have to be expanded into array for PolynomialApproximation within NonDPCE).
   SharedPolyApproxData::initialize_polynomial_basis(basis_types, collocRules,
@@ -62,7 +60,7 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
   numVars         = poly_basis.size();
   polynomialBasis = poly_basis; // shallow copy
 
-  // check for isotropic u_types
+  // check for isotropic integration rules
   unsigned short rule0 = poly_basis[0].collocation_rule();
   for (size_t i=1; i<numVars; ++i)
     if (poly_basis[i].collocation_rule() != rule0) {
@@ -70,63 +68,96 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 	    << "initialize_grid(poly_basis)." << std::endl;
       abort_handler(-1);
     }
-
   collocation_rule(rule0);
 }
 
 
 void CubatureDriver::
-initialize_grid_parameters(const ShortArray& u_types,
-			   const AleatoryDistParams& adp)
+initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
   // verify homogeneity in any polynomial parameterizations
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
+  short rv_type0 = mv_dist.random_variable_type(0);
+  MarginalsCorrDistribution* mvd_rep
+    = (MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
   switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
-    err_flag = (verify_homogeneity(adp.beta_alphas()) ||
-		verify_homogeneity(adp.beta_betas())); break;
+    err_flag =
+      (verify_homogeneity(mvd_rep->pull_parameters<Real>(BETA, BE_ALPHA)) ||
+       verify_homogeneity(mvd_rep->pull_parameters<Real>(BETA, BE_BETA)));
+    break;
   case GEN_GAUSS_LAGUERRE: // STD_GAMMA: check only alpha params
-    err_flag = verify_homogeneity(adp.gamma_alphas()); break;
+    err_flag =
+      verify_homogeneity(mvd_rep->pull_parameters<Real>(GAMMA, GA_ALPHA));
+    break;
   case GOLUB_WELSCH: // numerically generated: check all params
-    switch (u_types[0]) { // u_types verified in initialize_grid() above
+    switch (rv_type0) { // rv_types verified in initialize_grid() above
     case BOUNDED_NORMAL:
-      err_flag = (verify_homogeneity(adp.normal_means()) ||
-		  verify_homogeneity(adp.normal_std_deviations()) ||
-		  verify_homogeneity(adp.normal_lower_bounds()) ||
-		  verify_homogeneity(adp.normal_upper_bounds())); break;
-    case LOGNORMAL:
-      err_flag = (verify_homogeneity(adp.lognormal_means()) ||
-		  verify_homogeneity(adp.lognormal_std_deviations()) ||
-		  verify_homogeneity(adp.lognormal_lambdas()) ||
-		  verify_homogeneity(adp.lognormal_zetas()) ||
-		  verify_homogeneity(adp.lognormal_error_factors())); break;
-    case BOUNDED_LOGNORMAL:
-      err_flag = (verify_homogeneity(adp.lognormal_means()) ||
-		  verify_homogeneity(adp.lognormal_std_deviations()) ||
-		  verify_homogeneity(adp.lognormal_lambdas()) ||
-		  verify_homogeneity(adp.lognormal_zetas()) ||
-		  verify_homogeneity(adp.lognormal_error_factors()) ||
-		  verify_homogeneity(adp.lognormal_lower_bounds()) ||
-		  verify_homogeneity(adp.lognormal_upper_bounds())); break;
+      err_flag =
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_MEAN))    ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_STD_DEV)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_NORMAL, N_UPR_BND)));
+      break;
+    case LOGNORMAL: // standardized on lambda, zeta
+      err_flag =
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGNORMAL, LN_LAMBDA)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGNORMAL, LN_ZETA)));
+      break;
+    case BOUNDED_LOGNORMAL: // standardized on lambda, zeta
+      err_flag =
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_LAMBDA))  ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_ZETA)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(BOUNDED_LOGNORMAL, LN_UPR_BND)));
+       break;
     case LOGUNIFORM:
-      err_flag = (verify_homogeneity(adp.loguniform_lower_bounds()) ||
-		  verify_homogeneity(adp.loguniform_upper_bounds())); break;
+      err_flag =
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGUNIFORM, LU_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(LOGUNIFORM, LU_UPR_BND)));
+      break;
     case TRIANGULAR:
-      err_flag = (verify_homogeneity(adp.triangular_modes()) ||
-		  verify_homogeneity(adp.triangular_lower_bounds()) ||
-		  verify_homogeneity(adp.triangular_upper_bounds())); break;
+      err_flag =
+	(verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(TRIANGULAR, T_MODE)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(TRIANGULAR, T_LWR_BND)) ||
+	 verify_homogeneity(
+	   mvd_rep->pull_parameters<Real>(TRIANGULAR, T_UPR_BND)));
+      break;
     case GUMBEL:
-      err_flag = (verify_homogeneity(adp.gumbel_alphas()) ||
-		  verify_homogeneity(adp.gumbel_betas()));  break;
+      err_flag =
+	(verify_homogeneity(mvd_rep->pull_parameters<Real>(GUMBEL, GU_ALPHA)) ||
+	 verify_homogeneity(mvd_rep->pull_parameters<Real>(GUMBEL, GU_BETA)));
+      break;
     case FRECHET:
-      err_flag = (verify_homogeneity(adp.frechet_alphas()) ||
-		  verify_homogeneity(adp.frechet_betas())); break;
+      err_flag =
+	(verify_homogeneity(mvd_rep->pull_parameters<Real>(FRECHET, F_ALPHA)) ||
+	 verify_homogeneity(mvd_rep->pull_parameters<Real>(FRECHET, F_BETA)));
+      break;
     case WEIBULL:
-      err_flag = (verify_homogeneity(adp.weibull_alphas()) ||
-		  verify_homogeneity(adp.weibull_betas())); break;
+      err_flag =
+	(verify_homogeneity(mvd_rep->pull_parameters<Real>(WEIBULL, W_ALPHA)) ||
+	 verify_homogeneity(mvd_rep->pull_parameters<Real>(WEIBULL, W_BETA)));
+      break;
     case HISTOGRAM_BIN:
-      err_flag = verify_homogeneity(adp.histogram_bin_pairs()); break;
+      err_flag =
+	verify_homogeneity(
+	  mvd_rep->pull_parameters<RealRealMap>(HISTOGRAM_BIN, H_BIN_PAIRS));
+      break;
     default: err_flag = true; break;
     }
     break;
@@ -142,14 +173,14 @@ initialize_grid_parameters(const ShortArray& u_types,
   // TO DO: consider using a single BasisPolynomial for CubatureDriver
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
-  SharedPolyApproxData::update_basis_distribution_parameters(u_types, adp,
-							     polynomialBasis);
+  SharedPolyApproxData::
+    update_basis_distribution_parameters(mv_dist, polynomialBasis);
 }
 
 
 int CubatureDriver::grid_size()
 {
-  if (updateGridSize) {
+  if (numPts == 0) { // intial / special value indicates update required
     bool err_flag = false;
     switch(collocRules[0]) {
     case GAUSS_HERMITE:
@@ -159,7 +190,7 @@ int CubatureDriver::grid_size()
     //case 3: numPts = webbur::en_her_03_1_size(numVars);    break; // 2n
       case 3: numPts = webbur::en_her_03_xiu_size(numVars);  break; // 2n
       case 5: numPts = (numVars >=2 && numVars <= 7) ?
-	webbur::en_her_05_1_size(numVars) :                          // n^2+n+2
+	webbur::en_her_05_1_size(numVars) :                         // n^2+n+2
 	webbur::en_her_05_2_size(numVars);                   break; // 2n^2+1
       default: err_flag = true;                              break;
       }
@@ -171,7 +202,7 @@ int CubatureDriver::grid_size()
     //case 3: numPts = webbur::cn_leg_03_1_size(numVars);    break; // 2n
       case 3: numPts = webbur::cn_leg_03_xiu_size(numVars);  break; // 2n
       case 5: numPts = (numVars >=4 && numVars <= 6) ?
-	webbur::cn_leg_05_1_size(numVars) :                          // n^2+n+2
+	webbur::cn_leg_05_1_size(numVars) :                         // n^2+n+2
         webbur::cn_leg_05_2_size(numVars);                   break; // 2n^2+1
       default: err_flag = true;                              break;
       }
@@ -185,8 +216,8 @@ int CubatureDriver::grid_size()
       break;
     case GAUSS_JACOBI: {
       BasisPolynomial& poly0 = polynomialBasis[0];
-      const Real& alpha_poly = poly0.alpha_polynomial();
-      const Real& beta_poly  = poly0.beta_polynomial();
+      Real alpha_poly; poly0.pull_parameter(JACOBI_ALPHA, alpha_poly);
+      Real  beta_poly; poly0.pull_parameter(JACOBI_BETA,   beta_poly);
       switch (integrandOrder) {
       case 1: numPts = webbur::cn_jac_01_1_size(numVars, alpha_poly, beta_poly);
 	break;
@@ -197,7 +228,8 @@ int CubatureDriver::grid_size()
       break;
     }
     case GEN_GAUSS_LAGUERRE: {
-      const Real& alpha_poly = polynomialBasis[0].alpha_polynomial();
+      Real alpha_poly;
+      polynomialBasis[0].pull_parameter(GENLAG_ALPHA, alpha_poly);
       switch (integrandOrder) {
       case 1: numPts = webbur::epn_glg_01_1_size(numVars,   alpha_poly); break;
       case 2: numPts = webbur::epn_glg_02_xiu_size(numVars, alpha_poly); break;
@@ -220,14 +252,12 @@ int CubatureDriver::grid_size()
 	    << std::endl;
       abort_handler(-1);
     }
-    else
-      updateGridSize = false;
   }
   return numPts;
 }
 
 
-void CubatureDriver::compute_grid(RealMatrix& variable_sets)
+void CubatureDriver::compute_grid()
 {
   // --------------------------------
   // Get number of collocation points
@@ -241,8 +271,8 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   // Get collocation points and integration weights
   // ----------------------------------------------
   type1WeightSets.sizeUninitialized(numPts);
-  variable_sets.shapeUninitialized(numVars, numPts); // Teuchos: col major
-  double *pts = variable_sets.values(), *wts = type1WeightSets.values();
+  variableSets.shapeUninitialized(numVars, numPts); // Teuchos: col major
+  double *pts = variableSets.values(), *wts = type1WeightSets.values();
   bool err_flag = false, pt_scaling = false, wt_scaling = false;
   double pt_factor, wt_factor;
   BasisPolynomial& poly0 = polynomialBasis[0];
@@ -288,8 +318,8 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
     default: err_flag = true;                                  break;
     } break;
   case GAUSS_JACOBI: {
-    const Real& alpha_poly = poly0.alpha_polynomial();
-    const Real& beta_poly  = poly0.beta_polynomial();
+    Real alpha_poly; poly0.pull_parameter(JACOBI_ALPHA, alpha_poly);
+    Real  beta_poly; poly0.pull_parameter(JACOBI_BETA,   beta_poly);
     switch (integrandOrder) {
     case 1:
       webbur::cn_jac_01_1(numVars,   alpha_poly, beta_poly, numPts, pts, wts);
@@ -302,7 +332,7 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
     wt_scaling = true;        break;
   }
   case GEN_GAUSS_LAGUERRE: {
-    const Real& alpha_poly = poly0.alpha_polynomial();
+    Real alpha_poly; poly0.pull_parameter(GENLAG_ALPHA, alpha_poly);
     switch (integrandOrder) {
     case 1: webbur::epn_glg_01_1(numVars,   alpha_poly, numPts, pts, wts);
       break;
@@ -352,7 +382,7 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
 
   // scale points and weights
   if (pt_scaling)
-    variable_sets.scale(poly0.point_factor());
+    variableSets.scale(poly0.point_factor());
   if (wt_scaling)
     type1WeightSets.scale(std::pow(poly0.weight_factor(), (int)numVars));
 }

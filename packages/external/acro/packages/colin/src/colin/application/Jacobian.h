@@ -57,9 +57,9 @@ protected: // methods
 
 protected: // data
 
-   boost::signal<void(AppRequest::request_map_t&)>  jacobian_request_signal;
+   boost::signals2::signal<void(AppRequest::request_map_t&)>  jacobian_request_signal;
 
-   boost::signal< size_t( EqualityFilter,
+   boost::signals2::signal< size_t( EqualityFilter,
                           bool&,
                           std::list<utilib::Any>&,
                           AppResponse::response_map_t& ),

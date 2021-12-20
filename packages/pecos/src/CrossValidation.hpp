@@ -1,9 +1,15 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
 #ifndef CROSS_VALIDATION_HPP
 #define CROSS_VALIDATION_HPP
 
-#include "MathTools.hpp"
-#include "RandomNumberGenerator.hpp"
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "FaultTolerance.hpp"
 #include "pecos_data_types.hpp"
@@ -27,8 +33,6 @@ protected:
 
   int numEquationsPerPoint_;
 
-  RandomNumberGenerator RNG_;
-  
   // Dakota specific member variables
   bool faultInfoActive_;
   FaultInfo faultInfo_;
@@ -161,13 +165,13 @@ public:
   void copy_solver( LinearSolver_ptr solver );
 
   /// Copy only the solver of the cross validation iterator;
-  virtual boost::shared_ptr<LinearModelCrossValidationIterator> copy() = 0;
+  virtual std::shared_ptr<LinearModelCrossValidationIterator> copy() = 0;
 
   virtual void compute_fold_score( RealMatrix &fold_diffs, RealVector &result );
 
 };
 
-typedef boost::shared_ptr<LinearModelCrossValidationIterator>  LinearModelCVIterator_ptr;
+typedef std::shared_ptr<LinearModelCrossValidationIterator>  LinearModelCVIterator_ptr;
 
 class MultipleSolutionLinearModelCrossValidationIterator : public LinearModelCrossValidationIterator
 {
@@ -198,7 +202,7 @@ public:
   void get_coefficient_stats(RealMatrix &coeff_stats);
 
    /// Copy only the solver of the cross validation iterator;
-  boost::shared_ptr<LinearModelCrossValidationIterator> copy();
+  std::shared_ptr<LinearModelCrossValidationIterator> copy();
 };
 
 }  // namespace Pecos

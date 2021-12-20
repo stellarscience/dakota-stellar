@@ -237,7 +237,7 @@ class bit_mask_facade
         /// A proxy class to represent a bit location immutably.
         /**
          * Given an immutable bit location, you can determine what the bit
-         * value at that location is as a boolean (false = 0 and true = 1) but
+         * value at that location is as a Boolean (false = 0 and true = 1) but
          * you may not change it.
          */
         class const_bit_location
@@ -274,10 +274,10 @@ class bit_mask_facade
             */
             public:
 
-                /// Compares this bit location to the supplied boolean value.
+                /// Compares this bit location to the supplied Boolean value.
                 /**
                  * The comparison is done by first converting this bit location
-                 * to a boolean.  The result is then compared to \a lval.
+                 * to a Boolean.  The result is then compared to \a lval.
                  *
                  * \param lval The logical value to compare to this bit
                  *             locations value.
@@ -395,8 +395,8 @@ class bit_mask_facade
         /// A proxy class to represent and possibly modify a bit location.
         /**
          * Given a mutable bit location, you can determine what the bit value
-         * at that location is as a boolean (false = 0 and true = 1) and you
-         * may also change it by assignment to a boolean.
+         * at that location is as a Boolean (false = 0 and true = 1) and you
+         * may also change it by assignment to a Boolean.
          */
         class bit_location :
             public const_bit_location
@@ -433,7 +433,7 @@ class bit_mask_facade
 
                 /**
                  * \brief Changes the value of the bit at this location to the
-                 *        boolean value of \a rhs (1 for true, 0 for false).
+                 *        Boolean value of \a rhs (1 for true, 0 for false).
                  *
                  * \param rhs The value for this bit to have (true causes a
                  *            value of 1, false causes 0).
@@ -596,7 +596,7 @@ class bit_mask_facade
 
                 /// Returns true if rhs is equal to this and false otherwise.
                 /**
-                 * \param rhs The iterator to compare to this for equivolence.
+                 * \param rhs The iterator to compare to this for equivalence.
                  * \return True if \a rhs points to the same element as this.
                  *         False otherwise.
                  */
@@ -1083,7 +1083,7 @@ class bit_mask_facade
          * iterator returned by this function.  Doing so will cause an
          * exception to be thrown by the bit_mask.
          *
-         * \return An iterator to one past the bit at the hightest bit
+         * \return An iterator to one past the bit at the highest bit
          *         location.
          */
         inline
@@ -1100,7 +1100,7 @@ class bit_mask_facade
          * iterator returned by this function.  Doing so will cause an
          * exception to be thrown by the bit_mask.
          *
-         * \return A const_iterator to one past the bit at the hightest bit
+         * \return A const_iterator to one past the bit at the highest bit
          *         location.
          */
         inline
@@ -1114,7 +1114,7 @@ class bit_mask_facade
          *
          * The first bit location in the reverse sequence has a maximal index.
          *
-         * \return A reverse_iterator to the bit at the hightest bit location.
+         * \return A reverse_iterator to the bit at the highest bit location.
          */
         inline
         reverse_iterator
@@ -1127,7 +1127,7 @@ class bit_mask_facade
          *
          * The first bit location in the reverse sequence has a maximal index.
          *
-         * \return A const_reverse_iterator to the bit at the hightest bit
+         * \return A const_reverse_iterator to the bit at the highest bit
          *         location which is the beginning of the reverse sequence.
          */
         inline
@@ -1144,7 +1144,7 @@ class bit_mask_facade
          * dereference the iterator returned by this function.  Doing so will
          * cause an exception to be thrown by the bit_mask.
          *
-         * \return A reverse_iterator to one past the bit at the hightest bit
+         * \return A reverse_iterator to one past the bit at the highest bit
          *         location in the reverse sequence (which has minimal bit
          *         index).
          */
@@ -1162,7 +1162,7 @@ class bit_mask_facade
          * dereference the iterator returned by this function.  Doing so will
          * cause an exception to be thrown by the bit_mask.
          *
-         * \return A const_reverse_iterator to one past the bit at the hightest
+         * \return A const_reverse_iterator to one past the bit at the highest
          *         bit location in the reverse sequence (which has minimal bit
          *         index).
          */
@@ -1520,7 +1520,7 @@ class bit_mask_facade
         none(
             ) const;
 
-        /// Returns an unsigned long with an equivolent bit pattern as this.
+        /// Returns an unsigned long with an equivalent bit pattern as this.
         /**
          * \return An unsigned long with the same pattern of bits as this.
          * \throws overflow_error if unsigned long is not large enough to store
@@ -1565,7 +1565,7 @@ class bit_mask_facade
          *
          * This operation does not modify this bitmask at all.
          *
-         * \param off The number of locations to the rigth to shift the bits of
+         * \param off The number of locations to the right to shift the bits of
          *            this mask when creating the new one.
          * \return A new bitmask as the same type as this that has the same
          *         bits as this but right shifted by \a off locations.
@@ -1617,7 +1617,7 @@ class bit_mask_facade
 
         /// Statically downcasts this to a const most_derived_type&.
         /**
-         * \return \a casted casted to a const most_derived_type&.
+         * \return \a this casted to a const most_derived_type&.
          */
         inline
         const most_derived_type&
@@ -1750,9 +1750,9 @@ class bit_mask_facade
  *        of bits.
  *
  * This stores a collection of integral values of type BS_T used to represent
- * multiple boolean values.  It is parameterized on the total number of bits
- * available (# of boolean flags) and the integer types used to
- * acutally store the bits.  NBITS is not limited by the size of the integer
+ * multiple Boolean values.  It is parameterized on the total number of bits
+ * available (# of Boolean flags) and the integer types used to
+ * actually store the bits.  NBITS is not limited by the size of the integer
  * type used to store the bits.  This class houses the bits in as many
  * of the BS_T's as necessary.  Using smaller integer types (ex. unsigned char)
  * has the advantage that there is less likely to be wasted bits.  for example,
@@ -1761,7 +1761,7 @@ class bit_mask_facade
  *
  * The STL version of a bitset was not used b/c it does not support iterators
  * which this class does (both forward and reverse with random access
- * symantics) and because this class parameterizes the integer type used to
+ * semantics) and because this class parameterizes the integer type used to
  * store the bits whereas common stl practice is to use a basic_string.  This
  * class does implement the entire interface of the STL bitset mostly through
  * the facade base class.  Additional methods are supplied with more logical
@@ -2197,7 +2197,7 @@ class bit_mask :
 
 #ifdef sun
 
-            // continue to rip off chuncks of bits and putting them in our bits
+            // continue to rip off chunks of bits and putting them in our bits
             // array until either we have used all of the uint or all of the
             // bits array.
             size_type max_index = ARRAY_SIZE - 1;
@@ -2224,7 +2224,7 @@ class bit_mask :
 #else
 
             // Figure out how many bytes of information to copy over.
-            // it is the min of the number avaiable from initBits and the
+            // it is the min of the number available from initBits and the
             // number this can hold.
 
             // First, figure out how many are available.
@@ -2446,7 +2446,7 @@ class bit_mask :
             clear();
 
             // Figure out how many bytes of information to copy over.
-            // it is the min of the number avaiable from other and the number
+            // it is the min of the number available from other and the number
             // this can hold.
 
             // First, figure out how many are available.
@@ -2878,7 +2878,7 @@ class dynamic_bit_mask :
 
 #ifdef sun
 
-            // continue to rip off chuncks of bits and putting them in our bits
+            // continue to rip off chunks of bits and putting them in our bits
             // array until either we have used all of the uint or all of the
             // bits array.
             size_type max_index = this->array_size() - 1;
@@ -2905,7 +2905,7 @@ class dynamic_bit_mask :
 #else
 
             // Figure out how many bytes of information to copy over.
-            // it is the min of the number avaiable from initBits and the
+            // it is the min of the number available from initBits and the
             // number this can hold.
 
             // First, figure out how many are available.
@@ -3145,7 +3145,7 @@ class dynamic_bit_mask :
             clear();
 
             // Figure out how many bytes of information to copy over.
-            // it is the min of the number avaiable from other and the number
+            // it is the min of the number available from other and the number
             // this can hold.
 
             // First, figure out how many are available.

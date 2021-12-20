@@ -57,7 +57,10 @@ Includes
 // JEGAConfig.hpp should be the first include in all JEGA files.
 #include <../Utilities/include/JEGAConfig.hpp>
 
+#include <cmath>
 #include <cfloat>
+#include <limits>
+#include <type_traits>
 #include <utilities/include/Math.hpp>
 #include <../Utilities/include/Logging.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
@@ -101,9 +104,74 @@ namespace JEGA {
 Static Member Data Definitions
 ================================================================================
 */
+struct SignedRounder
+{
+    static
+    double
+    Round(
+        const double& value,
+        const double& min,
+        const double& max
+        )
+    {
+        EDDY_FUNC_DEBUGSCOPE
+
+        const double pct = (value - min) / (max - min);
+        const double adjMinVal = min - 0.5;
+
+        // There is a slight chance that the provided value is ub and so will
+        // wind up rounding to 1 greater than ub after adjustment.  All calling
+        // sites to this function will correct for that.  Alternatives would be
+        // to avoid that by shortening the adjustment to as close to 0.5 as we
+        // can such that adjMinVal != min-0.5 and adjMaxVal != max + 0.5.
+        return Math::Round(
+            (pct * ((max + 0.5) - adjMinVal)) + adjMinVal
+            );
+    }
+};
+
+struct IntegralRounder
+{
+    static
+    double
+    Round(
+        const double& value,
+        const double& min,
+        const double& max
+        )
+    {
+        EDDY_FUNC_DEBUGSCOPE
+        return value;
+    }
+};
 
 
+struct UnsignedRounder
+{
+    static
+    double
+    Round(
+        const double& value,
+        const double& min,
+        const double& max
+        )
+    {
+        EDDY_FUNC_DEBUGSCOPE
 
+        // If the range is such that subtracting 0.5 from the min will still be
+        // an unsigned value, then use the signed rounder.
+        if(min >= 0.5) return SignedRounder::Round(value, min, max);
+
+        // Otherwise, use a different technique.  NOTE: Assume there are no
+        // unsigned real valued types.
+
+        // There is a slight chance that the provided value is ub and so will
+        // wind up as 1 greater than ub after adjustment.  All calling
+        // sites to this function will correct for that.
+        const double pct = (value - min) / (max - min);
+        return std::trunc(pct * (max + 1.0 - min) + min);
+    }
+};
 
 
 
@@ -208,13 +276,13 @@ IntegerDesignVariableType::IsNatureLocked(
 }
 
 bool
-IntegerDesignVariableType::IsValidDoubleRep(
-    double rep
+IntegerDesignVariableType::IsValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     return Math::IsWhole(rep) &&
-        this->DesignVariableTypeBase::IsValidDoubleRep(rep);
+        this->DesignVariableTypeBase::IsValidRep(rep);
 }
 
 DesignVariableTypeBase*
@@ -228,11 +296,13 @@ IntegerDesignVariableType::Clone(
 
 double
 IntegerDesignVariableType::GetValueOf(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return Math::IsWhole(rep) ? this->GetNature().GetValueOf(rep) : -DBL_MAX;
+    return Math::IsWhole(rep) ?
+		this->GetNature().GetValueOf(rep) :
+		-std::numeric_limits<double>::max();
 }
 
 double
@@ -244,7 +314,7 @@ IntegerDesignVariableType::GetNearestValidValue(
     EDDY_ASSERT(Math::IsWhole(GetMinValue()));
     EDDY_ASSERT(Math::IsWhole(GetMaxValue()));
 
-    if(value == -DBL_MAX) return value;
+    if(value == -std::numeric_limits<double>::max()) return value;
 
     double temp = this->GetNature().GetNearestValidValue(value);
 
@@ -252,17 +322,24 @@ IntegerDesignVariableType::GetNearestValidValue(
     return this->GetNearestValidValue(Math::Round(temp));
 }
 
-double
-IntegerDesignVariableType::GetNearestValidDoubleRep(
-    double rep
+var_rep_t
+IntegerDesignVariableType::GetNearestValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    if(rep == -DBL_MAX) return rep;
+    typedef std::conditional<
+        std::is_integral<var_rep_t>::value, IntegralRounder, UnsignedRounder
+        >::type rndr_t;
 
-    return this->GetNature().GetNearestValidDoubleRep(
-        this->ubround(rep, this->GetMinDoubleRep(), this->GetMaxDoubleRep())
+	if(rep == -std::numeric_limits<var_rep_t>::max())
+		return -std::numeric_limits<var_rep_t>::max();
+
+    return this->GetNature().GetNearestValidRep(
+        static_cast<var_rep_t>(
+            rndr_t::Round(rep, this->GetMinRep(), this->GetMaxRep())
+            )
         );
 }
 
@@ -278,41 +355,41 @@ IntegerDesignVariableType::GetRandomValue(
     if(this->IsValidValue(temp)) return temp;
 
     return this->GetNearestValidValue(
-        this->ubround(temp, this->GetMinValue(), this->GetMaxValue())
+        SignedRounder::Round(temp, this->GetMinValue(), this->GetMaxValue())
         );
 }
 
-double
-IntegerDesignVariableType::GetDoubleRepOf(
+var_rep_t
+IntegerDesignVariableType::GetRepOf(
     double value
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(Math::IsWhole(value));
 
-    if(!Math::IsWhole(value)) return -DBL_MAX;
-    return this->GetNature().GetDoubleRepOf(value);
+    if(!Math::IsWhole(value)) return -std::numeric_limits<var_rep_t>::max();
+    return this->GetNature().GetRepOf(value);
 }
 
-double
-IntegerDesignVariableType::GetRandomDoubleRep(
+var_rep_t
+IntegerDesignVariableType::GetRandomRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    double temp = this->GetNature().GetRandomDoubleRep();
-    return this->GetNearestValidDoubleRep(temp);
+    var_rep_t temp = this->GetNature().GetRandomRep();
+    return this->GetNearestValidRep(temp);
 }
 
-double
-IntegerDesignVariableType::GetRandomDoubleRep(
+var_rep_t
+IntegerDesignVariableType::GetRandomRep(
     const RegionOfSpace& within
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    double temp = this->GetNature().GetRandomDoubleRep(within);
-    return this->GetNearestValidDoubleRep(temp);
+    var_rep_t temp = this->GetNature().GetRandomRep(within);
+    return this->GetNearestValidRep(temp);
 }
 
 void
@@ -364,28 +441,6 @@ IntegerDesignVariableType::SetMaxValue(
 Private Methods
 ================================================================================
 */
-
-double
-IntegerDesignVariableType::ubround(
-    const double& value,
-    const double& min,
-    const double& max
-    ) const
-{
-    EDDY_FUNC_DEBUGSCOPE
-
-    const double pct = (value - min) / (max - min);
-    const double adjMinVal = min - 0.5;
-
-    // There is a slight chance that the provided value is ub and so will adjust
-    // wind up rounding to 1 greater than ub after adjustment.  All calling
-    // sites to this function will correct for that.  Alternatives would be
-    // to avoid that by shortening the adjustment to as close to 0.5 as we can
-    // such that adjMinVal != min-0.5 and adjMaxVal != max + 0.5.
-    return Math::Round(
-        (pct * ((max + 0.5) - adjMinVal)) + adjMinVal
-        );
-}
 
 
 

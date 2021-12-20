@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -215,11 +215,11 @@ template<class P_V,class P_M>
 double
 likelihoodRoutine(
   const P_V&  paramValues,
-  const P_V*  paramDirection,
+  const P_V*  /* paramDirection */,
   const void* functionDataPtr,
-  P_V*        gradVector,
-  P_M*        hessianMatrix,
-  P_V*        hessianEffect)
+  P_V*        /* gradVector */,
+  P_M*        /* hessianMatrix */,
+  P_V*        /* hessianEffect */)
 {
   double resultValue = 0.;
 

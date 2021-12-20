@@ -156,11 +156,11 @@ Class Definition
 /**
  * \brief A log to wrap two other pre-existing logs and serve as a decorator.
  *
- * This log will log to 2 other underlying logs.  The underlyers may
+ * This log will log to 2 other underlying logs.  The underlying logs may
  * themselves be decorators.
  *
- * The underlyers must be pre-existing and will be known to this decorator by
- * reference.
+ * The underlying logs must be pre-existing and will be known to this decorator
+ * by reference.
  *
  * \param LogT1 The type of the first decorated log.
  * \param LogT2 The type of the second decorated log.
@@ -228,7 +228,7 @@ class EDDY_SL_IEDECL decorator_log
             const ET& e
             )
         {
-            // just pass the logging on to the underlyers.
+            // just pass the logging on to the tow decorated logs.
             this->_log1.log(e);
             this->_log2.log(e);
         }

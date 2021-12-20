@@ -487,49 +487,61 @@ Real BasisPolynomial::weight_factor()
 }
 
 
-Real BasisPolynomial::alpha_polynomial() const
+void BasisPolynomial::pull_parameter(short dist_param, Real& param) const
 {
-  if (!polyRep) {
-    PCerr << "Error: alpha_polynomial() not available for this basis "
+  if (polyRep)
+    polyRep->pull_parameter(dist_param, param);
+  else {
+    PCerr << "Error: pull_parameter(Real) not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->alpha_polynomial();
 }
 
 
-Real BasisPolynomial::beta_polynomial() const
-{
-  if (!polyRep) {
-    PCerr << "Error: beta_polynomial() not available for this basis polynomial "
-	  << "type." << std::endl;
-    abort_handler(-1);
-  }
-  return polyRep->beta_polynomial();
-}
-
-
-void BasisPolynomial::alpha_stat(Real alpha)
+void BasisPolynomial::
+pull_parameter(short dist_param, unsigned int& param) const
 {
   if (polyRep)
-    polyRep->alpha_stat(alpha);
+    polyRep->pull_parameter(dist_param, param);
   else {
-    PCerr << "Error: alpha_stat() not available for this basis polynomial type."
-	  << std::endl;
+    PCerr << "Error: pull_parameter(unsigned int) not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void BasisPolynomial::beta_stat(Real beta)
+void BasisPolynomial::push_parameter(short dist_param, Real param)
 {
   if (polyRep)
-    polyRep->beta_stat(beta);
+    polyRep->push_parameter(dist_param, param);
   else {
-    PCerr << "Error: beta_stat() not available for this basis polynomial type."
-	  << std::endl;
+    PCerr << "Error: push_parameter(Real) not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+void BasisPolynomial::push_parameter(short dist_param, unsigned int param)
+{
+  if (polyRep)
+    polyRep->push_parameter(dist_param, param);
+  else {
+    PCerr << "Error: push_parameter(unsigned int) not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+bool BasisPolynomial::parameterized() const
+{
+  if (polyRep)
+    return polyRep->parameterized();
+  else
+    return false; // default if not overridden
 }
 
 
@@ -590,15 +602,6 @@ const RealArray& BasisPolynomial::interpolation_points() const
 }
 
 
-bool BasisPolynomial::parameterized() const
-{
-  if (polyRep)
-    return polyRep->parameterized();
-  else
-    return false; // default if not overridden
-}
-
-
 Real BasisPolynomial::length_scale() const
 {
   if (!polyRep) {
@@ -607,6 +610,18 @@ Real BasisPolynomial::length_scale() const
     abort_handler(-1);
   }
   return polyRep->length_scale();
+}
+
+
+void BasisPolynomial::precompute_rules(unsigned short order)
+{
+  if (polyRep)
+    polyRep->precompute_rules(order); // else no-op
+  //else {
+  //  PCerr << "Error: precompute_rules() not available for this basis "
+  //	    << "polynomial type." << std::endl;
+  //  abort_handler(-1);
+  //}
 }
 
 } // namespace Pecos

@@ -168,7 +168,9 @@ DesignVariableNatureBase::AssertPrecision(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    return (val==-DBL_MAX) ? -DBL_MAX : Math::Round(val, this->_precision);
+	return (val==-std::numeric_limits<var_rep_t>::max()) ?
+		-std::numeric_limits<var_rep_t>::max() :
+		Math::Round(val, this->_precision);
 }
 
 
@@ -188,20 +190,20 @@ DesignVariableNatureBase::GetDesignVariableInfo(
     return this->GetType().GetDesignVariableInfo();
 }
 
-double
-DesignVariableNatureBase::GetRandomDoubleRep(
+var_rep_t
+DesignVariableNatureBase::GetRandomRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
     // use the max and mins as the range.
-    return this->GetRandomDoubleRep(
-        this->GetMinDoubleRep(), this->GetMaxDoubleRep()
+    return this->GetRandomRep(
+        this->GetMinRep(), this->GetMaxRep()
         );
 }
 
-double
-DesignVariableNatureBase::GetRandomDoubleRep(
+var_rep_t
+DesignVariableNatureBase::GetRandomRep(
     const RegionOfSpace& within
     ) const
 {
@@ -212,7 +214,7 @@ DesignVariableNatureBase::GetRandomDoubleRep(
     size_t index = this->GetType().GetDesignVariableInfo().GetNumber();
 
     // use the extremes for our variable in within as the range.
-    return this->GetRandomDoubleRep(
+    return this->GetRandomRep(
         within.GetLowerLimit(index), within.GetUpperLimit(index)
         );
 }
@@ -243,16 +245,16 @@ DesignVariableNatureBase::IsValidValue(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return (value != -DBL_MAX);
+    return (value != -std::numeric_limits<var_rep_t>::max());
 }
 
 bool
-DesignVariableNatureBase::IsValidDoubleRep(
-    double rep
+DesignVariableNatureBase::IsValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return (rep != -DBL_MAX);
+    return (rep != -std::numeric_limits<var_rep_t>::max());
 }
 
 

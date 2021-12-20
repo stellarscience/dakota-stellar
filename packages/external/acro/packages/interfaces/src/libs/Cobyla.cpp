@@ -32,10 +32,10 @@ namespace interfaces {
 Cobyla* Cobyla::instance = NULL;
 
 extern "C" int calc_func(int n, int m, double* x, double* f, double* con, void* /*state*/)
-{ Cobyla::calcfc(n,m,x,f,con); return 0; }
+{ Cobyla::acro_calcfc(n,m,x,f,con); return 0; }
 
 
-void Cobyla::calcfc(int n, int /*m*/, double* x, double* f, double* con)
+void Cobyla::acro_calcfc(int n, int /*m*/, double* x, double* f, double* con)
 {
    if ( ! instance )
       EXCEPTION_MNGR(std::runtime_error, "Cobyla::calcfc(): "
@@ -220,7 +220,7 @@ instance = this;
 blower_d << blower;
 bupper_d << bupper;
 
-int istatus = cobyla(n, m, &(x[0]), initial_step, step_tolerance, &(blower_d[0]), &(bupper_d[0]), iprint, &tmp_neval, accuracy, calc_func,0);
+int istatus = acro_cobyla(n, m, &(x[0]), initial_step, step_tolerance, &(blower_d[0]), &(bupper_d[0]), iprint, &tmp_neval, accuracy, calc_func,0);
 instance = NULL;
 //
 // Setup the solver status

@@ -244,16 +244,16 @@ class JEGA_SL_IEDECL GeneticAlgorithmEvaluator :
          * Evaluators are allowed to create new candidate solutions and propose
          * them to the algorithm for inclusion in the population.  They wind
          * up as "children" and are subjected to the same fitness and selection
-         * criterial that any other design is.
+         * criteria that any other design is.
          *
          * Note that the injected designs must be fully evaluated.
          */
         JEGA::Utilities::DesignDVSortSet _injections;
 
-        /// The mutext that protects the _numEvals variable in threadsafe mode.
+        /// The mutex that protects the _numEvals variable in threadsafe mode.
         EDDY_DECLARE_MUTABLE_MUTEX(_numEvalsMutex)
 
-        /// The mutext that protects the injections list in threadsafe mode.
+        /// The mutex that protects the injections list in threadsafe mode.
         EDDY_DECLARE_MUTABLE_MUTEX(_injsMutex)
 
         ThreadManager* _tMgr;
@@ -420,7 +420,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmEvaluator :
             const JEGA::Utilities::DesignGroup& in
             );
 
-        /// Tries to reslove \a des if it is a clone.
+        /// Tries to resolve \a des if it is a clone.
         /**
          * This method looks for an evaluated clone of \a des.  If it finds
          * one, it records the evaluation values and marks \a des as evaluated.
@@ -542,7 +542,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmEvaluator :
          * typically called as the last step in the Evaluate methods.  It
          * is set up so that it can generally be returned directly from those
          * methods since if evaluation failed, the design should be marked
-         * illconditioned.
+         * ill-conditioned.
          *
          * \param des The Design class object that is being post-evaluated.
          * \return The conditioning status if \a des (true if des is NOT

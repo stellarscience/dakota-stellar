@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -22,9 +22,11 @@
 //
 //-----------------------------------------------------------------------el-
 
-#include <algorithm>
-#include <queso/GslVector.h>
 #include <queso/Defines.h>
+#include <queso/GslVector.h>
+#include <queso/RngBase.h>
+#include <queso/FilePtr.h>
+#include <algorithm>
 #include <gsl/gsl_sort_vector.h>
 #include <cmath>
 
@@ -51,7 +53,6 @@ GslVector::GslVector(const BaseEnvironment& env, const Map& map)
   //          << "\n  map.NumMyElements()     = " << map.NumMyElements()
   //          << std::endl;
 
-  //std::cout << "Leaving GslVector::constructor(1)" << std::endl;
 }
 
 GslVector::GslVector(const BaseEnvironment& env, const Map& map, double value)
@@ -872,7 +873,7 @@ GslVector::subReadContents(
     // Read '=' sign
     *filePtrSet.ifsVar >> tmpString;
     //std::cout << "Just read '" << tmpString << "'" << std::endl;
-    queso_require_equal_to_msg(tmpString, "=", "string should be the '=' sign");
+    queso_require_equal_to_msg(tmpString, std::string("="), std::string("string should be the '=' sign"));
 
     // Read 'zeros(n_positions,n_params)' string
     *filePtrSet.ifsVar >> tmpString;
@@ -880,7 +881,7 @@ GslVector::subReadContents(
     unsigned int posInTmpString = 6;
 
     // Isolate 'n_positions' in a string
-    char nPositionsString[tmpString.size()-posInTmpString+1];
+    std::string nPositionsString(tmpString.size()-posInTmpString+1, ' ');
     unsigned int posInPositionsString = 0;
     do {
       queso_require_less_msg(posInTmpString, tmpString.size(), "symbol ',' not found in first line of file");
@@ -890,7 +891,7 @@ GslVector::subReadContents(
 
     // Isolate 'n_params' in a string
     posInTmpString++; // Avoid reading ',' char
-    char nParamsString[tmpString.size()-posInTmpString+1];
+    std::string nParamsString(tmpString.size()-posInTmpString+1, ' ');
     unsigned int posInParamsString = 0;
     do {
       queso_require_less_msg(posInTmpString, tmpString.size(), "symbol ')' not found in first line of file");
@@ -899,8 +900,8 @@ GslVector::subReadContents(
     nParamsString[posInParamsString] = '\0';
 
     // Convert 'n_positions' and 'n_params' strings to numbers
-    unsigned int sizeOfVecInFile = (unsigned int) strtod(nPositionsString,NULL);
-    unsigned int numParamsInFile = (unsigned int) strtod(nParamsString,   NULL);
+    unsigned int sizeOfVecInFile = (unsigned int) strtod(nPositionsString.c_str(),NULL);
+    unsigned int numParamsInFile = (unsigned int) strtod(nParamsString.c_str(),   NULL);
     if (m_env.subDisplayFile()) {
       *m_env.subDisplayFile() << "In GslVector::subReadContents()"
                               << ": fullRank "            << m_env.fullRank()
@@ -940,7 +941,7 @@ GslVector::subReadContents(
     // Read '=' sign
     *filePtrSet.ifsVar >> tmpString;
     //std::cout << "Core 0 just read '" << tmpString << "'" << std::endl;
-    queso_require_equal_to_msg(tmpString, "=", "in core 0, string should be the '=' sign");
+    queso_require_equal_to_msg(tmpString, std::string("="), std::string("in core 0, string should be the '=' sign"));
 
     // Take into account the ' [' portion
     std::streampos tmpPos = filePtrSet.ifsVar->tellg();
@@ -1091,7 +1092,6 @@ GslVector::abs() const
     }
 
   return abs_of_this_vec;
-
 }
 
 std::ostream&

@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -27,11 +27,10 @@
 #ifdef QUESO_HAS_TRILINOS
 #include <queso/TeuchosMatrix.h>
 #include <queso/TeuchosVector.h>
-#endif
+#include <queso/FilePtr.h>
 #include <sys/time.h>
 #include <cmath>
 
-#ifdef QUESO_HAS_TRILINOS
 
 namespace QUESO {
 

@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class RandomUniqueInitializer.
+        Implementation of class RandomUniqueInitializer.
 
     NOTES:
 
@@ -297,7 +297,7 @@ RandomUniqueInitializer::Initialize(
 
             // Generate a new design randomly.
             for(size_t j=0; j<ndv; j++)
-                newdes->SetVariableRep(j, dvis[j]->GetRandomDoubleRep());
+                newdes->SetVariableRep(j, dvis[j]->GetRandomRep());
 
             // Test to be sure that the new Design
             // is unique in the population.

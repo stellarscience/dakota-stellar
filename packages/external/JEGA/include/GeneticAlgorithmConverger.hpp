@@ -431,7 +431,7 @@ class JEGA_SL_IEDECL GeneticAlgorithmConverger :
          * GeneticAlgorithmOperator::GetAlgorithm() base class method.
          *
          * The method can do whatever you wish but should return
-         * true to indicate convergence and flase to indicate non-convergence.
+         * true to indicate convergence and false to indicate non-convergence.
          * It should also use the \a SetConverged method of this class to
          * record the result.
          *

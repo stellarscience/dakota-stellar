@@ -205,11 +205,9 @@ MetricTrackerConvergerBase::GetNumDP(
     // If the percent change is 0, then we use 2.
     if(this->_change == 0.0) return 2;
 
-    return static_cast<int>(
-        Math::Max(Math::Ceil(Math::Abs(
-            Math::Log10(this->_change*100.0)
-            ))+1, 2.0)
-        );
+    return static_cast<int>(Math::Max(Math::Ceil(Math::Abs(Math::Log10(
+		this->_change*100.0
+		))) + 1, 2.0));
 }
 
 
@@ -235,7 +233,7 @@ MetricTrackerConvergerBase::CheckConvergence(
         return true;
 
     // now get the metric to push onto the stack.
-    double metric = this->GetMetricValue(group, fitnesses);
+    const double metric = this->GetMetricValue(group, fitnesses);
 
     // If posting, only post the specific.  Those interested in the general
     // should be using appropriate predicates to get this post.

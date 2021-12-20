@@ -103,14 +103,6 @@ MaxDesignsNichePressureApplicator::GetDistancePercentages(
 }
 
 inline
-const std::size_t&
-MaxDesignsNichePressureApplicator::GetMaximumDesigns(
-    ) const
-{
-    return this->_maxDesigns;
-}
-
-inline
 double
 MaxDesignsNichePressureApplicator::GetDistancePercentage(
     std::size_t of
@@ -119,6 +111,14 @@ MaxDesignsNichePressureApplicator::GetDistancePercentage(
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(of < this->GetDesignTarget().GetNOF());
     return this->_distPcts[static_cast<JEGA::DoubleVector::size_type>(of)];
+}
+
+inline
+const std::size_t&
+MaxDesignsNichePressureApplicator::GetMaximumDesigns(
+    ) const
+{
+    return this->_maxDesigns;
 }
 
 

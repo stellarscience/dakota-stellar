@@ -35,14 +35,14 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
 
   switch (fourierMethod) {
   case IFFT_SD: // Generate num_terms LHS samples for Psi ~ iid U(0, 2.*PI).
-    lhsSamples.shapeUninitialized(num_terms, 1);
+    lhsSamples.shapeUninitialized(1, num_terms);
     lhsParam1.sizeUninitialized(1);
     lhsParam2.sizeUninitialized(1);
     lhsParam1[0] = 0.;    // lower bound
     lhsParam2[0] = 2.*PI; // upper bound
     break;
   case IFFT_G:  // Generate num_terms LHS samples for V, W ~ iid N(0,1).
-    lhsSamples.shapeUninitialized(num_terms, 2);
+    lhsSamples.shapeUninitialized(2, num_terms);
     lhsParam1.sizeUninitialized(2);
     lhsParam2.sizeUninitialized(2);
     lhsParam1[0] = lhsParam1[1] = 0.; // zero means
@@ -155,16 +155,16 @@ void FourierInverseTransformation::compute_sample_shinozuka_deodatis()
   X=m*real(ifft(B));
   */
 
-  size_t i, num_terms = omegaSequence.length();
+  size_t i, num_terms = omegaSequence.length(); RealSymMatrix corr;
   if (ifftSampleCntr)
     lhsSampler.advance_seed_sequence();
-  lhsSampler.generate_uniform_samples(lhsParam1, lhsParam2, num_terms,
+  lhsSampler.generate_uniform_samples(lhsParam1, lhsParam2, corr, num_terms,
 				      lhsSamples);
 
   for (i=0; i<num_terms; i++) {
     //Real A = sigmaSequence[i]*std::sqrt(2.);
     //ifftVector[i] = std::complex<Real>(A*cos(Psi_i), A*sin(Psi_i)); // Euler
-    ifftVector[i] = std::polar(sigmaSequence[i]*std::sqrt(2.), lhsSamples(i,0));
+    ifftVector[i] = std::polar(sigmaSequence[i]*std::sqrt(2.), lhsSamples(0,i));
   }
 
   compute_ifft_sample_set(ifftVector); // ifftVector: freq -> time domain
@@ -200,16 +200,15 @@ void FourierInverseTransformation::compute_sample_grigoriu()
   */
 
   size_t i, num_terms = omegaSequence.length();
-  RealVector empty_rv;
-  RealSymMatrix empty_correl;
+  RealVector bounds;  RealSymMatrix corr;
   if (ifftSampleCntr)
     lhsSampler.advance_seed_sequence();
-  lhsSampler.generate_normal_samples(lhsParam1, lhsParam2, empty_rv, empty_rv,
-				     num_terms, empty_correl, lhsSamples);
+  lhsSampler.generate_normal_samples(lhsParam1, lhsParam2, bounds, bounds,
+				     corr, num_terms, lhsSamples);
 
   for (i=0; i<num_terms; i++) {
-    const Real& v_i = lhsSamples(i, 0);
-    const Real& w_i = lhsSamples(i, 1);
+    Real* samp_i = lhsSamples[i];
+    Real v_i = samp_i[0], w_i = samp_i[1];
     //Real A = sigmaSequence[i]*std::sqrt(v_i*v_i + w_i*w_i); // A ~ Rayleigh
     //Real Psi = -std::atan2(w_i, v_i);                       // Psi ~ U(-pi,pi)
     //ifftVector[i] = std::complex<Real>(A*cos(Psi), A*sin(Psi)); // Euler

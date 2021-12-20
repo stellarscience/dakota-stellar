@@ -80,7 +80,7 @@ using namespace System;
 using namespace JEGA::FrontEnd::Managed;
 using namespace System::Collections::Generic;
 
-MANAGED_CLASS(public, TestEvaluator) :
+public ref class TestEvaluator :
     public MEvaluationFunctor
 {
     private:
@@ -92,8 +92,8 @@ MANAGED_CLASS(public, TestEvaluator) :
         virtual
         bool
         Evaluate(
-            MDesign MOH des,
-            List<MDesign MOH> MOH injections
+            MDesign^ des,
+            List<MDesign^>^ injections
             )
         {
             eddy::utilities::uint64_t ndv = des->GetNDV();
@@ -115,8 +115,8 @@ MANAGED_CLASS(public, TestEvaluator) :
         virtual
         bool
         Evaluate(
-            DesignVector MOH designs,
-            System::Collections::Generic::List<MDesign MOH> MOH injections
+            DesignVector^ designs,
+            System::Collections::Generic::List<MDesign^>^ injections
             )
         {
             return false;
@@ -144,8 +144,8 @@ MANAGED_CLASS(public, TestEvaluator) :
 
 void
 WriteSolution(
-    MSolution MOH sol,
-    System::IO::TextWriter MOH stream
+    MSolution^ sol,
+    System::IO::TextWriter^ stream
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -182,15 +182,15 @@ WriteSolution(
                 }
         }
     }
-    catch(System::Exception MOH ) {
+    catch(System::Exception^ ) {
 
     }
 }
 
 void
 WriteSolutions(
-    SolutionVector MOH sols,
-    System::IO::TextWriter MOH stream
+    SolutionVector^ sols,
+    System::IO::TextWriter^ stream
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -199,14 +199,12 @@ WriteSolutions(
 
         for(int i=0; i<sols->Count; ++i)
         {
-            MSolution MOH sol = NON_GENERIC_CAST(
-                MSolution MOH, MANAGED_LIST_ITEM(sols, i)
-                );
+            MSolution^ sol = sols[i];
             WriteSolution(sol, stream);
             stream->WriteLine();
         }
     }
-    catch(System::Exception MOH ) {
+    catch(System::Exception^ ) {
 
     }
 
@@ -216,20 +214,16 @@ WriteSolutions(
 
 int
 main(
-#if _MSC_VER < 1400
-     int, char*[], char*[]
-#else
     array<System::String ^> ^ args
-#endif
     )
 {
     try {
         MDriver::InitializeJEGA(
             "JEGAGlobal.log", JEGA::Logging::LevelClass::debug, 123456,
-            MAlgorithmConfig::FatalBehavior::ABORT
+            MAlgorithmConfig::FatalBehavior::ABORT, true
             );
 
-        MProblemConfig MOH pConfig = MANAGED_GCNEW MProblemConfig();
+        MProblemConfig^ pConfig = gcnew MProblemConfig();
         GC::SuppressFinalize(pConfig);
 
         pConfig->AddContinuumRealVariable("x1", -4.0, 4.0, 6);
@@ -239,14 +233,14 @@ main(
         pConfig->AddNonlinearMinimizeObjective("F1");
         pConfig->AddNonlinearMinimizeObjective("F2");
 
-        TestEvaluator MOH functor = MANAGED_GCNEW TestEvaluator();
+        TestEvaluator^ functor = gcnew TestEvaluator();
         GC::SuppressFinalize(functor);
-        MEvaluator MOH evaluator = MANAGED_GCNEW MEvaluator(functor);
+        MEvaluator^ evaluator = gcnew MEvaluator(functor);
         GC::SuppressFinalize(evaluator);
-        MAlgorithmConfig MOH aConfig = MANAGED_GCNEW MAlgorithmConfig(evaluator);
+        MAlgorithmConfig^ aConfig = gcnew MAlgorithmConfig(evaluator);
         GC::SuppressFinalize(aConfig);
 
-        MParameterDatabase MOH pdb = aConfig->GetParameterDB();
+        MParameterDatabase^ pdb = aConfig->GetParameterDB();
         aConfig->SetAlgorithmType(MAlgorithmConfig::AlgType::MOGA);
         aConfig->SetLoggingFilename("JEGA_VBRun.log");
         aConfig->SetDefaultLoggingLevel(MAlgorithmConfig::Silent);
@@ -276,14 +270,14 @@ main(
         pdb->AddDoubleParam("method.jega.fitness_limit", 5);
         pdb->AddDoubleParam("method.jega.shrinkage_percentage", 0.9);
 
-        DoubleVector MOH nicheVector = MANAGED_GCNEW DoubleVector();
-        nicheVector->Add(MANAGED_BOX(0.05));
-        nicheVector->Add(MANAGED_BOX(0.05));
+        DoubleVector^ nicheVector = gcnew DoubleVector();
+        nicheVector->Add(0.05);
+        nicheVector->Add(0.05);
         pdb->AddDoubleVectorParam("method.jega.niche_vector", nicheVector);
 
-        MDriver MOH driver = MANAGED_GCNEW MDriver(pConfig);
+        MDriver^ driver = gcnew MDriver(pConfig);
         GC::SuppressFinalize(driver);
-        SolutionVector MOH results = driver->ExecuteAlgorithm(aConfig);
+        SolutionVector^ results = driver->ExecuteAlgorithm(aConfig);
 
         GC::ReRegisterForFinalize(driver);
         GC::ReRegisterForFinalize(pConfig);
@@ -294,7 +288,7 @@ main(
 
         return 0;
     }
-    catch(System::Exception MOH ex) {
+    catch(System::Exception^ ex) {
         System::Console::Write("Caught a system exception reading: ");
         System::Console::WriteLine(ex->Message);
     }

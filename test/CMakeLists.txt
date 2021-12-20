@@ -6,6 +6,7 @@ include(CheckIncludeFile)
 include(CMakeParseArguments)
 include(DakotaCopyTarget)
 include(ListFilterEmacsBackups)
+include(ModifyTargetRpath)
 
 # Macro: dakota_get_test_properties; macro so can set in parent context.
 #
@@ -120,6 +121,13 @@ function(dakota_app_test _test_name _last_subtest)
     set(_par_clopt "--parallel")
     set(_par_mark "p")
   endif()
+  
+  # Circumvent SIP on OSX by running dakota and other test executables
+  # with custom generated .sh scripts.
+  set(binext "")
+  if(APPLE)
+    set(binext "--bin-ext=.sh")
+  endif()
 
   if (DAKOTA_EXPAND_SUBTESTS)
     # Add the 0th serial test. Don't create custom target for copied files.
@@ -128,11 +136,12 @@ function(dakota_app_test _test_name _last_subtest)
       ${_test_name}
       SUBTEST 0
       FILE_DEPENDENCIES "${_dat_FILE_DEPENDENCIES}"
-      PREPROCESS COMMAND \"${CMAKE_COMMAND}\" -E remove ${_diffs_filename}
-      APPLICATION COMMAND \"${PERL_EXECUTABLE}\"
+      PREPROCESS COMMAND ${CMAKE_COMMAND} -E remove ${_diffs_filename}
+      APPLICATION COMMAND ${PERL_EXECUTABLE}
         ${CMAKE_CURRENT_BINARY_DIR}/dakota_test.perl ${_par_clopt}
           --output-dir=${CMAKE_CURRENT_BINARY_DIR}/${_test_name}
           --bin-dir=${CMAKE_CURRENT_BINARY_DIR}
+          ${binext}
           ${_test_input_file} 0
       UNIQUE_DIRECTORY
       NO_TARGET
@@ -145,10 +154,11 @@ function(dakota_app_test _test_name _last_subtest)
         add_application_test(
     	${_test_name}
   	SUBTEST ${st_num}
-    	APPLICATION COMMAND \"${PERL_EXECUTABLE}\"
+	APPLICATION COMMAND ${PERL_EXECUTABLE}
             ${CMAKE_CURRENT_BINARY_DIR}/dakota_test.perl ${_par_clopt}
               --output-dir=${CMAKE_CURRENT_BINARY_DIR}/${_test_name}
               --bin-dir=${CMAKE_CURRENT_BINARY_DIR}
+              ${binext}
               ${test_input_file} ${st_num}
     	WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${_test_name}"
     	NO_TARGET
@@ -165,11 +175,12 @@ function(dakota_app_test _test_name _last_subtest)
     add_application_test(
       ${_test_name}
       FILE_DEPENDENCIES "${_dat_FILE_DEPENDENCIES}"
-      PREPROCESS COMMAND \"${CMAKE_COMMAND}\" -E remove ${_diffs_filename}
-      APPLICATION COMMAND \"${PERL_EXECUTABLE}\"
+      PREPROCESS COMMAND ${CMAKE_COMMAND} -E remove ${_diffs_filename}
+      APPLICATION COMMAND ${PERL_EXECUTABLE}
         ${CMAKE_CURRENT_BINARY_DIR}/dakota_test.perl ${_par_clopt}
           --output-dir=${CMAKE_CURRENT_BINARY_DIR}/${_test_name}
           --bin-dir=${CMAKE_CURRENT_BINARY_DIR}
+          ${binext}
           ${_test_input_file}
       UNIQUE_DIRECTORY
       NO_TARGET
@@ -409,6 +420,7 @@ set(dakota_test_executables
   steel_column_cost
   steel_column_perf
   steel_section
+  svanberg
   text_book
   text_book1
   text_book2
@@ -420,17 +432,20 @@ set(dakota_test_executables
 
 foreach(dte ${dakota_test_executables})
   add_executable(${dte} ${dte}.cpp)
+  ModifyTargetRpath(${dte} 3)
 endforeach()
 
 # nl2func has two source files
 list(APPEND dakota_test_executables nl2func)
 add_executable(nl2func nl2func.cpp nl2test.cpp)
+ModifyTargetRpath(nl2func 3)
 
 # parallel tester
 if(DAKOTA_HAVE_MPI)
   add_executable(text_book_par text_book_par.cpp)
   list(APPEND dakota_test_executables text_book_par)
   DakotaApplyMPISettings(text_book_par)
+  ModifyTargetRpath(text_book_par 3)
 endif()
 
 # Enforce an "imaginary" dependency

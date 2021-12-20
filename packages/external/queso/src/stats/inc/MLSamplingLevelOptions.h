@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -28,8 +28,15 @@
 #define LEVEL_REF_ID 0
 
 #include <queso/Environment.h>
-#include <queso/SequenceStatisticalOptions.h>
+
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 #include <queso/BoostInputOptionsParser.h>
+#else
+#define GETPOT_NAMESPACE QUESO // So we don't clash with other getpots
+#include <queso/getpot.h>
+#undef GETPOT_NAMESPACE
+#endif
+
 #define UQ_ML_SAMPLING_L_FILENAME_FOR_NO_FILE "."
 
 // _ODV = option default value
@@ -101,6 +108,9 @@
 #define UQ_ML_SAMPLING_L_AM_ETA_ODV                                           1.
 #define UQ_ML_SAMPLING_L_AM_EPSILON_ODV                                       1.e-5
 #define UQ_ML_SAMPLING_L_DO_LOGIT_TRANSFORM                                   0
+#define UQ_ML_SAMPLING_L_ALGORITHM                                            "random_walk"
+#define UQ_ML_SAMPLING_L_TK                                                   "random_walk"
+#define UQ_ML_SAMPLING_L_UPDATE_INTERVAL                                      1
 
 namespace QUESO {
 
@@ -119,10 +129,22 @@ class MLSamplingLevelOptions
 public:
   //! @name Constructor/Destructor methods
   //@{
+  //! Constructor
+  MLSamplingLevelOptions();
+
   //! Constructor: reads options from the input file.
   MLSamplingLevelOptions(const BaseEnvironment& env, const char* prefix);
 
   //MLSamplingLevelOptions(const MLSamplingLevelOptions& inputOptions);
+
+  //! Set default values for parameter options
+  void set_defaults();
+
+  //! Set parameter option names to begin with prefix
+  void set_prefix(const std::string& prefix);
+
+  //! Given prefix, read the input file for parameters named "prefix"+*
+  void parse(const BaseEnvironment& env, const std::string& prefix);
 
   //! Destructor
   virtual ~MLSamplingLevelOptions();
@@ -165,9 +187,6 @@ public:
 
   //! subEnvs that will write to generic output file.
   std::set<unsigned int>             m_dataOutputAllowedSet;
-
-  //! subEnvs that will write to generic output file.
-  std::string                        m_str1;
 
   //! Perform load balancing with chosen algorithm (0 = no balancing).
   unsigned int                       m_loadBalanceAlgorithmId;
@@ -217,9 +236,7 @@ public:
 
 
   std::set<unsigned int>             m_parameterDisabledSet; // gpmsa2
-  std::string                        m_str2; // gpmsa2
   std::vector<double>                m_initialValuesOfDisabledParameters; // gpmsa2
-  std::string                        m_str3; // gpmsa2
 
   //! Name of input file for raw chain.
   std::string                        m_rawChainDataInputFileName;
@@ -258,11 +275,9 @@ public:
   //! subEnvs that will write to output file for raw chain.
   std::set<unsigned int>             m_rawChainDataOutputAllowedSet;
 
-  std::string                        m_str4;
 #ifdef QUESO_USES_SEQUENCE_STATISTICAL_OPTIONS
   //! Compute statistics on raw chain.
   bool                               m_rawChainComputeStats;
-  SequenceStatisticalOptions*        m_rawChainStatisticalOptionsObj;
   bool                               m_rawChainStatOptsInstantiated;
 #endif
   //! Whether or not to generate filtered chain.
@@ -285,12 +300,10 @@ public:
 
   //! subEnvs that will write to output file for filtered chain.
   std::set<unsigned int>             m_filteredChainDataOutputAllowedSet;
-  std::string                        m_str5;
 
 #ifdef QUESO_USES_SEQUENCE_STATISTICAL_OPTIONS
   //! Compute statistics on filtered chain.
   bool                               m_filteredChainComputeStats;
-  SequenceStatisticalOptions*        m_filteredChainStatisticalOptionsObj;
   bool                               m_filteredChainStatOptsInstantiated;
 #endif
   //! Display candidates generated in the core MH algorithm.
@@ -310,7 +323,6 @@ public:
 
   //! 'dr' list of scales for proposal covariance matrices from 2nd stage on.
   std::vector<double>                m_drScalesForExtraStages;
-  std::string                        m_str6;
 
   //! Whether or not 'dr' is used during 'am' non adaptive interval.
   bool                               m_drDuringAmNonAdaptiveInt;
@@ -339,9 +351,6 @@ public:
   //! subEnvs that will write to output file for 'am' adapted matrices.
   std::set<unsigned int>             m_amAdaptedMatricesDataOutputAllowedSet;
 
-
-  std::string                        m_str7;
-
   //! 'am' eta.
   double                             m_amEta;
 
@@ -351,15 +360,26 @@ public:
   //! Whether or not a logit transform will be done for bounded domains
   bool m_doLogitTransform;
 
+  //! Which algorithm to use for sampling
+  std::string m_algorithm;
+
+  //! Which transition kernel to use for sampling
+  std::string m_tk;
+
+  //! How often to call the TK's updateTK method
+  unsigned int m_updateInterval;
+
 private:
   //! Copies the option values from \c srcOptions to \c this.
   void   copyOptionsValues(const MLSamplingLevelOptions& srcOptions);
   void getAllOptions();
   void defineAllOptions();
 
-  const BaseEnvironment&        m_env;
+  const BaseEnvironment*        m_env;
 
-  BoostInputOptionsParser * m_parser;
+#ifndef QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
+  ScopedPtr<BoostInputOptionsParser>::Type m_parser;
+#endif  // QUESO_DISABLE_BOOST_PROGRAM_OPTIONS
 
   std::string                   m_option_help;
 
@@ -435,8 +455,11 @@ private:
   std::string                   m_option_am_eta;
   std::string                   m_option_am_epsilon;
   std::string                   m_option_doLogitTransform;
+  std::string                   m_option_algorithm;
+  std::string                   m_option_tk;
+  std::string                   m_option_updateInterval;
 
-  void checkOptions(const BaseEnvironment * env);
+  void checkOptions();
 
   friend std::ostream & operator<<(std::ostream & os,
       const MLSamplingLevelOptions & obj);

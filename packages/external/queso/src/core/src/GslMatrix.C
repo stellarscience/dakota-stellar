@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,6 +25,7 @@
 #include <queso/GslMatrix.h>
 #include <queso/GslVector.h>
 #include <queso/Defines.h>
+#include <queso/FilePtr.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_eigen.h>
 #include <sys/time.h>
@@ -40,6 +41,7 @@ GslMatrix::GslMatrix( // can be a rectangular matrix
   Matrix  (env,map),
   m_mat          (gsl_matrix_calloc(map.NumGlobalElements(),nCols)),
   m_LU           (NULL),
+  m_chol(),
   m_inverse      (NULL),
   m_svdColMap    (NULL),
   m_svdUmat      (NULL),
@@ -64,6 +66,7 @@ GslMatrix::GslMatrix( // square matrix
   Matrix  (env,map),
   m_mat          (gsl_matrix_calloc(map.NumGlobalElements(),map.NumGlobalElements())),
   m_LU           (NULL),
+  m_chol(),
   m_inverse      (NULL),
   m_svdColMap    (NULL),
   m_svdUmat      (NULL),
@@ -90,6 +93,7 @@ GslMatrix::GslMatrix( // square matrix
   Matrix  (v.env(),v.map()),
   m_mat          (gsl_matrix_calloc(v.sizeLocal(),v.sizeLocal())),
   m_LU           (NULL),
+  m_chol(),
   m_inverse      (NULL),
   m_svdColMap    (NULL),
   m_svdUmat      (NULL),
@@ -114,6 +118,7 @@ GslMatrix::GslMatrix(const GslVector& v) // square matrix
   Matrix  (v.env(),v.map()),
   m_mat          (gsl_matrix_calloc(v.sizeLocal(),v.sizeLocal())),
   m_LU           (NULL),
+  m_chol(),
   m_inverse      (NULL),
   m_svdColMap    (NULL),
   m_svdUmat      (NULL),
@@ -140,6 +145,7 @@ GslMatrix::GslMatrix(const GslMatrix& B) // can be a rectangular matrix
   Matrix  (B.env(),B.map()),
   m_mat          (gsl_matrix_calloc(B.numRowsLocal(),B.numCols())),
   m_LU           (NULL),
+  m_chol(),
   m_inverse      (NULL),
   m_svdColMap    (NULL),
   m_svdUmat      (NULL),
@@ -160,7 +166,7 @@ GslMatrix::GslMatrix(const GslMatrix& B) // can be a rectangular matrix
 // Destructor ----------------------------------------------------------
 GslMatrix::~GslMatrix()
 {
-  this->resetLU();
+  this->reset();
   if (m_mat) gsl_matrix_free(m_mat);
 }
 
@@ -168,7 +174,7 @@ GslMatrix::~GslMatrix()
 GslMatrix&
 GslMatrix::operator=(const GslMatrix& obj)
 {
-  this->resetLU();
+  this->reset();
   this->copy(obj);
   return *this;
 }
@@ -176,7 +182,7 @@ GslMatrix::operator=(const GslMatrix& obj)
 GslMatrix&
 GslMatrix::operator*=(double a)
 {
-  this->resetLU();
+  this->reset();
   int iRC;
   iRC = gsl_matrix_scale(m_mat,a);
   queso_require_msg(!(iRC), "scaling failed");
@@ -186,7 +192,7 @@ GslMatrix::operator*=(double a)
 GslMatrix&
 GslMatrix::operator/=(double a)
 {
-  this->resetLU();
+  this->reset();
   *this *= (1./a);
 
   return *this;
@@ -195,7 +201,7 @@ GslMatrix::operator/=(double a)
 GslMatrix&
 GslMatrix::operator+=(const GslMatrix& rhs)
 {
-  this->resetLU();
+  this->reset();
   int iRC;
   iRC = gsl_matrix_add(m_mat,rhs.m_mat);
   queso_require_msg(!(iRC), "failed");
@@ -206,7 +212,7 @@ GslMatrix::operator+=(const GslMatrix& rhs)
 GslMatrix&
 GslMatrix::operator-=(const GslMatrix& rhs)
 {
-  this->resetLU();
+  this->reset();
   int iRC;
   iRC = gsl_matrix_sub(m_mat,rhs.m_mat);
   queso_require_msg(!(iRC), "failed");
@@ -220,7 +226,7 @@ void
 GslMatrix::copy(const GslMatrix& src)
 {
   // FIXME - should we be calling Matrix::base_copy here? - RHS
-  this->resetLU();
+  this->reset();
   int iRC;
   iRC = gsl_matrix_memcpy(this->m_mat, src.m_mat);
   queso_require_msg(!(iRC), "failed");
@@ -229,8 +235,9 @@ GslMatrix::copy(const GslMatrix& src)
 }
 
 void
-GslMatrix::resetLU()
+GslMatrix::reset()
 {
+  m_chol.reset();
   if (m_LU) {
     gsl_matrix_free(m_LU);
     m_LU = NULL;
@@ -431,6 +438,48 @@ GslMatrix::chol()
   return iRC;
 }
 
+void
+GslMatrix::cholSolve(const GslVector & rhs, GslVector & sol) const
+{
+  queso_require_equal_to_msg(this->numCols(), rhs.sizeLocal(), "matrix and rhs have incompatible sizes");
+  queso_require_equal_to_msg(sol.sizeLocal(), rhs.sizeLocal(), "solution and rhs have incompatible sizes");
+
+  int iRC;
+  if (m_chol == NULL) {
+    gsl_error_handler_t * oldHandler;
+    oldHandler = gsl_set_error_handler_off();
+
+    // Returns NULL if the allocation failed
+    m_chol.reset(gsl_matrix_calloc(this->numRowsLocal(), this->numCols()),
+        gsl_matrix_free);
+    if (m_chol == NULL) {
+      gsl_set_error_handler(oldHandler);
+      queso_error_msg("gsl_matrix_calloc() failed");
+    }
+
+    iRC = gsl_matrix_memcpy(m_chol.get(), m_mat);
+    if (iRC != 0) {
+      gsl_set_error_handler(oldHandler);
+      queso_error_msg("gsl_matrix_memcpy() failed");
+    }
+
+    iRC = gsl_linalg_cholesky_decomp(m_chol.get());
+    if (iRC != 0) {  // Clean up if the matrix isn't spd
+      gsl_set_error_handler(oldHandler);
+      queso_error_msg("gsl_linalg_chol_decomp() failed: " << gsl_strerror(iRC));
+    }
+  }
+
+  gsl_error_handler_t * oldHandler;
+  oldHandler = gsl_set_error_handler_off();
+
+  iRC = gsl_linalg_cholesky_solve(m_chol.get(), rhs.data(), sol.data());
+
+  gsl_set_error_handler(oldHandler);
+
+  queso_require_msg(!iRC, "gsl_linalg_cholesky_solve failed: " << gsl_strerror(iRC));
+}
+
 int
 GslMatrix::svd(GslMatrix& matU, GslVector& vecS, GslMatrix& matVt) const
 {
@@ -595,7 +644,7 @@ GslMatrix::zeroLower(bool includeDiagonal)
 
   queso_require_equal_to_msg(nRows, nCols, "routine works only for square matrices");
 
-  this->resetLU();
+  this->reset();
 
   if (includeDiagonal) {
     for (unsigned int i = 0; i < nRows; i++) {
@@ -623,7 +672,7 @@ GslMatrix::zeroUpper(bool includeDiagonal)
 
   queso_require_equal_to_msg(nRows, nCols, "routine works only for square matrices");
 
-  this->resetLU();
+  this->reset();
 
   if (includeDiagonal) {
     for (unsigned int i = 0; i < nRows; i++) {
@@ -692,15 +741,17 @@ GslMatrix::filterLargeValues(double thresholdValue)
 GslMatrix
 GslMatrix::transpose() const
 {
-  unsigned int nRows = this->numRowsLocal();
+  unsigned int nRows = this->numRowsGlobal();
   unsigned int nCols = this->numCols();
 
-  queso_require_equal_to_msg(nRows, nCols, "routine works only for square matrices");
+  const MpiComm & comm = this->map().Comm();
+  Map serial_map(nCols, 0, comm);
 
-  GslMatrix mat(m_env,m_map,nCols);
+  GslMatrix mat(m_env,serial_map,nRows);
+
   for (unsigned int row = 0; row < nRows; ++row) {
     for (unsigned int col = 0; col < nCols; ++col) {
-      mat(row,col) = (*this)(col,row);
+      mat(col,row) = (*this)(row,col);
     }
   }
 
@@ -1183,6 +1234,39 @@ GslMatrix::multiply(
   return;
 }
 
+GslMatrix
+GslMatrix::multiply(
+  const GslMatrix & X) const
+{
+  GslMatrix Y(m_env,m_map,X.numCols());
+  this->multiply(X,Y);
+
+  return Y;
+}
+
+
+
+void
+GslMatrix::multiply(
+  const GslMatrix & X,
+        GslMatrix & Y) const
+{
+  queso_require_equal_to_msg(this->numCols(), X.numRowsGlobal(), "matrix and X have incompatible sizes");
+  queso_require_equal_to_msg(this->numRowsGlobal(), Y.numRowsGlobal(), "matrix and Y have incompatible sizes");
+  queso_require_equal_to_msg(X.numCols(), Y.numCols(), "X and Y have incompatible sizes");
+
+  const unsigned int m_s = this->numRowsGlobal();
+  const unsigned int p_s = this->numCols();
+  const unsigned int n_s = X.numCols();
+
+  for (unsigned int k=0; k<p_s; k++)
+    for (unsigned int j=0; j<n_s; j++)
+      if (X(k,j) != 0.)
+        for (unsigned int i=0; i<m_s; i++)
+          Y(i,j) += (*this)(i,k) * X(k,j);
+}
+
+
 GslVector
 GslMatrix::invertMultiply(
   const GslVector& b) const
@@ -1628,7 +1712,7 @@ GslMatrix::getColumn(unsigned int column_num ) const
 void
 GslMatrix::setRow(unsigned int row_num, const GslVector& row)
 {
-  this->resetLU();
+  this->reset();
   // Sanity checks
   queso_require_less_msg(row_num, this->numRowsLocal(), "Specified row number not within range");
 
@@ -1645,7 +1729,7 @@ GslMatrix::setRow(unsigned int row_num, const GslVector& row)
 void
 GslMatrix::setColumn(unsigned int column_num, const GslVector& column)
 {
-  this->resetLU();
+  this->reset();
   // Sanity checks
   queso_require_less_msg(column_num, this->numCols(), "Specified column number not within range");
 
@@ -1837,7 +1921,7 @@ GslMatrix::subReadContents(
     // Read '=' sign
     *filePtrSet.ifsVar >> tmpString;
     //std::cout << "Just read '" << tmpString << "'" << std::endl;
-    queso_require_equal_to_msg(tmpString, "=", "string should be the '=' sign");
+    queso_require_equal_to_msg(tmpString, std::string("="), std::string("string should be the '=' sign"));
 
     // Read 'zeros(n_rows,n_cols)' string
     *filePtrSet.ifsVar >> tmpString;
@@ -1845,7 +1929,7 @@ GslMatrix::subReadContents(
     unsigned int posInTmpString = 6;
 
     // Isolate 'n_rows' in a string
-    char nRowsString[tmpString.size()-posInTmpString+1];
+    std::string nRowsString(tmpString.size()-posInTmpString+1, ' ');
     unsigned int posInRowsString = 0;
     do {
       queso_require_less_msg(posInTmpString, tmpString.size(), "symbol ',' not found in first line of file");
@@ -1855,7 +1939,7 @@ GslMatrix::subReadContents(
 
     // Isolate 'n_cols' in a string
     posInTmpString++; // Avoid reading ',' char
-    char nColsString[tmpString.size()-posInTmpString+1];
+    std::string nColsString(tmpString.size()-posInTmpString+1, ' ');
     unsigned int posInColsString = 0;
     do {
       queso_require_less_msg(posInTmpString, tmpString.size(), "symbol ')' not found in first line of file");
@@ -1864,8 +1948,8 @@ GslMatrix::subReadContents(
     nColsString[posInColsString] = '\0';
 
     // Convert 'n_rows' and 'n_cols' strings to numbers
-    unsigned int numRowsInFile = (unsigned int) strtod(nRowsString,NULL);
-    unsigned int numColsInFile = (unsigned int) strtod(nColsString,NULL);
+    unsigned int numRowsInFile = (unsigned int) strtod(nRowsString.c_str(),NULL);
+    unsigned int numColsInFile = (unsigned int) strtod(nColsString.c_str(),NULL);
     if (m_env.subDisplayFile()) {
       *m_env.subDisplayFile() << "In GslMatrix::subReadContents()"
                               << ": fullRank "        << m_env.fullRank()
@@ -1906,7 +1990,7 @@ GslMatrix::subReadContents(
     // Read '=' sign
     *filePtrSet.ifsVar >> tmpString;
     //std::cout << "Core 0 just read '" << tmpString << "'" << std::endl;
-    queso_require_equal_to_msg(tmpString, "=", "in core 0, string should be the '=' sign");
+    queso_require_equal_to_msg(tmpString, std::string("="), std::string("in core 0, string should be the '=' sign"));
 
     // Take into account the ' [' portion
     std::streampos tmpPos = filePtrSet.ifsVar->tellg();

@@ -59,6 +59,7 @@ Includes
 
 #include <utilities/include/EDDY_DebugScope.hpp>
 
+//#include <Mutators/SMOMutator.hpp>
 #include <Mutators/RandomBitMutator.hpp>
 #include <Mutators/CauchyOffsetMutator.hpp>
 #include <Mutators/UniformOffsetMutator.hpp>
@@ -69,11 +70,13 @@ Includes
 #include <OperatorGroups/NullOperatorGroup.hpp>
 #include <OperatorGroups/StandardOperatorGroup.hpp>
 
+//#include <Initializers/SMOInitializer.hpp>
 #include <Initializers/RandomInitializer.hpp>
 #include <Initializers/FlatFileInitializer.hpp>
 #include <Initializers/DoubleMatrixInitializer.hpp>
 #include <Initializers/RandomUniqueInitializer.hpp>
 
+//#include <Crossers/SMOCrosser.hpp>
 #include <Crossers/NPointRealCrosser.hpp>
 #include <Crossers/NPointBinaryCrosser.hpp>
 #include <Crossers/RandomDesignVariableCrosser.hpp>
@@ -195,7 +198,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 
-/// A macro to write implemenations for the Get operator registry methods.
+/// A macro to write implementations for the Get operator registry methods.
 /**
  * \param optype The operator registry type for which this is to be the get
  *               method.
@@ -278,6 +281,7 @@ StandardOperatorGroup::AcquireOperators(
         DO_REGISTER(CrosserRegistry, NPointBinaryCrosser);
         DO_REGISTER(CrosserRegistry, NPointParameterizedBinaryCrosser);
         DO_REGISTER(CrosserRegistry, NPointRealCrosser);
+        //DO_REGISTER(CrosserRegistry, SMOCrosser);
 
         // Register all the Evaluators
 
@@ -287,6 +291,7 @@ StandardOperatorGroup::AcquireOperators(
         DO_REGISTER(InitializerRegistry, RandomUniqueInitializer);
         DO_REGISTER(InitializerRegistry, RandomInitializer);
         DO_REGISTER(InitializerRegistry, FlatFileInitializer);
+        //DO_REGISTER(InitializerRegistry, SMOInitializer);
         DO_REGISTER(InitializerRegistry, DoubleMatrixInitializer);
 
         // Register all the MainLoops
@@ -300,6 +305,7 @@ StandardOperatorGroup::AcquireOperators(
         DO_REGISTER(MutatorRegistry, GaussianOffsetMutator);
         DO_REGISTER(MutatorRegistry, CauchyOffsetMutator);
         DO_REGISTER(MutatorRegistry, UniformOffsetMutator);
+        //DO_REGISTER(MutatorRegistry, SMOMutator);
 
         // Register all the Selectors
         DO_REGISTER(SelectorRegistry, ElitistSelector);

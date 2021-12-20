@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -51,7 +51,7 @@ public:
   //@{
   //! Default constructor.
   TransformedScaledCovMatrixTKGroup(const char * prefix,
-      const BoxSubset<V, M> & boxSubset, const std::vector<double> & scales,
+      const VectorSet<V, M> & domainSet, const std::vector<double> & scales,
       const M & covMatrix);
 
   //! Destructor.
@@ -70,9 +70,11 @@ public:
   const InvLogitGaussianVectorRV<V, M> & rv(
       const std::vector<unsigned int> & stageIds);
 
+  virtual const InvLogitGaussianVectorRV<V, M> & rv(const V & position) const;
+
   //! Scales the covariance matrix of the underlying Gaussian distribution.
   /*! The covariance matrix is scaled by a factor of \f$ 1/scales^2 \f$.*/
-  void updateLawCovMatrix(const M & covMatrix);
+  virtual void updateLawCovMatrix(const M & covMatrix);
   //@}
 
   //! @name Misc methods
@@ -87,6 +89,11 @@ public:
 
   //! Clears the pre-computing positions \c m_preComputingPositions[stageId]
   void clearPreComputingPositions();
+
+  virtual unsigned int set_dr_stage(unsigned int stageId);
+
+  virtual bool covMatrixIsDirty() { return false; }
+  virtual void cleanCovMatrix() { }
   //@}
 
   //! @name I/O methods
@@ -106,6 +113,8 @@ private:
   //! Sets the mean of the underlying Gaussian RVs to zero.
   void setRVsWithZeroMean();
 
+  void transformCovMatrixToGaussianSpace(M & covMatrix);
+
   using BaseTKGroup<V, M>::m_env;
   using BaseTKGroup<V, M>::m_prefix;
   using BaseTKGroup<V, M>::m_vectorSpace;
@@ -113,9 +122,8 @@ private:
   using BaseTKGroup<V, M>::m_preComputingPositions;
   using BaseTKGroup<V, M>::m_rvs;
 
-  const BoxSubset<V, M> & m_boxSubset;
+  const VectorSet<V, M> & m_domainSet;
   M m_originalCovMatrix;
-
 };
 
 }  // End namespace QUESO

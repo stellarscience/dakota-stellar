@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,7 +25,7 @@
 #include <queso/asserts.h>
 #include <queso/SharedPtr.h>
 
-int main(int argc, char* argv[])
+int main()
 {
   QUESO::SharedPtr<int>::Type int_ptr1(new int(1));
 

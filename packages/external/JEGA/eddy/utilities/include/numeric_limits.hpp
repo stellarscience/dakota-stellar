@@ -348,14 +348,14 @@ class numeric_limits<double> :
 
         /// Returns the smallest value that this arithmetic type can hold.
         /**
-         * \return -DBL_MAX
+         * \return -std::numeric_limits<double>::max()
          */
         static
         double
         smallest(
             ) throw()
         {
-            return -DBL_MAX;
+            return -std::numeric_limits<double>::max();
         }
 
 }; // class numeric_limits<double>

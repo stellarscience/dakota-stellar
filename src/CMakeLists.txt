@@ -23,14 +23,13 @@ set(DAKOTA_EXTPROJ_LIBS)
 # External third-party libraries installed on the system
 set(EXT_TPL_LIBS)
 
-# QUESO libraries have to be managed at end of link due to conflicts
-# with gslcblas (QUESO package built with ExternalProject_add within Dakota)
-set(QUESO_EXTPROJ_LIBS) 
-# QUESO external LIBS to be linked last
-set(QUESO_TPL_LIBS)
-
-list(APPEND DAKOTA_INCDIRS ${Dakota_BINARY_DIR} ${Dakota_BINARY_DIR}/generated ${Dakota_BINARY_DIR}/src
-  ${Dakota_SOURCE_DIR}/src ${Dakota_SOURCE_DIR}/packages)
+list(APPEND DAKOTA_INCDIRS 
+  ${Dakota_BINARY_DIR}/generated/src
+  # Consider removing these two paths and moving to generated...
+  ${Dakota_BINARY_DIR}
+  ${Dakota_BINARY_DIR}/src
+  ${Dakota_SOURCE_DIR}/src ${Dakota_SOURCE_DIR}/packages
+  )
 
 list(APPEND EXT_TPL_INCDIRS
   ${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
@@ -44,14 +43,16 @@ if (ENABLE_SPEC_MAINT OR ENABLE_DAKOTA_DOCS)
   # (dakota.input.nspec) translation and/or reference manual generation.
   add_subdirectory(java_utils)
 endif()
-include(DakotaEnableSpecMaint)
-DakotaEnableSpecMaint()
+include(DakotaSpecMaint)
+if(ENABLE_SPEC_MAINT)
+  # dakota.xml to dakota.input.nspec is conditional as it requires Java
+  DakotaXml2Nspec()
+endif()
+DakotaNidrgen()
 
 # Use TPL_LIBS for libraries built as part of this project
 list(APPEND DAKOTA_PKG_LIBS nidr)
 
-# WJB - ToDo:  convince myself that dakota_src_fortran should have a
-#              better name and be specified in the initial EXPORTS_TARGETS set
 set(EXPORT_TARGETS dakota_src nidr)
 
 # We don't want to export Teuchos libs unless we're building in our
@@ -102,26 +103,15 @@ endif()
 # Generat DakotaBuildInfo.src if needed
 
 set(DAKOTA_BUILDINFO_PATH)
-if(DAKOTA_SVN_checkout OR DAKOTA_GIT_checkout)
-  if(DAKOTA_SVN_checkout)
-    file( WRITE ${Dakota_BINARY_DIR}/generated/src/DakotaBuildInfo.cpp
-      "// -- AUTO GENERATED FILE; DO NOT EDIT --
-      #include \"DakotaBuildInfo.hpp\"
-      std::string Dakota::DakotaBuildInfo::releaseNum=\"${Dakota_VERSION_SRC}\";
-      std::string Dakota::DakotaBuildInfo::revision=\"${Dakota_SVN_REV}\";
-      std::string Dakota::DakotaBuildInfo::releaseDate=\"${Dakota_RELEASE_DATE}\";
-      // ToDo: Gather SVN rev for key TPLs, e.g. pecos, surfpack, etc.
-      //       Lower priority - a post-5.4 release task
-      " )
-  else()
-    file( WRITE ${Dakota_BINARY_DIR}/generated/src/DakotaBuildInfo.cpp
-      "// -- AUTO GENERATED FILE; DO NOT EDIT --
-      #include \"DakotaBuildInfo.hpp\"
-      std::string Dakota::DakotaBuildInfo::releaseNum=\"${Dakota_VERSION_SRC}\";
-      std::string Dakota::DakotaBuildInfo::revision=\"${Dakota_GIT_REV}\";
-      std::string Dakota::DakotaBuildInfo::releaseDate=\"${Dakota_RELEASE_DATE}\";
-      " )
-  endif(DAKOTA_SVN_checkout)
+if(DAKOTA_GIT_checkout)
+  file( WRITE ${Dakota_BINARY_DIR}/generated/src/DakotaBuildInfo.cpp
+    "// -- AUTO GENERATED FILE; DO NOT EDIT --
+    #include \"DakotaBuildInfo.hpp\"
+    std::string Dakota::DakotaBuildInfo::releaseNum=\"${Dakota_VERSION_SRC}\";
+    std::string Dakota::DakotaBuildInfo::revision=\"${Dakota_GIT_REV}\";
+    std::string Dakota::DakotaBuildInfo::releaseDate=\"${Dakota_RELEASE_DATE}\";
+    " )
+
   set(DAKOTA_BUILDINFO_PATH "${Dakota_BINARY_DIR}/generated/src/")
 
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/DakotaBuildInfo.cpp)
@@ -129,11 +119,11 @@ if(DAKOTA_SVN_checkout OR DAKOTA_GIT_checkout)
       "Found a generated file: ${CMAKE_CURRENT_SOURCE_DIR}/DakotaBuildInfo.cpp in the source tree; please remove!")
   endif() # incorrect location DakotaBuildInfo.cpp
 
-else() # source tree NOT an SVN checkout
+else() # source tree NOT a Git repo
 
   message(STATUS "EXPECTED - DakotaBuildInfo.cpp found in the src tree.")
 
-endif() # .svn directory conditional
+endif()
 
 # -----------------
 
@@ -252,7 +242,6 @@ if(DAKOTA_DL_SOLVER)
   check_include_file(dlfcn.h DAKOTA_HAVE_DLFCN_H)
 
   if(DAKOTA_HAVE_DLFCN_H)
-    # WJB - ToDo:  Test/debug on cygwin ("lgdi32" vs "" ?)
     message(STATUS "DAKOTA DL Solver enabled, LibDL = ${CMAKE_DL_LIBS}")
     add_definitions("-DDAKOTA_DL_SOLVER")
     add_definitions("-DDAKOTA_HAVE_DLFCN_H")
@@ -392,14 +381,15 @@ endif(DAKOTA_MODELCENTER)
 
 if(DAKOTA_HAVE_MPI)
   add_definitions("-DDAKOTA_HAVE_MPI")
-  list(APPEND EXT_TPL_INCDIRS ${MPI_CXX_INCLUDE_PATH})
+  list(APPEND EXT_TPL_INCDIRS ${MPI_CXX_INCLUDE_PATH} ${MPI_CXX_INCLUDE_DIRS})
   list(APPEND EXT_TPL_LIBS ${MPI_CXX_LIBRARIES})
 endif(DAKOTA_HAVE_MPI)
 
 if(DAKOTA_HAVE_HDF5)
   add_definitions("-DDAKOTA_HAVE_HDF5")
   list(APPEND EXT_TPL_INCDIRS ${HDF5_INCLUDE_DIRS})
-  list(APPEND EXT_TPL_LIBS ${HDF5_HL_LIBRARY} ${HDF5_LIBRARIES})
+  list(APPEND EXT_TPL_LIBDIRS ${HDF5_LIBRARY_DIRS})
+  list(APPEND EXT_TPL_LIBS ${HDF5_HL_LIBRARIES} ${HDF5_LIBRARIES})
 endif(DAKOTA_HAVE_HDF5)
 
 
@@ -415,36 +405,38 @@ function(CheckPackage package)
 endfunction(CheckPackage)
 
 
-CheckPackage(PECOS)
-list(APPEND DAKOTA_PKG_LIBS ${Pecos_LINK_LIBRARIES})
-list(APPEND EXPORT_TARGETS ${Pecos_LINK_LIBRARIES})
 if(HAVE_PECOS)
-  list(APPEND DAKOTA_INCDIRS ${Pecos_BINARY_DIR} ${Pecos_SOURCE_DIR}/src
-    ${VPISparseGrid_SOURCE_DIR}/src)
+  add_definitions("-DHAVE_${package}")
+  list(APPEND DAKOTA_INCDIRS ${Pecos_BINARY_DIR} ${Pecos_SOURCE_DIR}/util/src
+    ${Pecos_SOURCE_DIR}/src ${VPISparseGrid_SOURCE_DIR}/src)
+  list(APPEND DAKOTA_PKG_LIBS ${Pecos_LINK_LIBRARIES})
+  list(APPEND EXPORT_TARGETS ${Pecos_LINK_LIBRARIES})
 else()
   message(FATAL_ERROR
     "DAKOTA cannot currently be configured without PECOS: ${Pecos_SOURCE_DIR}")
-endif(HAVE_PECOS)
+endif()
 
 
 ## DAKOTA library sources.  Depend on NIDR_keywds.hpp to force generation
-set(Dakota_src ${DAKOTA_BUILDINFO_PATH}DakotaBuildInfo.cpp NIDR_keywds.hpp)
+set(Dakota_src ${DAKOTA_BUILDINFO_PATH}DakotaBuildInfo.cpp 
+  ${Dakota_BINARY_DIR}/generated/src/NIDR_keywds.hpp)
 
 ## UTIL sources.
 set(util_src ParallelLibrary.cpp IteratorScheduler.cpp MPIPackBuffer.cpp
     dakota_data_util.cpp dakota_data_io.cpp dakota_global_defs.cpp 
-    dakota_linear_algebra.cpp dakota_tabular_io.cpp 
+    dakota_linear_algebra.cpp dakota_preproc_util.cpp
+    dakota_stat_util.cpp dakota_tabular_io.cpp
     CommandLineHandler.cpp DakotaGraphics.cpp SensAnalysisGlobal.cpp 
     WorkdirHelper.cpp ResultsManager.cpp ResultsDBAny.cpp
     MPIManager.cpp ProgramOptions.cpp OutputManager.cpp
     ExperimentData.cpp UsageTracker.cpp ExperimentDataUtils.cpp
     ReducedBasis.cpp spectral_diffusion.cpp nested_sampling.cpp
-    predator_prey.cpp
+    predator_prey.cpp bayes_calibration_utils.cpp EvaluationStore.cpp
+    DakotaTPLDataTransfer.cpp
     )
 
 if(DAKOTA_HAVE_HDF5)
-  #list(APPEND util_src ResultsDBHDF5.cpp)
-  list(APPEND util_src BinaryIO_Helper.cpp)
+  list(APPEND util_src HDF5_IO.cpp ResultsDBHDF5.cpp )
 endif()
 
 if(DAKOTA_DL_SOLVER)
@@ -469,8 +461,8 @@ set(db_src ProblemDescDB.cpp NIDRProblemDescDB.cpp DataEnvironment.cpp
 ## Model sources.
 set(model_src DakotaModel.cpp SimulationModel.cpp NestedModel.cpp
   RecastModel.cpp DataTransformModel.cpp ProbabilityTransformModel.cpp
-  ScalingModel.cpp SurrogateModel.cpp DataFitSurrModel.cpp HierarchSurrModel.cpp
-  ActiveSubspaceModel.cpp RandomFieldModel.cpp DiscrepancyCorrection.cpp
+  ScalingModel.cpp WeightingModel.cpp SurrogateModel.cpp DataFitSurrModel.cpp
+  HierarchSurrModel.cpp ActiveSubspaceModel.cpp RandomFieldModel.cpp DiscrepancyCorrection.cpp
   AdaptedBasisModel.cpp)
 
 ## Constraint sources.
@@ -479,14 +471,13 @@ set(constraint_src DakotaConstraints.cpp MixedVarConstraints.cpp
 
 ## Interface sources.
 set(interface_src DakotaInterface.cpp ApproximationInterface.cpp
-    DakotaApproximation.cpp TaylorApproximation.cpp TANA3Approximation.cpp
+    DakotaApproximation.cpp TaylorApproximation.cpp TANA3Approximation.cpp QMEApproximation.cpp
     GaussProcApproximation.cpp VPSApproximation.cpp 
     PecosApproximation.cpp SharedApproxData.cpp
     SharedPecosApproxData.cpp
     ApplicationInterface.cpp ProcessApplicInterface.cpp
     ProcessHandleApplicInterface.cpp SysCallApplicInterface.cpp
-    CommandShell.cpp DirectApplicInterface.cpp TestDriverInterface.cpp
-    PollingSchedule.cpp)
+    CommandShell.cpp DirectApplicInterface.cpp TestDriverInterface.cpp)
 if(HAVE_SYS_WAIT_H AND HAVE_UNISTD_H)
   list(APPEND interface_src ForkApplicInterface.cpp)
 elseif(WIN32)
@@ -531,12 +522,13 @@ set(iterator_src DakotaIterator.cpp DakotaAnalyzer.cpp DakotaPStudyDACE.cpp
     NonDGlobalInterval.cpp NonDGlobalEvidence.cpp NonDGlobalSingleInterval.cpp
     NonDIntegration.cpp NonDCubature.cpp NonDQuadrature.cpp NonDSparseGrid.cpp
     NonDExpansion.cpp NonDPolynomialChaos.cpp NonDStochCollocation.cpp
+    NonDMultilevelPolynomialChaos.cpp NonDMultilevelStochCollocation.cpp
     NonDCalibration.cpp NonDBayesCalibration.cpp NonDWASABIBayesCalibration.cpp
     NonDSampling.cpp NonDLHSSampling.cpp
     NonDMultilevelSampling.cpp NonDAdaptImpSampling.cpp NonDGPImpSampling.cpp 
     NonDPOFDarts.cpp NonDRKDDarts.cpp
-    DakotaMinimizer.cpp DakotaOptimizer.cpp DakotaLeastSq.cpp
-    NonlinearCGOptimizer.cpp 
+    DakotaMinimizer.cpp DakotaOptimizer.cpp DakotaTraitsBase.cpp
+    DakotaLeastSq.cpp NonlinearCGOptimizer.cpp 
     SurrBasedMinimizer.cpp SurrBasedLocalMinimizer.cpp SurrBasedLevelData.cpp
     HierarchSurrBasedLocalMinimizer.cpp DataFitSurrBasedLocalMinimizer.cpp
     SurrBasedGlobalMinimizer.cpp EffGlobalMinimizer.cpp OptDartsOptimizer.cpp
@@ -603,62 +595,42 @@ if(HAVE_ADAPTIVE_SAMPLING)
   endif()
 endif()
 
-# Can't do CheckPackage because queso isn't built in CMake and
-# therefore can't be in EXPORT_TARGETS.
-#CheckPackage(QUESO)
+CheckPackage(QUESO)
 if(HAVE_QUESO)
-
-  list(APPEND iterator_src NonDQUESOBayesCalibration.cpp)
-  add_definitions("-DHAVE_QUESO")
-  add_definitions("-DQUESO_HAVE_BOOST_SCOPED_PTR_HPP")
-  add_definitions("-DQUESO_HAVE_BOOST_SHARED_PTR_HPP")
-  if(DAKOTA_HAVE_MPI)
-    add_definitions("-DQUESO_HAVE_MPI")
-  endif()
+  list(APPEND DAKOTA_INCDIRS
+    ${Dakota_BINARY_DIR}/packages/external/queso/include/)
+  list(APPEND iterator_src QUESOImpl.cpp NonDQUESOBayesCalibration.cpp)
   if(HAVE_QUESO_GPMSA)
     add_definitions("-DHAVE_QUESO_GPMSA")
     list(APPEND iterator_src NonDGPMSABayesCalibration.cpp)
   endif()
-
-  #list(APPEND DAKOTA_INCDIRS "$ENV{QUESO_PREFIX}/include")
-  if(DAKOTA_QUESO_CMAKE)
-
-    list(APPEND DAKOTA_INCDIRS ${Dakota_BINARY_DIR}/packages/external/queso/include/
-      ${GSL_INCLUDE_DIRS})
-    list(APPEND DAKOTA_PKG_LIBS queso)
-
-  else()
-
-  list(APPEND DAKOTA_INCDIRS 
-    ${Dakota_BINARY_DIR}/packages/queso_ext/include ${GSL_INCLUDE_DIRS})
-
-  #list(APPEND DAKOTA_LIBDIRS "$ENV{QUESO_PREFIX}/lib")
-  # Would prefer to detect 32 vs. 64-bit, but the location is
-  # operating system-specific; should be harmless to add the extra
-  # directory, but put 64-bit first
-  list(APPEND DAKOTA_LIBDIRS 
-    ${Dakota_BINARY_DIR}/packages/queso_ext/lib64)
-  list(APPEND DAKOTA_LIBDIRS 
-    ${Dakota_BINARY_DIR}/packages/queso_ext/lib)
-
-  # Can't put these in DAKOTA_PKG_LIBS; Trilinos will try to export them
-  list(APPEND QUESO_EXTPROJ_LIBS queso)
-
-  # Can't export these as they aren't executables or library targets
-  #list(APPEND EXPORT_TARGETS queso_ext)
-  #list(APPEND EXPORT_TARGETS queso gpmsa_any)
-
-  list(APPEND DAKOTA_EXTPROJ_LIBS ${QUESO_EXTPROJ_LIBS})
-
-  endif()
-
 endif(HAVE_QUESO)
-
 
 # Boost is required, but have to protect against empty DIR list
 if(Boost_FOUND)
   list(APPEND EXT_TPL_LIBDIRS ${Boost_LIBRARY_DIRS})
   list(APPEND EXT_TPL_LIBS ${Boost_LIBRARIES})
+endif()
+
+CheckPackage(C3)
+if(HAVE_C3)
+  set(iterator_src ${iterator_src} NonDC3FunctionTrain.cpp)
+  list(APPEND interface_src C3Approximation.cpp SharedC3ApproxData.cpp)
+  # BMA: disabled these includes as we aren't including c3.h
+  ##list(APPEND DAKOTA_INCDIRS
+  ##  ${C3_SOURCE_DIR}/include
+  ##  ${C3_SOURCE_DIR}/src/lib_stringmanip
+  ##  ${C3_SOURCE_DIR}/src/lib_array
+  ##  ${C3_SOURCE_DIR}/src/lib_linalg
+  ##  ${C3_SOURCE_DIR}/src/lib_quadrature
+  ##  ${C3_SOURCE_DIR}/src/lib_optimization
+  ##  ${C3_SOURCE_DIR}/src/lib_funcs
+  ##  ${C3_SOURCE_DIR}/src/lib_clinalg
+  ##  ${C3_SOURCE_DIR}/src/lib_probability
+  ##  ${C3_SOURCE_DIR}/src/lib_superlearn
+  ##  ${C3_SOURCE_DIR}/src/lib_interface
+  ##  )
+  list(APPEND DAKOTA_PKG_LIBS c3)
 endif()
 
 CheckPackage(CONMIN)
@@ -747,8 +719,11 @@ endif(HAVE_NOMAD)
 
 if(HAVE_NOWPAC)
   add_definitions("-DHAVE_NOWPAC")
-  list(APPEND DAKOTA_INCDIRS ${DAKOTA_NOWPAC_ROOT_DIR}/include ${DAKOTA_NOWPAC_NLOPT_ROOT}/include ${DAKOTA_NOWPAC_EIGEN_ROOT})
-  link_directories(${DAKOTA_NOWPAC_ROOT_DIR}/lib ${DAKOTA_NOWPAC_ROOT_DIR}/include ${DAKOTA_NOWPAC_NLOPT_ROOT}/lib ${DAKOTA_NOWPAC_NLOPT_ROOT}/include ...) # cmake external package
+  set(DAKOTA_NOWPAC_ROOT_DIR   "${Dakota_SOURCE_DIR}/packages/external/nowpac")
+  set(DAKOTA_NOWPAC_NLOPT_ROOT "${Dakota_BINARY_DIR}/packages/external/nowpac/nowpac/external/nlopt")
+  set(DAKOTA_NOWPAC_EIGEN_ROOT "${Dakota_BINARY_DIR}/packages/external/nowpac/nowpac/external/eigen")
+  list(APPEND DAKOTA_INCDIRS ${DAKOTA_NOWPAC_ROOT_DIR}/include ${DAKOTA_NOWPAC_NLOPT_ROOT}/include ${DAKOTA_NOWPAC_EIGEN_ROOT}/include/eigen3)
+  link_directories(${DAKOTA_NOWPAC_ROOT_DIR}/lib ${DAKOTA_NOWPAC_NLOPT_ROOT}/lib) # ${DAKOTA_NOWPAC_ROOT_DIR}/include ${DAKOTA_NOWPAC_NLOPT_ROOT}/include
   set(iterator_src ${iterator_src} NOWPACOptimizer.cpp)
   list(APPEND DAKOTA_PKG_LIBS nowpac nlopt)
   #list(APPEND EXPORT_TARGETS nowpac nlopt)
@@ -784,6 +759,23 @@ if(HAVE_OPTPP)
   list(APPEND EXPORT_TARGETS optpp)
 endif(HAVE_OPTPP)
 
+if(HAVE_ROL)
+  list(APPEND DAKOTA_INCDIRS ${ROL_INCLUDE_DIRS})
+  add_definitions("-DHAVE_ROL")
+  set(iterator_src ${iterator_src} ROLOptimizer.cpp)
+endif(HAVE_ROL)
+
+if(HAVE_DEMO_TPL)
+  set(DAKOTA_DEMOTPL_ROOT_DIR "${Dakota_SOURCE_DIR}/packages/external/demo_tpl")
+  list(APPEND DAKOTA_INCDIRS 
+    ${DAKOTA_DEMOTPL_ROOT_DIR}/dakota_src
+    ${DAKOTA_DEMOTPL_ROOT_DIR}/src)
+  set(iterator_src ${iterator_src} ${Dakota_SOURCE_DIR}/packages/external/demo_tpl/dakota_src/DemoOptimizer.cpp)
+  list(APPEND DAKOTA_PKG_LIBS demo_tpl)
+  list(APPEND EXPORT_TARGETS demo_tpl)
+  add_definitions("-DHAVE_DEMO_TPL")
+endif(HAVE_DEMO_TPL)
+
 CheckPackage(PSUADE)
 if(HAVE_PSUADE)
   list(APPEND interface_src PSUADEDesignCompExp.cpp)
@@ -811,10 +803,6 @@ set(Dakota_src ${Dakota_src} ${util_src} ${evaldata_src} ${db_src}
     ${model_src} ${constraint_src} ${interface_src} ${env_src}
     ${iterator_src})
 
-if(MSVC)
-  list(APPEND Dakota_src dirent.h dirent.c)
-endif()
-
 # Experiment with moving AMPL here; if cross-platform link errors, revert
 if(HAVE_AMPL)
   add_definitions("-DHAVE_AMPL")
@@ -836,19 +824,26 @@ endif(HAVE_AMPL)
 
 # Instead of trying to link GSL and CBLAS last, conditionally link a
 # system CBLAS instead of gslcblas
+#
+# GSL libraries have to be managed at end of link due to conflicts
+# with gslcblas
 if(DAKOTA_HAVE_GSL)
   list(APPEND EXT_TPL_INCDIRS "${GSL_INCLUDE_DIRS}")
   list(APPEND EXT_TPL_LIBDIRS "${GSL_LIBRARY_DIRS}")
   # GSL_LIBRARIES may or may not include a CBLAS library, depending on
   # top-level option GSL_WITHOUT_CBLAS
-  list(APPEND QUESO_TPL_LIBS ${GSL_LIBRARIES})
+  list(APPEND EXT_TPL_LIBS ${GSL_LIBRARIES})
   if(DAKOTA_CBLAS_LIBS) 
-    list(APPEND QUESO_TPL_LIBS ${DAKOTA_CBLAS_LIBS})
+    list(APPEND EXT_TPL_LIBS ${DAKOTA_CBLAS_LIBS})
   endif()
-  list(APPEND EXT_TPL_LIBS ${QUESO_TPL_LIBS})
 endif(DAKOTA_HAVE_GSL)
 
 list(APPEND EXT_TPL_LIBS ${LAPACK_LIBS} ${BLAS_LIBS})
+# BMA: Should probably use only ATLAS when enabling C3...
+if(HAVE_C3)
+  message(WARNING "Dakota/C3: Duplicate include of ATLAS and BLAS/LAPACK")
+  list(INSERT EXT_TPL_LIBS 0 "${atlas_lib}")
+endif()
 
 # Now that packages and TPLs are processed, set include/link directories
 include_directories(${DAKOTA_INCDIRS} ${EXT_TPL_INCDIRS})
@@ -881,8 +876,6 @@ set(DAKOTA_ALL_LIBS ${DAKOTA_LIBS})
 list(APPEND DAKOTA_ALL_LIBS ${DAKOTA_PKG_LIBS})
 list(APPEND DAKOTA_ALL_LIBS ${DAKOTA_EXTPROJ_LIBS})
 list(APPEND DAKOTA_ALL_LIBS ${EXT_TPL_LIBS})
-#list(APPEND DAKOTA_ALL_LIBS ${QUESO_EXTPROJ_LIBS})
-#list(APPEND DAKOTA_ALL_LIBS ${QUESO_TPL_LIBS})
 
 # --- Explicit dependencies for Dakota core libraries
 
@@ -890,25 +883,15 @@ if(HAVE_ACRO)
   target_link_libraries(dakota_src utilib colin interfaces scolib)
 endif()
 
-if(HAVE_QUESO AND NOT DAKOTA_QUESO_CMAKE)
-  # Enforce QUESO config header creation prior to compiling dakota sources
-  add_dependencies(dakota_src queso_ext)
+if(HAVE_NOWPAC)
+  # Require Eigen and NLOPT ExternalProjects to be downloaded, built,
+  # and installed before building Dakota sources
+  add_dependencies(dakota_src EIGEN NLOPT)
 endif()
 
 # EXTRA_TPL_LIBS doesn't suffice, due to symbols needed by ParallelLibrary
 if (DAKOTA_MODELCENTER)
   target_link_libraries(dakota_src PHXCppApi)
-endif()
-
-if(MSVC)
-  # Create "Native Windows dirent" source files in the binary tree so they
-  # will only be seen by Native Windows builds.
-
-  configure_file(${Dakota_SOURCE_DIR}/cmake/win_dirent.c.in
-                 ${Dakota_BINARY_DIR}/src/dirent.c COPYONLY)
-
-  configure_file(${Dakota_SOURCE_DIR}/cmake/win_dirent.h.in
-                 ${Dakota_BINARY_DIR}/src/dirent.h COPYONLY)
 endif()
 
 
@@ -971,9 +954,12 @@ install(TARGETS dakota_src EXPORT ${ExportTarget} DESTINATION lib)
 install(TARGETS dakota dakota_restart_util EXPORT DESTINATION bin)
 install(TARGETS dakota_library_mode DESTINATION bin)
 file(GLOB Dakota_hdr *.hpp *.h)
-install(FILES ${Dakota_hdr} DESTINATION include)
-file(GLOB Dakota_spec_files dakota.input.*)
-install(FILES ${Dakota_spec_files} DESTINATION bin)
+# We don't install NIDR_keywds0.hpp as is not needed by clients
+install(FILES ${Dakota_hdr} ${Dakota_BINARY_DIR}/generated/src/NIDR_keywds.hpp
+  DESTINATION include)
+install(FILES dakota.xsd dakota.xml dakota.input.nspec
+  ${Dakota_BINARY_DIR}/generated/src/dakota.input.summary
+  DESTINATION bin)
 
 if (DAKOTA_DLL_API)
   add_library(dakota_dll_api dakota_dll_api.cpp)
@@ -982,26 +968,6 @@ if (DAKOTA_DLL_API)
   DakotaApplyMPISettings(dakota_dll_api)
 endif()
 
-# Install dyanamic deps, omitting standard system libs
-# CMake variables aren't passed to the script, so we have to invoke
-# separate scripts for each platform
-option(DAKOTA_INSTALL_DYNAMIC_DEPS 
-  "Install Dakota's dynamic dependencies to CMAKE_INSTALL_PREFIX/bin/" ON)
-if (DAKOTA_INSTALL_DYNAMIC_DEPS)
-  if (CYGWIN)
-    install(SCRIPT "${Dakota_SOURCE_DIR}/cmake/InstallCygwinDLLs.cmake")
-  elseif (APPLE)
-    install(SCRIPT "${Dakota_SOURCE_DIR}/cmake/InstallDarwinDylibs.cmake")
-  elseif (UNIX)
-#    include(InstallRequiredSystemLibraries)
-    install(SCRIPT "${Dakota_SOURCE_DIR}/cmake/InstallUnixSOs.cmake")
-  elseif (WIN32)
-    #include(InstallWinDLLs)
-    # Attempt to migrate to a more standard install using Kitware's helper
-    include(DakotaInstallRequiredSystemLibraries)
-  endif()
-endif()
-  
 
 # --- Define variables used for export Makefiles
 # TODO: use these variables/names in the Trilinos block below
@@ -1034,12 +1000,10 @@ set(Dakota_TPL_LIBRARY_DIRS ${EXT_TPL_LIBDIRS} CACHE INTERNAL
 
 # Any library that will be installed with Dakota, including Queso
 set(Dakota_LIBRARIES ${DAKOTA_LIBS} ${DAKOTA_PKG_LIBS} ${DAKOTA_EXTPROJ_LIBS} 
-#  ${QUESO_EXTPROJ_LIBS} 
   CACHE INTERNAL "Dakota libraries") 
 
 # Libraries that will be on the system
 set(Dakota_TPL_LIBRARIES ${EXT_TPL_LIBS}  
-#  ${QUESO_TPL_LIBS}
   CACHE INTERNAL "Dakota TPL libraries") 
  
 message(STATUS "Dakota_LIBRARIES: ${Dakota_LIBRARIES}")
@@ -1078,7 +1042,6 @@ if (BUILD_IN_TRILINOS)
 
   # Libraries built outside of Dakota CMake
   set(Dakota_EXTRA_LIBRARIES ${DAKOTA_EXTPROJ_LIBS} ${EXT_TPL_LIBS}
-#    ${QUESO_EXTPROJ_LIBS}  ${QUESO_TPL_LIBS} 
     CACHE INTERNAL "Dakota extra libraries")
   message(STATUS 
     "Export targets to <export-name> = ${ExportTarget}: ${EXPORT_TARGETS}"

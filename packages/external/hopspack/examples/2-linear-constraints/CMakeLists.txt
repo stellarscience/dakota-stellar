@@ -9,6 +9,7 @@
 #   the U.S. Government retains certain rights in this software.
 # ************************************************************************
 
+include(ModifyTargetRpath)
 
 #---- Copy the parameters file to the target location.
 SET (PARAMS_FILE_NAME examples/2-linear-constraints/example2_params.txt)
@@ -24,6 +25,7 @@ ADD_EXECUTABLE (
 
 #---- Installation instructions.
 INSTALL (TARGETS linear_constraints
-         DESTINATION examples/2-linear-constraints)
+         DESTINATION ${DAKOTA_EXAMPLES_INSTALL}/examples/hopspack/2-linear-constraints)
+ModifyTargetRpath( linear_constraints 5)
 INSTALL (FILES ${HOPSPACK_SOURCE_DIR}/${PARAMS_FILE_NAME}
-         DESTINATION examples/2-linear-constraints)
+         DESTINATION ${DAKOTA_EXAMPLES_INSTALL}/examples/hopspack/2-linear-constraints)

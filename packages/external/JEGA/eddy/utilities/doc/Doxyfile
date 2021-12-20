@@ -1002,7 +1002,7 @@ SEARCH_INCLUDES        = YES
 
 INCLUDE_PATH           = 
 
-# You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard 
+# You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wild card 
 # patterns (like *.h and *.hpp) to filter out the header-files in the 
 # directories. If left blank, the patterns specified with FILE_PATTERNS will 
 # be used.

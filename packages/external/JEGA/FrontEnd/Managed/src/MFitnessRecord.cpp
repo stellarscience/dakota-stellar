@@ -152,7 +152,7 @@ MFitnessRecord::Manifest(
 
 bool
 MFitnessRecord::AddFitness(
-    MDesign MOH des,
+    MDesign^ des,
     double fitness
     )
 {
@@ -170,7 +170,7 @@ MFitnessRecord::GetAverageFitness(
 
 double
 MFitnessRecord::GetFitness(
-    MDesign MOH des
+    MDesign^ des
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -236,7 +236,7 @@ Subclass Overridable Methods
 */
 
 void
-MFitnessRecord::MANAGED_DISPOSE(
+MFitnessRecord::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -289,7 +289,7 @@ MFitnessRecord::~MFitnessRecord(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    MANAGED_DISPOSE();
+    DoDispose();
 }
 
 

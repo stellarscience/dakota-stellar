@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -26,6 +26,7 @@
 #include <queso/SequentialVectorRealizer.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
+#include <queso/FilePtr.h>
 
 namespace QUESO {
 
@@ -279,17 +280,21 @@ StatisticalForwardProblem<P_V,P_M,Q_V,Q_M>::solveWithMonteCarlo(
                               << ": instantiating cov and corr matrices"
                               << std::endl;
     }
-    pqCovarianceMatrix = new P_M(m_env,
-                                 m_paramRv.imageSet().vectorSpace().map(),       // number of rows
-                                 m_qoiRv.imageSet().vectorSpace().dimGlobal());  // number of cols
-    pqCorrelationMatrix = new P_M(m_env,
-                                  m_paramRv.imageSet().vectorSpace().map(),      // number of rows
-                                  m_qoiRv.imageSet().vectorSpace().dimGlobal()); // number of cols
-    ComputeCovCorrMatricesBetweenVectorSequences(*m_paramChain,
-                                                   *m_qoiChain,
-                                                   std::min(m_paramRv.realizer().subPeriod(),m_qoiRv.realizer().subPeriod()), // FIX ME: might be INFINITY
-                                                   *pqCovarianceMatrix,
-                                                   *pqCorrelationMatrix);
+
+    // Only compute correlations on the inter0Comm communicator
+    if (m_env.subRank() == 0) {
+      pqCovarianceMatrix = new P_M(m_env,
+                                   m_paramRv.imageSet().vectorSpace().map(),       // number of rows
+                                   m_qoiRv.imageSet().vectorSpace().dimGlobal());  // number of cols
+      pqCorrelationMatrix = new P_M(m_env,
+                                    m_paramRv.imageSet().vectorSpace().map(),      // number of rows
+                                    m_qoiRv.imageSet().vectorSpace().dimGlobal()); // number of cols
+      ComputeCovCorrMatricesBetweenVectorSequences(*m_paramChain,
+                                                     *m_qoiChain,
+                                                     std::min(m_paramRv.realizer().subPeriod(),m_qoiRv.realizer().subPeriod()), // FIX ME: might be INFINITY
+                                                     *pqCovarianceMatrix,
+                                                     *pqCorrelationMatrix);
+    }
   }
 
   // Write data out
@@ -412,7 +417,7 @@ template <class P_V,class P_M,class Q_V,class Q_M>
 // I/O methods--------------------------------------
 template <class P_V,class P_M,class Q_V,class Q_M>
 void
-StatisticalForwardProblem<P_V,P_M,Q_V,Q_M>::print(std::ostream& os) const
+StatisticalForwardProblem<P_V,P_M,Q_V,Q_M>::print(std::ostream& /* os */) const
 {
   return;
 }

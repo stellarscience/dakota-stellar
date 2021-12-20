@@ -193,6 +193,16 @@ OptppArray<int> CompoundConstraint::getConstraintMappingIndices() const
 
 }
 
+void CompoundConstraint::reset()
+{
+  Constraint test;
+
+  for(int i = 0; i < numOfSets_; i++) {
+    test = constraints_[i];
+    test.reset();
+  }
+}
+
 SerialDenseVector<int,double> CompoundConstraint::getConstraintValue() const 
 {
    /* 

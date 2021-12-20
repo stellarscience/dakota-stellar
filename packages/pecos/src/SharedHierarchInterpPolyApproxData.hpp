@@ -61,6 +61,10 @@ protected:
   void allocate_component_sobol();
   void increment_component_sobol();
 
+  void pre_combine_data();
+  //void post_combine_data();
+  void combined_to_active(bool clear_combined = true);
+
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);
   void set_new_point(const RealVector& x, const UShortArray& basis_index,

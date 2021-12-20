@@ -111,6 +111,7 @@ Static Member Data Definitions
 */
 const double DistanceNichingPostProcessor::DEFAULT_DIST_PCT(0.01);
 
+const size_t DistanceNichingPostProcessor::TABOO_MARK(7);
 
 
 
@@ -130,42 +131,42 @@ DistanceNichingPostProcessor::SetDistancePercentages(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    size_t nof = GetDesignTarget().GetNOF();
+    const size_t nof = this->GetDesignTarget().GetNOF();
 
-    JEGAIFLOG_CF_II(nof < pcts.size(), GetLogger(), lquiet(), this,
+    JEGAIFLOG_CF_II(nof < pcts.size(), this->GetLogger(), lquiet(), this,
         text_entry(lquiet(),
-            GetName() + ": Received more percentages than there are objective "
-            "functions.  Extras will be ignored.")
+            this->GetName() + ": Received more percentages than there are "
+            "objective functions.  Extras will be ignored.")
         )
 
-    JEGAIFLOG_CF_II(nof > pcts.size() && pcts.size() > 1, GetLogger(), lquiet(),
-        this, ostream_entry(lquiet(),
-            GetName() + ": Received fewer percentages (") << pcts.size()
+    JEGAIFLOG_CF_II(nof > pcts.size() && pcts.size() > 1, this->GetLogger(),
+		lquiet(), this, ostream_entry(lquiet(),
+            this->GetName() + ": Received fewer percentages (") << pcts.size()
             << ") than there are objective functions (" << nof << ").  "
             "Using default value of " << DEFAULT_DIST_PCT << " to fill in."
         )
 
-    JEGAIFLOG_CF_II(nof > pcts.size() && pcts.size() == 1, GetLogger(), lquiet(),
-        this, ostream_entry(lquiet(),
-            GetName() + ": Received a single distance percentage for a ")
+    JEGAIFLOG_CF_II(nof > pcts.size() && pcts.size() == 1, this->GetLogger(),
+		lquiet(), this, ostream_entry(lquiet(),
+            this->GetName() + ": Received a single distance percentage for a ")
             << nof << " objective function problem.  Using the supplied value "
             "of " << pcts[0] << " for all objectives."
         )
 
-    _distPcts = pcts;
+    this->_distPcts = pcts;
 
     double fill_val =
-        (_distPcts.size() == 1) ? _distPcts[0] : DEFAULT_DIST_PCT;
+        (this->_distPcts.size() == 1) ? this->_distPcts[0] : DEFAULT_DIST_PCT;
 
-    if(nof > _distPcts.size())
-        _distPcts.resize(
+    if(nof > this->_distPcts.size())
+        this->_distPcts.resize(
             static_cast<JEGA::DoubleVector::size_type>(nof), fill_val
             );
 
     // now go through and set each one individually so that they can be checked
     // for legitimacy.
     for(JEGA::DoubleVector::size_type i=0; i<nof; ++i)
-        this->SetDistancePercentage(i, _distPcts[i]);
+        this->SetDistancePercentage(i, this->_distPcts[i]);
 }
 
 void
@@ -174,7 +175,10 @@ DistanceNichingPostProcessor::SetDistancePercentages(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    SetDistancePercentages(DoubleVector(GetDesignTarget().GetNOF(), pct));
+
+    this->SetDistancePercentages(
+		DoubleVector(this->GetDesignTarget().GetNOF(), pct)
+		);
 }
 
 void
@@ -190,46 +194,46 @@ DistanceNichingPostProcessor::SetDistancePercentage(
         )
 
     const DesignTarget& target = GetDesignTarget();
-    size_t nof = target.GetNOF();
+    const size_t nof = target.GetNOF();
     JEGA::DoubleVector::size_type dvsof =
         static_cast<JEGA::DoubleVector::size_type>(of);
 
     // make sure we have enough locations in the percentages vector.
-    _distPcts.resize(
+    this->_distPcts.resize(
         static_cast<JEGA::DoubleVector::size_type>(nof), DEFAULT_DIST_PCT
         );
 
     // now verify the supplied objective function index.
-    JEGAIFLOG_CF_II_F(of >= nof, GetLogger(), this,
+    JEGAIFLOG_CF_II_F(of >= nof, this->GetLogger(), this,
         ostream_entry(lfatal(),
-            GetName() + ": Request to change objective with index #") << of
-            << ".  Valid indices are 0 through " << (nof-1) << "."
+            this->GetName() + ": Request to change objective with index #")
+			<< of << ".  Valid indices are 0 through " << (nof-1) << "."
         )
 
     // now verify the supplied value.
-    JEGAIFLOG_CF_II(pct < 0.0, GetLogger(), lquiet(), this,
+    JEGAIFLOG_CF_II(pct < 0.0, this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(),
-            GetName() + ": Distance percentages must be at least ") << minPct
-            << " Supplied value of " << pct << " for objective \""
+            this->GetName() + ": Distance percentages must be at least ")
+			<< minPct << " Supplied value of " << pct << " for objective \""
             << target.GetObjectiveFunctionInfos()[dvsof]->GetLabel()
             << "\" will be replaced by the minimum."
         )
 
-    JEGAIFLOG_CF_II(pct > 1.0, GetLogger(), lquiet(), this,
+    JEGAIFLOG_CF_II(pct > 1.0, this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(),
-            GetName() + ": Distance percentages cannot exceed 100%.  Supplied "
-            "value of ") << pct << " for objective \""
+            this->GetName() + ": Distance percentages cannot exceed 100%.  "
+            "Supplied value of ") << pct << " for objective \""
             << target.GetObjectiveFunctionInfos()[dvsof]->GetLabel()
             << "\" will be replaced by 100%."
         )
 
     pct = Math::Max(0.0, Math::Min(pct, 1.0));
 
-    _distPcts[dvsof] = pct;
+    this->_distPcts[dvsof] = pct;
 
-    JEGALOG_II(GetLogger(), lverbose(), this,
+    JEGALOG_II(this->GetLogger(), lverbose(), this,
         ostream_entry(lverbose(),
-            GetName() + ": Distance for objective \"")
+            this->GetName() + ": Distance for objective \"")
             << target.GetObjectiveFunctionInfos()[dvsof]->GetLabel()
             << "\" now = " << pct << "."
         )
@@ -307,17 +311,17 @@ Subclass Visible Methods
 
 JEGA::DoubleVector
 DistanceNichingPostProcessor::ComputeCutoffDistances(
-    const DoubleExtremes& objExtremes
+    const extremes<obj_val_t>& objExtremes
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
     // the cutoff distance is a percentage of the range of the objective
     // considering only the non-dominated designs.
-    size_t nof = GetDesignTarget().GetNOF();
+    const size_t nof = this->GetDesignTarget().GetNOF();
 
-    JEGAIFLOG_CF_II_F(nof != objExtremes.size(), GetLogger(), this,
-        ostream_entry(lfatal(), GetName() + ": Extremes contain "
+    JEGAIFLOG_CF_II_F(nof != objExtremes.size(), this->GetLogger(), this,
+        ostream_entry(lfatal(), this->GetName() + ": Extremes contain "
             "record of ") << objExtremes.size() << " objectives for an "
             << nof << " objective problem."
         )
@@ -325,7 +329,7 @@ DistanceNichingPostProcessor::ComputeCutoffDistances(
     // Prepare a vector for return.
     JEGA::DoubleVector ret(nof);
 
-    for(DoubleExtremes::size_type i=0; i<nof; ++i)
+    for(extremes<obj_val_t>::size_type i=0; i<nof; ++i)
         ret[i] = Math::Abs(
             this->GetDistancePercentage(i) * objExtremes.get_range(i)
             );
@@ -386,16 +390,23 @@ DistanceNichingPostProcessor::PostProcess(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    JEGALOG_II(GetLogger(), ldebug(), this, text_entry(ldebug(),
-        GetName() + ": post processing."))
-
-    // we will need the number of objectives for a few things here.
-    size_t nof = GetDesignTarget().GetNOF();
+    JEGALOG_II(this->GetLogger(), ldebug(), this, text_entry(ldebug(),
+        this->GetName() + ": post processing."))
 
     // If the group is empty, we needn't go any further.
     if(group.IsEmpty()) return;
 
-    // Sychronize the lists just in case.
+    // in case we are not caching, we will need the target below.
+    DesignTarget& target = this->GetDesignTarget();
+
+    // we will need the number of objectives for a few things here.
+    const size_t nof = target.GetNOF();
+
+    // Make sure that the Taboo mark is clear on all designs.
+    for(DesignDVSortSet::const_iterator it(group.BeginDV());
+        it!=group.EndDV(); ++it) (*it)->ModifyAttribute(TABOO_MARK, false);
+
+    // Synchronize the lists just in case.
     group.SynchronizeOFAndDVContainers();
 
     // Store our candidate designs for use below and so we don't screw things
@@ -403,7 +414,7 @@ DistanceNichingPostProcessor::PostProcess(
     DesignOFSortSet designs(group.GetOFSortContainer());
 
     // Now continue by extracting the overall extremes
-    DoubleExtremes objExtremes(
+    const extremes<obj_val_t> objExtremes(
         DesignStatistician::GetObjectiveFunctionExtremes(designs)
         );
 
@@ -411,16 +422,16 @@ DistanceNichingPostProcessor::PostProcess(
     // distance from the current design.  Fortunately, we are using
     // the same cutoff distance for all designs and so we can compute that
     // now for all designs.
-    JEGA::DoubleVector dists(ComputeCutoffDistances(objExtremes));
-
-    // we will need the target below.
-    DesignTarget& target = this->GetDesignTarget();
+    const JEGA::DoubleVector dists(this->ComputeCutoffDistances(objExtremes));
 
     // now, we start with the first design and search the range for all
     // those that are too close.  We never extract an extreme Design.
 
     // prepare to output the number of designs cut out.
     JEGA_LOGGING_IF_ON(DesignOFSortSet::size_type prevSize = designs.size();)
+
+    // Now continue by tagging the Pareto extremes so they can be skipped
+    MultiObjectiveStatistician::TagParetoExtremeDesigns(designs, TABOO_MARK);
 
     // We can bound our search range by noting that once the first objective
     // distance is too big, we needn't look any further.  That is true because
@@ -433,16 +444,13 @@ DistanceNichingPostProcessor::PostProcess(
         DesignOFSortSet::iterator next(curr);
         for(++next; next!=designs.end();)
         {
-            double obj0Dist = ComputeObjectiveDistance(**curr, **next, 0);
+            if((*next)->HasAttribute(TABOO_MARK)) { ++next; continue; }
+
+            const double obj0Dist = ComputeObjectiveDistance(**curr, **next, 0);
 
             // If the distance at obj0 is large enough, we can get out of this
             // inner loop and move onto the next "curr".
             if(obj0Dist > dists.at(0)) break;
-
-            // if next is an extreme design, we keep it no matter what.
-            if(MultiObjectiveStatistician::IsExtremeDesign(
-                **next, objExtremes
-                )){ ++next; continue; }
 
             // prepare to store whether or not we will be keeping next.
             bool keep = false;
@@ -471,14 +479,14 @@ DistanceNichingPostProcessor::PostProcess(
         }
     }
 
-    JEGALOG_II(GetLogger(), lverbose(), this,
-        ostream_entry(lverbose(), GetName() + ": Removed ")
+    JEGALOG_II(this->GetLogger(), lverbose(), this,
+        ostream_entry(lverbose(), this->GetName() + ": Removed ")
             << (prevSize - designs.size()) << " of " << prevSize
             << " designs during post processing."
         )
 
-    JEGALOG_II(GetLogger(), lverbose(), this,
-        ostream_entry(lverbose(), GetName() + ": Final group size after "
+    JEGALOG_II(this->GetLogger(), lverbose(), this,
+        ostream_entry(lverbose(), this->GetName() + ": Final group size after "
             "post processing is ") << group.GetSize() << "."
         )
 
@@ -492,19 +500,20 @@ DistanceNichingPostProcessor::PollForParameters(
     EDDY_FUNC_DEBUGSCOPE
 
     bool success = ParameterExtractor::GetDoubleVectorFromDB(
-        db, "method.jega.niche_vector", _distPcts
+        db, "method.jega.niche_vector", this->_distPcts
         );
 
     // If we did not find the crossover rate, warn about it and use the default
     // value.  Note that if !success, then _distPcts has not been altered.
-    JEGAIFLOG_CF_II(!success, GetLogger(), lverbose(), this,
-        text_entry(lverbose(), GetName() + ": The distance percentages were "
-            "not found in the parameter database.  Using the current values.")
+    JEGAIFLOG_CF_II(!success, this->GetLogger(), lverbose(), this,
+        text_entry(lverbose(), this->GetName() + ": The distance percentages "
+            "were not found in the parameter database.  Using the current "
+			"values.")
         )
 
-    SetDistancePercentages(_distPcts);
+    this->SetDistancePercentages(_distPcts);
 
-    return GeneticAlgorithmPostProcessor::PollForParameters(db);
+    return this->GeneticAlgorithmPostProcessor::PollForParameters(db);
 }
 
 

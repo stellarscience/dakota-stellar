@@ -242,9 +242,9 @@ class MOGAConverger :
          * These values are used among other things to track the expansion of
          * the Pareto frontier from generation to generation.
          */
-        eddy::utilities::DoubleExtremes _prevParExtremes;
+        eddy::utilities::extremes<obj_val_t> _prevParExtremes;
 
-        eddy::utilities::DoubleExtremes _prevPopExtremes;
+        eddy::utilities::extremes<obj_val_t> _prevPopExtremes;
 
         std::size_t _prevPopSize;
 
@@ -345,7 +345,7 @@ class MOGAConverger :
          */
         double
         GetMaxRangeChange(
-            const eddy::utilities::DoubleExtremes& newExtremes
+            const eddy::utilities::extremes<obj_val_t>& newExtremes
             ) const;
 
         /**
@@ -367,12 +367,12 @@ class MOGAConverger :
         double
         GetDensityChange(
             const JEGA::Utilities::DesignOFSortSet& newPop,
-            const eddy::utilities::DoubleExtremes& newExtremes
+            const eddy::utilities::extremes<obj_val_t>& newExtremes
             ) const;
 
         /**
          * \brief Returns the fraction of Designs in \a _prevParSet that are
-         *        domianted by Designs in \a curr.
+         *        dominated by Designs in \a curr.
          *
          * This is the count of dominated divided by the total number which
          * always results in a non-negative number.
@@ -388,7 +388,7 @@ class MOGAConverger :
 
 
         /**
-         * \brief Flushes the previous set then refills it with with duplicates
+         * \brief Flushes the previous set then refills it with duplicates
          *        of the Designs in the supplied set.
          *
          * \param newSet The set of Designs to use in updating the \a _prevParSet.
@@ -407,7 +407,7 @@ class MOGAConverger :
         inline
         void
         UpdateParetoExtremes(
-            const eddy::utilities::DoubleExtremes& newExtremes
+            const eddy::utilities::extremes<obj_val_t>& newExtremes
             );
 
         /**
@@ -419,7 +419,7 @@ class MOGAConverger :
         inline
         void
         UpdatePopulationExtremes(
-            const eddy::utilities::DoubleExtremes& newExtremes
+            const eddy::utilities::extremes<obj_val_t>& newExtremes
             );
 
         /**
@@ -538,14 +538,14 @@ class MOGAConverger :
          * \brief Computes and returns the volume of the space bounded by the
          *        supplied \a extremes.
          *
-         * \param extremes The extremes object that contains the maxs and mins
-         *                 of multiple dimensions.
+         * \param exts The extremes object that contains the maxs and mins
+         *             of multiple dimensions.
          * \return The product of all ranges contained within \a extremes.
          */
         static
         double
         ComputeVolume(
-            const eddy::utilities::DoubleExtremes& extremes
+            const eddy::utilities::extremes<obj_val_t>& exts
             );
 
 

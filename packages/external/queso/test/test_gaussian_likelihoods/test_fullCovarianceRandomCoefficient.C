@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,8 +25,12 @@
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 #include <queso/VectorSet.h>
+#include <queso/VectorSpace.h>
 #include <queso/BoxSubset.h>
 #include <queso/GaussianLikelihoodFullCovarianceRandomCoefficient.h>
+
+#include <cstdlib>
+#include <cmath>
 
 #define TOL 1e-8
 
@@ -46,9 +50,7 @@ public:
   {
   }
 
-  virtual void evaluateModel(const V & domainVector, const V * domainDirection,
-      V & modelOutput, V * gradVector, M * hessianMatrix,
-      V * hessianEffect) const
+  virtual void evaluateModel(const V & domainVector, V & modelOutput) const
   {
     // Evaluate model and fill up the m_modelOutput member variable
     for (unsigned int i = 0; i < modelOutput.sizeLocal(); i++) {
@@ -56,14 +58,21 @@ public:
       modelOutput[i] = domainVector[0] + 3.0;
     }
   }
+
+  using QUESO::GaussianLikelihoodFullCovarianceRandomCoefficient<V, M>::evaluateModel;
 };
 
 int main(int argc, char ** argv) {
+  std::string inputFileName = "test_gaussian_likelihoods/queso_input.txt";
+  const char * test_srcdir = std::getenv("srcdir");
+  if (test_srcdir)
+    inputFileName = test_srcdir + ('/' + inputFileName);
+
 #ifdef QUESO_HAS_MPI
   MPI_Init(&argc, &argv);
-  QUESO::FullEnvironment env(MPI_COMM_WORLD, "test_gaussian_likelihoods/queso_input.txt", "", NULL);
+  QUESO::FullEnvironment env(MPI_COMM_WORLD, inputFileName, "", NULL);
 #else
-  QUESO::FullEnvironment env("test_gaussian_likelihoods/queso_input.txt", "", NULL);
+  QUESO::FullEnvironment env(inputFileName, "", NULL);
 #endif
 
   QUESO::VectorSpace<QUESO::GslVector, QUESO::GslMatrix> paramSpace(env,
@@ -110,7 +119,7 @@ int main(int argc, char ** argv) {
   point[0] = 0.0;
   point[1] = 2.0;  // Multiplicative coefficient of obs matrix
   lhood_value = lhood.actualValue(point, NULL, NULL, NULL, NULL);
-  truth_value = std::exp(-5.0/4.0);
+  truth_value = std::exp(-5.0/4.0) / 4.0;
 
   if (std::abs(lhood_value - truth_value) > TOL) {
     std::cerr << "Random coefficient Gaussian test case failure." << std::endl;
@@ -122,7 +131,7 @@ int main(int argc, char ** argv) {
   point[0] = -2.0;
   point[1] = 1.0;
   lhood_value = lhood.actualValue(point, NULL, NULL, NULL, NULL);
-  truth_value = 1.0;
+  truth_value = 1.0 / 2.0;
 
   if (std::abs(lhood_value - truth_value) > TOL) {
     std::cerr << "Random coefficient Gaussian test case failure." << std::endl;

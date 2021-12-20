@@ -42,7 +42,7 @@ public:
   void optimize();
 
   /// The function used to compute the constraints and objective
-  static void calcfc(int n, int m, double* x, double* f, double* con );
+  static void acro_calcfc(int n, int m, double* x, double* f, double* con );
 
 protected:
 

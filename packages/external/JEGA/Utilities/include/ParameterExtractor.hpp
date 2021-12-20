@@ -226,7 +226,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with an
@@ -245,7 +245,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -266,7 +266,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with a
@@ -285,7 +285,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -306,7 +306,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with a
@@ -325,7 +325,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -346,7 +346,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with a
@@ -365,7 +365,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -386,7 +386,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with a
@@ -405,7 +405,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -426,7 +426,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with a
@@ -445,7 +445,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -466,7 +466,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with an
@@ -485,7 +485,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -506,7 +506,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with a
@@ -525,7 +525,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -546,7 +546,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \return The value retrieved.
          * \throws no_such_parameter_error If tag is not associated with a
@@ -565,7 +565,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.
@@ -623,7 +623,7 @@ class ParameterExtractor
          * exception of type no_such_parameter_error is thrown.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param func The ParameterDatabase function to use to return a
          *             parameter of type R given the tag.
@@ -651,7 +651,7 @@ class ParameterExtractor
          * way.
          *
          * \param db The database from which to retrieve the parameter
-         *           assiciated with \a tag.
+         *           associated with \a tag.
          * \param tag The name of the parameter to be retrieved.
          * \param into The instance into which to copy the retrieved value if
          *             successfully retrieved.

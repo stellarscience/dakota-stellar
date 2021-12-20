@@ -43,6 +43,14 @@ enum { NOCOVAR=0, EXP_L2, EXP_L1 };
 enum { SUBSPACE_NORM_DEFAULT=0, SUBSPACE_NORM_MEAN_VALUE,
        SUBSPACE_NORM_MEAN_GRAD, SUBSPACE_NORM_LOCAL_GRAD }; 
 
+/// define special values for componentParallelMode
+/// (active model for parallel scheduling)
+enum { SURROGATE_MODEL=1, TRUTH_MODEL };
+
+/// define special values for distParamDerivs
+enum { NO_DERIVS=0, ALL_DERIVS, MIXED_DERIVS }; 
+
+
 /// Body class for model specification data.
 
 /** The DataModelRep class is used to contain the data from a model
@@ -141,6 +149,8 @@ public:
   String importBuildPtsFile;
   /// tabular format for the build point import file
   unsigned short importBuildFormat;
+  /// whether to parse/validate variable labels from header
+  bool importUseVariableLabels;
   /// whether to import active variables only
   bool importBuildActive;
 
@@ -257,6 +267,8 @@ public:
   String importChallengePtsFile;
   /// tabular format of the challenge data file
   unsigned short importChallengeFormat;
+  /// whether to parse/validate variable labels from header
+  bool importChalUseVariableLabels;
   /// whether to import active variables only
   bool importChallengeActive;
 
@@ -286,6 +298,8 @@ public:
   /// level (constraint) functions (from the \c secondary_response_mapping
   /// specification in \ref ModelNested)
   RealVector secondaryRespCoeffs;
+  /// whether an identity response map is requested in lieu of explicit maps
+  bool identityRespMap;
   /// number of servers for concurrent sub-iterator parallelism
   int subMethodServers;
   /// number of processors for each concurrent sub-iterator partition
@@ -349,6 +363,30 @@ public:
   /// Contains which cutoff method to use in the cross validation metric
   unsigned short subspaceIdCVMethod;
 
+
+  // Function-Train Options
+
+  /// Optimization tolerance for FT regression
+  double solverTolerance;
+  /// Rounding tolerance for adaptive algorithms
+  double roundingTolerance;
+  /// starting polynomial order
+  size_t startOrder;
+  /// maximum order of basis polynomials
+  size_t maxOrder;
+  /// starting rank
+  size_t startRank;
+  /// rank increase increment
+  size_t kickRank;
+  /// maximum rank
+  size_t maxRank;
+  /// whether or not to adapt rank
+  bool adaptRank;
+  /// maximum number of cross iterations
+  size_t crossMaxIter;
+  // Verbosity level
+  //size_t verbosity;
+    
 
   /// whether automatic surrogate refinement is enabled
   bool autoRefine;

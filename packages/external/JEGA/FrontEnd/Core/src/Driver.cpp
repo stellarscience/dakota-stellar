@@ -56,6 +56,7 @@ Includes
 ================================================================================
 */
 // JEGAConfig.hpp should be the first include in all JEGA files.
+#include <../Utilities/include/JEGATypes.hpp>
 #include <../Utilities/include/JEGAConfig.hpp>
 
 #include <ctime>
@@ -175,7 +176,29 @@ Driver::IsJEGAInitialized(
     return _initialized;
 }
 
+const char*
+Driver::GetXType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return typeid(var_rep_t).name();
+}
 
+const char*
+Driver::GetGType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return typeid(con_val_t).name();
+}
+
+const char*
+Driver::GetFType(
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return typeid(obj_val_t).name();
+}
 
 
 
@@ -191,7 +214,8 @@ Driver::InitializeJEGA(
     const string& globalLogFilename,
     const LogLevel& globalLogDefLevel,
     unsigned int rSeed,
-    Logger::FatalBehavior onFatal
+    Logger::FatalBehavior onFatal,
+	bool registerSignalHandlers
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -203,12 +227,15 @@ Driver::InitializeJEGA(
 
     // The handle_signal method will give the debugscope project it's chance.
     // So there are no EDDY_DEBUGSIGNAL calls in this method.
-    ::signal(SIGSEGV, &Driver::handle_signal);
-    EDDY_IF_NO_WINDOWS(::signal(SIGINT, &Driver::handle_signal);)
-    ::signal(SIGILL, &Driver::handle_signal);
-    ::signal(SIGFPE, &Driver::handle_signal);
-    ::signal(SIGTERM, &Driver::handle_signal);
-    ::signal(SIGABRT, &Driver::handle_signal);
+	if (registerSignalHandlers)
+	{
+		::signal(SIGSEGV, &Driver::handle_signal);
+		EDDY_IF_NO_WINDOWS(::signal(SIGINT, &Driver::handle_signal);)
+		::signal(SIGILL, &Driver::handle_signal);
+		::signal(SIGFPE, &Driver::handle_signal);
+		::signal(SIGTERM, &Driver::handle_signal);
+		::signal(SIGABRT, &Driver::handle_signal);
+	}
 
     // Start by initializing the logger
     JEGA_LOGGING_INIT(globalLogFilename, globalLogDefLevel);
@@ -436,7 +463,7 @@ Driver::ExtractAllData(
         this->LoadAlgorithm(*theGA, algConfig);
 
         // Add newLog to the list of logs that we are responsible for
-        // destroyting iff it is non-null.
+        // destroying iff it is non-null.
         if(newLog != 0x0)
             this->_myLogs.insert(GALoggerMap::value_type(theGA, newLog));
 

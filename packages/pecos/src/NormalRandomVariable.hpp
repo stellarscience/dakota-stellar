@@ -62,8 +62,10 @@ public:
   Real to_standard(Real x) const;
   Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -71,7 +73,7 @@ public:
   Real standard_deviation() const;
   Real variance() const;
 
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
@@ -95,8 +97,6 @@ public:
 
   static Real std_pdf(Real z);
   //static Real phi(Real z);
-  static Real mvn_std_pdf(Real beta, size_t n);
-  static Real mvn_std_pdf(const RealVector& u);
 
   static Real std_cdf(Real z);
   static Real std_ccdf(Real z);
@@ -135,12 +135,12 @@ protected:
 
 inline NormalRandomVariable::NormalRandomVariable():
   RandomVariable(BaseConstructor()), gaussMean(0), gaussStdDev(1.)
-{ ranVarType = NORMAL; }
+{ ranVarType = STD_NORMAL; }
 
 
 inline NormalRandomVariable::NormalRandomVariable(Real mean, Real stdev):
   RandomVariable(BaseConstructor()), gaussMean(mean), gaussStdDev(stdev)
-{ ranVarType = NORMAL; }
+{ ranVarType = (mean == 0. && stdev == 1.) ? STD_NORMAL : NORMAL; }
 
 
 inline NormalRandomVariable::~NormalRandomVariable()
@@ -256,7 +256,7 @@ inline Real NormalRandomVariable::variance() const
 { return gaussStdDev * gaussStdDev; }
 
 
-inline RealRealPair NormalRandomVariable::bounds() const
+inline RealRealPair NormalRandomVariable::distribution_bounds() const
 {
   Real dbl_inf = std::numeric_limits<Real>::infinity();
   return RealRealPair(-dbl_inf, dbl_inf);
@@ -271,12 +271,16 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   Real COV;
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
-  case NORMAL:      return 1.; break; // No warping
+  case NORMAL:      case STD_NORMAL:
+    return 1.;  break; // No warping
 
   // Der Kiureghian & Liu: Table 2 (constants)
-  case UNIFORM:     return 1.023326707946488488; break; // Max Error 0.0%
-  case EXPONENTIAL: return 1.107; break;                // Max Error 0.0%
-  case GUMBEL:      return 1.031; break;                // Max Error 0.0%
+  case UNIFORM:     case STD_UNIFORM:
+    return 1.023326707946488488; break; // Max Error 0.0%
+  case EXPONENTIAL: case STD_EXPONENTIAL:
+    return 1.107; break;                // Max Error 0.0%
+  case GUMBEL:
+    return 1.031; break;                // Max Error 0.0%
 
   // Der Kiureghian & Liu: Table 3 (quadratic approximations in COV)
   case LOGNORMAL:
@@ -299,31 +303,51 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 }
 
 
-inline Real NormalRandomVariable::parameter(short dist_param) const
+inline void NormalRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case N_MEAN:    case N_LOCATION: return gaussMean;   break;
-  case N_STD_DEV: case N_SCALE:    return gaussStdDev; break;
+  case N_MEAN:    case N_LOCATION: val = gaussMean;   break;
+  case N_STD_DEV: case N_SCALE:    val = gaussStdDev; break;
+  case N_VARIANCE:                 val = gaussStdDev * gaussStdDev; break;
+  case N_LWR_BND: val = -std::numeric_limits<Real>::infinity();     break;
+  case N_UPR_BND: val =  std::numeric_limits<Real>::infinity();     break;
   default:
-    PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in NormalRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+    PCerr << "Error: lookup failure for distribution parameter " << dist_param
+	  << " in NormalRandomVariable::pull_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void NormalRandomVariable::parameter(short dist_param, Real val)
+inline void NormalRandomVariable::push_parameter(short dist_param, Real val)
 {
+  bool err_flag = false;
   switch (dist_param) {
   case N_MEAN:    case N_LOCATION: gaussMean   = val; break;
   case N_STD_DEV: case N_SCALE:    gaussStdDev = val; break;
-  // Note: bounded normal case would translate/scale bounds for
-  // N_LOCATION,N_SCALE (see NestedModel::real_variable_mapping())
+  case N_VARIANCE:                 gaussStdDev = std::sqrt(val); break;
+  case N_LWR_BND:
+    if (val != -std::numeric_limits<Real>::infinity()) err_flag = true;
+    break;
+  case N_UPR_BND:
+    if (val !=  std::numeric_limits<Real>::infinity()) err_flag = true;
+    break;
   default:
-    PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in NormalRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); break;
+    err_flag = true; break;
   }
+  if (err_flag) {
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in NormalRandomVariable::push_parameter(Real)." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void NormalRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(N_MEAN,    gaussMean);
+  rv.pull_parameter(N_STD_DEV, gaussStdDev);
 }
 
 
@@ -398,29 +422,6 @@ inline Real NormalRandomVariable::std_pdf(Real z)
   normal_dist norm(0., 1.);
   return bmth::pdf(norm, z);
   //return std::exp(-z*z/2.)/std::sqrt(2.*PI);
-}
-
-
-// Multivariate standard normal density function with aggregate distance.
-inline Real NormalRandomVariable::mvn_std_pdf(Real beta, size_t n)
-{
-  // need n instances of 1/sqrt(2Pi), but 1D pdf only includes 1:
-  return (n > 1) ?
-    std_pdf(beta) * std::pow(2.*PI, -((Real)(n-1))/2.) :// correct 1D pdf for nD
-    std_pdf(beta);
-}
-
-
-// Multivariate standard normal density function from vector.
-inline Real NormalRandomVariable::mvn_std_pdf(const RealVector& u)
-{
-  return mvn_std_pdf(u.normFrobenius(), u.length());
-
-  // Alternate implementation invokes exp() repeatedly:
-  //normal_dist norm(0., 1.);
-  //size_t i, n = u.length(); Real pdf = 1.;
-  //for (i=0; i<n; ++i)
-  //  pdf *= bmth::pdf(norm, u[i]);
 }
 
 

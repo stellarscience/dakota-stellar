@@ -135,7 +135,7 @@ Public Methods
 ================================================================================
 */
 
-DoubleExtremes
+extremes<var_rep_t>
 DesignGroup::ComputeDVExtremes(
     ) const
 {
@@ -145,7 +145,7 @@ DesignGroup::ComputeDVExtremes(
         );
 }
 
-DoubleExtremes
+extremes<obj_val_t>
 DesignGroup::ComputeOFExtremes(
     ) const
 {
@@ -179,7 +179,7 @@ DesignGroup::FlushDesignRetDV(
     if(it == this->EndDV()) return this->EndDV();
 
     Design* des = *it;
-    DVSortContainer::iterator ret(this->EraseRetDV(it));
+    const DVSortContainer::iterator ret(this->EraseRetDV(it));
     this->_target.TakeDesign(des);
     return ret;
 
@@ -195,7 +195,7 @@ DesignGroup::FlushDesignRetOF(
     if(it == this->EndOF()) return this->EndOF();
 
     Design* des = *it;
-    OFSortContainer::iterator ret(this->EraseRetOF(it));
+    const OFSortContainer::iterator ret(this->EraseRetOF(it));
     this->_target.TakeDesign(des);
     return ret;
 
@@ -263,7 +263,7 @@ DesignGroup::operator = (
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(&this->_target == &right._target);
 
-    if(this== &right) return *this;
+    if(this == &right) return *this;
 
     this->_dvSort.clear();
     this->_ofSort.clear();

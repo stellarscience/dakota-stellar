@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Definition of the minumum logging level class.
+        Definition of the minimum logging level class.
 
     NOTES:
 
@@ -44,7 +44,7 @@ Document This File
 ================================================================================
 */
 /** \file
- * \brief Contains the definition of the minumum logging level class.
+ * \brief Contains the definition of the minimum logging level class.
  */
 
 

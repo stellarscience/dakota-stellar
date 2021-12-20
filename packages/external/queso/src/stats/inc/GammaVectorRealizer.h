@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -35,15 +35,14 @@ namespace QUESO {
 class GslVector;
 class GslMatrix;
 
-//*****************************************************
-// Gamma class [R-06]
-//*****************************************************
 /*!
  * \class GammaVectorRealizer
  * \brief A class for handling sampling from a Gamma probability density distribution.
  *
- * This class handles sampling from a Gamma probability density distribution, of
- * parameters \c a and \c b.*/
+ * This class handles sampling from a Gamma probability density distribution,
+ * with shape and scale parameters \c a and \c b.  See GammaJointPdf for more
+ * details on the parameterisation of the distribution function.
+ */
 template <class V = GslVector, class M = GslMatrix>
 class GammaVectorRealizer : public BaseVectorRealizer<V,M> {
 public:

@@ -72,6 +72,7 @@ Includes
 #include <GeneticAlgorithmFitnessAssessor.hpp>
 #include <PostProcessors/NullPostProcessor.hpp>
 #include <utilities/include/EDDY_DebugScope.hpp>
+#include <../Utilities/include/LRUDesignCache.hpp>
 #include <../Utilities/include/DesignGroupVector.hpp>
 #include <../Utilities/include/ParameterExtractor.hpp>
 #include <../Utilities/include/DesignVariableInfo.hpp>
@@ -126,12 +127,12 @@ asstring(
 }
 
 /**
- * \brief Replaces all occurances of some search string within a source string
+ * \brief Replaces all occurrences of some search string within a source string
  *        with a supplied replacement string.
  *
  * \param of The string to search for.
  * \param in The string in which to search.
- * \param with The string with which to replace all occurances of \a of in
+ * \param with The string with which to replace all occurrences of \a of in
  *             \a in.
  */
 string
@@ -175,7 +176,7 @@ GeneticAlgorithm::SetOperator(
     EDDY_FUNC_DEBUGSCOPE
 
     // See if the current group has the operator.  If it does, we can go ahead
-    // and use the supplied operator without any futher considerations.
+    // and use the supplied operator without any further considerations.
     if(groupHasOp)
     {
         (this->GetOperatorSet().*setFunc)(op);
@@ -197,7 +198,7 @@ GeneticAlgorithm::SetOperator(
     {
         JEGALOG_II(this->GetLogger(), lquiet(), this, text_entry(lquiet(),
             "Cannot set " + opType + " to " + op->GetName() +
-            ".  It is incompatable with the other existing operators "
+            ".  It is incompatible with the other existing operators "
             "according to the known groups.  Retaining current " + opType +
             " of " + current.GetName())
             )
@@ -600,7 +601,7 @@ GeneticAlgorithm::LogIllconditionedDesigns(
     {
         ostream_entry ent(lquiet(), this->GetName());
 
-        ent << ": Design Variable Values for Illconditioned "
+        ent << ": Design Variable Values for Ill-conditioned "
                "Designs:\n";
         
         for(
@@ -656,23 +657,23 @@ GeneticAlgorithm::ValidateVariableValues(
 
         for(size_t dv = 0; dv<ndv; ++dv)
         {
-            double rep = des->GetVariableRep(dv);
+            var_rep_t rep = des->GetVariableRep(dv);
 
             const DesignVariableInfo& dvi = *dvInfos[dv];
 
-            if(dvi.IsValidDoubleRep(rep)) continue;
+            if(dvi.IsValidRep(rep)) continue;
 
             // get a corrected variable value.
-            double corrected = dvi.IsRepInBounds(rep) ?
-                dvi.GetNearestValidDoubleRep(rep) : dvi.GetRandomDoubleRep();
+            var_rep_t corrected = dvi.IsRepInBounds(rep) ?
+                dvi.GetNearestValidRep(rep) : dvi.GetRandomRep();
 
-            // a return of -DBL_MAX means that the rep could
+            // a return of -limits::max means that the rep could
             // not be corrected.
-            if(corrected == -DBL_MAX)
+			if(corrected == -std::numeric_limits<var_rep_t>::max())
             {
                 JEGALOG_II(this->GetLogger(), lquiet(), this,
                     ostream_entry(lquiet(), this->GetName() + ": "
-                        "Noncorrectable invalid value of ")
+                        "Non-correctable invalid variable rep of ")
                         << rep << " found for variable " << dvi.GetLabel()
                     )
                 des->SetIllconditioned(true);
@@ -686,10 +687,11 @@ GeneticAlgorithm::ValidateVariableValues(
             {
                 JEGALOG_II(this->GetLogger(), lquiet(), this,
                     ostream_entry(
-                        lquiet(), this->GetName() + ": Invalid value of "
+                        lquiet(), this->GetName() + ": Invalid variable rep of "
                         )
                         << rep << " found for variable " << dvi.GetLabel()
-                        << ".  Corrected to " << corrected << "."
+                        << ".  Corrected to " << corrected << " (value="
+                        << dvi.GetValueOf(corrected) << ")."
                     )
                 des->SetVariableRep(dv, corrected);
                 des->RemoveAsClone();
@@ -714,7 +716,7 @@ GeneticAlgorithm::ValidateVariableValues(
         group.Insert(changedDesigns[i]);
     }
 
-    // this will varify that all variables are now valid.
+    // this will verify that all variables are now valid.
 #if defined(JEGA_LOGGING_ON) && defined(JEGA_OPTION_DEBUG)
 
     for(DesignDVSortSet::iterator dit(group.BeginDV()); dit!=de; ++dit)
@@ -723,16 +725,16 @@ GeneticAlgorithm::ValidateVariableValues(
             dvit != dvInfos.end(); ++dvit)
         {
             JEGAIFLOG_CF_F(!(*dit)->IsIllconditioned() &&
-                        !(*dvit)->IsValidDoubleRep(
-                            (*dvit)->WhichDoubleRep(**dit)
+                        !(*dvit)->IsValidRep(
+                            (*dvit)->WhichRep(**dit)
                             ),
                         this->GetLogger(),
                         ostream_entry(lfatal(),
                             "Invalid variable representation found in "
-                            "non-illcondintioned design after variable "
+                            "non-ill-conditioned design after variable "
                             "correction operation.  Variable ")
                                 << (*dvit)->GetLabel() << ", Representation "
-                                << (*dvit)->WhichDoubleRep(**dit)
+                                << (*dvit)->WhichRep(**dit)
                         )
         }
     }
@@ -1061,7 +1063,7 @@ GeneticAlgorithm::AbsorbEvaluatorInjections(
         }
     }
 
-    // now that we've absorbed them all, dispose of them in the evalutor.
+    // now that we've absorbed them all, dispose of them in the evaluator.
     evaler.ClearInjectedDesigns();
 }
 
@@ -1173,7 +1175,7 @@ GeneticAlgorithm::AlgorithmInitialize(
 
     if(this->GetInitializer().CanProduceInvalidVariableValues())
     {
-        // verify the validity of each design variable of eahc Design.
+        // verify the validity of each design variable of each Design.
         size_t numIll = this->ValidateVariableValues(this->_pop);
 
         // any designs that could not be evaluated must be removed.
@@ -1196,7 +1198,7 @@ GeneticAlgorithm::AlgorithmInitialize(
     this->_pop.GetDVSortContainer().test_within_list_for_clones();
 
     // check for duplicates in the discarded designs to avoid re-evaluations.
-    const DesignDVSortSet& discards =
+    const LRUDesignCache& discards =
         this->GetDesignTarget().CheckoutDiscards();
     discards.test_for_clones(this->_pop.GetDVSortContainer());
     this->GetDesignTarget().CheckinDiscards();
@@ -1224,7 +1226,7 @@ GeneticAlgorithm::AlgorithmInitialize(
                 lquiet(), this->GetName() + ": encountered and flushed "
                 )
                 << nrem
-                << " illconditioned designs after evaluation of the initial "
+                << " ill-conditioned designs after evaluation of the initial "
                    "population."
                 )
     }
@@ -1250,7 +1252,7 @@ GeneticAlgorithm::AlgorithmProcess(
 
     // If this algorithm has already reported itself converged, don't do
     // anything.
-    // Or, similary, if we test it for convergence using the parameterless
+    // Or, similarly, if we test it for convergence using the parameter-less
     // convergence method and it says it is converged, then do nothing.
     if(this->GetConverger().GetConverged() ||
        this->GetConverger().CheckConvergence())
@@ -1332,10 +1334,11 @@ GeneticAlgorithm::AlgorithmFinalize(
     // now write all other Designs considered to another tab delimited file.
     if(this->_printDiscards)
     {
-        const DesignDVSortSet& discards =
+        const LRUDesignCache& discards =
             this->GetDesignTarget().CheckoutDiscards();
         if(!this->WriteGroupToFile(
-            discards, this->GetDataDirectory() + "/" + "discards.dat"
+            discards.DVSortSet(),
+            this->GetDataDirectory() + "/" + "discards.dat"
             )) ret = false;
         this->GetDesignTarget().CheckinDiscards();
     }
@@ -1351,7 +1354,6 @@ GeneticAlgorithm::GetBestDesign(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    // store the ofsort of the population for repeated use.
     DesignGroupVector gps(1, &this->GetPopulation());
 
     DesignOFSortSet bests(this->GetSelector().SelectNBest(
@@ -1443,7 +1445,7 @@ GeneticAlgorithm::GeneticAlgorithm(
         _myDesignSpace(target.GetDesignSpace()),
         _isFinalized(false),
         _isInitialized(false),
-        _lastFtns(0x0),
+        _lastFtns(nullptr),
         _dataDir("./"),
         _startTime(std::numeric_limits<clock_t>::max())
 {

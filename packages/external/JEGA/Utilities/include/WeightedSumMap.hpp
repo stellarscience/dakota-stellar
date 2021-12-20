@@ -213,7 +213,7 @@ class JEGA_SL_IEDECL WeightedSumMap :
         /**
          * \brief Provides immutable access to the weights used in this map.
          *
-         * \return The set of weights used to compute the weigthed sums present
+         * \return The set of weights used to compute the weighted sums present
          *         in this map.
          */
         inline
@@ -332,7 +332,7 @@ class JEGA_SL_IEDECL WeightedSumMap :
     public:
 
         /**
-         * \brief Constructs a weighted sum map in which weightes sums will
+         * \brief Constructs a weighted sum map in which weighted sums will
          *        exist that were computed using the supplied weights.
          *
          * \param weights The weights used to compute the weighted sums

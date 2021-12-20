@@ -142,7 +142,7 @@ Class Definition
 ================================================================================
 */
 
-/// This class stores information about design variabes.
+/// This class stores information about design variables.
 /**
  * The information stored includes the type (real, integer, etc) and the
  * nature (continuum, discrete) as well as any inherited information from
@@ -305,9 +305,9 @@ class JEGA_SL_IEDECL DesignVariableInfo :
 
         /// Returns the default value for this design variable as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
-         * \return The default value for this variable or -DBL_MAX if none.
+         * \return The default value for this variable or -limits::max if none.
          */
         inline
         double
@@ -316,7 +316,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
 
         /// Returns the maximum value this variable may have as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The largest legitimate value for this variable.
          */
@@ -327,7 +327,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
 
         /// Returns the minimum value this variable may have as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The smallest legitimate value for this variable.
          */
@@ -348,7 +348,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
 
         /// Returns the nearest valid value to "value".
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to correct to a valid value.
          * \return The nearest value to "value" for which IsValidValue will
@@ -362,33 +362,33 @@ class JEGA_SL_IEDECL DesignVariableInfo :
 
         /// Returns the nearest valid double rep to "rep".
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param rep The representation to correct to a valid representation.
          * \return The nearest representation to "rep" for which
-         *         IsValidDoubleRep will return true;
+         *         IsValidRep will return true;
          */
         virtual
-        double
-        GetNearestValidDoubleRep(
-            double rep
+        var_rep_t
+        GetNearestValidRep(
+            var_rep_t rep
             ) const;
 
         /// Returns the value represented by "rep" as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param rep The representation to convert to a value.
          * \return The value associated with or represented by "rep".
          */
         double
         GetValueOf(
-            double rep
+            var_rep_t rep
             ) const;
 
         /// Returns a random valid value for this variable as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return A random value for this variable for which IsValidValue will
          *         return true;
@@ -399,41 +399,41 @@ class JEGA_SL_IEDECL DesignVariableInfo :
 
         /// Returns the representation of the default value as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of the default value for this variable or
-         *         -DBL_MAX if none.
+         *         -limits::max if none.
          */
-        double
-        GetDefaultDoubleRep(
+        var_rep_t
+        GetDefaultRep(
             ) const;
 
         /**
          * \brief Returns the representation of the max value for this type as
          *        a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of the maximum value for this variable or
-         *         -DBL_MAX of none.
+         *         -limits::max of none.
          */
         inline
-        double
-        GetMaxDoubleRep(
+        var_rep_t
+        GetMaxRep(
             ) const;
 
         /**
          * \brief Returns the representation of the min value for this type as
          *        a double.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of the minimum value for this variable or
-         *         -DBL_MAX of none.
+         *         -limits::max of none.
          */
         inline
-        double
-        GetMinDoubleRep(
+        var_rep_t
+        GetMinRep(
             ) const;
 
         /// Returns the difference between the max and min double rep.
@@ -442,59 +442,59 @@ class JEGA_SL_IEDECL DesignVariableInfo :
          *         this variable.
          */
         inline
-        double
-        GetDoubleRepRange(
+        var_rep_t
+        GetRepRange(
             ) const;
 
         /// Returns the proper representation of "value" as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to retrieve the representation of.
          * \return The representation of the value "value".
          */
         inline
-        double
-        GetDoubleRepOf(
+		var_rep_t
+        GetRepOf(
             double value
             ) const;
 
         /// Returns the representation of a random "value" as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of a random value.
          */
         inline
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             ) const;
 
         /**
          * \brief Returns a random representation existing within the supplied
          *        region of space.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param within The region of space in which to restrict the value.
          * \return The representation of a random value inside \a within.
          */
         inline
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             const RegionOfSpace& within
             ) const;
 
         /// Returns the distance between valid representations as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The increment that exists between consecutive
          *         representations according to the decimal precision.
          */
         inline
-        double
-        GetDistanceBetweenDoubleReps(
+        var_rep_t
+        GetDistanceBetweenReps(
             ) const;
 
         /**
@@ -537,7 +537,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
         inline
         bool
         IsRepInBounds(
-            double rep
+            var_rep_t rep
             ) const;
 
         /// Returns true if the nature of this variable cannot be changed.
@@ -600,7 +600,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
          *        for this variable.
          *
          * Valid representations are those that may be returned by
-         * GetRandomDoubleRep.
+         * GetRandomRep.
          *
          * \param rep The representation to check for validity with this
          *            variable type.
@@ -609,8 +609,8 @@ class JEGA_SL_IEDECL DesignVariableInfo :
          */
         inline
         bool
-        IsValidDoubleRep(
-            double rep
+        IsValidRep(
+            var_rep_t rep
             ) const;
 
         /// Returns a string representation of the type of this variable.
@@ -768,7 +768,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
         /// Returns true if the nature of this variable is Discrete.
         /**
          * This method exists because Discrete and Continuum natures are
-         * the two most common and so it is convienient to directly
+         * the two most common and so it is convenient to directly
          * poll for them.
          *
          * \return True if this design variable has a discrete nature and false
@@ -782,7 +782,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
         /// Returns true if the nature of this variable is Continuum.
         /**
          * This method exists because Discrete and Continuum natures are
-         * the two most common and so it is convienient to directly
+         * the two most common and so it is convenient to directly
          * poll for them.
          *
          * \return True if this design variable has a continuum nature and
@@ -808,7 +808,7 @@ class JEGA_SL_IEDECL DesignVariableInfo :
             ) const;
 
         /**
-         * \brief Returns the variable representationassociated with this info
+         * \brief Returns the variable representation associated with this info
          *        object.
          *
          * For example, if this is the 3rd DesignVariableInfo, then this method
@@ -818,8 +818,8 @@ class JEGA_SL_IEDECL DesignVariableInfo :
          *            variable is sought.
          * \return The number stored for this variable in "des".
          */
-        double
-        WhichDoubleRep(
+        var_rep_t
+        WhichRep(
             const Design& des
             ) const;
 

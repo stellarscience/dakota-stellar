@@ -64,7 +64,7 @@ Includes
 
 #include <../Utilities/include/DesignTarget.hpp>
 
-// Design Variable Info Relavant Includes
+// Design Variable Info Relevant Includes
 #include <../Utilities/include/DesignVariableInfo.hpp>
 #include <../Utilities/include/RealDesignVariableType.hpp>
 #include <../Utilities/include/BooleanDesignVariableType.hpp>
@@ -72,7 +72,7 @@ Includes
 #include <../Utilities/include/ContinuumDesignVariableNature.hpp>
 #include <../Utilities/include/DiscreteDesignVariableNature.hpp>
 
-// Objective Function Info Relavant Includes
+// Objective Function Info Relevant Includes
 #include <../Utilities/include/ObjectiveFunctionInfo.hpp>
 #include <../Utilities/include/MinimizeObjectiveFunctionType.hpp>
 #include <../Utilities/include/MaximizeObjectiveFunctionType.hpp>
@@ -81,7 +81,7 @@ Includes
 #include <../Utilities/include/SeekRangeObjectiveFunctionType.hpp>
 #include <../Utilities/include/NonLinearObjectiveFunctionNature.hpp>
 
-// Constraint Info Relavant Includes
+// Constraint Info Relevant Includes
 #include <../Utilities/include/ConstraintInfo.hpp>
 #include <../Utilities/include/EqualityConstraintType.hpp>
 #include <../Utilities/include/LinearConstraintNature.hpp>
@@ -264,7 +264,7 @@ bool
 ConfigHelper::AddLinearSeekValueObjective(
     DesignTarget& target,
     const string& label,
-    double value,
+    obj_val_t value,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -278,8 +278,8 @@ bool
 ConfigHelper::AddLinearSeekRangeObjective(
     DesignTarget& target,
     const string& label,
-    double lowerBound,
-    double upperBound,
+    obj_val_t lowerBound,
+    obj_val_t upperBound,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -319,7 +319,7 @@ bool
 ConfigHelper::AddNonlinearSeekValueObjective(
     DesignTarget& target,
     const string& label,
-    double value
+    obj_val_t value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -332,8 +332,8 @@ bool
 ConfigHelper::AddNonlinearSeekRangeObjective(
     DesignTarget& target,
     const string& label,
-    double lowerBound,
-    double upperBound
+    obj_val_t lowerBound,
+    obj_val_t upperBound
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -346,7 +346,7 @@ bool
 ConfigHelper::AddLinearInequalityConstraint(
     DesignTarget& target,
     const string& label,
-    double upperLimit,
+    con_val_t upperLimit,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -360,7 +360,7 @@ bool
 ConfigHelper::AddLinearEqualityConstraint(
     DesignTarget& target,
     const string& label,
-    double targetValue,
+    con_val_t targetValue,
     double allowedViol,
     const JEGA::DoubleVector& coeffs
     )
@@ -377,7 +377,7 @@ bool
 ConfigHelper::AddLinearNotEqualityConstraint(
     DesignTarget& target,
     const string& label,
-    double tabooValue,
+    con_val_t tabooValue,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -391,8 +391,8 @@ bool
 ConfigHelper::AddLinearTwoSidedInequalityConstraint(
     DesignTarget& target,
     const string& label,
-    double lowerLimit,
-    double upperLimit,
+    con_val_t lowerLimit,
+    con_val_t upperLimit,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -408,7 +408,7 @@ bool
 ConfigHelper::AddNonlinearInequalityConstraint(
     DesignTarget& target,
     const string& label,
-    double upperLimit
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -421,7 +421,7 @@ bool
 ConfigHelper::AddNonlinearEqualityConstraint(
     DesignTarget& target,
     const string& label,
-    double targetValue,
+    con_val_t targetValue,
     double allowedViol
     )
 {
@@ -437,7 +437,7 @@ bool
 ConfigHelper::AddNonlinearNotEqualityConstraint(
     DesignTarget& target,
     const string& label,
-    double tabooValue
+    con_val_t tabooValue
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -450,8 +450,8 @@ bool
 ConfigHelper::AddNonlinearTwoSidedInequalityConstraint(
     DesignTarget& target,
     const string& label,
-    double lowerLimit,
-    double upperLimit
+    con_val_t lowerLimit,
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -594,7 +594,7 @@ ObjectiveFunctionInfo*
 ConfigHelper::GetLinearSeekValueObjective(
     DesignTarget& target,
     const std::string& label,
-    double value,
+    obj_val_t value,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -610,8 +610,8 @@ ObjectiveFunctionInfo*
 ConfigHelper::GetLinearSeekRangeObjective(
     DesignTarget& target,
     const std::string& label,
-    double lowerBound,
-    double upperBound,
+    obj_val_t lowerBound,
+    obj_val_t upperBound,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -657,7 +657,7 @@ ObjectiveFunctionInfo*
 ConfigHelper::GetNonlinearSeekValueObjective(
     DesignTarget& target,
     const std::string& label,
-    double value
+    obj_val_t value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -673,8 +673,8 @@ ObjectiveFunctionInfo*
 ConfigHelper::GetNonlinearSeekRangeObjective(
     DesignTarget& target,
     const std::string& label,
-    double lowerBound,
-    double upperBound
+    obj_val_t lowerBound,
+    obj_val_t upperBound
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -689,7 +689,7 @@ ConstraintInfo*
 ConfigHelper::GetLinearInequalityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double upperLimit,
+    con_val_t upperLimit,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -705,7 +705,7 @@ ConstraintInfo*
 ConfigHelper::GetLinearEqualityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double targetValue,
+    con_val_t targetValue,
     double allowedViol,
     const JEGA::DoubleVector& coeffs
     )
@@ -722,7 +722,7 @@ ConstraintInfo*
 ConfigHelper::GetLinearNotEqualityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double tabooValue,
+    con_val_t tabooValue,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -738,8 +738,8 @@ ConstraintInfo*
 ConfigHelper::GetLinearTwoSidedInequalityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double lowerLimit,
-    double upperLimit,
+    con_val_t lowerLimit,
+    con_val_t upperLimit,
     const JEGA::DoubleVector& coeffs
     )
 {
@@ -757,7 +757,7 @@ ConstraintInfo*
 ConfigHelper::GetNonlinearInequalityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double upperLimit
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -772,7 +772,7 @@ ConstraintInfo*
 ConfigHelper::GetNonlinearEqualityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double targetValue,
+    con_val_t targetValue,
     double allowedViol
     )
 {
@@ -788,7 +788,7 @@ ConstraintInfo*
 ConfigHelper::GetNonlinearNotEqualityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double tabooValue
+    con_val_t tabooValue
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -803,8 +803,8 @@ ConstraintInfo*
 ConfigHelper::GetNonlinearTwoSidedInequalityConstraint(
     DesignTarget& target,
     const std::string& label,
-    double lowerLimit,
-    double upperLimit
+    con_val_t lowerLimit,
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -821,8 +821,8 @@ ConfigHelper::GetNonlinearTwoSidedInequalityConstraint(
 SeekRangeObjectiveFunctionType*
 ConfigHelper::GetSeekRangeOFType(
     ObjectiveFunctionInfo& ofInfo,
-    double lowerBound,
-    double upperBound
+    obj_val_t lowerBound,
+    obj_val_t upperBound
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -838,7 +838,7 @@ ConfigHelper::GetSeekRangeOFType(
 SeekValueObjectiveFunctionType*
 ConfigHelper::GetSeekValueOFType(
     ObjectiveFunctionInfo& ofInfo,
-    double value
+    obj_val_t value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -869,7 +869,7 @@ ConfigHelper::GetLinearObjectiveFunctionNature(
 EqualityConstraintType*
 ConfigHelper::GetEqualityConstraintType(
     ConstraintInfo& cnInfo,
-    double targetValue,
+    con_val_t targetValue,
     double allowedViol
     )
 {
@@ -886,7 +886,7 @@ ConfigHelper::GetEqualityConstraintType(
 JEGA::Utilities::NotEqualityConstraintType*
 ConfigHelper::GetNotEqualityConstraintType(
     JEGA::Utilities::ConstraintInfo& cnInfo,
-    double tabooValue
+    con_val_t tabooValue
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -899,7 +899,7 @@ ConfigHelper::GetNotEqualityConstraintType(
 InequalityConstraintType*
 ConfigHelper::GetInequalityConstraintType(
     ConstraintInfo& cnInfo,
-    double upperLimit
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -914,8 +914,8 @@ ConfigHelper::GetInequalityConstraintType(
 TwoSidedInequalityConstraintType*
 ConfigHelper::GetTwoSidedInequalityConstraintType(
     ConstraintInfo& cnInfo,
-    double lowerLimit,
-    double upperLimit
+    con_val_t lowerLimit,
+    con_val_t upperLimit
     )
 {
     EDDY_FUNC_DEBUGSCOPE

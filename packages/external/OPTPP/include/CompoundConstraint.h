@@ -140,6 +140,11 @@ public:
   virtual OptppArray<int> getConstraintMappingIndices() const;
 
   /**
+   * Reset values to allow multiple instantiations
+   */
+  void reset();
+
+  /**
    * @return Reference to constraint i
    */
   Constraint& operator[]( int i ) { return constraints_[i];}

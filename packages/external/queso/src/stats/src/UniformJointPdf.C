@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/UniformJointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -73,7 +74,7 @@ UniformJointPdf<V,M>::actualValue(
   if (domainDirection) {}; // just to remove compiler warning
 
   double volume = m_domainSet.volume();
-  if (((boost::math::isnan)(volume)) ||
+  if ((queso_isnan(volume)) ||
       (volume == -INFINITY         ) ||
       (volume ==  INFINITY         ) ||
       (volume <= 0.                ) ||
@@ -101,7 +102,7 @@ UniformJointPdf<V,M>::lnValue(
   if (domainDirection) {}; // just to remove compiler warning
 
   double volume = m_domainSet.volume();
-  if (((boost::math::isnan)(volume)) ||
+  if ((queso_isnan(volume)) ||
       (volume == -INFINITY         ) ||
       (volume ==  INFINITY         ) ||
       (volume <= 0.                ) ||
@@ -110,6 +111,20 @@ UniformJointPdf<V,M>::lnValue(
   }
 
   return -log(volume);
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+UniformJointPdf<V,M>::distributionMean(V& meanVector) const
+{
+  m_domainSet.centroid(meanVector);
+}
+//--------------------------------------------------
+template<class V, class M>
+void
+UniformJointPdf<V,M>::distributionVariance(M & covMatrix) const
+{
+  m_domainSet.moments(covMatrix);
 }
 //--------------------------------------------------
 template<class V, class M>

@@ -16,9 +16,11 @@
 
 #include "SharedPolyApproxData.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 
 namespace Pecos {
+
+class MultivariateDistribution;
 
 
 /// Derived approximation class for orthogonal polynomials (global
@@ -55,66 +57,71 @@ public:
   ~SharedOrthogPolyApproxData();
 
   //
+  //- Heading: Virtual function redefinitions
+  //
+
+  bool push_available();
+  void construct_basis(const MultivariateDistribution& u_dist);
+  void update_basis_distribution_parameters(
+    const MultivariateDistribution& u_dist);
+
+  /// get polynomialBasis (const)
+  const std::vector<BasisPolynomial>& polynomial_basis() const;
+  /// get polynomialBasis
+  std::vector<BasisPolynomial>& polynomial_basis();
+  /// set polynomialBasis
+  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
+
+  //
   //- Heading: Member functions
   //
 
   /// alternative form for setting multiIndex (expansion import) and
   /// allocating related arrays
   void allocate_data(const UShort2DArray& mi);
-  /// get multiIndex
+
+  /// get active multiIndex
   const UShort2DArray& multi_index() const;
+  /// get active multiIndex
+  UShort2DArray& multi_index();
+  /// get multiIndex[key]
+  const UShort2DArray& multi_index(const UShortArray& key) const;
 
   /// retrieve size of multiIndex
   size_t expansion_terms() const;
 
-  /// get approxOrder
+  /// get active approxOrder
   const UShortArray& expansion_order() const;
-  /// set approxOrder
+  /// get approxOrder[key]; fn name avoids ambiguity with set fn below
+  const UShortArray& keyed_expansion_order(const UShortArray& key) const;
+  /// set active approxOrder
   void expansion_order(const UShortArray& order);
-  /// uniformly increment approxOrder
+  /// set active approxOrder
+  void expansion_order(unsigned short new_order, bool one_sided = false);
+
+  /// uniformly increment active approxOrder
   void increment_order();
+  /// uniformly decrement active approxOrder
+  void decrement_order();
 
-  /// invoke initialize_orthogonal_basis_types_rules(),
-  /// initialize_polynomial_basis(), and, if needed,
-  /// update_basis_distribution_parameters() using class member data
-  void construct_basis(const ShortArray& u_types,
-		       const AleatoryDistParams& adp);
-  
-  /// invoke initialize_orthogonal_basis_types_rules(),
-  /// initialize_polynomial_basis(), and, if needed,
-  /// update_basis_distribution_parameters() using passed data
-  static void construct_basis(const ShortArray& u_types,
-			      const AleatoryDistParams& adp,
-			      const BasisConfigOptions& bc_options,
-			      std::vector<BasisPolynomial>& poly_basis);
-
-  /// invoke initialize_orthogonal_basis_types_rules(),
-  /// initialize_polynomial_basis(), and, if needed,
-  /// update_basis_distribution_parameters() using passed data
-  static void construct_basis(const ShortArray& u_types,
-			      const AleatoryDistParams& adp,
+  /// invoke initialize_orthogonal_basis_types_rules() and
+  /// initialize_polynomial_basis()
+  static void construct_basis(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis,
-			      ShortArray &basis_types,ShortArray &colloc_rules);
+			      ShortArray& basis_types,ShortArray& colloc_rules);
 
   /// set orthogPolyTypes
   void orthogonal_basis_types(const ShortArray& opb_types);
   /// get orthogPolyTypes
   const ShortArray& orthogonal_basis_types() const;
 
-  /// get polynomialBasis
-  const std::vector<BasisPolynomial>& polynomial_basis() const;
-  std::vector<BasisPolynomial>& polynomial_basis();
-  /// set polynomialBasis
-  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
-
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
 
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
   static void coefficients_norms_flag(bool flag,
-				      ShortArray &poly_types,
-				      std::vector<BasisPolynomial> &poly_basis);
+				      std::vector<BasisPolynomial>& poly_basis);
 
 protected:
 
@@ -122,23 +129,28 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void active_key(const UShortArray& key);
+  void clear_keys();
+
   void allocate_data();
 
-  void store_data(size_t index = _NPOS);
-  void restore_data(size_t index = _NPOS);
-  void remove_stored_data(size_t index = _NPOS);
-  
-  size_t pre_combine_data(short combine_type);
-  void post_combine_data(short combine_type);
+  void pre_combine_data();
+  //void post_combine_data();
+  void combined_to_active(bool clear_combined = true);
+
+  void clear_inactive_data();
 
   //
   //- Heading: Member functions
   //
 
+  /// update {multiIndex,approxOrd}Iter from activeKey
+  void update_active_iterators();
+
   /// detect whether current expansion settings are the most refined
-  size_t maximal_expansion();
-  /// swap current data and the stored data set identified by index
-  void swap_data(size_t index);
+  const UShortArray& maximal_expansion();
+  // swap current shared data with a stored data set, as identified by index
+  //void swap_shared_data(size_t index);
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(
@@ -162,60 +174,35 @@ protected:
 			   UShort2DArray& aggregated_mi, bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void pre_push_trial_set(const UShortArray& trial_set,
-			     UShort2DArray& aggregated_mi,
-			     bool monotonic = true);
+			  UShort2DArray& aggregated_mi, bool monotonic = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void post_push_trial_set(const UShortArray& trial_set,
-			      UShort2DArray& aggregated_mi,
-			      bool save_map = true);
+			   UShort2DArray& aggregated_mi, bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void push_trial_set(const UShortArray& trial_set,
-			 UShort2DArray& aggregated_mi,
-			 bool monotonic = true, bool save_map = true);
+		      UShort2DArray& aggregated_mi, bool monotonic = true,
+		      bool save_map = true);
 
+  /// Precompute a maximal order of quadrature rules (based on a
+  /// multiIndex) when too expensive to compute on demand
+  void precompute_maximal_rules(const UShort2DArray& multi_index);
+  /// Precompute a maximal order of quadrature rules (based on an
+  /// approxOrder) when too expensive to compute on demand
+  void precompute_maximal_rules(const UShortArray& approx_order);
+
+  /// allocate sobolIndexMap from active multi_index
+  void allocate_component_sobol();
   /// allocate sobolIndexMap from multi_index
   void allocate_component_sobol(const UShort2DArray& multi_index);
   /// update sobolIndexMap using new multi_index terms (from multifidelity
   /// overlay or a new QoI in orthogonal least interpolation)
   void update_component_sobol(const UShort2DArray& multi_index);
 
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi
-  void append_multi_index(const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi
-  void append_multi_index(const UShortArraySet& append_mi,
-			  UShort2DArray& combined_mi);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi; define append_mi_map and append_mi_map_ref
-  void append_multi_index(const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi, SizetArray& append_mi_map,
-			  size_t& append_mi_map_ref);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi; define append_mi_map and append_mi_map_ref
-  void append_multi_index(const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi, SizetSet& append_mi_map,
-			  size_t& append_mi_map_ref);
-  /// append multi-indices from append_mi that do not already appear in
-  /// combined_mi (consistent ordering assumed); define append_mi_map
-  /// and append_mi_map_ref
-  void append_leading_multi_index(const UShort2DArray& append_mi,
-				  UShort2DArray& combined_mi,
-				  SizetSet& append_mi_map,
-				  size_t& append_mi_map_ref);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi, using previously defined append_mi_map and
-  /// append_mi_map_ref for mapping
-  void append_multi_index(const UShort2DArray& append_mi,
-			  SizetArray& append_mi_map, size_t& append_mi_map_ref,
-			  UShort2DArray& combined_mi);
-  /// append multi-indices from append_mi that do not already appear in
-  /// combined_mi, updating sparse_indices, exp_coeffs, and exp_coeff_grads
-  void append_multi_index(SizetSet& sparse_indices,
-			  const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi, RealVector& exp_coeffs,
-			  RealMatrix& exp_coeff_grads);
+  /// define multi_index_c based on products of terms contained within
+  /// multi_index_a and multi_index_b
+  void product_multi_index(const UShort2DArray& multi_index_a,
+			   const UShort2DArray& multi_index_b,
+			   UShort2DArray& multi_index_c);
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as probabilistic
@@ -272,38 +259,6 @@ protected:
   const RealSymMatrix& multivariate_polynomial_hessian_matrix(
     const RealVector& x, const UShortArray& indices);
 
-  /// define/update a combined Pareto set with a new multi_index by
-  /// omitting terms that are weakly Pareto dominated (more omissions
-  /// = smaller resulting set)
-  void update_pareto_set(const UShort2DArray& multi_index,
-			 UShort2DArray& combined_pareto);
-  /// define/update a combined Pareto set for a new multi_index term
-  void update_pareto_set(const UShortArray& mi_i,
-			 UShort2DArray& combined_pareto);
-  /// define/update a leading multi_index frontier omitting points that are
-  /// strongly Pareto dominated (fewer omissions = larger resulting set)
-  void update_frontier(const UShortArraySet& multi_index,
-		       UShortArraySet& mi_frontier);
-  /// define/update a leading multi_index frontier omitting points that are
-  /// strongly Pareto dominated (fewer omissions = larger resulting set)
-  void update_frontier(const UShort2DArray& multi_index,
-		       UShortArraySet& mi_frontier);
-  /// update/update a leading multi_index frontier for a new multi_index term
-  void update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier);
-
-  // assess whether new_pareto is dominated by total_pareto
-  //bool assess_dominance(const UShort2DArray& pareto,
-  //			  const UShort2DArray& combined_pareto);
-  /// assess bi-directional weak dominance for a "challenger" polynomial
-  /// index set against an "incumbent" polynomial index set
-  void assess_dominance(const UShortArray& new_order,
-			const UShortArray& existing_order,
-			bool& new_dominated, bool& existing_dominated);
-  /// assess bi-directional strong dominance between two polynomial index sets
-  void assess_strong_dominance(const UShortArray& order_a,
-			       const UShortArray& order_b,
-			       bool& a_dominated, bool& b_dominated);
-
   /// test for nonzero indices in random variable subset
   bool zero_random(const UShortArray& indices) const;
 
@@ -327,50 +282,59 @@ protected:
   std::vector<BasisPolynomial> polynomialBasis;
 
   /// order of orthogonal polynomial expansion
-  UShortArray approxOrder;
-  /// previous value of approxOrder; used for detecting when a multiIndex
-  /// update is needed
-  UShortArray approxOrderPrev;
+  std::map<UShortArray, UShortArray> approxOrder;
+  /// iterator pointing to active node in approxOrder
+  std::map<UShortArray, UShortArray>::iterator approxOrdIter;
+
+  /// initial value of approxOrder passed through ctor
+  UShortArray approxOrderSpec;
+  /// previous value of active approxOrder; used for detecting when an
+  /// expansion update is needed in allocate_arrays()
+  UShortArray prevApproxOrder;
+  /// previous value of active multiIndex for restoration in decrement_data()
+  UShort2DArray prevMultiIndex;
+  /// previous value of activeKey; used for detecting when an
+  /// expansion update is needed in allocate_arrays()
+  UShortArray prevActiveKey;
 
   /// number of exp terms-by-number of vars array for identifying the orders
   /// of the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
-  UShort2DArray multiIndex;
-  /// multi-index that is the result of expansion combination
-  UShort2DArray combinedMultiIndex;
+  std::map<UShortArray, UShort2DArray> multiIndex;
+  /// iterator pointing to active node in multiIndex
+  std::map<UShortArray, UShort2DArray>::iterator multiIndexIter;
 
-  /// array of stored approxOrder's cached in store_coefficients() for use in
-  /// combine_coefficients()
-  UShort2DArray storedApproxOrder;
-  /// array of stored multiIndex's cached in store_coefficients() for use in
-  /// combine_coefficients()
-  UShort3DArray storedMultiIndex;
-  /// mapping of terms when aggregating storedMultiIndex with multiIndex in
-  /// pre_combine_data()
-  Sizet2DArray storedMultiIndexMap;
+  /// multi-index that is the final result of a sequence of expansion
+  /// combinations
+  UShort2DArray combinedMultiIndex;
+  /// mapping of terms when aggregating multiIndex into combinedMultiIndex
+  /// in pre_combine_data() (case ADD_COMBINE)
+  Sizet2DArray combinedMultiIndexMap;
+  /// sequence of multi-index products defined in pre_combine_data() for case
+  /// MULT_COMBINE.  For combinations of more than two levels, this provides
+  /// a bridge between the first multi-index for "a" (multiIndex.begin()) and
+  /// the final multi-index for "c" (combinedMultiIndex) in c = a * b.
+  UShort3DArray combinedMultiIndexSeq;
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials
   /// contributing to each of the multivariate orthogonal polynomials.
   /** For nested rules (GP, CC, or GK), the integration driver's collocKey
       is insufficient and we must track expansion orders separately. */
-  UShort3DArray tpMultiIndex;
+  std::map<UShortArray, UShort3DArray> tpMultiIndex;
   /// sparse grid bookkeeping: mapping from num tensor-products by 
   /// tensor-product multi-indices into aggregated multiIndex
-  Sizet2DArray tpMultiIndexMap;
+  std::map<UShortArray, Sizet2DArray> tpMultiIndexMap;
   /// sparse grid bookkeeping: reference points for tpMultiIndexMap
-  SizetArray tpMultiIndexMapRef;
+  std::map<UShortArray, SizetArray> tpMultiIndexMapRef;
 
-  /// popped instances of tpMultiIndex that were computed but not selected
-  std::deque<UShort2DArray> poppedTPMultiIndex;
+  /// popped instances of either multiIndex or tpMultiIndex (depending
+  /// on expansion solution approach) that were computed but not selected
+  std::map<UShortArray, UShort2DArrayDeque> poppedMultiIndex;
   /// popped instances of tpMultiIndexMap that were computed but not selected
-  std::deque<SizetArray> poppedTPMultiIndexMap;
+  std::map<UShortArray, SizetArrayDeque> poppedMultiIndexMap;
   /// popped instances of tpMultiIndexMapRef that were computed but not selected
-  std::deque<size_t> poppedTPMultiIndexMapRef;
-
-  /// index into popped sets of data to be restored (stored in this
-  /// class for used by each ProjectOrthogPolyApproximation)
-  size_t pushIndex;
+  std::map<UShortArray, SizetDeque> poppedMultiIndexMapRef;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
@@ -391,8 +355,11 @@ private:
 inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
-  SharedPolyApproxData(basis_type, num_vars), approxOrder(approx_order)
-{ }
+  SharedPolyApproxData(basis_type, num_vars), approxOrderSpec(approx_order)
+{
+  update_active_iterators();
+  approxOrdIter->second = approx_order;
+}
 
 
 inline SharedOrthogPolyApproxData::
@@ -401,49 +368,125 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options),
-  approxOrder(approx_order)
-{ }
+  approxOrderSpec(approx_order)
+{
+  update_active_iterators();
+  approxOrdIter->second = approx_order;
+}
 
 
 inline SharedOrthogPolyApproxData::~SharedOrthogPolyApproxData()
 { }
 
 
+inline void SharedOrthogPolyApproxData::update_active_iterators()
+{
+  approxOrdIter = approxOrder.find(activeKey);
+  if (approxOrdIter == approxOrder.end()) {
+    std::pair<UShortArray, UShortArray> ua_pair(activeKey, approxOrderSpec);//, UShortArray());
+    approxOrdIter = approxOrder.insert(ua_pair).first;
+  }
+  multiIndexIter = multiIndex.find(activeKey);
+  if (multiIndexIter == multiIndex.end()) {
+    std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+    multiIndexIter = multiIndex.insert(u2a_pair).first;
+    //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
+  }
+}
+
+
 inline const UShort2DArray& SharedOrthogPolyApproxData::multi_index() const
-{ return multiIndex; }
+{ return multiIndexIter->second; }
+
+
+inline UShort2DArray& SharedOrthogPolyApproxData::multi_index()
+{ return multiIndexIter->second; }
+
+
+inline const UShort2DArray& SharedOrthogPolyApproxData::
+multi_index(const UShortArray& key) const
+{
+  std::map<UShortArray, UShort2DArray>::const_iterator cit
+    = multiIndex.find(key);
+  if (cit == multiIndex.end()) {
+    PCerr << "Error: key not found in SharedOrthogPolyApproxData::"
+	  << "multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline size_t SharedOrthogPolyApproxData::expansion_terms() const
-{ return multiIndex.size(); }
+{ return multiIndexIter->second.size(); }
 
 
 inline const UShortArray& SharedOrthogPolyApproxData::expansion_order() const
-{ return approxOrder; }
+{ return approxOrdIter->second; }
+
+
+/** Use alternate naming since UShortArray overload already used. */
+inline const UShortArray& SharedOrthogPolyApproxData::
+keyed_expansion_order(const UShortArray& key) const
+{
+  std::map<UShortArray, UShortArray>::const_iterator cit
+    = approxOrder.find(key);
+  if (cit == approxOrder.end()) {
+    PCerr << "Error: key not found in SharedOrthogPolyApproxData::"
+	  << "keyed_expansion_order()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline void SharedOrthogPolyApproxData::
 expansion_order(const UShortArray& order)
-{ approxOrder = order; } // multiIndex updated in allocate_arrays()
+{
+  UShortArray& approx_order = approxOrdIter->second;
+  if (approx_order != order) {
+    approx_order = order;
+    //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
+  }
+}
+
+
+inline void SharedOrthogPolyApproxData::
+expansion_order(unsigned short new_order, bool one_sided)
+{
+  UShortArray& approx_order = approxOrdIter->second;
+  if (approx_order.empty() || !one_sided)
+    approx_order.assign(numVars, new_order);
+  else {
+    size_t i, num_ao = approx_order.size();
+    for (i=0; i<num_ao; ++i)
+      if (new_order > approx_order[i])
+	approx_order[i] = new_order;
+  }
+}
+
+
+inline void SharedOrthogPolyApproxData::allocate_component_sobol()
+{ allocate_component_sobol(multiIndexIter->second); }
 
 
 inline void SharedOrthogPolyApproxData::increment_order()
 {
   // increment approxOrder (multiIndex updated in allocate_arrays())
+  UShortArray& approx_order = approxOrdIter->second;
   for (size_t i=0; i<numVars; ++i)
-    ++approxOrder[i];
+    ++approx_order[i];
+  //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
 }
 
 
-/** This function is invoked to create orthogPolyTypes and polynomialBasis
-    for cases where they have not already been created by an
-    IntegrationDriver (i.e., expansion_samples or regression). */
-inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
+inline void SharedOrthogPolyApproxData::decrement_order()
 {
-  ShortArray colloc_rules;
-  BasisConfigOptions bc_options;
-  construct_basis(u_types, adp, basisConfigOptions, polynomialBasis,
-		  orthogPolyTypes, colloc_rules);		  
+  // decrement approxOrder (multiIndex updated in allocate_arrays())
+  UShortArray& approx_order = approxOrdIter->second;
+  for (size_t i=0; i<numVars; ++i)
+    --approx_order[i];
+  //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
 }
 
 
@@ -451,30 +494,35 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
-		const BasisConfigOptions& bc_options,
-		std::vector<BasisPolynomial>& poly_basis)
-{
-  ShortArray basis_types, colloc_rules;
-  construct_basis(u_types, adp, bc_options, poly_basis,
-		  basis_types, colloc_rules);
-}
-
-/** This function is invoked to create orthogPolyTypes and polynomialBasis
-    for cases where they have not already been created by an
-    IntegrationDriver (i.e., expansion_samples or regression). */
-inline void SharedOrthogPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
+construct_basis(const MultivariateDistribution& u_dist,
 		const BasisConfigOptions& bc_options,
 		std::vector<BasisPolynomial>& poly_basis,
-		ShortArray &basis_types, ShortArray &colloc_rules)
+		ShortArray& basis_types, ShortArray& colloc_rules)
 {
-  bool dist_params
-    = initialize_orthogonal_basis_types_rules(u_types, bc_options,
-					      basis_types, colloc_rules);
+  // Construct time initializations
+  initialize_orthogonal_basis_types_rules(u_dist, bc_options,
+					  basis_types, colloc_rules);
   initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
-  if (dist_params)
-    update_basis_distribution_parameters(u_types, adp, poly_basis);
+
+  // The following update now occurs at run time:
+  //update_basis_distribution_parameters(u_dist, poly_basis);
+}
+
+
+inline void SharedOrthogPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist)
+{
+  ShortArray colloc_rules;
+  construct_basis(u_dist, basisConfigOptions, polynomialBasis,
+		  orthogPolyTypes, colloc_rules);
+}
+
+
+inline void SharedOrthogPolyApproxData::
+update_basis_distribution_parameters(const MultivariateDistribution& u_dist)
+{
+  SharedPolyApproxData::
+    update_basis_distribution_parameters(u_dist, polynomialBasis);
 }
 
 
@@ -510,26 +558,26 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
 
 
 inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
-{
-  coefficients_norms_flag(flag,orthogPolyTypes,polynomialBasis);
-}
+{ coefficients_norms_flag(flag, polynomialBasis); }
 
-inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag,
-		  ShortArray &poly_types,
-		  std::vector<BasisPolynomial> &poly_basis)
+
+inline void SharedOrthogPolyApproxData::
+coefficients_norms_flag(bool flag, std::vector<BasisPolynomial>& poly_basis)
 {
   //size_t i, num_basis = orthogPolyTypes.size();
   size_t i, num_basis = poly_basis.size();
-  for (i=0; i<num_basis; ++i)
-    if (poly_types[i] == NUM_GEN_ORTHOG)
-      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())
+  for (i=0; i<num_basis; ++i) {
+    BasisPolynomial& poly_basis_i = poly_basis[i];
+    if (poly_basis_i.basis_type() == NUM_GEN_ORTHOG)
+      ((NumericGenOrthogPolynomial*)poly_basis_i.polynomial_rep())
 	->coefficients_norms_flag(flag);
+  }
 }
 
 
 inline void SharedOrthogPolyApproxData::
 push_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
-		  bool monotonic, bool save_map)
+	       bool monotonic, bool save_map)
 {
   pre_push_trial_set(trial_set, aggregated_mi, monotonic);
   post_push_trial_set(trial_set, aggregated_mi, save_map);
@@ -675,46 +723,6 @@ multivariate_polynomial_hessian_matrix(const RealVector& x,
   //    mvp_hess_col[r] = multivariate_polynomial_hessian(x, r, c, indices);
   //}
   return mvpHessian;
-}
-
-
-inline void SharedOrthogPolyApproxData::
-update_pareto_set(const UShort2DArray& multi_index,
-		  UShort2DArray& combined_pareto)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  size_t i, num_p = multi_index.size();
-  for (i=0; i<num_p; ++i)
-    update_pareto_set(multi_index[i], combined_pareto);
-}
-
-
-inline void SharedOrthogPolyApproxData::
-update_frontier(const UShort2DArray& multi_index, UShortArraySet& mi_frontier)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  size_t i, num_p = multi_index.size();
-  for (i=0; i<num_p; ++i)
-    update_frontier(multi_index[i], mi_frontier);
-}
-
-
-inline void SharedOrthogPolyApproxData::
-update_frontier(const UShortArraySet& multi_index, UShortArraySet& mi_frontier)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  UShortArraySet::const_iterator cit;
-  for (cit=multi_index.begin(); cit!=multi_index.end(); ++cit)
-    update_frontier(*cit, mi_frontier);
 }
 
 

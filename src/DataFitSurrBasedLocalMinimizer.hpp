@@ -31,6 +31,42 @@ namespace Dakota {
     convergence through the use of a sequence of trust regions and the
     application of surrogate corrections at the trust region centers. */
 
+
+/**
+ * \brief A version of TraitsBase specialized for local surrogate-based minimizer
+ *
+ */
+
+class DataFitSurrBasedLocalTraits: public TraitsBase
+{
+  public:
+
+  /// default constructor
+  DataFitSurrBasedLocalTraits() { }
+
+  /// destructor
+  virtual ~DataFitSurrBasedLocalTraits() { }
+
+  /// A temporary query used in the refactor
+  virtual bool is_derived() { return true; }
+
+  /// Return the flag indicating whether method supports continuous variables
+  bool supports_continuous_variables() { return true; }
+
+  /// Return the flag indicating whether method supports linear equalities
+  bool supports_linear_equality() { return true; }
+
+  /// Return the flag indicating whether method supports linear inequalities
+  bool supports_linear_inequality() { return true; }
+
+  /// Return the flag indicating whether method supports nonlinear equalities
+  bool supports_nonlinear_equality() { return true; }
+
+  /// Return the flag indicating whether method supports nonlinear inequalities
+  bool supports_nonlinear_inequality() { return true; }
+};
+
+
 class DataFitSurrBasedLocalMinimizer: public SurrBasedLocalMinimizer
 {
 public:
@@ -54,8 +90,6 @@ protected:
 
   void post_run(std::ostream& s);
 
-  void reset();
-
   //
   //- Heading: Virtual functions
   //
@@ -69,16 +103,17 @@ protected:
   void verify();
 
   bool build_global();
-  bool build_local();
+  bool build_centered();
   void compute_center_correction(bool embed_correction);
+
+  unsigned short converged();
 
   //
   //- Heading: Convenience member functions
   //
 
   /// retrieve responseCenterTruth if possible, evaluate it if not
-  void find_center_truth(const Iterator& dace_iterator, Model& truth_model);
-
+  void find_center_truth();
   /// retrieve responseCenter_approx if possible, evaluate it if not
   void find_center_approx();
 
@@ -89,11 +124,13 @@ protected:
   /// container for trust region variable/response data
   SurrBasedLevelData trustRegionData;
 
-  /// flags the use of a global data fit surrogate (rsm, ann, mars, kriging)
+  /// flags the use of a global data fit surrogate (NN, MARS, GP, RBF, et al.)
   bool globalApproxFlag;
-  /// flags the use of a multipoint data fit surrogate (TANA)
-  bool multiptApproxFlag;
-  /// flags the use of a local data fit surrogate (Taylor series)
+  /// flags the use of a multipoint data fit surrogate (MPEA et al.)
+  bool multiPtApproxFlag;
+  /// flags the use of a two-point data fit surrogate (TANA)
+  bool twoPtApproxFlag;
+  /// flags the use of a local/single-point data fit surrogate (Taylor series)
   bool localApproxFlag;
 
   // flag indicating inclusion of the center point in the DACE
@@ -123,17 +160,11 @@ inline SurrBasedLevelData& DataFitSurrBasedLocalMinimizer::trust_region()
 
 
 inline void DataFitSurrBasedLocalMinimizer::update_trust_region()
-{
-  update_trust_region_data(trustRegionData, globalLowerBnds, globalUpperBnds);
+{ update_trust_region_data(trustRegionData, globalLowerBnds, globalUpperBnds); }
 
-  // TO DO: will propagate in recast evaluate() but are there direct evaluates?
-  //if (recastSubProb)
-  //  iteratedModel.continuous_variables(cv_center);
-  if (globalApproxFlag) { // propagate build bounds to DFSModel
-    iteratedModel.continuous_lower_bounds(trustRegionData.tr_lower_bounds());
-    iteratedModel.continuous_upper_bounds(trustRegionData.tr_upper_bounds());
-  }
-}
+
+inline unsigned short DataFitSurrBasedLocalMinimizer::converged()
+{ return trustRegionData.converged(); }
 
 } // namespace Dakota
 

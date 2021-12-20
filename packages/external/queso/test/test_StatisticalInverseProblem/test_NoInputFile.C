@@ -23,8 +23,8 @@ public:
   {
   }
 
-  virtual double lnValue(const V & domainVector, const V * domainDirection,
-      V * gradVector, M * hessianMatrix, V * hessianEffect) const
+  virtual double lnValue(const V & domainVector, const V * /* domainDirection */,
+      V * /* gradVector */, M * /* hessianMatrix */, V * /* hessianEffect */) const
   {
     double x1 = domainVector[0];
     double x2 = domainVector[1];
@@ -38,6 +38,8 @@ public:
     return std::exp(this->lnValue(domainVector, domainDirection, gradVector,
           hessianMatrix, hessianEffect));
   }
+
+  using QUESO::BaseScalarFunction<V, M>::lnValue;
 };
 
 int main(int argc, char ** argv) {
@@ -120,6 +122,8 @@ int main(int argc, char ** argv) {
   mhOptions.m_amEta = (double) 2.4 * 2.4 / dim;  // From Gelman 95
   mhOptions.m_amEpsilon = 1.e-8;
   mhOptions.m_doLogitTransform = false;
+  mhOptions.m_algorithm = "random_walk";
+  mhOptions.m_tk = "random_walk";
 
   ip.solveWithBayesMetropolisHastings(&mhOptions, paramInitials,
       &proposalCovMatrix);

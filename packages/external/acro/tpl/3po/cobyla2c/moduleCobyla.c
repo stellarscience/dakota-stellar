@@ -229,7 +229,8 @@ PyObject *moduleCobyla_minimize(PyObject *self, PyObject *args)
 
   Py_INCREF(py_function);
   
-  rc = cobyla(n, m, x, rhobeg, rhoend, iprint, &maxfun, 0,function, &py_state);
+  rc = acro_cobyla(n, m, x, rhobeg, rhoend, iprint, &maxfun, 0,function, 
+		   &py_state);
 
   Py_DECREF(py_function);
 

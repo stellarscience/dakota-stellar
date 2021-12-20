@@ -74,9 +74,14 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tpl/teuchos)
   option(HAVE_TEUCHOS "Build with Teuchos enabled?" ON)
   # when building inside Trilinos, the path to Teuchos will already be set
   if (NOT BUILD_IN_TRILINOS)
-    # first probe for system-installed Trilinos
-    # this will respect Trilinos_DIR if already set
-    find_package(Trilinos QUIET)
+    # Workaround to skip finding system Trilinos until this probe is
+    # simplified and follows find_package semantics. Double negative to
+    # preserve historical behavior without overcomplicating things.
+    if(NOT DAKOTA_NO_FIND_TRILINOS)
+      # first probe for system-installed Trilinos
+      # this will respect Trilinos_DIR if already set
+      find_package(Trilinos QUIET)
+    endif()
     if (NOT Trilinos_DIR)
       # if no one has configured a local src Teuchos, do so
       # this will respect Teuchos_DIR if already set

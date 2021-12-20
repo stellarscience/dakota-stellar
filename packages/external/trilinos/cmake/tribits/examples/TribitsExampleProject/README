@@ -1,0 +1,37 @@
+#
+# TribitsExampleProject Documentation
+#
+
+The project TribitsExampleProject defines a TriBITS CMake project designed to
+provide a simple example to demonstrate how to use the TriBITS system to
+create a CMake build, test, and deployment system using a package-based
+architecture.
+
+To get started building you can create a directory structure like:
+
+    ~/TribitsExampleProject.base/
+        TribitsExampleProject/   # This directory
+        BUILDS/
+            GCC-<X.Y.Z>/
+                SERIAL_DEBUG/
+
+You can then copy the configure file as:
+
+  cd ~/TribitsExampleProject.base/BUILDS/GCC-<X.Y.Z>/BUILDS/SERIAL_DEBUG
+  cp ../../../../TribitsExampleProject/sampleScripts/linux-serial-debug.sh \
+    do-configure
+
+After that set, configure with:
+
+  ./do-configure -DTribitsExProj_ENABLE_ALL_PACKAGES=ON
+
+and then build and test with:
+
+  make -j4 && ctest -j4
+
+The layout of a TriBITS project is described in:
+
+  https://tribits.org/doc/TribitsDevelopersGuide.html#tribits-project-structure
+
+Otherwise, this example TriBITS project is simple enough that it should be
+enough to get started as a template.

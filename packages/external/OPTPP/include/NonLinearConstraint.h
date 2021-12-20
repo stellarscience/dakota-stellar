@@ -141,6 +141,11 @@ public:
   virtual OptppArray<int> getConstraintMappingIndices() const 
   		{return constraintMappingIndices_;}
 
+  /**
+   * Reset values to allow multiple instantiations
+   */
+  void reset() {nlp_->reset();}
+
 #ifdef DAKOTA_OPTPP
   virtual Teuchos::SerialDenseVector<int,double> getConstraintType() const {return ctype_;}
   virtual Teuchos::SerialDenseVector<int,double> evalResidual(const Teuchos::SerialDenseVector<int,double>& xc) const ;

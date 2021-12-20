@@ -131,7 +131,7 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MMessageBoard);
+ref class MMessageBoard;
 
 
 
@@ -151,7 +151,7 @@ class PredicateTie
 {
     private:
 
-        gcroot<System::Delegate MOH> _mPred;
+        gcroot<System::Delegate^> _mPred;
 
     public:
 
@@ -162,7 +162,7 @@ class PredicateTie
             ) const;
 
         PredicateTie(
-            gcroot<System::Delegate MOH> mPred
+            gcroot<System::Delegate^> mPred
             ) :
                 _mPred(mPred)
         {}
@@ -178,7 +178,7 @@ class CallbackTie
 {
     private:
 
-        gcroot<System::Delegate MOH> _mCallback;
+        gcroot<System::Delegate^> _mCallback;
 
     public:
 
@@ -189,7 +189,7 @@ class CallbackTie
             ) const;
 
         CallbackTie(
-            gcroot<System::Delegate MOH> mCallback
+            gcroot<System::Delegate^> mCallback
             ) :
                 _mCallback(mCallback)
         {}
@@ -216,7 +216,7 @@ Class Definition
  *
  *
  */
-MANAGED_CLASS(public, MMessageBoard)
+public ref class MMessageBoard
 {
     /*
     ============================================================================
@@ -233,14 +233,14 @@ MANAGED_CLASS(public, MMessageBoard)
 
             public:
 
-                System::String MOH
+                System::String^
                 Tag(
                     )
                 {
                     return ManagedUtils::ToSysString(this->_msgId.Tag());
                 }
 
-                System::String MOH
+                System::String^
                 SenderType(
                     )
                 {
@@ -276,18 +276,18 @@ MANAGED_CLASS(public, MMessageBoard)
             private:
 
                 const JEGA::Utilities::MessageBoard::Message& _msg;
-                MessageIdentifier MOH _msgId;
+                MessageIdentifier^ _msgId;
 
             public:
 
-                System::String MOH
+                System::String^
                 Text(
                     )
                 {
                     return ManagedUtils::ToSysString(this->_msg.Text());
                 }
 
-                MessageIdentifier MOH
+                MessageIdentifier^
                 Identifier(
                     )
                 {
@@ -307,7 +307,7 @@ MANAGED_CLASS(public, MMessageBoard)
                     const JEGA::Utilities::MessageBoard::Message& msg
                     ) :
                         _msg(msg),
-                        _msgId(MANAGED_GCNEW MessageIdentifier(msg.Identifier()))
+                        _msgId(gcnew MessageIdentifier(msg.Identifier()))
                 {}
 
         };
@@ -315,13 +315,13 @@ MANAGED_CLASS(public, MMessageBoard)
         delegate
         bool
         Predicate(
-            MessageIdentifier MOH msgId
+            MessageIdentifier^ msgId
             );
 
         delegate
         void
         Callback(
-            Message MOH msg
+            Message^ msg
             );
 
         ref class Subscription
@@ -334,7 +334,7 @@ MANAGED_CLASS(public, MMessageBoard)
 
                 bool
                 Check(
-                    Message MOH msg
+                    Message^ msg
                     )
                 {
                     return this->_subsc->Check(msg->Manifest());
@@ -342,7 +342,7 @@ MANAGED_CLASS(public, MMessageBoard)
 
                 void
                 Service(
-                    Message MOH msg
+                    Message^ msg
                     )
                 {
                     this->_subsc->Service(msg->Manifest());
@@ -357,7 +357,7 @@ MANAGED_CLASS(public, MMessageBoard)
 
                 bool
                 operator ==(
-                    Subscription MOH other
+                    Subscription^ other
                     )
                 {
                     return *this->_subsc == *other->_subsc;
@@ -366,8 +366,8 @@ MANAGED_CLASS(public, MMessageBoard)
             public:
 
                 Subscription(
-                    MMessageBoard::Predicate MOH pred,
-                    MMessageBoard::Callback MOH cb
+                    MMessageBoard::Predicate^ pred,
+                    MMessageBoard::Callback^ cb
                     ) :
                         _subsc(0x0)
                 {
@@ -420,19 +420,19 @@ MANAGED_CLASS(public, MMessageBoard)
 
 
         static
-        Subscription MOH
+        Subscription^
         Subscribe(
-            Predicate MOH pred,
-            Callback MOH cb
+            Predicate^ pred,
+            Callback^ cb
             )
         {
-            return MANAGED_GCNEW Subscription(pred, cb);
+            return gcnew Subscription(pred, cb);
         }
 
         static
         bool
         Unsubscribe(
-            Subscription MOH subscr
+            Subscription^ subscr
             )
         {
             return JEGA::Utilities::MessageBoard::Unsubscribe(
@@ -496,7 +496,7 @@ PredicateTie::operator()(
     ) const
 {
     return static_cast<bool>(this->_mPred->DynamicInvoke(
-        MANAGED_GCNEW MMessageBoard::MessageIdentifier(msgId)
+        gcnew MMessageBoard::MessageIdentifier(msgId)
         ));
 }
 
@@ -507,7 +507,7 @@ CallbackTie::operator()(
     ) const
 {
     this->_mCallback->DynamicInvoke(
-        MANAGED_GCNEW MMessageBoard::Message(msg)
+        gcnew MMessageBoard::Message(msg)
         );
 }
 

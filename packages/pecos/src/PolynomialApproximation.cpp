@@ -14,13 +14,281 @@
 #include "PolynomialApproximation.hpp"
 #include "BasisPolynomial.hpp"
 #include "SparseGridDriver.hpp"
-#include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
+#include "DiscrepancyCalculator.hpp"
 
 //#define DEBUG
 
 
 namespace Pecos {
+
+void PolynomialApproximation::compute_coefficients()
+{
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
+    PCerr << "Warning: neither expansion coefficients nor expansion "
+	  << "coefficient gradients\n         are active in Polynomial"
+	  << "Approximation::compute_coefficients().\n         Bypassing "
+	  << "approximation construction." << std::endl;
+    return;
+  }
+
+  // update modSurrData from surrData
+  synchronize_surrogate_data();
+
+  // For testing of anchor point logic:
+  //modSurrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
+
+  // anchor point, if present, is handled differently for different
+  // expCoeffsSolnApproach settings:
+  //   SAMPLING:   treat it as another data point
+  //   QUADRATURE/CUBATURE/*_SPARSE_GRID: error
+  //   LEAST_SQ_REGRESSION: use equality-constrained least squares
+  if (!modSurrData.points()) {
+    PCerr << "Error: nonzero number of sample points required in Polynomial"
+	  << "Approximation::compute_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void PolynomialApproximation::synchronize_surrogate_data()
+{
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  switch (data_rep->expConfigOptions.discrepancyType) {
+  case RECURSIVE_DISCREP:
+    response_data_to_surplus_data();     break;
+  case DISTINCT_DISCREP:
+    response_data_to_discrepancy_data(); break;
+  default: // allow use of approxData or modSurrData, even if no modifications
+    // depending on ctor for modSurrData, may be NULL or just empty
+    if (modSurrData.is_null()) // shared rep (linking once is sufficient)
+      modSurrData = surrData;
+    else if (modSurrData.points() == 0) // retain independence: shallow data cp
+      modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
+    break;
+  }
+}
+
+
+/** When using a recursive approximation, subtract current polynomial approx
+    prediction from the modSurrData so that we form expansion on the surplus */
+void PolynomialApproximation::response_data_to_surplus_data()
+{
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
+  else                       modSurrData.active_key(key);
+  if (key != surrData.active_key()) {
+    PCerr << "Error: active key mismatch in PolynomialApproximation::"
+	  << "response_data_to_surplus_data()." << std::endl;
+    abort_handler(-1);
+  }
+
+  // Keep surrData and modSurrData distinct (don't share reps since copy() will
+  // not restore independence when it is needed).  Rather use distinct arrays
+  // with shallow copies of SDV,SDR instances when they will not be modified.
+  // > level 0: both SDVs and SDRs can be shallow copies
+  // > shallow copies of popped arrays support replicated pops on modSurrData
+  //   (applied to distinct arrays of shared instances)
+  const std::map<UShortArray, SDRArray>& resp_data_map
+    = surrData.response_data_map();
+  std::map<UShortArray, SDRArray>::const_iterator r_cit = resp_data_map.begin();
+  if (key == r_cit->first) { // first entry -> no discrepancy/surplus
+    modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
+    return;
+  }
+
+  // levels 1 -- L: modSurrData computes hierarchical surplus between level l
+  // data (approxData[0] from Dakota::PecosApproximation) and the level l-1
+  // approximation.
+  // > SDR and popped SDR instances are distinct; only pop counts are copied
+  modSurrData.copy_active_sdv(surrData, SHALLOW_COPY);
+  modSurrData.size_active_sdr(surrData);
+  modSurrData.anchor_index(surrData.anchor_index());
+  modSurrData.pop_count_stack(surrData.pop_count_stack());
+  // TO DO: do this more incrementally as data sets evolve across levels
+
+  // More efficient to roll up contributions from each level expansion than
+  // to combine expansions and then eval once.  Approaches are equivalent for
+  // additive roll up.
+  size_t i, num_pts = surrData.points();
+  const SDVArray&   sdv_array =    surrData.variables_data();
+  const SDRArray&   sdr_array =    surrData.response_data();
+  SDRArray& surplus_sdr_array = modSurrData.response_data();
+  Real delta_val; RealVector delta_grad;
+  switch (data_rep->expConfigOptions.combineType) {
+  case MULT_COMBINE: {
+    Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
+    RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
+    size_t j, k, num_deriv_vars = modSurrData.num_derivative_variables();
+    std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
+    for (i=0; i<num_pts; ++i) {
+      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
+      const SurrogateDataResp& orig_sdr  = sdr_array[i];
+      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
+      short                 surplus_bits = surplus_sdr.active_bits();
+      delta_val = orig_fn_val = orig_sdr.response_function();
+      if (surplus_bits & 2)
+	copy_data(orig_sdr.response_gradient(), orig_fn_grad);
+      for (r_cit=resp_data_map.begin(), j=0; r_cit->first!=key; ++r_cit, ++j) {
+	stored_val = stored_value(c_vars, r_cit->first);
+	delta_val /= stored_val;
+	if (surplus_bits & 2) { // recurse using levels j and j-1
+	  const RealVector& stored_grad
+	    = stored_gradient_nonbasis_variables(c_vars, r_cit->first);
+	  if (j == 0)
+	    { fn_val_j = stored_val; fn_grad_j = stored_grad; }
+	  else {
+	    fn_val_j = fn_val_jm1 * stored_val;
+	    for (k=0; k<num_deriv_vars; ++k)
+	      fn_grad_j[k]  = ( fn_grad_jm1[k] * stored_val +
+				fn_val_jm1 * stored_grad[j] );
+	  }
+	  look_ahead_cit = r_cit; ++look_ahead_cit;
+	  if (look_ahead_cit->first == key)
+	    for (k=0; k<num_deriv_vars; ++k)
+	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
+	                    / fn_val_j;
+	  else
+	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
+	}
+      }
+      if (surplus_bits & 1)
+	surplus_sdr.response_function(delta_val);
+      if (surplus_bits & 2)
+	surplus_sdr.response_gradient(delta_grad);
+    }
+    break;
+  }
+  default: //case ADD_COMBINE: (correction specification not required)
+    for (i=0; i<num_pts; ++i) {
+      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
+      const SurrogateDataResp& orig_sdr  = sdr_array[i];
+      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
+      short                 surplus_bits = surplus_sdr.active_bits();
+      if (surplus_bits & 1) {
+	delta_val = orig_sdr.response_function();
+	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
+	  delta_val -= stored_value(c_vars, r_cit->first);
+	surplus_sdr.response_function(delta_val);
+      }
+      if (surplus_bits & 2) {
+	copy_data(orig_sdr.response_gradient(), delta_grad);
+	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
+	  delta_grad -=
+	    stored_gradient_nonbasis_variables(c_vars, r_cit->first);
+	surplus_sdr.response_gradient(delta_grad);
+      }
+    }
+    break;
+  }
+}
+
+
+void PolynomialApproximation::response_data_to_discrepancy_data()
+{
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
+  else                       modSurrData.active_key(key);
+  if (key != surrData.active_key()) {
+    PCerr << "Error: active key mismatch in PolynomialApproximation::"
+	  << "response_data_to_discrepancy_data()." << std::endl;
+    abort_handler(-1);
+  }
+
+  const std::map<UShortArray, SDRArray>& resp_data_map
+    = surrData.response_data_map();
+  std::map<UShortArray, SDRArray>::const_iterator r_cit = resp_data_map.begin();
+
+  // Keep surrData and modSurrData distinct (don't share reps since copy() will
+  // not restore independence when it is needed).  Rather use distinct arrays
+  // with shallow copies of SDV,SDR instances when they will not be modified.
+  // > level 0 mode is BYPASS_SURROGATE: both SDVs & SDRs can be shallow copies
+  // > shallow copies of popped arrays support replicated pops on modSurrData
+  //   (applied to distinct arrays of shared instances)
+  if (key == r_cit->first) { // first entry -> no discrepancy/surplus
+    modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
+    return;
+  }
+
+  // levels 1 -- L use AGGREGATED_MODELS mode: modSurrData computes discrepancy
+  // between LF data (approxData[0] from Dakota::PecosApproximation; receives
+  // level l-1 data) and HF data (approxData[1] from Dakota::PecosApproximation;
+  // receives level l data).
+  // > SDR and popped SDR instances are distinct; only pop counts are copied
+  modSurrData.copy_active_sdv(surrData, SHALLOW_COPY);
+  modSurrData.size_active_sdr(surrData);
+  modSurrData.anchor_index(surrData.anchor_index());
+  modSurrData.pop_count_stack(surrData.pop_count_stack());
+  // TO DO: do this more incrementally as data sets evolve across levels
+
+  // More efficient to roll up contributions from each level expansion than
+  // to combine expansions and then eval once.  Approaches are equivalent for
+  // additive roll up.
+  size_t i, num_pts = surrData.points();
+  const SDVArray&    sdv_array = surrData.variables_data();
+  const SDRArray& hf_sdr_array = surrData.response_data();
+
+  // ***************************************************************************
+  // TO DO: improve encapsulation by passing surrogate key
+  // (currently replicates logic in NonDExpansion::configure_indices())
+  UShortArray lf_key;  paired_lf_key(key, lf_key);
+  r_cit = resp_data_map.find(lf_key);
+  const SDRArray& lf_sdr_array = r_cit->second;
+  // ***************************************************************************
+
+  DiscrepancyCalculator discrepCalc;
+  SDRArray& delta_sdr_array = modSurrData.response_data();
+  switch (data_rep->expConfigOptions.combineType) {
+  case MULT_COMBINE: {
+    size_t num_deriv_vars = surrData.num_derivative_variables();
+    for (i=0; i<num_pts; ++i) {
+      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
+      short                 delta_bits = delta_sdr.active_bits();
+      short                 corr_order = (delta_bits & 2) ? 1 : 0;
+      if (discrepCalc.check_multiplicative(hf_sdr.response_function(),
+					   lf_sdr.response_function(),
+					   corr_order)) {
+	PCerr << "Error: numerical FPE in computing multiplicative discrepancy."
+	      << "\n       Please change to additive discrepancy." << std::endl;
+	abort_handler(-1);
+      }
+      if (delta_bits & 1)
+	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
+	  lf_sdr.response_function(), delta_sdr.response_function_view());
+      if (delta_bits & 2) {
+	RealVector delta_grad(delta_sdr.response_gradient_view());	
+	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
+	  hf_sdr.response_gradient(), lf_sdr.response_function(),
+	  lf_sdr.response_gradient(), delta_grad);
+      }
+    }
+    break;
+  }
+  default: //case ADD_COMBINE: (correction specification not required)
+    for (i=0; i<num_pts; ++i) {
+      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
+      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
+      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
+      short                 delta_bits = delta_sdr.active_bits();
+      if (delta_bits & 1)
+	discrepCalc.compute_additive(hf_sdr.response_function(),
+	  lf_sdr.response_function(), delta_sdr.response_function_view());
+      if (delta_bits & 2) {
+	RealVector delta_grad(delta_sdr.response_gradient_view());
+	discrepCalc.compute_additive(hf_sdr.response_gradient(),
+	  lf_sdr.response_gradient(), delta_grad);
+      }
+    }
+    break;
+  }
+
+  modSurrData.data_checks(); // from scratch (aggregate LF,HF failures)
+}
+
 
 void PolynomialApproximation::
 integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
@@ -47,6 +315,11 @@ integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
 	  << ") in PolynomialApproximation::integrate_moments()." << std::endl;
     abort_handler(-1);
   }
+
+#ifdef DEBUG
+  PCout <<  "Coeffs in integrate_moments():\n" << coeffs
+	<< "Weights in integrate_moments():\n" << t1_wts;
+#endif
 
   // estimate 1st raw moment (mean)
   moments = 0.;
@@ -187,14 +460,48 @@ void PolynomialApproximation::allocate_total_sobol()
 }
 
 
+void PolynomialApproximation::
+initialize_covariance(PolynomialApproximation* poly_approx_2)
+{ } // default is no-op
+
+
+void PolynomialApproximation::clear_covariance_pointers()
+{ } // default is no-op
+
+
+void PolynomialApproximation::initialize_products()
+{ } // default is no-op
+
+
+bool PolynomialApproximation::product_interpolants()
+{ return false; } // default
+
+
 ULongULongMap PolynomialApproximation::sparse_sobol_index_map() const
 { return ULongULongMap(); } // default is empty map
 
 
-Real PolynomialApproximation::
-delta_covariance(PolynomialApproximation* poly_approx_2)
+size_t PolynomialApproximation::expansion_terms() const
 {
-  PCerr << "Error: delta_covariance() not available for this polynomial "
+  PCerr << "Error: expansion_terms() not defined for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return _NPOS;
+}
+
+
+Real PolynomialApproximation::combined_mean()
+{
+  PCerr << "Error: combined_mean() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::combined_mean(const RealVector& x)
+{
+  PCerr << "Error: combined_mean() not available for this polynomial "
 	<< "approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
@@ -202,9 +509,57 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
 
 
 Real PolynomialApproximation::
-delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+combined_covariance(PolynomialApproximation* poly_approx_2)
 {
-  PCerr << "Error: delta_covariance() not available for this polynomial "
+  PCerr << "Error: combined_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: combined_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::beta(bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: beta() not available for this polynomial approximation type."
+	<< std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: beta(x) not available for this polynomial approximation "
+	<< "type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::combined_beta(bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: combined_beta() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: combined_beta(x) not available for this polynomial "
 	<< "approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
@@ -229,6 +584,24 @@ Real PolynomialApproximation::delta_mean(const RealVector& x)
 }
 
 
+Real PolynomialApproximation::delta_combined_mean()
+{
+  PCerr << "Error: delta_combined_mean() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_mean(const RealVector& x)
+{
+  PCerr << "Error: delta_combined_mean(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 Real PolynomialApproximation::delta_std_deviation()
 {
   PCerr << "Error: delta_std_deviation() not available for this polynomial "
@@ -242,6 +615,65 @@ Real PolynomialApproximation::delta_std_deviation(const RealVector& x)
 {
   PCerr << "Error: delta_std_deviation(x) not available for this polynomial "
 	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_std_deviation()
+{
+  PCerr << "Error: delta_combined_std_deviation() not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_std_deviation(const RealVector& x)
+{
+  PCerr << "Error: delta_combined_std_deviation(x) not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_combined_covariance() not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_covariance(const RealVector& x,
+			  PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_combined_covariance() not available for this "
+	<< "polynomial approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
 }
@@ -280,6 +712,44 @@ delta_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 {
   PCerr << "Error: delta_z(x) not available for this polynomial approximation "
 	<< "type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_beta(bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: delta_combined_beta() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: delta_combined_beta(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_combined_z(bool cdf_flag, Real beta_bar)
+{
+  PCerr << "Error: delta_combined_z() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar)
+{
+  PCerr << "Error: delta_combined_z(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
 }

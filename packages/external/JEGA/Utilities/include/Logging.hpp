@@ -167,7 +167,7 @@ Includes
 // This block defines most of what happens if logging is on.
 #ifdef JEGA_LOGGING_ON
 
-// include memory for the auto_ptr.
+// include memory for the unique_ptr.
 #include <memory>
 
 // For convenience, we will provide functions for creating string literals.
@@ -388,7 +388,7 @@ class JEGA_SL_IEDECL Logger
     private:
 
         /// The one Logger instance that serves as the global logger.
-        static std::auto_ptr<Logger> _global;
+        static std::unique_ptr<Logger> _global;
 
         /// The one instance that serves as the global file log.
         static file_log _globalFLog;
@@ -402,7 +402,7 @@ class JEGA_SL_IEDECL Logger
          * If no file stream was created (this Logger is using the global
          * file stream log) then the pointer is null.
          */
-        std::auto_ptr<file_log> _flog;
+        std::unique_ptr<file_log> _flog;
 
         /**
          * \brief The decorator log that combines the file stream of this
@@ -1016,7 +1016,7 @@ Macro Interface
 
 /**
  * \brief Logs entry (e) at level (ll) checked against the default with
- *        the suplied Logger class object.
+ *        the supplied Logger class object.
  *
  * See documentation of EDDY_LOGGING_LEVEL_LOG_D for more information.
  *
@@ -1041,7 +1041,7 @@ Macro Interface
 
 /**
  * \brief Logs entry (e) at level (ll) checked against the default with
- *        the suplied Logger class object if cond evaluates to true.
+ *        the supplied Logger class object if cond evaluates to true.
  *
  * See documentation of EDDY_LOGGING_LEVEL_IFLOG_D for more information.
  *
@@ -1068,7 +1068,7 @@ Macro Interface
 
 /**
  * \brief Logs entry (e) at level (ll) checked against the default with
- *        the suplied Logger class object if cond evaluates to true.
+ *        the supplied Logger class object if cond evaluates to true.
  *
  * See documentation of EDDY_LOGGING_LEVEL_IFLOG_CF_D for more information.
  *
@@ -1095,7 +1095,7 @@ Macro Interface
 
 /**
  * \brief Logs entry (e) at level (ll) if the level for issuer (ii) allows
- *        with the suplied Logger class object.
+ *        with the supplied Logger class object.
  *
  * See documentation of EDDY_LOGGING_LEVEL_LOG_II for more information.
  *
@@ -1588,7 +1588,7 @@ Fatal Logging Interface
 // fatal log entries get issued and provide meaningful feedback.  That's what
 // these alternate log macros do.
 
-/// A macro to produce a non descript failure output message.
+/// A macro to produce a nondescript failure output message.
 #define JEGA_LOGGING_NO_LOG_FATAL_ERROR_HANDLE(e)                          \
     JEGA::Logging::Logger::fatal_callback::Invoke(e);
 

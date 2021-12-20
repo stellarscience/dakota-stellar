@@ -8,7 +8,9 @@
 
 #include "NatafTransformation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
-#include "pecos_stat_util.hpp"
+//#include "pecos_stat_util.hpp"
+#include "NormalRandomVariable.hpp"
+#include "UniformRandomVariable.hpp"
 
 static const char rcsId[]="@(#) $Id: NatafTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -25,7 +27,7 @@ namespace Pecos {
 void NatafTransformation::
 trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
 {
-  if (correlationFlagX) {
+  if (xDist.correlation()) {
     RealVector z_vars;
     trans_U_to_Z(u_vars, z_vars);
     trans_Z_to_X(z_vars, x_vars);
@@ -87,36 +89,39 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
   // This routine performs an inverse transformation based on CDF/CCDF
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
-  const RandomVariable& rv_i = randomVarsX[i];
-  short x_type = rv_i.type(), u_type = ranVarTypesU[i];
+  const RandomVariable& x_rv_i = xDist.active_random_variable(i);
+  short x_type = x_rv_i.type(), u_type = uDist.active_random_variable_type(i);
   if (u_type == x_type)
     x = z;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    x = rv_i.from_standard(z); break;
-    case LOGNORMAL:
-      x = std::exp(rv_i.parameter(LN_LAMBDA) + rv_i.parameter(LN_ZETA) * z);
+    case NORMAL:  x = x_rv_i.from_standard(z);  break;
+    case LOGNORMAL: {
+      Real lambda;  x_rv_i.pull_parameter(LN_LAMBDA, lambda);
+      Real   zeta;  x_rv_i.pull_parameter(LN_ZETA,   zeta);
+      x = std::exp(lambda + zeta * z);
       break;
+    }
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-      x = rv_i.inverse_log_ccdf(NormalRandomVariable::log_std_ccdf(z)); break;
+      x = x_rv_i.inverse_log_ccdf(NormalRandomVariable::log_std_ccdf(z)); break;
     case GUMBEL:  // Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
     case FRECHET: // Phi(z) = F(x) = e^(-(beta/x)^alpha)
-      x = rv_i.inverse_log_cdf(NormalRandomVariable::log_std_cdf(z));   break;
+      x = x_rv_i.inverse_log_cdf(NormalRandomVariable::log_std_cdf(z));   break;
     */
     default: // default mapping based on either CDF or CCDF equivalence
-      x = (z > 0.) ? rv_i.inverse_ccdf(NormalRandomVariable::std_ccdf(z)) :
-	rv_i.inverse_cdf(NormalRandomVariable::std_cdf(z));  break;
+      x = (z > 0.) ? x_rv_i.inverse_ccdf(NormalRandomVariable::std_ccdf(z)) :
+	x_rv_i.inverse_cdf(NormalRandomVariable::std_cdf(z));  break;
     }
   }
   else if (u_type == STD_UNIFORM)
-    x = (z > 0.) ? rv_i.inverse_ccdf(UniformRandomVariable::std_ccdf(z)) :
-      rv_i.inverse_cdf(UniformRandomVariable::std_cdf(z));
+    x = (z > 0.) ? x_rv_i.inverse_ccdf(UniformRandomVariable::std_ccdf(z)) :
+      x_rv_i.inverse_cdf(UniformRandomVariable::std_cdf(z));
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    x = rv_i.from_standard(z);
+    x = x_rv_i.from_standard(z);
   else {
     PCerr << "Error: unsupported variable mapping for variable " << i
 	  << " in NatafTransformation::trans_Z_to_X()" << std::endl;
@@ -132,7 +137,7 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
 void NatafTransformation::
 trans_X_to_U(const RealVector& x_vars, RealVector& u_vars) 
 { 
-  if (correlationFlagX) {
+  if (xDist.correlation()) {
     RealVector z_vars;
     trans_X_to_Z(x_vars, z_vars);
     trans_Z_to_U(z_vars, u_vars);
@@ -177,41 +182,44 @@ void NatafTransformation::trans_X_to_Z(Real x, Real& z, size_t i)
   // This routine performs an forward transformation based on CDF/CCDF
   // equivalence, e.g. F(X) = Phi(Z) in the case of a std normal z-space CDFs
 
-  const RandomVariable& rv_i = randomVarsX[i];
-  short x_type = rv_i.type(), u_type = ranVarTypesU[i];
+  const RandomVariable& x_rv_i = xDist.active_random_variable(i);
+  short x_type = x_rv_i.type(), u_type = uDist.active_random_variable_type(i);
   if (u_type == x_type)
     z = x;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    z = rv_i.to_standard(x); break;
-    case LOGNORMAL:
-      z = (std::log(x) - rv_i.parameter(LN_LAMBDA)) / rv_i.parameter(LN_ZETA);
-      break;      
+    case NORMAL:    z = x_rv_i.to_standard(x); break;
+    case LOGNORMAL: {
+      Real lambda;  x_rv_i.pull_parameter(LN_LAMBDA, lambda);
+      Real   zeta;  x_rv_i.pull_parameter(LN_ZETA,   zeta);
+      z = (std::log(x) - lambda) / zeta;
+      break;
+    }
     /* log cdf offers no real benefit for normal target due to erf() cdf:
     case EXPONENTIAL: // Phi(z) = F(x) = 1 - e^(-x/beta)
     case WEIBULL:     // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-      z = NormalRandomVariable::inverse_log_std_ccdf(rv_i.log_ccdf(x)); break;
+      z = NormalRandomVariable::inverse_log_std_ccdf(x_rv_i.log_ccdf(x)); break;
     case GUMBEL:  // Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
     case FRECHET: // Phi(z) = F(x) = e^(-(beta/x)^alpha)
-      z = NormalRandomVariable::inverse_log_std_cdf(rv_i.log_cdf(x));   break;
+      z = NormalRandomVariable::inverse_log_std_cdf(x_rv_i.log_cdf(x));   break;
     */
     default: { // default mapping based on either CDF or CCDF equivalence
-      Real xcdf = rv_i.cdf(x);
-      z = (xcdf > .5) ? NormalRandomVariable::inverse_std_ccdf(rv_i.ccdf(x)) :
+      Real xcdf = x_rv_i.cdf(x);
+      z = (xcdf > .5) ? NormalRandomVariable::inverse_std_ccdf(x_rv_i.ccdf(x)) :
 	NormalRandomVariable::inverse_std_cdf(xcdf);
       break;
     }
     }
   }
   else if (u_type == STD_UNIFORM) {
-    Real xcdf = rv_i.cdf(x);
-    z = (xcdf > .5) ? UniformRandomVariable::inverse_std_ccdf(rv_i.ccdf(x)) :
+    Real xcdf = x_rv_i.cdf(x);
+    z = (xcdf > .5) ? UniformRandomVariable::inverse_std_ccdf(x_rv_i.ccdf(x)) :
       UniformRandomVariable::inverse_std_cdf(xcdf);
   }
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    z = rv_i.to_standard(x);
+    z = x_rv_i.to_standard(x);
   else {
     PCerr << "Error: unsupported variable mapping for variable " << i
 	  << " in NatafTransformation::trans_X_to_Z()" << std::endl;
@@ -247,7 +255,6 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
   corr_solver.solve();
   // Assign into u_vars, which may be a Teuchos::View
   u_vars.assign(tmp_u_vars);
-
 }
 
 
@@ -256,8 +263,8 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
     It uses empirical expressionss derived from least-squares polynomial fits
     to numerical integration data.
 
-    \li corrMatrixX: the correlation coefficient matrix of the random variables
-    provided by the user
+    \li x_corr_matrix: the correlation coefficient matrix of the random
+    variables provided by the user
 
     \li mod_corr_matrix: modified correlation matrix
 
@@ -271,36 +278,95 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
     some error as noted below. */
 void NatafTransformation::transform_correlations()
 {
-  if (!correlationFlagX)
+  if (!xDist.correlation())
     return;
 
-  RealSymMatrix mod_corr_matrix(corrMatrixX); // copy
+  const RealSymMatrix& x_corr_matrix = xDist.correlation_matrix();
+  const BitArray&        active_vars = xDist.active_variables();
+  const BitArray&        active_corr = xDist.active_correlations();
+  bool no_v_mask = active_vars.empty(), no_c_mask = active_corr.empty();
 
-  size_t i, j, num_rv = randomVarsX.size();
-  for (i=0; i<num_rv; ++i)
-    if (ranVarTypesU[i] == STD_NORMAL)
-      for (j=0; j<i; ++j) {
-	Real corr = corrMatrixX(i,j);
-	if (ranVarTypesU[j] == STD_NORMAL && std::abs(corr) > 0.)
-	  mod_corr_matrix(i,j) *=
-	    randomVarsX[i].correlation_warping_factor(randomVarsX[j], corr);
+  // Enumerate the active correlations (ignoring the active variable subset)
+  const std::vector<RandomVariable>& x_rv = xDist.random_variables();
+  const ShortArray&               u_types = uDist.random_variable_types();
+  size_t rv_i, rv_j, c_i, c_j, v_i, v_j, num_rv = x_rv.size(),
+    num_active_v = (no_v_mask) ? num_rv : active_vars.count(),
+    num_active_c = (no_c_mask) ? num_rv : active_corr.count();
 
-	// fill in upper half of symmetric matrix
-	//mod_corr_matrix(j,i) = mod_corr_matrix(i,j);
+  // Loop over active variables using find_{first,next}:
+  // RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
+  // rv_i = rv_j = (no_c_mask) ? 0 : active_corr.find_first();
+  // for (c_i=0; i<num_active_c; ++c_i) {
+  //   //if (u_types[v_i] != STD_NORMAL) continue;
+  //   if (c_i) rv_j = (no_c_mask) ? 0 : active_corr.find_first();
+  //   for (c_j=0; c_j<c_i; ++c_j) {
+  //     Real corr_ij = x_corr_matrix(c_i, c_j);
+  //     if (/* u_types[v_j] == STD_NORMAL && */ std::abs(corr_ij) > 0.)
+  // 	mod_corr_matrix(c_i, c_j) *=
+  // 	  x_rv[rv_i].correlation_warping_factor(x_rv[rv_j], corr_ij);
+  //     rv_j = (no_c_mask) ? c_j : active_corr.find_next(rv_j);
+  //   }
+  //   rv_i = (no_c_mask) ? c_i : active_corr.find_next(rv_i);
+  // }
+
+  // Loop over all random variables, checking active_corr bits:
+  // RealSymMatrix mod_corr_matrix(x_corr_matrix); // copy
+  // for (rv_i=0, c_i=0; rv_i<num_rv; ++rv_i)
+  //   if (no_c_mask || active_corr[rv_i]) {
+  //     //if (u_types[rv_i] == STD_NORMAL)
+  // 	 for (rv_j=0, c_j=0; rv_j<rv_i; ++rv_j)
+  // 	   if (no_c_mask || active_corr[rv_j]) {
+  // 	     Real corr = x_corr_matrix(c_i, c_j);
+  // 	     if (/* u_types[j] == STD_NORMAL && */ std::abs(corr) > 0.)
+  // 	       mod_corr_matrix(c_i, c_j) *=
+  // 		 x_rv[rv_i].correlation_warping_factor(x_rv[rv_j], corr);
+  // 	     ++c_j;
+  // 	   }
+  //     ++c_i;
+  //   }
+
+  // Loop over all random variables, checking active_{vars,corr} bits:
+  RealSymMatrix mod_corr_matrix(num_active_v); // init to 0
+  bool active_c_i, active_v_i, active_c_j, active_v_j;
+  for (rv_i=0, c_i=0, v_i=0; rv_i<num_rv; ++rv_i) {
+    active_c_i = (no_c_mask || active_corr[rv_i]);
+    active_v_i = (no_v_mask || active_vars[rv_i]);
+    if (active_v_i) mod_corr_matrix(v_i, v_i) = 1.;
+    if (active_c_i && active_v_i) {
+      for (rv_j=0, c_j=0, v_j=0; rv_j<rv_i; ++rv_j) {
+	active_c_j = (no_c_mask || active_corr[rv_j]);
+        active_v_j = (no_v_mask || active_vars[rv_j]);
+	if (active_c_j && active_v_j) {
+	  Real corr = x_corr_matrix(c_i, c_j);
+	  if (std::abs(corr) > 0.)
+	    mod_corr_matrix(v_i, v_j) = corr *
+	      x_rv[rv_i].correlation_warping_factor(x_rv[rv_j], corr);
+	}
+	if (active_c_j) ++c_j;
+	if (active_v_j) ++v_j;
       }
+    }
+    if (active_c_i) ++c_i;
+    if (active_v_i) ++v_i;
+  }
 
   // Cholesky decomposition for modified correlation matrix
   RealSpdSolver corr_solver;
   corr_solver.setMatrix( Teuchos::rcp(&mod_corr_matrix, false) );
   corr_solver.factor(); // Cholesky factorization (LL^T) in place
   // Define corrCholeskyFactorZ to be L by assigning the lower triangle.
-  size_t num_active_vars = randomVarsX.size();
-  if (corrCholeskyFactorZ.numRows() != num_active_vars ||
-      corrCholeskyFactorZ.numCols() != num_active_vars)
-    corrCholeskyFactorZ.shape(num_active_vars, num_active_vars);
-  for (i=0; i<num_active_vars; ++i)
-    for (j=0; j<=i; ++j)
-      corrCholeskyFactorZ(i, j) = mod_corr_matrix(i, j);
+  // Inflate as needed if discrepancy between active_rv and active_corr
+  if (corrCholeskyFactorZ.numRows() != num_active_v ||
+      corrCholeskyFactorZ.numCols() != num_active_v)
+    corrCholeskyFactorZ.shape(num_active_v, num_active_v); // init to 0
+
+  // If mod_corr_matrix is kept in active_corr, need to map to active_vars
+  //if (active_vars == active_corr)
+  for (v_i=0; v_i<num_active_v; ++v_i)
+    for (v_j=0; v_j<=v_i; ++v_j)
+      corrCholeskyFactorZ(v_i, v_j) = mod_corr_matrix(v_i, v_j);
+  //else { ...map to active_vars... }
+
 #ifdef DEBUG
   PCout << "corrCholeskyFactorZ:\n" << corrCholeskyFactorZ;
 #endif
@@ -341,7 +407,7 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
 		  const RealMatrix& jacobian_xu, const SizetArray& x_dvv,
 		  SizetMultiArrayConstView cv_ids)
 {
-  // Jacobian dimensions = length of ranVarTypesU = model.cv()
+  // Jacobian dimensions = length of random variables = model.cv()
   int num_v = jacobian_xu.numRows();
   if (x_dvv == cv_ids) { // standard DVV
     if (fn_grad_x.length() != num_v) {
@@ -408,7 +474,7 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
 		  const RealMatrix& jacobian_ux, const SizetArray& x_dvv,
 		  SizetMultiArrayConstView cv_ids)
 {
-  // Jacobian dimensions = length of ranVarTypesU = model.cv()
+  // Jacobian dimensions = length of random variables = model.cv()
   int u_len = jacobian_ux.numRows();
   if (x_dvv == cv_ids) { // standard DVV
     if (fn_grad_u.length() != u_len) {
@@ -488,7 +554,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 		  const ShortArray& acv_map2_targets)
 {
   // Jacobian dim is num_v by num_s, where
-  // > num_v = length of ranVarTypesU  = inner model.cv()
+  // > num_v = length of random variables  = inner model.cv()
   // > num_s = acv_map1_indices.size() = outer model.cv()
   int num_v = jacobian_xs.numRows(), num_s = jacobian_xs.numCols();
   if (acv_map1_indices.empty() || acv_map2_targets.empty()) {
@@ -588,9 +654,10 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   bool nonlinear_vars_map = false;
   size_t i, num_v = x_vars.length(); short x_type, u_type;
   for (i=0; i<num_v; ++i) {
-    x_type = randomVarsX[i].type(); u_type = ranVarTypesU[i];
-    if ( ( ( x_type == CONTINUOUS_DESIGN   || x_type == CONTINUOUS_STATE ||
-	     x_type == CONTINUOUS_INTERVAL || x_type == UNIFORM ) &&
+    x_type = xDist.active_random_variable_type(i);
+    u_type = uDist.active_random_variable_type(i);
+    if ( ( ( x_type == CONTINUOUS_RANGE || x_type == UNIFORM ||
+	     x_type == CONTINUOUS_INTERVAL_UNCERTAIN ) &&
 	   u_type   != STD_UNIFORM ) ||
 	 ( x_type   == NORMAL      && u_type != STD_NORMAL ) ||
 	 ( x_type   == EXPONENTIAL && u_type != STD_EXPONENTIAL ) ||
@@ -627,7 +694,7 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealVector& fn_grad_x, const SizetArray& x_dvv,
 		  SizetMultiArrayConstView cv_ids)
 {
-  // Jacobian dimensions = length of ranVarTypesU = model.cv()
+  // Jacobian dimensions = length of random variables = model.cv()
   int  num_v   = jacobian_xu.numRows();
   bool std_dvv = (x_dvv == cv_ids); // standard DVV
   bool nonlinear_vars_map = !hessian_xu.empty();
@@ -731,7 +798,7 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 void NatafTransformation::
 jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
 {
-  if (correlationFlagX) {
+  if (xDist.correlation()) {
     // dX/dZ = diagonal
     RealMatrix jacobian_xz;
     jacobian_dX_dZ(x_vars, jacobian_xz);
@@ -769,31 +836,36 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 
   Real z_var; short x_type, u_type;
   for (int i=0; i<num_v; ++i) {
-    const RandomVariable& rv_i = randomVarsX[i];
-    x_type = rv_i.type(); u_type = ranVarTypesU[i];
+    const RandomVariable& x_rv_i = xDist.active_random_variable(i);
+    x_type = x_rv_i.type(); u_type = uDist.active_random_variable_type(i);
     if (u_type == x_type)
       jacobian_xz(i, i) = 1.;
     else if (u_type == STD_NORMAL)
       switch (x_type) {
-      case NORMAL:    // z = (x - mean)/stdev
-	jacobian_xz(i, i) = rv_i.parameter(N_STD_DEV);                    break;
-      case LOGNORMAL: // z = (ln x - lambda)/zeta
-	jacobian_xz(i, i) = rv_i.parameter(LN_ZETA) * x_vars[i];          break;
+      case NORMAL:      // z = (x - mean)/stdev
+	x_rv_i.pull_parameter(N_STD_DEV, jacobian_xz(i, i));       break;
+      case LOGNORMAL: { // z = (ln x - lambda)/zeta
+	Real zeta;  x_rv_i.pull_parameter(LN_ZETA, zeta);
+	jacobian_xz(i, i) = zeta * x_vars[i];
+	break;
+      }
       default:
 	trans_X_to_Z(x_vars[i], z_var, i);
 	jacobian_xz(i, i) = NormalRandomVariable::std_pdf(z_var)
-	                  / rv_i.pdf(x_vars[i]);                          break;
+	                  / x_rv_i.pdf(x_vars[i]);                        break;
       }
     else if (u_type == STD_UNIFORM)
       jacobian_xz(i, i)
-	= UniformRandomVariable::std_pdf() / rv_i.pdf(x_vars[i]);
+	= UniformRandomVariable::std_pdf() / x_rv_i.pdf(x_vars[i]);
     else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL)
-      jacobian_xz(i, i) = rv_i.parameter(E_BETA);
+      x_rv_i.pull_parameter(E_BETA,  jacobian_xz(i, i));
     else if (u_type == STD_GAMMA       && x_type == GAMMA)
-      jacobian_xz(i, i) = rv_i.parameter(GA_BETA);
-    else if (u_type == STD_BETA        && x_type == BETA)
-      jacobian_xz(i, i)
-	= (rv_i.parameter(BE_UPR_BND) - rv_i.parameter(BE_LWR_BND)) / 2.;
+      x_rv_i.pull_parameter(GA_BETA, jacobian_xz(i, i));
+    else if (u_type == STD_BETA        && x_type == BETA) {
+      Real l_bnd;  x_rv_i.pull_parameter(BE_LWR_BND, l_bnd);
+      Real u_bnd;  x_rv_i.pull_parameter(BE_UPR_BND, u_bnd);
+      jacobian_xz(i, i) = (u_bnd - l_bnd) / 2.;
+    }
     else {
       PCerr << "Error: unsupported variable mapping for variable " << i
 	    << " in NatafTransformation::jacobian_dX_dZ()" << std::endl;
@@ -809,7 +881,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 void NatafTransformation::
 jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
 {
-  if (correlationFlagX) {
+  if (xDist.correlation()) {
     // dZ/dX = diagonal
     RealMatrix jacobian_zx;
     jacobian_dZ_dX(x_vars, jacobian_zx);
@@ -862,31 +934,41 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 
   Real z_var; short x_type, u_type;
   for (int i=0; i<num_v; ++i) {
-    const RandomVariable& rv_i = randomVarsX[i];
-    x_type = rv_i.type(); u_type = ranVarTypesU[i];
+    const RandomVariable&   x_rv_i = xDist.active_random_variable(i);
+    x_type = x_rv_i.type(); u_type = uDist.active_random_variable_type(i);
     if (u_type == x_type)
       jacobian_zx(i, i) = 1.;
     else if (u_type == STD_NORMAL)
       switch (x_type) {
-      case NORMAL:    // z = (x - mean)/stdev
-	jacobian_zx(i, i) = 1. / rv_i.parameter(N_STD_DEV);             break;
-      case LOGNORMAL: // z = (ln x - lambda)/zeta
-	jacobian_zx(i, i) = 1. / (rv_i.parameter(LN_ZETA) * x_vars[i]); break;
+      case NORMAL: {    // z = (x - mean)/stdev
+	Real stdev;  x_rv_i.pull_parameter(N_STD_DEV, stdev);
+	jacobian_zx(i, i) = 1. / stdev;  break;
+      }
+      case LOGNORMAL: { // z = (ln x - lambda)/zeta
+	Real zeta;  x_rv_i.pull_parameter(LN_ZETA, zeta);
+	jacobian_zx(i, i) = 1. / (zeta * x_vars[i]);  break;
+      }
       default:
 	trans_X_to_Z(x_vars[i], z_var, i);
-	jacobian_zx(i, i) = rv_i.pdf(x_vars[i])
-	                  / NormalRandomVariable::std_pdf(z_var);       break;
+	jacobian_zx(i, i)
+	  = x_rv_i.pdf(x_vars[i]) / NormalRandomVariable::std_pdf(z_var); break;
       }
     else if (u_type == STD_UNIFORM)
-      jacobian_zx(i, i) = rv_i.pdf(x_vars[i])
-	                / UniformRandomVariable::std_pdf();
-    else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL)
-      jacobian_zx(i, i) = 1. / rv_i.parameter(E_BETA);
-    else if (u_type == STD_GAMMA       && x_type == GAMMA)
-      jacobian_zx(i, i) = 1. / rv_i.parameter(GA_BETA);
-    else if (u_type == STD_BETA        && x_type == BETA)
       jacobian_zx(i, i)
-	= 2. / (rv_i.parameter(BE_UPR_BND) - rv_i.parameter(BE_LWR_BND));
+	= x_rv_i.pdf(x_vars[i]) / UniformRandomVariable::std_pdf();
+    else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) {
+      Real beta;  x_rv_i.pull_parameter(E_BETA, beta);
+      jacobian_zx(i, i) = 1. / beta;
+    }
+    else if (u_type == STD_GAMMA       && x_type == GAMMA) {
+      Real beta;  x_rv_i.pull_parameter(GA_BETA, beta);
+      jacobian_zx(i, i) = 1. / beta;
+    }
+    else if (u_type == STD_BETA        && x_type == BETA) {
+      Real l_bnd;  x_rv_i.pull_parameter(BE_LWR_BND, l_bnd);
+      Real u_bnd;  x_rv_i.pull_parameter(BE_UPR_BND, u_bnd);
+      jacobian_zx(i, i) = 2. / (u_bnd -	l_bnd);
+    }
     else {
       PCerr << "Error: unsupported variable mapping for variable " << i
 	    << " in NatafTransformation::jacobian_dZ_dX()" << std::endl;
@@ -915,7 +997,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // Rectangular Jacobian = Gradient^T = num_X by num_S where num_S is the total
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
-  size_t i, j, num_var_map_1c = acv_map1_indices.size();
+  size_t num_var_map_1c = acv_map1_indices.size();
   int num_v = x_vars.length();
   if (jacobian_xs.numRows() != num_v || jacobian_xs.numCols() != num_var_map_1c)
     jacobian_xs.shape(num_v, num_var_map_1c);
@@ -923,25 +1005,21 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   RealVector z_vars;
   trans_X_to_Z(x_vars, z_vars);
 
-  // compute counts for looping over continuous aleatory uncertain vars
-  size_t num_cdv = 0, num_cdv_cauv = num_v; short x_type, u_type;
-  for (i=0; i<num_v; ++i) {
-    x_type = randomVarsX[i].type();
-    if      (x_type == CONTINUOUS_DESIGN) ++num_cdv;
-    else if (x_type == CONTINUOUS_INTERVAL || x_type == CONTINUOUS_STATE)
-      --num_cdv_cauv;
-  }
-
   // For distributions without simple closed-form CDFs (beta, gamma), dx/ds is
   // computed numerically for nonlinear mappings.  If uncorrelated, then this
   // is only needed if the beta/gamma distribution parameters are design vars.
   // If correlated, then the beta/gamma distribution params do not have to be
   // design vars (dx/ds for beta/gamma x will include a dz/ds contribution).
-  bool need_xs = false, non_std_beta_gamma_map = false;
+  const RealSymMatrix& x_corr_matrix = xDist.correlation_matrix();
+  const BitArray&      x_active_corr = xDist.active_correlations();
+  short x_type, u_type;  size_t i, j, cntr_i, cntr_j;
+  bool need_xs = false, non_std_beta_gamma_map = false,
+       x_corr  = xDist.correlation(), no_mask = x_active_corr.empty();
   // non_std_beta_gamma_map detects unsupported X->U cases for dx_ds and
   // dz_ds_factor; this is augmented below with unsupported dist param targets.
-  for (i=num_cdv; i<num_cdv_cauv; ++i) {
-    x_type = randomVarsX[i].type(); u_type = ranVarTypesU[i];
+  for (i=0, cntr_i=0; i<num_v; ++i) {
+    x_type = xDist.active_random_variable_type(i);
+    u_type = uDist.active_random_variable_type(i);
     if ( ( x_type == BETA  && u_type != STD_BETA  ) ||
 	 ( x_type == GAMMA && u_type != STD_GAMMA ) ) {
       // non-std mapping invalidates support for BE_LWR_BND,BE_UPR_BND,GA_BETA
@@ -949,12 +1027,16 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
       non_std_beta_gamma_map = true;
       // correlation with non-std mapped beta/gamma invalidates support in
       // {Beta,Gamma}RandomVariable::dz_ds_factor(), requiring numerical dx/ds
-      if (correlationFlagX)
+      if (x_corr)
 	// since we don't check all rows, check *all* columns despite symmetry
-	for (j=num_cdv; j<num_cdv_cauv; ++j)
-	  if (i != j && std::abs(corrMatrixX(i, j)) > SMALL_NUMBER)
-	    { need_xs = true; break; }
+	for (j=0, cntr_j=0; j<num_v; ++j)
+	  if (no_mask || x_active_corr[j]) {
+	    if (i != j && std::abs(x_corr_matrix(cntr_i,cntr_j)) > SMALL_NUMBER)
+	      { need_xs = true; break; }
+	    ++cntr_j;
+	  }
     }
+    if (no_mask || x_active_corr[i]) ++cntr_i;
   }
   // If numerical dx/ds not already reqd due to correlation-based contributions
   // from dz/ds, detect cases where dx_ds is not supported for particular s.
@@ -970,18 +1052,18 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   }
 
   // If need_xs, then we compute all of dx/ds and insert the necessary
-  // components directly into jacobian_xs below.  If correlationFlagX, we
-  // compute all of dz/ds and utilize it within loop in combination with
+  // components directly into jacobian_xs below.  If x-space correlations,
+  // we compute all of dz/ds and utilize it within loop in combination with
   // dz_ds_factor().  Complete numerical jacobians are computed, even if
   // only certain portions (beta/gamma rows) are needed.
   RealMatrix num_dx_ds, num_dz_ds;
-  if (need_xs || correlationFlagX) // compute num_dx_ds and/or num_dz_ds
-    numerical_design_jacobian(x_vars, need_xs, num_dx_ds,
-			      correlationFlagX, num_dz_ds, cv_ids, acv_ids,
-			      acv_map1_indices, acv_map2_targets);
+  if (need_xs || x_corr) // compute num_dx_ds and/or num_dz_ds
+    numerical_design_jacobian(x_vars, need_xs, num_dx_ds, x_corr, num_dz_ds,
+			      cv_ids, acv_ids, acv_map1_indices,
+			      acv_map2_targets);
   if (need_xs)
     for (j=0; j<num_v; ++j)              // loop over X
-      switch (randomVarsX[j].type()) {
+      switch (xDist.active_random_variable_type(j)) {
       case BETA: case GAMMA:
 	for (i=0; i<num_var_map_1c; ++i) // loop over S
 	  jacobian_xs(j, i) = num_dx_ds(j, i);
@@ -1004,25 +1086,152 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	// Jacobian row    = X value = j
 	// Jacobian column = S value = i
 
-	const RandomVariable& rv_j = randomVarsX[j]; x_type = rv_j.type();
+	const RandomVariable& x_rv_j = xDist.active_random_variable(j);
+	x_type = x_rv_j.type();
         numerical_xs = ( need_xs && (x_type == BETA || x_type == GAMMA) );
 	if (!numerical_xs) { // else jacobian_xs already updated above
-	  x = x_vars[j]; z = z_vars[j]; u_type = ranVarTypesU[j];
+	  x = x_vars[j]; z = z_vars[j];
+	  u_type = uDist.active_random_variable_type(j);
 	  // corresponding variable has derivative w.r.t. its distribution param
 	  if (j == cv_index)
-	    jacobian_xs(j, i)  = rv_j.dx_ds(target2, u_type, x, z);
+	    jacobian_xs(j, i)  = x_rv_j.dx_ds(target2, u_type, x, z);
 	  // dz/ds contributions (deriv of jth variable w.r.t. any variable's
 	  // dist param) are included if correlated
 	  // Note: BOUNDED_{NORMAL,LOGNORMAL},LOGUNIFORM,TRIANGULAR,BETA cases
 	  // will currently be zero, but dL/ds can be nonzero in the future
 	  // once correlation warping is more complete.
-	  if (correlationFlagX)
-	    jacobian_xs(j, i) += rv_j.dz_ds_factor(u_type, x, z)
+	  if (x_corr)
+	    jacobian_xs(j, i) += x_rv_j.dz_ds_factor(u_type, x, z)
 	                      *  num_dz_ds(j, i);
 	}
       }
     }
   }
+}
+
+
+/** This procedure computes numerical derivatives of x and/or z with respect to
+    distribution parameters s, and is used by jacobian_dX_dS() to provide data
+    that is not available analytically.  Numerical dz/ds involves dL/ds
+    (z(s) = L(s) u and dz/ds = dL/ds u) and is needed to evaluate dx/ds
+    semi-analytically for correlated variables.  Numerical dx/ds is needed for
+    distributions lacking simple closed-form CDF expressions (beta and gamma
+    distributions). */
+void NatafTransformation::
+numerical_design_jacobian(const RealVector& x_vars,
+			  bool xs, RealMatrix& num_jacobian_xs,
+			  bool zs, RealMatrix& num_jacobian_zs,
+			  SizetMultiArrayConstView cv_ids,
+			  SizetMultiArrayConstView acv_ids,
+			  const SizetArray& acv_map1_indices,
+			  const ShortArray& acv_map2_targets)
+{
+  // For correlated vars, correlation matrix C = C(s) due to Nataf modifications
+  //   z(s) = L(s) u  ->  dz/ds = dL/ds u  ->  need dL/ds
+  //   C(s) = L(s) L(s)^T
+  //   dC/ds (which could be derived analytically) = L dL/ds^T + dL/ds L^T
+  // This takes the form dC/ds = A + A^T where A = L dL/ds^T
+  // Unfortunately, solution of this equation for general A (which could
+  // provide dL/ds) given symmetric dC/ds is not possible since it is nonunique.
+  // Since we will not be differentiating the Cholesky solver, we will use
+  // semi-analytic design sensitivities with numerical dL/ds.  Note that
+  // numerical dz/ds is simpler and would likely be just as effective, but in
+  // general, semi-analytic sensitivities should minimize the numerical portion.
+
+  // Rectangular Jacobians = Gradient^T = num_Z x num_S where num_S is the total
+  // number of active continuous vars flowed down from a higher iteration level.
+  // The number of distribution parameter insertions is <= num_S.
+  size_t i, j, k, num_var_map_1c = acv_map1_indices.size();
+  int x_len = x_vars.length();
+  if (xs && (num_jacobian_xs.numRows() != x_len ||
+	     num_jacobian_xs.numCols() != num_var_map_1c) )
+    num_jacobian_xs.shape(x_len, num_var_map_1c);
+  if (zs && (num_jacobian_zs.numRows() != x_len ||
+	     num_jacobian_zs.numCols() != num_var_map_1c) )
+    num_jacobian_zs.shape(x_len, num_var_map_1c);
+
+  RealMatrix L_s_plus_h, dL_dsi;
+  RealVector dz_dsi;
+  //RealVector z_vars_s_plus_h, z_vars_s_minus_h;
+  RealVector x_vars_s_plus_h, x_vars_s_minus_h;
+  if (zs) {
+    L_s_plus_h.shape(x_len, x_len);
+    dL_dsi.shape(x_len, x_len);
+    dz_dsi.size(x_len);
+  }
+
+  RealVector u_vars;
+  trans_X_to_U(x_vars, u_vars);
+
+  Real fd_grad_ss = 1.e-4;
+  RealMatrix chol_z0(corrCholeskyFactorZ);
+  for (i=0; i<num_var_map_1c; i++) {
+
+    size_t cv_index        = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
+    short  acv_map2_target = acv_map2_targets[i];
+    if (cv_index != _NPOS && acv_map2_target != NO_TARGET) {
+
+      Pecos::RandomVariable& x_rv_i = xDist.active_random_variable(cv_index);
+
+      Real s0;  x_rv_i.pull_parameter(acv_map2_target, s0);
+
+      // Compute the offset for the ith gradient variable.
+      // Enforce a minimum delta of fdgss*.01
+      Real h_mag = fd_grad_ss * std::max(std::fabs(s0), .01);
+      Real h = (s0 < 0.0) ? -h_mag : h_mag; // h has same sign as s0
+
+      // -----------------------------------
+      // Evaluate (L/z_vars/x_vars)_s_plus_h
+      // -----------------------------------
+      Real s1 = s0 + h;
+      // update randomVars & corrCholeskyFactorZ:
+      x_rv_i.push_parameter(acv_map2_target, s1);
+      transform_correlations();
+      if (zs) {
+	L_s_plus_h = corrCholeskyFactorZ;        // L
+	//trans_U_to_Z(u_vars, z_vars_s_plus_h); // z
+      }
+      if (xs)
+	trans_U_to_X(u_vars, x_vars_s_plus_h);   // x
+
+      // ------------------------------------
+      // Evaluate (L/z_vars/x_vars)_s_minus_h
+      // ------------------------------------
+      s1 = s0 - h;
+      // update randomVars & corrCholeskyFactorZ:
+      x_rv_i.push_parameter(acv_map2_target, s1);
+      transform_correlations();
+      //if (zs) {
+        // utilize corrCholeskyFactorZ below      // L
+        //trans_U_to_Z(u_vars, z_vars_s_minus_h); // z
+      //}
+      if (xs)
+	trans_U_to_X(u_vars, x_vars_s_minus_h);   // x
+
+      // -------------------------------
+      // Compute the central differences
+      // -------------------------------
+      if (zs) {
+	for (j=0; j<x_len; j++)                            // dL/ds
+	  for (k=0; k<=j; k++)
+	    dL_dsi(j, k) = (L_s_plus_h(j, k) - corrCholeskyFactorZ(j, k))/2./h;
+	dz_dsi.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1., dL_dsi,
+			u_vars, 0.); // dz/ds
+	for (j=0; j<x_len; j++)
+	  num_jacobian_zs(j, i) = dz_dsi(j);
+	//for (j=0; j<x_len; j++)                          // dz/ds (alt)
+	//  num_jacobian_zs(j, i)=(z_vars_s_plus_h(j)-z_vars_s_minus_h(j))/2./h;
+      }
+      if (xs)
+	for (j=0; j<x_len; j++)                            // dx/ds
+	  num_jacobian_xs(j,i) = (x_vars_s_plus_h(j)-x_vars_s_minus_h(j))/2./h;
+
+      // reset s0 (corrCholeskyFactorZ reset can be deferred):
+      x_rv_i.push_parameter(acv_map2_target, s0);
+    }
+  }
+  // reset corrCholeskyFactorZ:
+  corrCholeskyFactorZ = chol_z0;
 }
 
 
@@ -1033,7 +1242,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 void NatafTransformation::
 hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
 {
-  if (correlationFlagX) {
+  if (xDist.correlation()) {
     // d^2X/dZ^2
     int num_v = x_vars.length();
     RealSymMatrixArray hessian_xz(num_v);
@@ -1086,8 +1295,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 
   Real x, z, dx_dz, pdf; short x_type, u_type;
   for (int i=0; i<num_v; ++i) {
-    const RandomVariable& rv_i = randomVarsX[i];
-    x_type = rv_i.type(); u_type = ranVarTypesU[i];
+    const RandomVariable& x_rv_i = xDist.active_random_variable(i);
+    x_type = x_rv_i.type(); u_type = uDist.active_random_variable_type(i);
     if (hessian_xz[i].numRows() != num_v)
       hessian_xz[i].shape(num_v);
     // each d^2X_i/dZ^2 has a single entry on the diagonal as defined by
@@ -1100,35 +1309,37 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       case NORMAL:
 	hessian_xz[i](i, i) = 0.; break;
       case LOGNORMAL: {	// dx/dz = zeta x --> d^2x/dz^2 = zeta dx/dz = zeta^2 x
-	Real zeta = rv_i.parameter(LN_ZETA);
+	Real zeta;  x_rv_i.pull_parameter(LN_ZETA, zeta);
 	hessian_xz[i](i, i) = zeta * zeta * x_vars[i]; break;
       }
-      case CONTINUOUS_DESIGN: case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
-      case UNIFORM:           case HISTOGRAM_BIN: // pdf_grad is zero
+      case CONTINUOUS_RANGE: case CONTINUOUS_INTERVAL_UNCERTAIN:
+      case UNIFORM:          case HISTOGRAM_BIN: // pdf_grad is zero
 	x = x_vars[i]; trans_X_to_Z(x, z, i);
-	dx_dz = NormalRandomVariable::std_pdf(z) / rv_i.pdf(x);
+	dx_dz = NormalRandomVariable::std_pdf(z) / x_rv_i.pdf(x);
 	hessian_xz[i](i, i) = -dx_dz * z;
 	break;
       default:
-	x = x_vars[i]; trans_X_to_Z(x, z, i); pdf = rv_i.pdf(x);
+	x = x_vars[i]; trans_X_to_Z(x, z, i); pdf = x_rv_i.pdf(x);
 	dx_dz = NormalRandomVariable::std_pdf(z) / pdf;
-	hessian_xz[i](i, i) = -dx_dz * (z + rv_i.pdf_gradient(x) * dx_dz / pdf);
+	hessian_xz[i](i, i)
+	  = -dx_dz * (z + x_rv_i.pdf_gradient(x) * dx_dz / pdf);
 	break;
       }
     else if (u_type == STD_UNIFORM)
       switch (x_type) {
-      case CONTINUOUS_DESIGN: case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
-      case UNIFORM:           case HISTOGRAM_BIN:
+      case CONTINUOUS_RANGE: case CONTINUOUS_INTERVAL_UNCERTAIN:
+      case UNIFORM:          case HISTOGRAM_BIN:
 	hessian_xz[i](i, i) = 0.; break;
       case LOGUNIFORM: {
-	Real log_range = std::log(rv_i.parameter(LU_UPR_BND))
-	               - std::log(rv_i.parameter(LU_LWR_BND));
+	Real l_bnd;  x_rv_i.pull_parameter(LU_LWR_BND, l_bnd);
+	Real u_bnd;  x_rv_i.pull_parameter(LU_UPR_BND, u_bnd);
+	Real log_range = std::log(u_bnd) - std::log(l_bnd);
 	hessian_xz[i](i, i) = log_range * log_range * x_vars[i] / 4.; break;
       }
       default:
-	x = x_vars[i]; pdf = rv_i.pdf(x);
+	x = x_vars[i]; pdf = x_rv_i.pdf(x);
 	dx_dz = UniformRandomVariable::std_pdf() / pdf;
-	hessian_xz[i](i, i) = -dx_dz * dx_dz * rv_i.pdf_gradient(x) / pdf;
+	hessian_xz[i](i, i) = -dx_dz * dx_dz * x_rv_i.pdf_gradient(x) / pdf;
 	break;
       }
     else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||

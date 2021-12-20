@@ -263,7 +263,7 @@ class JEGA_SL_IEDECL IntegerDesignVariableType :
          *        for this variable.
          *
          * Valid representations are those that may be returned by
-         * GetRandomDoubleRep.
+         * GetRandomRep.
          *
          * \param rep The representation to check for validity with this
          *            variable type.
@@ -272,8 +272,8 @@ class JEGA_SL_IEDECL IntegerDesignVariableType :
          */
         virtual
         bool
-        IsValidDoubleRep(
-            double rep
+        IsValidRep(
+            var_rep_t rep
             ) const;
 
         /// Returns an exact duplicate of this type object.
@@ -290,7 +290,7 @@ class JEGA_SL_IEDECL IntegerDesignVariableType :
 
         /// Returns the value represented by \a rep as a double.
         /**
-         * A return of -DBL_MAX indicates failure.  The returned
+         * A return of -limits::max indicates failure.  The returned
          * value is not necessarily valid.  It may be out of bounds
          * etc.
          *
@@ -300,12 +300,12 @@ class JEGA_SL_IEDECL IntegerDesignVariableType :
         virtual
         double
         GetValueOf(
-            double rep
+            var_rep_t rep
             ) const;
 
         /// Returns the nearest valid value to \a value.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to correct to a valid value.
          * \return The nearest value to \a value for which IsValidValue will
@@ -319,21 +319,21 @@ class JEGA_SL_IEDECL IntegerDesignVariableType :
 
         /// Returns the nearest valid double rep to \a rep.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param rep The representation to correct to a valid representation.
          * \return The nearest representation to \a rep for which
-         *         IsValidDoubleRep will return true;
+         *         IsValidRep will return true;
          */
         virtual
-        double
-        GetNearestValidDoubleRep(
-            double rep
+        var_rep_t
+        GetNearestValidRep(
+            var_rep_t rep
             ) const;
 
         /// Returns a random valid value for this type as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return A random value for this variable for which IsValidValue will
          *         return true;
@@ -345,40 +345,40 @@ class JEGA_SL_IEDECL IntegerDesignVariableType :
 
         /// Returns the proper representation of \a value as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param value The value to retrieve the representation of.
          * \return The representation of the value \a value.
          */
         virtual
-        double
-        GetDoubleRepOf(
+		var_rep_t
+        GetRepOf(
             double value
             ) const;
 
         /// Returns the representation of a random value as a double.
         /**
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \return The representation of a random value.
          */
         virtual
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             ) const;
 
         /**
          * \brief Returns a random representation existing within the supplied
          *        region of space.
          *
-         * A return of -DBL_MAX indicates failure.
+         * A return of -limits::max indicates failure.
          *
          * \param within The region of space in which to restrict the value.
          * \return The representation of a random value inside \a within.
          */
         virtual
-        double
-        GetRandomDoubleRep(
+        var_rep_t
+        GetRandomRep(
             const RegionOfSpace& within
             ) const;
 
@@ -425,13 +425,11 @@ class JEGA_SL_IEDECL IntegerDesignVariableType :
     ============================================================================
     */
     private:
+        
 
-        double
-        ubround(
-            const double& value,
-            const double& min,
-            const double& max
-            ) const;
+
+
+
 
     /*
     ============================================================================

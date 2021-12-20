@@ -188,10 +188,10 @@ class JEGA_SL_IEDECL SeekRangeObjectiveFunctionType :
 
 
         /// The lower bound of the range to seek
-        double _lowerBound;
+        obj_val_t _lowerBound;
 
         /// The upper bound of the range to seek
-        double _upperBound;
+        obj_val_t _upperBound;
 
 
 
@@ -211,7 +211,7 @@ class JEGA_SL_IEDECL SeekRangeObjectiveFunctionType :
         inline
         void
         SetLowerBound(
-            double value
+            obj_val_t value
             );
 
         /// Sets the upper bound on the range this objective seeks.
@@ -222,7 +222,7 @@ class JEGA_SL_IEDECL SeekRangeObjectiveFunctionType :
         inline
         void
         SetUpperBound(
-            double value
+            obj_val_t value
             );
 
 
@@ -244,7 +244,7 @@ class JEGA_SL_IEDECL SeekRangeObjectiveFunctionType :
          * \return The lower bound on the range sought by this objective.
          */
         inline
-        double
+        obj_val_t
         GetLowerBound(
             ) const;
 
@@ -253,7 +253,7 @@ class JEGA_SL_IEDECL SeekRangeObjectiveFunctionType :
          * \return The upper bound on the range sought by this objective.
          */
         inline
-        double
+        obj_val_t
         GetUpperBound(
             ) const;
 
@@ -309,9 +309,9 @@ class JEGA_SL_IEDECL SeekRangeObjectiveFunctionType :
          *         techniques.
          */
         virtual
-        double
+        obj_val_t
         GetValueForMinimization(
-            double val
+            obj_val_t val
             ) const;
 
         /// Returns the string name of this type.

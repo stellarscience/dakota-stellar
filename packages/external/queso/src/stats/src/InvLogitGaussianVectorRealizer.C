@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,31 +23,29 @@
 //-----------------------------------------------------------------------el-
 
 #include <cmath>
-
+#include <limits>
 #include <queso/InvLogitGaussianVectorRealizer.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
-
-#include <boost/math/special_functions/fpclassify.hpp>
+#include <queso/math_macros.h>
 
 namespace QUESO {
 
 template<class V, class M>
 InvLogitGaussianVectorRealizer<V, M>::InvLogitGaussianVectorRealizer(
     const char * prefix,
-    const BoxSubset<V, M> & unifiedImageBoxSubset,
+    const VectorSet<V, M> & unifiedImageSet,
     const V & lawExpVector,
     const M & lowerCholLawCovMatrix)
   : BaseVectorRealizer<V, M>(((std::string)(prefix)+"invlogit_gau").c_str(),
-      unifiedImageBoxSubset, std::numeric_limits<unsigned int>::max()),
+      unifiedImageSet, std::numeric_limits<unsigned int>::max()),
     m_unifiedLawExpVector(new V(lawExpVector)),
     m_unifiedLawVarVector(
-        unifiedImageBoxSubset.vectorSpace().newVector(INFINITY)),  // FIX ME
+        unifiedImageSet.vectorSpace().newVector(INFINITY)),  // FIX ME
     m_lowerCholLawCovMatrix(new M(lowerCholLawCovMatrix)),
     m_matU(NULL),
     m_vecSsqrt(NULL),
-    m_matVt(NULL),
-    m_unifiedImageBoxSubset(unifiedImageBoxSubset)
+    m_matVt(NULL)
 {
   *m_unifiedLawExpVector = lawExpVector;
 }
@@ -55,21 +53,19 @@ InvLogitGaussianVectorRealizer<V, M>::InvLogitGaussianVectorRealizer(
 template<class V, class M>
 InvLogitGaussianVectorRealizer<V, M>::InvLogitGaussianVectorRealizer(
     const char * prefix,
-    const BoxSubset<V, M> & unifiedImageBoxSubset,
+    const VectorSet<V, M> & unifiedImageSet,
     const V & lawExpVector,
     const M & matU,
     const V & vecSsqrt,
     const M & matVt)
   : BaseVectorRealizer<V, M>(((std::string)(prefix)+"invlogit_gau").c_str(),
-      unifiedImageBoxSubset, std::numeric_limits<unsigned int>::max()),
+      unifiedImageSet, std::numeric_limits<unsigned int>::max()),
     m_unifiedLawExpVector(new V(lawExpVector)),
-    m_unifiedLawVarVector(
-        unifiedImageBoxSubset.vectorSpace().newVector( INFINITY)), // FIX ME
+    m_unifiedLawVarVector(unifiedImageSet.vectorSpace().newVector( INFINITY)), // FIX ME
     m_lowerCholLawCovMatrix(NULL),
     m_matU(new M(matU)),
     m_vecSsqrt(new V(vecSsqrt)),
-    m_matVt(new M(matVt)),
-    m_unifiedImageBoxSubset(unifiedImageBoxSubset)
+    m_matVt(new M(matVt))
 {
   *m_unifiedLawExpVector = lawExpVector; // ????
 }
@@ -119,27 +115,27 @@ InvLogitGaussianVectorRealizer<V, M>::realization(V & nextValues) const
     queso_error_msg("GaussianVectorRealizer<V,M>::realization() inconsistent internal state");
   }
 
-  V min_domain_bounds(this->m_unifiedImageBoxSubset.minValues());
-  V max_domain_bounds(this->m_unifiedImageBoxSubset.maxValues());
+  V min_domain_bounds(this->m_unifiedImageSet.minValues());
+  V max_domain_bounds(this->m_unifiedImageSet.maxValues());
 
   for (unsigned int i = 0; i < nextValues.sizeLocal(); i++) {
     double temp = std::exp(nextValues[i]);
     double min_val = min_domain_bounds[i];
     double max_val = max_domain_bounds[i];
 
-    if (boost::math::isfinite(min_val) &&
-        boost::math::isfinite(max_val)) {
+    if (queso_isfinite(min_val) &&
+        queso_isfinite(max_val)) {
         // Left- and right-hand sides are finite.  Do full transform.
         nextValues[i] = (max_val * temp + min_val) / (1.0 + temp);
       }
-    else if (boost::math::isfinite(min_val) &&
-             !boost::math::isfinite(max_val)) {
+    else if (queso_isfinite(min_val) &&
+             !queso_isfinite(max_val)) {
       // Left-hand side finite, but right-hand side is not.
       // Do only left-hand transform.
       nextValues[i] = temp + min_val;
     }
-    else if (!boost::math::isfinite(min_val) &&
-             boost::math::isfinite(max_val)) {
+    else if (!queso_isfinite(min_val) &&
+             queso_isfinite(max_val)) {
       // Right-hand side is finite, but left-hand side is not.
       // Do only right-hand transform.
       nextValues[i] = (max_val * temp - 1.0) / temp;

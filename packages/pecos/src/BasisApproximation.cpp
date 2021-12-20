@@ -243,7 +243,7 @@ const RealSymMatrix& BasisApproximation::hessian(const RealVector& x)
 	  << "type." << std::endl;
     abort_handler(-1);
   }
-    
+
   return basisApproxRep->hessian(x);
 }
 
@@ -253,8 +253,8 @@ void BasisApproximation::surrogate_data(const SurrogateData& data)
   if (basisApproxRep)
     basisApproxRep->surrogate_data(data);
   else {
-    PCerr << "Error: surrogate_data(SurrogateData&) not available for this "
-	  << "basis approximation type." << std::endl;
+    PCerr << "Error: surrogate_data(SurrogateData&) not available "
+	  << "for this basis approximation type." << std::endl;
     abort_handler(-1);
   }
 }
@@ -267,8 +267,56 @@ const SurrogateData& BasisApproximation::surrogate_data() const
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
-    
+
   return basisApproxRep->surrogate_data();
+}
+
+
+SurrogateData& BasisApproximation::surrogate_data()
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: surrogate_data() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return basisApproxRep->surrogate_data();
+}
+
+
+void BasisApproximation::modified_surrogate_data(const SurrogateData& data)
+{
+  if (basisApproxRep)
+    basisApproxRep->modified_surrogate_data(data);
+  else {
+    PCerr << "Error: modified_surrogate_data(SurrogateData&) not available "
+	  << "for this basis approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+const SurrogateData& BasisApproximation::modified_surrogate_data() const
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: modified_surrogate_data() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return basisApproxRep->modified_surrogate_data();
+}
+
+
+SurrogateData& BasisApproximation::modified_surrogate_data()
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: modified_surrogate_data() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+
+  return basisApproxRep->modified_surrogate_data();
 }
 
 
@@ -308,12 +356,12 @@ void BasisApproximation::increment_coefficients()
 }
 
 
-void BasisApproximation::decrement_coefficients()
+void BasisApproximation::pop_coefficients(bool save_data)
 {
   if (basisApproxRep)
-    basisApproxRep->decrement_coefficients(); 
+    basisApproxRep->pop_coefficients(save_data); 
   else {
-    PCerr << "Error: decrement_coefficients() not available for this basis "
+    PCerr << "Error: pop_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
@@ -344,6 +392,7 @@ void BasisApproximation::finalize_coefficients()
 }
 
 
+/*
 void BasisApproximation::store_coefficients(size_t index)
 {
   if (basisApproxRep)
@@ -368,18 +417,6 @@ void BasisApproximation::restore_coefficients(size_t index)
 }
 
 
-void BasisApproximation::swap_coefficients(size_t index)
-{
-  if (basisApproxRep)
-    basisApproxRep->swap_coefficients(index);
-  else {
-    PCerr << "Error: swap_coefficients() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
 void BasisApproximation::remove_stored_coefficients(size_t index)
 {
   if (basisApproxRep)
@@ -392,13 +429,46 @@ void BasisApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void BasisApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+void BasisApproximation::swap_coefficients(size_t index)
 {
   if (basisApproxRep)
-    basisApproxRep->combine_coefficients(combine_type, swap_index);
+    basisApproxRep->swap_coefficients(index);
+  else {
+    PCerr << "Error: swap_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+*/
+
+
+void BasisApproximation::clear_inactive()
+{
+  if (basisApproxRep)
+    basisApproxRep->clear_inactive(); 
+  //else
+  //  default: no stored approx data to clear
+}
+
+
+void BasisApproximation::combine_coefficients()
+{
+  if (basisApproxRep)
+    basisApproxRep->combine_coefficients();
   else {
     PCerr << "Error: combine_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisApproximation::combined_to_active(bool clear_combined)
+{
+  if (basisApproxRep)
+    basisApproxRep->combined_to_active(clear_combined);
+  else {
+    PCerr << "Error: combined_to_active() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }

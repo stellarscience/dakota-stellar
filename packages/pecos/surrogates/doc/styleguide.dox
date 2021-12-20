@@ -1,0 +1,122 @@
+/**
+\page styleguide Coding Style Guidelines and Conventions
+
+\section StyleConventionsIntro Introduction
+
+
+This page presents guidelines for coding in SURFPACK.
+Common code development practices can be extremely useful in multiple
+developer environments.  Particular styles for code components lead to
+improved readability of the code and can provide important visual cues
+to other developers.  Here we adopt the coding convention used by DAKOTA, so
+that tools built using SURFPACK can be more easily integrated into DAKOTA.
+Much of this recommended practices document is
+borrowed from the Dakota project, which in turn borrows
+its recommended practices from other Sanida projects.
+
+\section StyleConventionsCpp C++/c Style Guidelines
+
+
+Style guidelines involve the ability to discern at a glance the type
+and scope of a variable or function.
+
+
+\subsection StyleConventionsCV Class and variable styles
+
+Class names should be composed of two or more descriptive words, with
+the first character of each word capitalized, e.g.:
+\code
+class ClassName;
+\endcode
+
+Class member variables should be composed of two or more descriptive
+words, with the first character of the second and succeeding words
+capitalized, e.g.:
+\code
+double classMemberVariable;
+\endcode
+
+Temporary (i.e. local) variables are lower case, with underscores
+separating words in a multiple word temporary variable, e.g.:
+\code
+int temporary_variable;
+\endcode
+
+Constants (i.e. parameters) and enumeration values are upper case,
+with underscores separating words, e.g.:
+\code
+const double CONSTANT_VALUE;
+\endcode
+
+
+\subsection StyleConventionsFn Function styles
+
+Function names are lower case, with underscores separating words, e.g.:
+\code
+int function_name();
+\endcode
+There is no need to distinguish between member and non-member
+functions by style, as this distinction is usually clear by context.
+This style convention allows member function names which set and
+return the value of a similarly-named private member variable, e.g.:
+\code
+int memberVariable;
+void member_variable(int a) { // set
+  memberVariable = a;
+}
+int member_variable() const { // get
+  return memberVariable;
+}
+\endcode
+
+In cases where the data to be set or returned is more than a few bytes,
+it is highly desirable to employ const references to avoid unnecessary
+copying, e.g.:
+\code
+void continuous_variables(const RealVector& c_vars) { // set
+  continuousVariables = c_vars;
+}
+const RealVector& continuous_variables() const {      // get
+  return continuousVariables;
+}
+\endcode
+
+Note that it is not necessary to always accept the returned data as a
+const reference.  If it is desired to be able change this data, then
+accepting the result as a new variable will generate a copy, e.g.:
+\code
+// reference to continuousVariables cannot be changed
+const RealVector& c_vars = model.continuous_variables();
+// local copy of continuousVariables can be changed
+RealVector c_vars = model.continuous_variables();
+\endcode
+
+
+\subsection StyleConventionsMisc Miscellaneous
+
+Appearance of typedefs to redefine or alias basic types is isolated to
+a few header files (\c data_types.h, \c template_defs.h), so that
+issues like program precision can be changed by changing a few lines
+of typedefs rather than many lines of code, e.g.:
+\code
+typedef double Real;
+\endcode
+
+\c xemacs is the preferred source code editor, as it has C++ modes for
+enhancing readability through color (turn on "Syntax highlighting").
+Other helpful features include "Paren highlighting" for matching
+parentheses and the "New Frame" utility to have more than one window
+operating on the same set of files (note that this is still the same
+edit session, so all windows are synchronized with each other).
+Window width should be set to 80 internal columns, which can be
+accomplished by manual resizing, or preferably, using the following
+alias in your shell resource file (e.g., \c .cshrc):
+\verbatim
+alias xemacs "xemacs -g 81x63"
+\endverbatim
+where an external width of 81 gives 80 columns internal to the window
+and the desired height of the window will vary depending on monitor
+size.  This window width imposes a coding standard since you should
+avoid line wrapping by continuing anything over 80 columns onto the
+next line.
+*/

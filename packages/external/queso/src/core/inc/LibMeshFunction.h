@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -24,14 +24,14 @@
 
 #include <queso/Defines.h>
 
-#ifdef QUESO_HAVE_LIBMESH
+#ifdef QUESO_HAVE_LIBMESH_SLEPC
 
 #ifndef QUESO_LIBMESHFUNCTION_H
 #define QUESO_LIBMESHFUNCTION_H
 
 #include <string>
-#include <boost/shared_ptr.hpp>
 #include <queso/FunctionBase.h>
+#include <queso/SharedPtr.h>
 
 namespace libMesh {
   class MeshBase;
@@ -98,19 +98,19 @@ public:
    * identically zero (by copying \c this) everywhere and return a boost shared
    * pointer to it
    */
-  virtual boost::shared_ptr<FunctionBase> zero_clone() const;
+  virtual SharedPtr<FunctionBase>::Type zero_clone() const;
 
   //! Return the internal libmesh equation systems object
-  virtual boost::shared_ptr<libMesh::EquationSystems> get_equation_systems() const;
+  virtual SharedPtr<libMesh::EquationSystems>::Type get_equation_systems() const;
 
 private:
   const FunctionOperatorBuilder & builder;
 
-  boost::shared_ptr<libMesh::EquationSystems> equation_systems;
+  SharedPtr<libMesh::EquationSystems>::Type equation_systems;
 };
 
 }  // End namespace QUESO
 
 #endif // QUESO_LIBMESHFUNCTION_H
 
-#endif  // QUESO_HAVE_LIBMESH
+#endif  // QUESO_HAVE_LIBMESH_SLEPC

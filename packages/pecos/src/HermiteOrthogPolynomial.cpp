@@ -108,8 +108,9 @@ collocation_points(unsigned short order)
 {
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
-    PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "HermiteOrthogPolynomial::collocation_points()." << std::endl;
+    PCerr << "Error: underflow in quadrature order (" << order << ") relative "
+	  << "to minimum order (1) in HermiteOrthogPolynomial::"
+	  << "collocation_points()." << std::endl;
     abort_handler(-1);
   }
 

@@ -151,7 +151,9 @@ thread::sleep(
     unsigned int msecs
     )
 {
-    struct timespec ts = { msecs/1000, (msecs%1000)*1000000 };
+    struct timespec ts = {
+		msecs/1000, static_cast<long>((msecs%1000)*1000000)
+		};
 
 #if defined(EDDY_WINDOWS)
     pthread_delay_np(&ts);
@@ -180,39 +182,39 @@ thread::cancel(
 } // thread::cancel
 
 void
-thread::set_asynch_cancelation(
+thread::set_asynch_cancellation(
     )
 {
-    set_cancelation(PTHREAD_CANCEL_ASYNCHRONOUS);
+    set_cancellation(PTHREAD_CANCEL_ASYNCHRONOUS);
 
-} // thread::set_asynch_cancelation
+} // thread::set_asynch_cancellation
 
 void
-thread::set_deferred_cancelation(
+thread::set_deferred_cancellation(
     )
 {
-    set_cancelation(PTHREAD_CANCEL_DEFERRED);
+    set_cancellation(PTHREAD_CANCEL_DEFERRED);
 
-} // thread::set_deferred_cancelation
+} // thread::set_deferred_cancellation
 
 void
-thread::disable_cancelation(
+thread::disable_cancellation(
     )
 {
-    set_cancelation(PTHREAD_CANCEL_DISABLE);
+    set_cancellation(PTHREAD_CANCEL_DISABLE);
 
-} // thread::disable_cancelation
+} // thread::disable_cancellation
 
 void
-thread::enable_cancelation(
+thread::enable_cancellation(
     )
 {
-    set_cancelation(PTHREAD_CANCEL_ENABLE);
+    set_cancellation(PTHREAD_CANCEL_ENABLE);
 
-} // thread::enable_cancelation
+} // thread::enable_cancellation
 
 void
-thread::restore_cancelation_state(
+thread::restore_cancellation_state(
     )
 {
     pthread_t self = pthread_self();
@@ -221,7 +223,7 @@ thread::restore_cancelation_state(
         &old_cancel_types()[&self]
         );
 
-} // thread::restore_cancelation_state
+} // thread::restore_cancellation_state
 
 const thread&
 thread::operator =(
@@ -229,7 +231,7 @@ thread::operator =(
     )
 {
     if(this == &other) return other;
-    _thread = other._thread;
+    this->_thread = other._thread;
     return *this;
 }
 
@@ -237,7 +239,7 @@ bool
 thread::is_this_thread(
     ) const
 {
-    return pthread_equal(_thread, pthread_self()) != 0;
+    return pthread_equal(this->_thread, pthread_self()) != 0;
 
 } // thread::is_this_thread
 
@@ -246,7 +248,7 @@ thread::operator ==(
     const thread& other
     ) const
 {
-    return pthread_equal(_thread, other._thread ) != 0;
+    return pthread_equal(this->_thread, other._thread ) != 0;
 }
 
 bool
@@ -277,7 +279,7 @@ Subclass Visible Methods
 */
 
 void
-thread::set_cancelation(
+thread::set_cancellation(
     int state
     )
 {
@@ -330,13 +332,13 @@ thread::thread(
         _thread()
 {
 
-    _thread = pthread_self();
+    this->_thread = pthread_self();
 
     // This thread may or may not already be in the map but that's not a
-    // problem.  It willnot be let in again b/c of the workings of the map.
-    old_cancel_types().insert(
-        old_cancel_state_map::value_type(&_thread, PTHREAD_CANCEL_DEFERRED)
-        );
+    // problem.  It will not be let in again b/c of the workings of the map.
+    old_cancel_types().insert(old_cancel_state_map::value_type(
+		&(this->_thread), PTHREAD_CANCEL_DEFERRED
+		));
 
 } // thread::thread
 
@@ -363,11 +365,11 @@ thread::thread(
     if(pthread_attr_init(&attributes) != 0)
         throw resource_error("thread::thread failed to init attributes.");
 
-    // if the seting of attributes fails, it means sharing is invalid
+    // if the setting of attributes fails, it means sharing is invalid
     if(pthread_attr_setdetachstate(&attributes, detachstate) != 0)
         throw logical_error("thread::thread invalid detachstate argument");
 
-    // if the seting of attributes fails, it means sharing is invalid
+    // if the setting of attributes fails, it means sharing is invalid
     if(pthread_attr_setinheritsched(&attributes, inheritsched) != 0)
         throw logical_error("thread::thread invalid inheritsched argument");
 
@@ -376,9 +378,9 @@ thread::thread(
         throw resource_error("thread::thread failed to create thread.");
 
     // The new thread was created so account for it in our cancel state map.
-    old_cancel_types().insert(
-        old_cancel_state_map::value_type(&_thread, PTHREAD_CANCEL_DEFERRED)
-        );
+    old_cancel_types().insert(old_cancel_state_map::value_type(
+		&(this->_thread), PTHREAD_CANCEL_DEFERRED
+		));
 
     // destroy the attributes object b/c it is not needed anymore.
     pthread_attr_destroy(&attributes);

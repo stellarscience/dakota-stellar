@@ -252,7 +252,7 @@ void Solver_Base::set_statistic(std::string name, utilib::Any value)
 // Solver_Base protected members
 //========================================================================
 
-boost::signal<void(TiXmlElement*,bool)>& 
+boost::signals2::signal<void(TiXmlElement*,bool)>& 
 Solver_Base::register_construct(std::string element)
 {
    Any& ans = data->construct_map[element];

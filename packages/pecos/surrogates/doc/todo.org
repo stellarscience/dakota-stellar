@@ -1,0 +1,55 @@
+* Cpp tasks
+** TODO Clean up linear algebra factorization and linear system solver methods
+Make sure each method has the ability to do inplace solve or to not modify
+data. Focus on lapack wrappers. John J can cleanup compressed sensing solvers
+** TODO Implement Gaussian process.
+Combine strengths of Dakota and Surfpack GPs. John J has already started
+ this conversion
+** TODO Wrap Pecos i.i.d. variable types and make a derived class of Variables
+ Retire AleatoryDistParameters struct and replace with Mikes newer
+random variables classes
+** TODO Implement sets of variables
+Create a Variables object that is a list of different sets of Variable classes
+** TODO Hide explicit construction of variable transformation from user
+Allow approximations to accept Variables object and meta-data
+about transformation and let approximation build transformation internally
+** TODO Create all variables in their canonical domain with no notion of transformation but
+provide a wrapper class that contains a canonical approximation and a variable transformation
+that transforms variables in user space to the domain of the approximation
+** TODO Wrap Pecos PCE
+Start with regression based PCE but also provide driver based upon Pseudo spectral projection
+** TODO Wrap Pecos Sparse grid variants
+Separate Sparse grid drivers from sparse grid approximation.
+** TODO Wrap or reimplement Surfpack approximation methods in new approximation hierachy
+* Build and test infastructure tasks
+** TODO Setup nightly testing on Jenkins
+** TODO Make all compiler warning errors
+** TODO Adapt build infastructure to allow surrogate package to be built without pecos.
+* Python tasks
+** TODO Add wrappers of ~Teuchos::SerialDenseVector~ and ~Teuchos::SerialDenseMatrix~ to PyTrilinos
+Create ~Teuchos_SerialDenseVector.i~ and ~Teuchos_SerialDenseMatrix.i~ and follow convention in ~Teuchos_Array.i~
+** TODO Extend ~Teuchos_ParameterList.i~ to allow use of ~Teuchos::SerialDenseVector~ and ~Teuchos::SerialDenseMatrix~
+Support two variants. One using a PyTrilinos configure variable such that
+~Teuchos::SerialDenseVector~ is used instead of ~Teuchos::Array~
+Another such that both these classes are supported but where to maintain
+ backward compatability ~Teuchos::Array~ is used to provide automatic conversion
+of python types such as numpy.ndarray and lists to ~Teuchos::Array~ and to use
+~Teuchos::SerialDenseMatrix~ in ParameterList by using Python code like
+#+begin_src Python
+a = Teuchos.SerialDenseMatrix()
+pList.set("a",a)
+#+end_src
+
+For later see the following two types of calls in
+#+begin_src C++
+static swig_type_info * swig_TPL_ptr =
+    SWIG_TypeQuery("Teuchos::RCP< Teuchos::ParameterList >*");
+
+SWIG_CheckState(SWIG_Python_ConvertPtrAndOwn(value,
+&argp,
+swig_TPL_ptr,
+0,
+&newmem)))
+#+end_src
+
+** TODO Decide and implement strategy to include PyTrilinos (Teuchos.i)

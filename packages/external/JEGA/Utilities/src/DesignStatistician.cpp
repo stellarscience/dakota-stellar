@@ -154,6 +154,28 @@ DesignStatistician::ComputeTotalPercentageViolation(
 
 } // DesignStatistician::ComputeTotalPercentageViolation
 
+eddy::utilities::extremes<obj_val_t>
+DesignStatistician::TransformForMinimization(
+    const eddy::utilities::extremes<obj_val_t>& exts,
+    const ObjectiveFunctionInfoVector& infos
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+    eddy::utilities::extremes<obj_val_t> ret(exts.size());
+    const std::size_t highest = std::min(exts.size(), infos.size());
+
+    for(std::size_t i=0; i<highest; ++i)
+    {
+        ret.take_if_either(
+            i, infos[i]->GetValueForMinimization(exts.get_min(i))
+            );
+        ret.take_if_either(
+            i, infos[i]->GetValueForMinimization(exts.get_max(i))
+            );
+    }
+
+    return ret;
+}
 
 double
 DesignStatistician::ComputeNonSidePercentageViolation(
@@ -208,12 +230,12 @@ DesignStatistician::ComputeSidePercentageViolation(
         if(cviol == 0.0) continue;
 
         // now get the range which is what we will consider a 100% violation.
-        double range = info.GetDoubleRepRange();
+        const var_rep_t range = info.GetRepRange();
 
         // if the range is for some reason 0, we add a violation equal to the
         // rep value since we cannot really compute it.
         if(range == 0.0) cviol = Math::Abs(
-            info.WhichDoubleRep(des) - info.GetMinDoubleRep()
+            info.WhichRep(des) - info.GetMinRep()
             );
 
         // otherwise, we add in our current violation percentage.
@@ -403,21 +425,25 @@ DesignStatistician::ParetoConstraintCompare(
 
 } // DesignStatistician::ParetoConstraintCompare
 
-eddy::utilities::DoubleExtremes
+eddy::utilities::extremes<var_rep_t>
 DesignStatistician::GetDesignVariableExtremes(
     const DesignDVSortSet& from
     )
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    // If from is emtpy, we cannot return anything sensible.
-    if(from.empty()) return eddy::utilities::DoubleExtremes();
+    // If from is empty, we cannot return anything sensible.
+    if(from.empty()) return eddy::utilities::extremes<var_rep_t>();
 
     // retrieve the number of objective functions.
     const std::size_t ndv = from.front()->GetNDV();
 
     // prepare a return object.
-    eddy::utilities::DoubleExtremes ret(ndv, DBL_MAX, -DBL_MAX);
+    eddy::utilities::extremes<var_rep_t> ret(
+		ndv, 
+		std::numeric_limits<var_rep_t>::max(),
+		-std::numeric_limits<var_rep_t>::max()
+		);
 
     // Iterate through and find the maxs/mins for each of the objectives.
     DesignDVSortSet::const_iterator it(from.begin());

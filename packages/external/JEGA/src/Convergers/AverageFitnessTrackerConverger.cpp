@@ -220,7 +220,7 @@ AverageFitnessTrackerConverger::GetMetricValue(
             text_entry(lquiet(), this->GetName() + ": Empty group received for "
                        "fitness assessment.")
             )
-        return -DBL_MAX;
+        return -std::numeric_limits<double>::max();
     }
 
     double totalFit = 0.0;
@@ -230,9 +230,9 @@ AverageFitnessTrackerConverger::GetMetricValue(
     for(DesignOFSortSet::const_iterator it(group.BeginOF());
         it!=group.EndOF(); ++it)
     {
-        double currFit = fitnesses.GetFitness(**it);
+        const double currFit = fitnesses.GetFitness(**it);
 
-        if(currFit != -DBL_MAX)
+        if(currFit != -std::numeric_limits<double>::max())
         {
             ++nFits;
             totalFit += currFit;
@@ -252,10 +252,10 @@ AverageFitnessTrackerConverger::GetMetricValue(
             text_entry(lquiet(), this->GetName() +
                 ": No fitnesses could be retrieved for testing.")
             )
-        return -DBL_MAX;
+        return -std::numeric_limits<double>::max();
     }
 
-    double avgFit = totalFit / nFits;
+    const double avgFit = totalFit / nFits;
 
     JEGALOG_II(this->GetLogger(), lverbose(), this,
         ostream_entry(lverbose(), this->GetName() + ": Average fitness = ")

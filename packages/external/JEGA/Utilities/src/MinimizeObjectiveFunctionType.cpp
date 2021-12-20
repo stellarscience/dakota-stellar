@@ -169,9 +169,9 @@ Subclass Overridable Methods
 ================================================================================
 */
 
-double
+obj_val_t
 MinimizeObjectiveFunctionType::GetValueForMinimization(
-    double val
+    obj_val_t val
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE

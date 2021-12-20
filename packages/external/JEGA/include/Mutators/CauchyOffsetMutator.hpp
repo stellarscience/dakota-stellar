@@ -214,7 +214,7 @@ class CauchyOffsetMutator :
             It then chooses a random design variable and adds a Cauchy random
             amount to it.  The amount has a mean of 0 and a standard deviation
             that depends on the offset range.  The offset range is interpreted
-            as a precentage of the total range of the variable and that amount
+            as a percentage of the total range of the variable and that amount
             is in turn interpreted as the standard deviation.  The number of
             mutations is the rate times the size of the group passed in rounded
             to the nearest whole number.
@@ -263,7 +263,7 @@ class CauchyOffsetMutator :
 
         /**
          * \brief This method provides an appropriate offset amount for the
-         *        requested variable using a gaussian random distribution.
+         *        requested variable using a Gaussian random distribution.
          *
          * \param varInfo The information object describing the design variable
          *                currently being considered for mutation and for which

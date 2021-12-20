@@ -257,7 +257,7 @@ class DuplicateRemovingMainLoop :
         /// Performs one trip through the main loop.
         /**
          * The operations are executed in the order described in the
-         * documetation of this class.
+         * documentation of this class.
          *
          * \return True if this loop wishes to be called again and false
          *         otherwise which means that convergence has occurred.

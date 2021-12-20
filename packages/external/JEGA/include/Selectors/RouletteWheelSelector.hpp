@@ -318,7 +318,7 @@ class RouletteWheelSelector :
          * \param from The group of designs for which to compute the
          *             cumulative probabilities.
          * \param ftns The fitnesses of the designs in \a from.
-         * \param into The map of cumulative probabilites into which to place
+         * \param into The map of cumulative probabilities into which to place
          *             the computed values for the designs in \a from.
          */
         void

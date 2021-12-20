@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="entries">
+      <UniqueIdentifier>{11fe5257-3810-4e71-8cdf-da098d7a9fe2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="log_gateways">
+      <UniqueIdentifier>{61a4d36d-e44a-4b5d-adf5-044a37539d6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="logs">
+      <UniqueIdentifier>{3ac84aa4-53a3-4ae5-ac4a-9979cf87fcc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="detail">
+      <UniqueIdentifier>{44f2ed5c-b7fb-4ce6-a1e4-236ca9d12cc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="doc">
+      <UniqueIdentifier>{e5d29780-3b8a-459e-96e5-efeeeab82589}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="level_classes">
+      <UniqueIdentifier>{706353f1-c24e-4481-a3ff-f700ccaf319a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\entries\ostream_entry.hpp">
+      <Filter>entries</Filter>
+    </ClInclude>
+    <ClInclude Include="..\entries\text_entry.hpp">
+      <Filter>entries</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\config.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\default_types.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\entries.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\exceptions.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\level_classes.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\log_gateways.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\logs.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\macros.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\log_gateways\basic_log_gateway.hpp">
+      <Filter>log_gateways</Filter>
+    </ClInclude>
+    <ClInclude Include="..\log_gateways\cb_level_log_gateway.hpp">
+      <Filter>log_gateways</Filter>
+    </ClInclude>
+    <ClInclude Include="..\log_gateways\level_log_gateway.hpp">
+      <Filter>log_gateways</Filter>
+    </ClInclude>
+    <ClInclude Include="..\logs\appending_log.hpp">
+      <Filter>logs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\logs\decorator_log.hpp">
+      <Filter>logs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\logs\file_log.hpp">
+      <Filter>logs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\logs\file_ring_log.hpp">
+      <Filter>logs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\logs\list_log.hpp">
+      <Filter>logs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\logs\null_log.hpp">
+      <Filter>logs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\logs\ostream_log.hpp">
+      <Filter>logs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\detail\macros.hpp">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\detail\threadsafe.hpp">
+      <Filter>detail</Filter>
+    </ClInclude>
+    <ClInclude Include="..\level_classes\cougaar_levels.hpp">
+      <Filter>level_classes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\level_classes\dakota_levels.hpp">
+      <Filter>level_classes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\level_classes\java_util_levels.hpp">
+      <Filter>level_classes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\level_classes\log4j_levels.hpp">
+      <Filter>level_classes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\level_classes\minimal_levels.hpp">
+      <Filter>level_classes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\level_classes\volume_levels.hpp">
+      <Filter>level_classes</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\doc\Doxyfile">
+      <Filter>doc</Filter>
+    </None>
+    <None Include="..\doc\Mainpage.dox">
+      <Filter>doc</Filter>
+    </None>
+  </ItemGroup>
+</Project>

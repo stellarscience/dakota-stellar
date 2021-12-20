@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/WignerJointPdf.h>
+#include <queso/VectorSpace.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
 
@@ -66,7 +67,7 @@ template<class V, class M>
 double
 WignerJointPdf<V,M>::actualValue(
   const V& domainVector,
-  const V* domainDirection,
+  const V* /* domainDirection */,
         V* gradVector,
         M* hessianMatrix,
         V* hessianEffect) const
@@ -103,6 +104,23 @@ WignerJointPdf<V,M>::lnValue(
   // No need to add m_logOfNormalizationFactor because 'actualValue()' is called [PDF-09]
   return log(this->actualValue(domainVector,domainDirection,gradVector,hessianMatrix,hessianEffect));
 }
+//--------------------------------------------------
+template<class V, class M>
+void
+WignerJointPdf<V,M>::distributionMean(V& meanVector) const
+{
+  meanVector = *m_centerPos;
+}
+
+//---------------------------------------------------
+template<class V,class M>
+void
+WignerJointPdf<V,M>::distributionVariance(M & /* covMatrix */) const
+{
+  queso_not_implemented();
+}
+
+
 //--------------------------------------------------
 template<class V, class M>
 double

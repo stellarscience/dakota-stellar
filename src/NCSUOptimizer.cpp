@@ -49,7 +49,8 @@ NCSUOptimizer* NCSUOptimizer::ncsudirectInstance(NULL);
 
 /** This is the standard constructor with method specification support. */ 
 NCSUOptimizer::NCSUOptimizer(ProblemDescDB& problem_db, Model& model):
-  Optimizer(problem_db, model), setUpType(SETUP_MODEL),
+  Optimizer(problem_db, model, std::shared_ptr<TraitsBase>(new NCSUTraits())),
+  setUpType(SETUP_MODEL),
   minBoxSize(probDescDB.get_real("method.min_boxsize_limit")), 
   volBoxSize(probDescDB.get_real("method.volume_boxsize_limit")),
   solutionTarget(probDescDB.get_real("method.solution_target")),
@@ -65,7 +66,8 @@ NCSUOptimizer::NCSUOptimizer(ProblemDescDB& problem_db, Model& model):
 NCSUOptimizer::
 NCSUOptimizer(Model& model, const int& max_iter, const int& max_eval,
 	      double min_box_size, double vol_box_size, double solution_target):
-  Optimizer(NCSU_DIRECT, model), setUpType(SETUP_MODEL),
+  Optimizer(NCSU_DIRECT, model, std::shared_ptr<TraitsBase>(new NCSUTraits())),
+  setUpType(SETUP_MODEL),
   minBoxSize(min_box_size), volBoxSize(vol_box_size),
   solutionTarget(solution_target), userObjectiveEval(NULL)
 { 
@@ -78,7 +80,8 @@ NCSUOptimizer(Model& model, const int& max_iter, const int& max_eval,
 /** This is an alternate constructor for Iterator instantiations by name
     using a Model but no ProblemDescDB. */
 NCSUOptimizer::NCSUOptimizer(Model& model):
-  Optimizer(NCSU_DIRECT, model), setUpType(SETUP_MODEL), minBoxSize(-1.),
+  Optimizer(NCSU_DIRECT, model, std::shared_ptr<TraitsBase>(new NCSUTraits())),
+  setUpType(SETUP_MODEL), minBoxSize(-1.),
   volBoxSize(-1.), solutionTarget(-DBL_MAX), userObjectiveEval(NULL)
 { 
   initialize(); 
@@ -94,7 +97,7 @@ NCSUOptimizer(const RealVector& var_l_bnds,
 	      const int& max_eval,
 	      double (*user_obj_eval) (const RealVector &x),
 	      double min_box_size, double vol_box_size, double solution_target):
-  Optimizer(NCSU_DIRECT, var_l_bnds.length(), 0, 0, 0, 0, 0, 0, 0),
+  Optimizer(NCSU_DIRECT, var_l_bnds.length(), 0, 0, 0, 0, 0, 0, 0, std::shared_ptr<TraitsBase>(new NCSUTraits())),
   setUpType(SETUP_USERFUNC), minBoxSize(min_box_size), volBoxSize(vol_box_size),
   solutionTarget(solution_target), lowerBounds(var_l_bnds), 
   upperBounds(var_u_bnds), userObjectiveEval(user_obj_eval)
@@ -176,6 +179,14 @@ objective_eval(int *n, double c[], double l[], double u[], int point[],
   const BoolDeque& max_sense
     = ncsudirectInstance->iteratedModel.primary_response_fn_sense();
   bool max_flag = (!max_sense.empty() && max_sense[0]);
+
+//PDH: double * to RealVector
+//     Note that there's some re-scaling going on here because the
+//     DIRECT internal function that does it is bypassed.
+//     Also, c (and u and l) contains multiple points to be
+//     evaluated.  NOMAD can also do this, though the wrapper doesn't
+//     currently take advantage of it.  It should in future
+//     iterations.
 
   // loop over trial points, lift internal DIRECT scaling (mimics
   // DIRinfcn in DIRsubrout.f), and either submit for asynch
@@ -273,6 +284,11 @@ void NCSUOptimizer::core_run()
   double* ddata = NULL;
   char*   cdata = NULL;
 
+//PDH: RealVector to double *
+//     copy_data and .values() already used here.
+//     do something to make it consistent with other wrappers using
+//     new transfers/adapters.
+
   // Here local_des_vars is in the space of the original model
   RealVector local_des_vars;
   if (setUpType == SETUP_MODEL) {
@@ -285,8 +301,10 @@ void NCSUOptimizer::core_run()
   else
     local_des_vars.size(num_cv);
 
+  int max_iter = maxIterations;
+  int max_eval = maxFunctionEvals;
   NCSU_DIRECT_F77(objective_eval, local_des_vars.values(), num_cv, eps,
-		  maxFunctionEvals, maxIterations, fmin, lowerBounds.values(),
+		  max_eval, max_iter, fmin, lowerBounds.values(),
 		  upperBounds.values(), algmethod, ierror, logfile,
 		  solutionTarget, fglper, volper, sigmaper, idata, isize,
 		  ddata, dsize, cdata, csize, quiet_flag);
@@ -345,6 +363,9 @@ void NCSUOptimizer::core_run()
     Cout << std::endl;
   }
 
+//PDH: Pretty clean due to use of .values() above, but do something to
+//make this consistent with other wrappers using new transfers/adapters.
+
   // Set best variables and response for use by strategy level.
   // local_des_vars, fmin contain the optimal design 
   bestVariablesArray.front().continuous_variables(local_des_vars);
@@ -360,4 +381,14 @@ void NCSUOptimizer::core_run()
   ncsudirectInstance = prev_instance;
 }
 
+// This override exists purely to prevent an optimizer/minimizer from declaring sources 
+// when it's being used to evaluate a user-defined function (e.g. finding the correlation
+// lengths of Dakota's GP). 
+void NCSUOptimizer::declare_sources() {
+  if(setUpType == SETUP_USERFUNC) 
+    return;
+  else
+    Iterator::declare_sources();
+}
+    
 } // namespace Dakota

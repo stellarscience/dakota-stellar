@@ -1,0 +1,1583 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{f541df2b-ed07-44db-892b-25886d6c30a6}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="src\Convergers">
+      <UniqueIdentifier>{f2c39ccd-3aa1-4bb9-9fd3-f4a85b3d665b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Crossers">
+      <UniqueIdentifier>{ae86ca77-eeed-4630-875a-8a88bdc7d158}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Evaluators">
+      <UniqueIdentifier>{2d703b92-fe82-4343-a697-2e5b18063a76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\FitnessAssessors">
+      <UniqueIdentifier>{8569a862-74c0-4ed6-b49e-c69a58d96761}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Initializers">
+      <UniqueIdentifier>{5d840f94-a830-4b0a-b7b7-5e0d9fb7ce5b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\MainLoops">
+      <UniqueIdentifier>{5d381226-37c2-4f58-bf3f-c7d8fe07b379}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Mutators">
+      <UniqueIdentifier>{338696a1-c1da-44a8-9c57-7d22345102ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\OperatorGroups">
+      <UniqueIdentifier>{70c41cda-5ac7-4f26-a64b-86b20860e0ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Selectors">
+      <UniqueIdentifier>{c365e746-a4b2-4132-b37a-677439174631}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\NichePressureApplicators">
+      <UniqueIdentifier>{8e406e51-f804-4660-aabb-fb3f7550c28b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\PostProcessors">
+      <UniqueIdentifier>{5be78e28-211b-4154-bcb3-e3d8f734d450}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{20ad9e63-bc3c-4ae5-9eb6-f6e7c445baa0}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="include\Convergers">
+      <UniqueIdentifier>{6a547505-6f6b-4dcf-8fdf-0dde581a3315}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Convergers\inline">
+      <UniqueIdentifier>{67f02219-8932-44b4-9053-9e076195663e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Crossers">
+      <UniqueIdentifier>{bd75644b-7ee5-4b2d-8e3f-311bd23082df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Crossers\inline">
+      <UniqueIdentifier>{1a1a549a-b623-4882-ab0c-98a4c119be64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Evaluators">
+      <UniqueIdentifier>{9aed9bf1-6c8f-4f62-9286-df832fe7b33f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Evaluators\inline">
+      <UniqueIdentifier>{4625c02a-b504-40c3-99b9-e27883bc960b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\FitnessAssessors">
+      <UniqueIdentifier>{d152fcd2-72db-4a4d-86d4-4e2aaba89a88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\FitnessAssessors\inline">
+      <UniqueIdentifier>{76a86c7f-afb5-40aa-84e4-16e24bdf5312}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Initializers">
+      <UniqueIdentifier>{63872878-e6ba-4bc6-a373-b6a2cdf4e1a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Initializers\inline">
+      <UniqueIdentifier>{50bb1f60-56ba-4722-935c-70a46d1c134b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\MainLoops">
+      <UniqueIdentifier>{d526878e-fc5a-4183-86c8-372e74f17b75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\MainLoops\inline">
+      <UniqueIdentifier>{1eaad591-fb73-432c-9741-b64c62f12914}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Mutators">
+      <UniqueIdentifier>{8fbf4c4a-3114-4121-af9a-3edbedafcdd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Mutators\inline">
+      <UniqueIdentifier>{1f68301d-8f00-46c6-b4ee-cb386fc15b6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\OperatorGroups">
+      <UniqueIdentifier>{aa3abf66-db8f-47fe-9329-288bdc732435}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\OperatorGroups\inline">
+      <UniqueIdentifier>{d21a2380-6aca-4c76-b903-18ab951e0c86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Selectors">
+      <UniqueIdentifier>{bbb63614-e9e2-4bb1-8b26-753b7cc7e4a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\Selectors\inline">
+      <UniqueIdentifier>{e282da10-90e7-4fa8-b888-8c662a4d47f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\inline">
+      <UniqueIdentifier>{03969c01-4a5a-4539-a58b-9be481c5bc6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\NichePressureApplicators">
+      <UniqueIdentifier>{7d5148eb-e597-4e40-8639-60d3e6b4781a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\NichePressureApplicators\inline">
+      <UniqueIdentifier>{6cc6bb36-7689-4859-85e5-c057ba07e444}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\PostProcessors">
+      <UniqueIdentifier>{c6d2b142-47c7-4b7f-81d6-30017decb8dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\PostProcessors\inline">
+      <UniqueIdentifier>{b139f73b-a53d-453c-87d9-72c2452bc143}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA">
+      <UniqueIdentifier>{0b98b7a3-6cc1-488d-b952-87e8b133878a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\src">
+      <UniqueIdentifier>{27b949c1-a918-4a09-9b0f-dfe574c44c19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\src\Convergers">
+      <UniqueIdentifier>{102a2fa6-99bf-4268-a41a-3fae7a67eef8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\src\FitnessAssessors">
+      <UniqueIdentifier>{42f30fe9-5342-4808-af07-686c3cc3d72c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\src\OperatorGroups">
+      <UniqueIdentifier>{b91dc217-d3e2-40a7-a349-fd522f1bd96b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\src\NichePressureApplicators">
+      <UniqueIdentifier>{dba373eb-ad93-4798-a16d-031c041ed37d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\src\PostProcessors">
+      <UniqueIdentifier>{d50daf67-b2de-47af-8703-3b7e22d3bf53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include">
+      <UniqueIdentifier>{2b2522c3-e669-49ab-83f7-65de6e0c7f89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\inline">
+      <UniqueIdentifier>{c422cf32-cd25-4573-964d-af3f8bc80738}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\Convergers">
+      <UniqueIdentifier>{5a36052e-8cc8-4f7e-8869-339f351e2f37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\Convergers\inline">
+      <UniqueIdentifier>{829a27bd-12cd-4a90-9da7-a2be76cc557f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\FitnessAssessors">
+      <UniqueIdentifier>{5549590e-95ed-4b40-aa2b-27c74c89a2b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\FitnessAssessors\inline">
+      <UniqueIdentifier>{c01bc821-c3e4-4d54-8746-237af1470ae2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\OperatorGroups">
+      <UniqueIdentifier>{be28cd44-d54d-4981-9f8d-5f0f39b6b075}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\OperatorGroups\inline">
+      <UniqueIdentifier>{c7e0246d-f963-421b-a73f-38760f51335c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\NichePressureApplicators">
+      <UniqueIdentifier>{a97f0e72-12e7-4ef0-9430-3bee1f216f6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\NichePressureApplicators\inline">
+      <UniqueIdentifier>{6cb33c14-c96d-4e33-bae6-cd8903ff049f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\PostProcessors">
+      <UniqueIdentifier>{b8a4bd51-2c73-4800-9f01-5241592b9d42}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MOGA\include\PostProcessors\inline">
+      <UniqueIdentifier>{26184667-a6c3-4701-a49d-e839eea770c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA">
+      <UniqueIdentifier>{01e7d9ca-213f-481e-bb3a-45c5cc7a04a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\src">
+      <UniqueIdentifier>{e1230f88-4cd7-4b39-8a9c-97aab1bb93a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\src\FitnessAssessors">
+      <UniqueIdentifier>{251f2471-1ae6-499e-8382-74a245012709}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\src\OperatorGroups">
+      <UniqueIdentifier>{6e5acbe8-383a-4ecc-a3e4-e9a2023bbd67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\src\Selectors">
+      <UniqueIdentifier>{13b0cc0e-f2b4-47ec-90b6-499ecbb2a9d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include">
+      <UniqueIdentifier>{a380bc1d-417a-4273-80da-dc2270a5fa97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include\inline">
+      <UniqueIdentifier>{fb214999-8456-41a8-a07c-24cf8d5133c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include\FitnessAssessors">
+      <UniqueIdentifier>{fb54b6ca-79e4-4dab-bb77-0ebe8d97cb09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include\FitnessAssessors\inline">
+      <UniqueIdentifier>{4fc2433d-03d7-4048-9e83-6af47522d894}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include\OperatorGroups">
+      <UniqueIdentifier>{d20fdae9-b60b-4e14-b396-175e1c963f16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include\OperatorGroups\inline">
+      <UniqueIdentifier>{441b0fb6-d16f-47bd-9be7-eb175e3e45c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include\Selectors">
+      <UniqueIdentifier>{7020d3ac-3592-4930-ae0f-a5ca4752e564}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOGA\include\Selectors\inline">
+      <UniqueIdentifier>{d1c87221-27dd-4ef2-a15a-cb1ffee2a341}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs">
+      <UniqueIdentifier>{ee26b57e-ec01-46c1-8398-a47b4c413eae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users">
+      <UniqueIdentifier>{11b9dd0b-5192-4b6d-8a85-5f76ed67e7a4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\abstract">
+      <UniqueIdentifier>{db1e874e-ee63-4932-b1a5-cb4964b5c188}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\acknowledgements">
+      <UniqueIdentifier>{5c9894ae-81df-4278-b95b-2344df088eda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\appendices">
+      <UniqueIdentifier>{824363d7-aa64-49a2-b483-c8a8e37beec3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\bibliography">
+      <UniqueIdentifier>{cad4ee0e-965e-4272-8952-8d6838849e75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_background">
+      <UniqueIdentifier>{27faa521-7837-4f27-99a2-f2f1797fcb9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_capabilities">
+      <UniqueIdentifier>{548e4b97-a4d3-4ef6-8398-a2b4b5248ab4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_configuration">
+      <UniqueIdentifier>{07d9f920-7a93-48c8-b8ef-56d7c49287b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_examples">
+      <UniqueIdentifier>{4ab9d21d-24ed-45b9-8255-127e2835cdc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_features">
+      <UniqueIdentifier>{9a0dfcc3-e2c3-4c80-933d-4b7e7683dc08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_getting_started">
+      <UniqueIdentifier>{7044befe-0229-4f32-ac06-f66b47f0ad59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_introduction">
+      <UniqueIdentifier>{5e20a6bc-1060-4354-8942-b685c6689e6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_operators">
+      <UniqueIdentifier>{76e5b39c-9165-4e9d-959a-6b4534522d28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\ch_output">
+      <UniqueIdentifier>{579d9271-852e-4023-baae-1fbbe02101bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs\users\main">
+      <UniqueIdentifier>{e035660f-ad9c-4a99-a1a6-cba396c05bed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd">
+      <UniqueIdentifier>{6f327961-569d-42a5-ace1-7eff41423c91}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\Core">
+      <UniqueIdentifier>{c703456d-5aae-4a3c-b4ab-c2b152f7ddfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\Core\include">
+      <UniqueIdentifier>{d9d9b470-e7d4-48e7-b60b-3498e93a2067}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\Core\include\inline">
+      <UniqueIdentifier>{f5cad879-34e1-4cba-9d7b-46cd20676f80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\Core\src">
+      <UniqueIdentifier>{5fdf3a4a-850b-4068-989d-a0c90aa1aecd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\ConfigFile">
+      <UniqueIdentifier>{1b5b8401-2a1f-42d4-9d87-bc17da98208c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\ConfigFile\include">
+      <UniqueIdentifier>{9e683dcc-3a52-419a-91f8-1f74bc6b45d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\ConfigFile\include\inline">
+      <UniqueIdentifier>{bc79dee9-c02a-44cf-9b57-0d2370bf660d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FrontEnd\ConfigFile\src">
+      <UniqueIdentifier>{ada47036-d048-4a1e-900d-64d3738a8a3d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{6dc86e36-d5e7-4fec-b15a-27c7c33dcac9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities\src">
+      <UniqueIdentifier>{de1aa76e-85b9-4f10-843f-6567ff81bd78}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities\include">
+      <UniqueIdentifier>{bd4b6ddd-dfc4-4b6a-8b21-a5bab0712022}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities\include\inline">
+      <UniqueIdentifier>{5f3d0c26-a941-4694-987f-58aef9a8633f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\BitManipulator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\FitnessRecord.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmConverger.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmCrosser.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmEvaluator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmFitnessAssessor.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmInitializer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmMainLoop.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmMutator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmNichePressureApplicator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmOperator.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmOperatorGroup.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmOperatorSet.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmPostProcessor.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GeneticAlgorithmSelector.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MetricTracker.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\AverageFitnessTrackerConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\BestFitnessTrackerConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\MaxGenEvalConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\MaximumEvaluationConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\MaximumGenerationConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\MetricTrackerConvergerBase.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\NullConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Crossers\NPointBinaryCrosser.cpp">
+      <Filter>src\Crossers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Crossers\NPointCrosserBase.cpp">
+      <Filter>src\Crossers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Crossers\NPointParameterizedBinaryCrosser.cpp">
+      <Filter>src\Crossers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Crossers\NPointRealCrosser.cpp">
+      <Filter>src\Crossers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Crossers\NullCrosser.cpp">
+      <Filter>src\Crossers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Crossers\RandomDesignVariableCrosser.cpp">
+      <Filter>src\Crossers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Evaluators\ExternalEvaluator.cpp">
+      <Filter>src\Evaluators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Evaluators\NullEvaluator.cpp">
+      <Filter>src\Evaluators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Evaluators\SimpleFunctorEvaluator.cpp">
+      <Filter>src\Evaluators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\FitnessAssessors\NullFitnessAssessor.cpp">
+      <Filter>src\FitnessAssessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Initializers\DoubleMatrixInitializer.cpp">
+      <Filter>src\Initializers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Initializers\FlatFileInitializer.cpp">
+      <Filter>src\Initializers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Initializers\NullInitializer.cpp">
+      <Filter>src\Initializers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Initializers\RandomInitializer.cpp">
+      <Filter>src\Initializers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Initializers\RandomUniqueInitializer.cpp">
+      <Filter>src\Initializers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MainLoops\DuplicateRemovingMainLoop.cpp">
+      <Filter>src\MainLoops</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MainLoops\NullMainLoop.cpp">
+      <Filter>src\MainLoops</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\MainLoops\StandardMainLoop.cpp">
+      <Filter>src\MainLoops</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\CauchyOffsetMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\GaussianOffsetMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\LocalDesignVariableMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\NullMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\OffsetMutatorBase.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\RandomBitMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\RandomDesignVariableMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\UniformOffsetMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\OperatorGroups\AllOperators.cpp">
+      <Filter>src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\OperatorGroups\DuplicateFreeOperatorGroup.cpp">
+      <Filter>src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\OperatorGroups\NullOperatorGroup.cpp">
+      <Filter>src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\OperatorGroups\StandardOperatorGroup.cpp">
+      <Filter>src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Selectors\BelowLimitSelector.cpp">
+      <Filter>src\Selectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Selectors\ElitistSelector.cpp">
+      <Filter>src\Selectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Selectors\NonDuplicatingRouletteWheelSelector.cpp">
+      <Filter>src\Selectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Selectors\NullSelector.cpp">
+      <Filter>src\Selectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Selectors\RouletteWheelSelector.cpp">
+      <Filter>src\Selectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\NichePressureApplicators\NullNichePressureApplicator.cpp">
+      <Filter>src\NichePressureApplicators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\PostProcessors\NullPostProcessor.cpp">
+      <Filter>src\PostProcessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\MOGA.cpp">
+      <Filter>MOGA\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\Convergers\MOGAConverger.cpp">
+      <Filter>MOGA\src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\FitnessAssessors\DominationCountFitnessAssessor.cpp">
+      <Filter>MOGA\src\FitnessAssessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\FitnessAssessors\LayerFitnessAssessor.cpp">
+      <Filter>MOGA\src\FitnessAssessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\OperatorGroups\DominationCountOperatorGroup.cpp">
+      <Filter>MOGA\src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\OperatorGroups\MOGAOperatorGroup.cpp">
+      <Filter>MOGA\src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\DistanceNichePressureApplicator.cpp">
+      <Filter>MOGA\src\NichePressureApplicators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\MaxDesignsNichePressureApplicator.cpp">
+      <Filter>MOGA\src\NichePressureApplicators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\RadialNichePressureApplicator.cpp">
+      <Filter>MOGA\src\NichePressureApplicators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\PostProcessors\DistanceNichingPostProcessor.cpp">
+      <Filter>MOGA\src\PostProcessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SOGA\src\SOGA.cpp">
+      <Filter>SOGA\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SOGA\src\FitnessAssessors\ExteriorPenaltyFitnessAssessor.cpp">
+      <Filter>SOGA\src\FitnessAssessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SOGA\src\FitnessAssessors\PenaltyFitnessAssessorBase.cpp">
+      <Filter>SOGA\src\FitnessAssessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SOGA\src\FitnessAssessors\WeightedSumOnlyFitnessAssessor.cpp">
+      <Filter>SOGA\src\FitnessAssessors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SOGA\src\OperatorGroups\FavorFeasibleOperatorGroup.cpp">
+      <Filter>SOGA\src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SOGA\src\OperatorGroups\SOGAOperatorGroup.cpp">
+      <Filter>SOGA\src\OperatorGroups</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SOGA\src\Selectors\FavorFeasibleSelector.cpp">
+      <Filter>SOGA\src\Selectors</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\core\src\AlgorithmConfig.cpp">
+      <Filter>FrontEnd\Core\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\core\src\ConfigHelper.cpp">
+      <Filter>FrontEnd\Core\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\core\src\Driver.cpp">
+      <Filter>FrontEnd\Core\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\core\src\ProblemConfig.cpp">
+      <Filter>FrontEnd\Core\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\core\src\SimpleFunctorEvaluatorCreator.cpp">
+      <Filter>FrontEnd\Core\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\FrontEnd\ConfigFile\src\ConfigFileFrontEndApp.cpp">
+      <Filter>FrontEnd\ConfigFile\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\BasicParameterDatabaseImpl.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\BooleanDesignVariableType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ConstraintInfo.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ConstraintNatureBase.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ConstraintTypeBase.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ContinuumDesignVariableNature.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\Design.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignFileReader.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignGroup.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignGroupVector.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignStatistician.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignTarget.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignVariableInfo.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignVariableNatureBase.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DesignVariableTypeBase.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\DiscreteDesignVariableNature.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\EqualityConstraintType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\InequalityConstraintType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\InfoBase.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\IntegerDesignVariableType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\LinearConstraintNature.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\LinearObjectiveFunctionNature.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\Logging.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\MaximizeObjectiveFunctionType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\MessageBoard.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\MinimizeObjectiveFunctionType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\MultiObjectiveStatistician.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\NonLinearConstraintNature.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\NonLinearObjectiveFunctionNature.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\NotEqualityConstraintType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ObjectiveFunctionInfo.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ObjectiveFunctionNatureBase.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ObjectiveFunctionTypeBase.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\ParameterExtractor.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\RealDesignVariableType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\RegionOfSpace.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\SeekRangeObjectiveFunctionType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\SeekValueObjectiveFunctionType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\SingleObjectiveStatistician.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\TwoSidedInequalityConstraintType.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\UnconstrainedStatistician.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\MaxGenEvalTimeConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Convergers\MaximumWallClockTimeConverger.cpp">
+      <Filter>src\Convergers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Utilities\src\LRUDesignCache.cpp">
+      <Filter>Utilities\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\SpaceFillingNicher.cpp">
+      <Filter>MOGA\src\NichePressureApplicators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Initializers\SMOInitializer.cpp">
+      <Filter>src\Initializers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Mutators\SMOMutator.cpp">
+      <Filter>src\Mutators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Crossers\SMOCrosser.cpp">
+      <Filter>src\Crossers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MOGA\src\NichePressureApplicators\RandomNichePressureApplicator.cpp">
+      <Filter>MOGA\src\NichePressureApplicators</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\Makefile.am">
+      <Filter>src</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\AverageFitnessTrackerConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\BestFitnessTrackerConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\MaxGenEvalConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\MaximumEvaluationConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\MaximumGenerationConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\MetricTrackerConvergerBase.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\NullConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Crossers\inline\NPointBinaryCrosser.hpp.inl">
+      <Filter>include\Crossers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Crossers\inline\NPointCrosserBase.hpp.inl">
+      <Filter>include\Crossers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Crossers\inline\NPointParameterizedBinaryCrosser.hpp.inl">
+      <Filter>include\Crossers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Crossers\inline\NPointRealCrosser.hpp.inl">
+      <Filter>include\Crossers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Crossers\inline\NullCrosser.hpp.inl">
+      <Filter>include\Crossers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Crossers\inline\RandomDesignVariableCrosser.hpp.inl">
+      <Filter>include\Crossers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Evaluators\inline\ExternalEvaluator.hpp.inl">
+      <Filter>include\Evaluators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Evaluators\inline\NullEvaluator.hpp.inl">
+      <Filter>include\Evaluators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Evaluators\inline\SimpleFunctorEvaluator.hpp.inl">
+      <Filter>include\Evaluators\inline</Filter>
+    </None>
+    <None Include="..\..\include\FitnessAssessors\inline\NullFitnessAssessor.hpp.inl">
+      <Filter>include\FitnessAssessors\inline</Filter>
+    </None>
+    <None Include="..\..\include\Initializers\inline\DoubleMatrixInitializer.hpp.inl">
+      <Filter>include\Initializers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Initializers\inline\FlatFileInitializer.hpp.inl">
+      <Filter>include\Initializers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Initializers\inline\NullInitializer.hpp.inl">
+      <Filter>include\Initializers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Initializers\inline\RandomInitializer.hpp.inl">
+      <Filter>include\Initializers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Initializers\inline\RandomUniqueInitializer.hpp.inl">
+      <Filter>include\Initializers\inline</Filter>
+    </None>
+    <None Include="..\..\include\MainLoops\inline\DuplicateRemovingMainLoop.hpp.inl">
+      <Filter>include\MainLoops\inline</Filter>
+    </None>
+    <None Include="..\..\include\MainLoops\inline\NullMainLoop.hpp.inl">
+      <Filter>include\MainLoops\inline</Filter>
+    </None>
+    <None Include="..\..\include\MainLoops\inline\StandardMainLoop.hpp.inl">
+      <Filter>include\MainLoops\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\CauchyOffsetMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\GaussianOffsetMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\LocalDesignVariableMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\NullMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\OffsetMutatorBase.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\RandomBitMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\RandomDesignVariableMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\UniformOffsetMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\OperatorGroups\inline\AllOperators.hpp.inl">
+      <Filter>include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\include\OperatorGroups\inline\DuplicateFreeOperatorGroup.hpp.inl">
+      <Filter>include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\include\OperatorGroups\inline\NullOperatorGroup.hpp.inl">
+      <Filter>include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\include\OperatorGroups\inline\StandardOperatorGroup.hpp.inl">
+      <Filter>include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\include\Selectors\inline\BelowLimitSelector.hpp.inl">
+      <Filter>include\Selectors\inline</Filter>
+    </None>
+    <None Include="..\..\include\Selectors\inline\ElitistSelector.hpp.inl">
+      <Filter>include\Selectors\inline</Filter>
+    </None>
+    <None Include="..\..\include\Selectors\inline\NonDuplicatingRouletteWheelSelector.hpp.inl">
+      <Filter>include\Selectors\inline</Filter>
+    </None>
+    <None Include="..\..\include\Selectors\inline\NullSelector.hpp.inl">
+      <Filter>include\Selectors\inline</Filter>
+    </None>
+    <None Include="..\..\include\Selectors\inline\RouletteWheelSelector.hpp.inl">
+      <Filter>include\Selectors\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\BitManipulator.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\FitnessRecord.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithm.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmConverger.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmCrosser.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmEvaluator.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmFitnessAssessor.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmInitializer.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmInjector.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmMainLoop.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmMutator.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmNichePressureApplicator.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmOperator.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmOperatorGroup.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmOperatorSet.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmPostProcessor.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\GeneticAlgorithmSelector.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\inline\MetricTracker.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\..\include\NichePressureApplicators\inline\NullNichePressureApplicator.hpp.inl">
+      <Filter>include\NichePressureApplicators\inline</Filter>
+    </None>
+    <None Include="..\..\include\PostProcessors\inline\NullPostProcessor.hpp.inl">
+      <Filter>include\PostProcessors\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\src\Makefile.in">
+      <Filter>MOGA\src</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\inline\MOGA.hpp.inl">
+      <Filter>MOGA\include\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\Convergers\inline\MOGAConverger.hpp.inl">
+      <Filter>MOGA\include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\FitnessAssessors\inline\DominationCountFitnessAssessor.hpp.inl">
+      <Filter>MOGA\include\FitnessAssessors\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\FitnessAssessors\inline\LayerFitnessAssessor.hpp.inl">
+      <Filter>MOGA\include\FitnessAssessors\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\OperatorGroups\inline\DominationCountOperatorGroup.hpp.inl">
+      <Filter>MOGA\include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\OperatorGroups\inline\MOGAOperatorGroup.hpp.inl">
+      <Filter>MOGA\include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\DistanceNichePressureApplicator.hpp.inl">
+      <Filter>MOGA\include\NichePressureApplicators\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\MaxDesignsNichePressureApplicator.hpp.inl">
+      <Filter>MOGA\include\NichePressureApplicators\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\RadialNichePressureApplicator.hpp.inl">
+      <Filter>MOGA\include\NichePressureApplicators\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\PostProcessors\inline\DistanceNichingPostProcessor.hpp.inl">
+      <Filter>MOGA\include\PostProcessors\inline</Filter>
+    </None>
+    <None Include="..\..\SOGA\Makefile.am">
+      <Filter>SOGA</Filter>
+    </None>
+    <None Include="..\..\SOGA\include\inline\SOGA.hpp.inl">
+      <Filter>SOGA\include\inline</Filter>
+    </None>
+    <None Include="..\..\SOGA\include\FitnessAssessors\inline\ExteriorPenaltyFitnessAssessor.hpp.inl">
+      <Filter>SOGA\include\FitnessAssessors\inline</Filter>
+    </None>
+    <None Include="..\..\SOGA\include\FitnessAssessors\inline\PenaltyFitnessAssessorBase.hpp.inl">
+      <Filter>SOGA\include\FitnessAssessors\inline</Filter>
+    </None>
+    <None Include="..\..\SOGA\include\FitnessAssessors\inline\WeightedSumOnlyFitnessAssessor.hpp.inl">
+      <Filter>SOGA\include\FitnessAssessors\inline</Filter>
+    </None>
+    <None Include="..\..\SOGA\include\OperatorGroups\inline\FavorFeasibleOperatorGroup.hpp.inl">
+      <Filter>SOGA\include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\SOGA\include\OperatorGroups\inline\SOGAOperatorGroup.hpp.inl">
+      <Filter>SOGA\include\OperatorGroups\inline</Filter>
+    </None>
+    <None Include="..\..\SOGA\include\Selectors\inline\FavorFeasibleSelector.hpp.inl">
+      <Filter>SOGA\include\Selectors\inline</Filter>
+    </None>
+    <None Include="..\..\docs\Changes.dox">
+      <Filter>docs</Filter>
+    </None>
+    <None Include="..\..\docs\Doxyfile-changes">
+      <Filter>docs</Filter>
+    </None>
+    <None Include="..\..\docs\Doxyfile-jega">
+      <Filter>docs</Filter>
+    </None>
+    <None Include="..\..\docs\JEGA.dox">
+      <Filter>docs</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\Makefile.am">
+      <Filter>FrontEnd</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\Core\Makefile.am">
+      <Filter>FrontEnd\Core</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\core\include\inline\AlgorithmConfig.hpp.inl">
+      <Filter>FrontEnd\Core\include\inline</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\core\include\inline\ConfigHelper.hpp.inl">
+      <Filter>FrontEnd\Core\include\inline</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\core\include\inline\Driver.hpp.inl">
+      <Filter>FrontEnd\Core\include\inline</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\core\include\inline\ProblemConfig.hpp.inl">
+      <Filter>FrontEnd\Core\include\inline</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\core\include\inline\SimpleFunctorEvaluatorCreator.hpp.inl">
+      <Filter>FrontEnd\Core\include\inline</Filter>
+    </None>
+    <None Include="..\..\FrontEnd\ConfigFile\include\inline\ConfigFileFrontEndApp.hpp.inl">
+      <Filter>FrontEnd\ConfigFile\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\Makefile.am">
+      <Filter>Utilities</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\BasicParameterDatabaseImpl.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\BooleanDesignVariableType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ConstraintInfo.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ConstraintNatureBase.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ConstraintTypeBase.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ContinuumDesignVariableNature.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\Design.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignDoubleValueMap.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignFileReader.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignGroup.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignGroupVector.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignModel.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignMultiSet.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignStatistician.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignTarget.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignValueMap.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignVariableInfo.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignVariableNatureBase.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DesignVariableTypeBase.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\DiscreteDesignVariableNature.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\EqualityConstraintType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\InequalityConstraintType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\InfoBase.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\IntegerDesignVariableType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\LinearConstraintNature.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\LinearObjectiveFunctionNature.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\MaximizeObjectiveFunctionType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\MessageBoard.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\MinimizeObjectiveFunctionType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\MultiObjectiveStatistician.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\NonLinearConstraintNature.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\NonLinearObjectiveFunctionNature.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\NotEqualityConstraintType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ObjectiveFunctionInfo.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ObjectiveFunctionNatureBase.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ObjectiveFunctionTypeBase.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\ParameterExtractor.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\RealDesignVariableType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\RegionOfSpace.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\SeekRangeObjectiveFunctionType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\SeekValueObjectiveFunctionType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\SingleObjectiveStatistician.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\TwoSidedInequalityConstraintType.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\UnconstrainedStatistician.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\WeightedSumMap.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\configure.ac" />
+    <None Include="..\..\FGENFILE" />
+    <None Include="..\..\LICENSE" />
+    <None Include="..\..\Makefile.am" />
+    <None Include="..\..\include\Convergers\inline\MaxGenEvalTimeConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Convergers\inline\MaximumWallClockTimeConverger.hpp.inl">
+      <Filter>include\Convergers\inline</Filter>
+    </None>
+    <None Include="..\..\Utilities\include\inline\LRUDesignCache.hpp.inl">
+      <Filter>Utilities\include\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\SpaceFillingNicher.hpp.inl">
+      <Filter>MOGA\include\NichePressureApplicators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Initializers\inline\SMOInitializer.hpp.inl">
+      <Filter>include\Initializers\inline</Filter>
+    </None>
+    <None Include="..\..\include\Mutators\inline\SMOMutator.hpp.inl">
+      <Filter>include\Mutators\inline</Filter>
+    </None>
+    <None Include="..\..\include\Crossers\inline\SMOCrosser.hpp.inl">
+      <Filter>include\Crossers\inline</Filter>
+    </None>
+    <None Include="..\..\MOGA\include\NichePressureApplicators\inline\RandomNichePressureApplicator.hpp.inl">
+      <Filter>MOGA\include\NichePressureApplicators\inline</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\BitManipulator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\FitnessRecord.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithm.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmConverger.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmCrosser.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmEvaluator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmFitnessAssessor.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmInitializer.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmMainLoop.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmMutator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmNichePressureApplicator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmOperator.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmOperatorGroup.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmOperatorSet.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmPostProcessor.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\GeneticAlgorithmSelector.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\MetricTracker.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\AverageFitnessTrackerConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\BestFitnessTrackerConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\MaxGenEvalConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\MaximumEvaluationConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\MaximumGenerationConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\MetricTrackerConvergerBase.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\NullConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Crossers\NPointBinaryCrosser.hpp">
+      <Filter>include\Crossers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Crossers\NPointCrosserBase.hpp">
+      <Filter>include\Crossers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Crossers\NPointParameterizedBinaryCrosser.hpp">
+      <Filter>include\Crossers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Crossers\NPointRealCrosser.hpp">
+      <Filter>include\Crossers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Crossers\NullCrosser.hpp">
+      <Filter>include\Crossers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Crossers\RandomDesignVariableCrosser.hpp">
+      <Filter>include\Crossers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Evaluators\ExternalEvaluator.hpp">
+      <Filter>include\Evaluators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Evaluators\NullEvaluator.hpp">
+      <Filter>include\Evaluators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Evaluators\SimpleFunctorEvaluator.hpp">
+      <Filter>include\Evaluators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\FitnessAssessors\NullFitnessAssessor.hpp">
+      <Filter>include\FitnessAssessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Initializers\DoubleMatrixInitializer.hpp">
+      <Filter>include\Initializers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Initializers\FlatFileInitializer.hpp">
+      <Filter>include\Initializers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Initializers\NullInitializer.hpp">
+      <Filter>include\Initializers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Initializers\RandomInitializer.hpp">
+      <Filter>include\Initializers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Initializers\RandomUniqueInitializer.hpp">
+      <Filter>include\Initializers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\MainLoops\DuplicateRemovingMainLoop.hpp">
+      <Filter>include\MainLoops</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\MainLoops\NullMainLoop.hpp">
+      <Filter>include\MainLoops</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\MainLoops\StandardMainLoop.hpp">
+      <Filter>include\MainLoops</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\CauchyOffsetMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\GaussianOffsetMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\LocalDesignVariableMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\NullMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\OffsetMutatorBase.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\RandomBitMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\RandomDesignVariableMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\UniformOffsetMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\OperatorGroups\AllOperators.hpp">
+      <Filter>include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\OperatorGroups\DuplicateFreeOperatorGroup.hpp">
+      <Filter>include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\OperatorGroups\NullOperatorGroup.hpp">
+      <Filter>include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\OperatorGroups\StandardOperatorGroup.hpp">
+      <Filter>include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Selectors\BelowLimitSelector.hpp">
+      <Filter>include\Selectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Selectors\ElitistSelector.hpp">
+      <Filter>include\Selectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Selectors\NonDuplicatingRouletteWheelSelector.hpp">
+      <Filter>include\Selectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Selectors\NullSelector.hpp">
+      <Filter>include\Selectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Selectors\RouletteWheelSelector.hpp">
+      <Filter>include\Selectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\NichePressureApplicators\NullNichePressureApplicator.hpp">
+      <Filter>include\NichePressureApplicators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\PostProcessors\NullPostProcessor.hpp">
+      <Filter>include\PostProcessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\MOGA.hpp">
+      <Filter>MOGA\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\Convergers\MOGAConverger.hpp">
+      <Filter>MOGA\include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\FitnessAssessors\DominationCountFitnessAssessor.hpp">
+      <Filter>MOGA\include\FitnessAssessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\FitnessAssessors\LayerFitnessAssessor.hpp">
+      <Filter>MOGA\include\FitnessAssessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\OperatorGroups\DominationCountOperatorGroup.hpp">
+      <Filter>MOGA\include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\OperatorGroups\MOGAOperatorGroup.hpp">
+      <Filter>MOGA\include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\DistanceNichePressureApplicator.hpp">
+      <Filter>MOGA\include\NichePressureApplicators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\MaxDesignsNichePressureApplicator.hpp">
+      <Filter>MOGA\include\NichePressureApplicators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\RadialNichePressureApplicator.hpp">
+      <Filter>MOGA\include\NichePressureApplicators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\PostProcessors\DistanceNichingPostProcessor.hpp">
+      <Filter>MOGA\include\PostProcessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SOGA\include\SOGA.hpp">
+      <Filter>SOGA\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SOGA\include\FitnessAssessors\ExteriorPenaltyFitnessAssessor.hpp">
+      <Filter>SOGA\include\FitnessAssessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SOGA\include\FitnessAssessors\PenaltyFitnessAssessorBase.hpp">
+      <Filter>SOGA\include\FitnessAssessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SOGA\include\FitnessAssessors\WeightedSumOnlyFitnessAssessor.hpp">
+      <Filter>SOGA\include\FitnessAssessors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SOGA\include\OperatorGroups\FavorFeasibleOperatorGroup.hpp">
+      <Filter>SOGA\include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SOGA\include\OperatorGroups\SOGAOperatorGroup.hpp">
+      <Filter>SOGA\include\OperatorGroups</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SOGA\include\Selectors\FavorFeasibleSelector.hpp">
+      <Filter>SOGA\include\Selectors</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\core\include\AlgorithmConfig.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\core\include\ConfigHelper.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\core\include\Driver.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\core\include\EvaluatorCreator.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\core\include\GenericEvaluatorCreator.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\Core\include\InjectorCreator.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\core\include\ProblemConfig.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\core\include\SimpleFunctorEvaluatorCreator.hpp">
+      <Filter>FrontEnd\Core\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\FrontEnd\ConfigFile\include\ConfigFileFrontEndApp.hpp">
+      <Filter>FrontEnd\ConfigFile\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\BasicParameterDatabaseImpl.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\BooleanDesignVariableType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ConstraintInfo.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ConstraintNatureBase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ConstraintTypeBase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ContinuumDesignVariableNature.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\Design.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignDoubleValueMap.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignFileReader.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignGroup.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignGroupVector.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignMultiSet.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignStatistician.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignTarget.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignValueMap.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignVariableInfo.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignVariableNatureBase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DesignVariableTypeBase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\DiscreteDesignVariableNature.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\EqualityConstraintType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\InequalityConstraintType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\InfoBase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\IntegerDesignVariableType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\JEGAConfig.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\JEGATypes.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\LinearConstraintNature.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\LinearObjectiveFunctionNature.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\Logging.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\MaximizeObjectiveFunctionType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\MessageBoard.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\MinimizeObjectiveFunctionType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\MultiObjectiveStatistician.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\NonLinearConstraintNature.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\NonLinearObjectiveFunctionNature.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\NotEqualityConstraintType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ObjectiveFunctionInfo.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ObjectiveFunctionNatureBase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ObjectiveFunctionTypeBase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ParameterDatabase.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\ParameterExtractor.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\RealDesignVariableType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\RegionOfSpace.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\SeekRangeObjectiveFunctionType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\SeekValueObjectiveFunctionType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\SingleObjectiveStatistician.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\TwoSidedInequalityConstraintType.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\UnconstrainedStatistician.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\WeightedSumMap.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\jega_config.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\MaxGenEvalTimeConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Convergers\MaximumWallClockTimeConverger.hpp">
+      <Filter>include\Convergers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Utilities\include\LRUDesignCache.hpp">
+      <Filter>Utilities\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\SpaceFillingNicher.hpp">
+      <Filter>MOGA\include\NichePressureApplicators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Initializers\SMOInitializer.hpp">
+      <Filter>include\Initializers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Mutators\SMOMutator.hpp">
+      <Filter>include\Mutators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\Crossers\SMOCrosser.hpp">
+      <Filter>include\Crossers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MOGA\include\NichePressureApplicators\RandomNichePressureApplicator.hpp">
+      <Filter>MOGA\include\NichePressureApplicators</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

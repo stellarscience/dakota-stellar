@@ -1,0 +1,16 @@
+diff --git a/src/stats/src/MetropolisHastingsSG.C b/src/stats/src/MetropolisHastingsSG.C
+index 8a0768c..00264ce 100644
+--- a/queso/src/stats/src/MetropolisHastingsSG.C
++++ b/queso/src/stats/src/MetropolisHastingsSG.C
+@@ -2034,7 +2034,10 @@ MetropolisHastingsSG<P_V, P_M>::adapt(unsigned int positionId,
+ 
+     // Transform to the space without boundaries.  This is the space
+     // where the proposal distribution is Gaussian
+-    if (this->m_optionsObj->m_tk == "logit_random_walk") {
++    if (this->m_optionsObj->m_tk == "logit_random_walk" ||
++	// BMA TODO: one time std::is_base_of check at construct time
++	// to alleviate Dakota-specific check
++	this->m_optionsObj->m_tk == "dakota_dipc_logit_tk") {
+       // Only do this when we don't use the Hessian (this may change in
+       // future, but transformToGaussianSpace() is only implemented in
+       // TransformedScaledCovMatrixTKGroup

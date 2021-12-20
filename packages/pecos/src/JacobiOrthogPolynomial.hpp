@@ -76,16 +76,8 @@ protected:
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
-  /// return alphaPoly
-  Real alpha_polynomial() const;
-  /// return betaPoly
-  Real beta_polynomial() const;
-  /// set betaPoly using the conversion betaPoly = alpha_stat - 1.
-  void alpha_stat(Real alpha);
-  /// set alphaPoly using the conversion alphaPoly = beta_stat - 1.
-  void beta_stat(Real beta);
-
-  /// override default definition (false) since Jacobi is parameterized
+  void pull_parameter(short dist_param, Real& param) const;
+  void push_parameter(short dist_param, Real  param);
   bool parameterized() const;
 
   Real length_scale() const;
@@ -110,7 +102,6 @@ inline JacobiOrthogPolynomial::JacobiOrthogPolynomial():
 { collocRule = GAUSS_JACOBI; }
 
 
-// TO DO
 inline JacobiOrthogPolynomial::
 JacobiOrthogPolynomial(Real alpha_stat, Real beta_stat):
   alphaPoly(beta_stat-1.), betaPoly(alpha_stat-1.) // inverted conventions
@@ -121,15 +112,24 @@ inline JacobiOrthogPolynomial::~JacobiOrthogPolynomial()
 { }
 
 
-inline Real JacobiOrthogPolynomial::alpha_polynomial() const
-{ return alphaPoly; }
+inline void JacobiOrthogPolynomial::
+pull_parameter(short dist_param, Real& param) const
+{
+  // return BE_ALPHA,BETA (unconverted)
+  switch (dist_param) {
+  case JACOBI_ALPHA: param = alphaPoly;      break;
+  case JACOBI_BETA:  param =  betaPoly;      break;
+  case BE_ALPHA:     param =  betaPoly + 1.; break; // beta poly to alpha stat
+  case BE_BETA:      param = alphaPoly + 1.; break; // alpha poly to beta stat
+  default:
+    PCerr << "Error: unsupported distribution parameter in JacobiOrthog"
+	  << "Polynomial::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
 
 
-inline Real JacobiOrthogPolynomial::beta_polynomial() const
-{ return betaPoly; }
-
-
-inline void JacobiOrthogPolynomial::alpha_stat(Real alpha)
+inline void JacobiOrthogPolynomial::push_parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -137,33 +137,36 @@ inline void JacobiOrthogPolynomial::alpha_stat(Real alpha)
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    betaPoly = alpha - 1.;
+    switch (dist_param) {
+    case JACOBI_ALPHA: alphaPoly = param;      break;
+    case JACOBI_BETA:   betaPoly = param;      break;
+    case BE_ALPHA:      betaPoly = param - 1.; break; // alpha stat to beta poly
+    case BE_BETA:      alphaPoly = param - 1.; break; // beta stat to alpha poly
+    }
   }
-  else {
-    parametricUpdate = false;
-    Real bp = alpha - 1.;
-    if (!real_compare(betaPoly, bp))
-      { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
-  }
-}
-
-
-inline void JacobiOrthogPolynomial::beta_stat(Real beta)
-{
-  // *_stat() routines are called for each approximation build from
-  // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  // Logic for first pass included for completeness, but should not be .
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
-    alphaPoly = beta - 1.;
-  }
-  else {
-    parametricUpdate = false;
-    Real ap = beta - 1.;
-    if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
-  }
+  else
+    switch (dist_param) {
+    case JACOBI_ALPHA:
+      if (real_compare(alphaPoly, param)) parametricUpdate = false;
+      else { alphaPoly = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    case JACOBI_BETA:
+      if (real_compare(betaPoly, param)) parametricUpdate = false;
+      else { betaPoly = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    case BE_ALPHA: {
+      Real bp = param - 1.; // alpha stat to beta poly
+      if (real_compare(betaPoly, bp)) parametricUpdate = false;
+      else { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
+      break;
+    }
+    case BE_BETA: {
+      Real ap = param - 1.; break; // beta stat to alpha poly
+      if (real_compare(alphaPoly, ap)) parametricUpdate = false;
+      else { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+      break;
+    }
+    }
 }
 
 

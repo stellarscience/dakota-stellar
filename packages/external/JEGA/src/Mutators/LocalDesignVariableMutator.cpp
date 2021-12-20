@@ -56,7 +56,7 @@ Includes
 // JEGAConfig.hpp should be the first include in all JEGA files.
 #include <../Utilities/include/JEGAConfig.hpp>
 
-#include <fstream>
+#include <sstream>
 #include <../Utilities/include/Logging.hpp>
 #include <../Utilities/include/DesignGroup.hpp>
 #include <../Utilities/include/DesignTarget.hpp>
@@ -123,6 +123,26 @@ AsT(
 }
 
 
+void
+remove_carriage_return(
+    std::string& line
+    )
+{
+    if(!line.empty() && (*line.rbegin() == '\r'))
+        line.erase(line.length() - 1);
+}
+
+template <typename StrmT>
+void
+mygetline(
+    StrmT& strm,
+    std::string& line
+    )
+{
+    std::getline(strm, line);
+    remove_carriage_return(line);
+}
+
 
 
 
@@ -188,9 +208,9 @@ LocalDesignVariableMutator::Description(
         "built specifically for technology management optimization and is "
         "aware of the concepts of variables, options, and suboptions.  It "
         "requires that the design space map be written without specific names "
-        "into a text file that can in turn be read.  The location of that "
-        "file must be provided via the parameters database as a string "
-        "argument named method.design_space_map."
+        "into a text string that can in turn be parsed.  That string must be "
+        "provided via the parameters database as a string argument named "
+        "method.design_space_map."
         );
     return ret;
 }
@@ -219,7 +239,7 @@ Subclass Visible Methods
 */
 void
 LocalDesignVariableMutator::ReadDesignSpaceFile(
-    const string& fileName
+    const string& spaceMap
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -233,50 +253,35 @@ LocalDesignVariableMutator::ReadDesignSpaceFile(
     // We need to identify and treat each section differently.  So, we will
     // read lines and identify the sections as we go.  Each time we come to a
     // new section, we will branch off and process it.
-    ifstream iFile(fileName.c_str());
-
-    // If we could not open the space map file, then we cannot continue.
-    JEGAIFLOG_CF_II_F(!iFile, this->GetLogger(), this,
-        text_entry(lfatal(), this->GetName() + ": The design space file \"" +
-            fileName + "\" was not found or could not be opened.")
-        )
-
-    this->ReadDesignSpaceFile(iFile, fileName);
-}
-
-void
-LocalDesignVariableMutator::ReadDesignSpaceFile(
-    istream& iFile,
-    const string& fileName
-    )
-{
-    EDDY_FUNC_DEBUGSCOPE
 
     // We can skip lines until we find a section.
     string line;
     line.reserve(1024);
 
-    while(!iFile.eof())
+    std::istringstream f(spaceMap);
+
+    while(!f.eof())
     {
-        getline(iFile, line);
+        mygetline(f, line);
+
         if(line == "Single Choice Option Space")
         {
             this->_roadmaps.push_back(roadmap());
 
             this->ReadSingleChoiceOptionSection(
-                iFile, this->_roadmaps.back(), fileName
+                f, this->_roadmaps.back()
                 );
         }
         else if(line == "Multiple Choice Option Space")
         {
             this->ReadMultipleChoiceOptionSection(
-                iFile, this->_roadmaps.back(), fileName
+                f, this->_roadmaps.back()
                 );
         }
         else if(line == "Variable Space")
         {
             this->ReadVariableSection(
-                iFile, this->_roadmaps.back(), fileName
+                f, this->_roadmaps.back()
                 );
         }
     }
@@ -285,8 +290,7 @@ LocalDesignVariableMutator::ReadDesignSpaceFile(
 void
 LocalDesignVariableMutator::ReadSingleChoiceOptionSection(
     istream& iFile,
-    roadmap& rm,
-    const string& fileName
+    roadmap& rm
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -297,12 +301,12 @@ LocalDesignVariableMutator::ReadSingleChoiceOptionSection(
 
     while(!iFile.eof())
     {
-        getline(iFile, line);
+        mygetline(iFile, line);
 
         if(!line.empty())
         {
             if(line[0] == 'O')
-                this->ReadSingleChoiceOptionData(iFile, line, rm, fileName);
+                this->ReadSingleChoiceOptionData(iFile, line, rm);
 
             else if(line[0] == '=') return;
         }
@@ -312,8 +316,7 @@ LocalDesignVariableMutator::ReadSingleChoiceOptionSection(
 void
 LocalDesignVariableMutator::ReadMultipleChoiceOptionSection(
     istream& iFile,
-    roadmap& rm,
-    const string& fileName
+    roadmap& rm
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -325,10 +328,10 @@ LocalDesignVariableMutator::ReadMultipleChoiceOptionSection(
     while(!iFile.eof())
     {
         if(line.empty() || line[0] != 'O')
-            getline(iFile, line);
+            mygetline(iFile, line);
 
         if(!line.empty() && line[0] == 'O')
-            this->ReadMultipleChoiceOptionData(iFile, line, rm, fileName);
+            this->ReadMultipleChoiceOptionData(iFile, line, rm);
 
         if(!line.empty() && line[0] == '=')
             return;
@@ -338,8 +341,7 @@ LocalDesignVariableMutator::ReadMultipleChoiceOptionSection(
 void
 LocalDesignVariableMutator::ReadVariableSection(
     istream& iFile,
-    roadmap& rm,
-    const string& fileName
+    roadmap& rm
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -351,10 +353,10 @@ LocalDesignVariableMutator::ReadVariableSection(
     while(!iFile.eof())
     {
         if(line.empty() || line[0] != 'V')
-            getline(iFile, line);
+            mygetline(iFile, line);
 
         if(!line.empty() && line[0] == 'V')
-            this->ReadVariableData(iFile, line, rm, fileName);
+            this->ReadVariableData(iFile, line, rm);
 
         if(!line.empty() && line[0] == '=')
             return;
@@ -401,15 +403,15 @@ LocalDesignVariableMutator::PerformMoveBy1Mutation(
     // extract the design variable information
     const DesignVariableInfoVector& dvis = target.GetDesignVariableInfos();
     const DesignVariableInfo& dvi = *dvis[dv];
-    const double currRep = des.GetVariableRep(dv);
+    const var_rep_t currRep = des.GetVariableRep(dv);
 
     const bool up =
 		(RandomNumberGenerator::RandomBoolean() &&
-         currRep < dvi.GetMaxDoubleRep()) ||
-         currRep <= dvi.GetMinDoubleRep();
+         currRep < dvi.GetMaxRep()) ||
+         currRep <= dvi.GetMinRep();
 
     des.SetVariableRep(
-        dv, dvi.GetNearestValidDoubleRep(currRep + (up ? 1 : -1))
+        dv, dvi.GetNearestValidRep(currRep + (up ? 1 : -1))
         );
 }
 
@@ -427,7 +429,7 @@ LocalDesignVariableMutator::PerformRandomReassignMutation(
     // extract the design variable information
     const DesignVariableInfoVector& dvis = target.GetDesignVariableInfos();
 
-    des.SetVariableRep(dv, dvis[dv]->GetRandomDoubleRep());
+    des.SetVariableRep(dv, dvis[dv]->GetRandomRep());
 }
 
 void
@@ -449,12 +451,12 @@ LocalDesignVariableMutator::PerformFullBlockChangeMutation(
     // if the chosen dv is higher than the hi Opt, then it is a variable.
     // If that is the case, then we use the variable map and not the
     // option suboption maps.
-    const bool dvIsVar = static_cast<int>(dv-pndv) > rm._hiOptVar;
+    const bool dvIsVar = this->DvIsVar(rm, dv-pndv);
 
     // perform the mutation.  In order to identify locally equal variables,
     // store the old rep.  To replace properly, store the new rep.
-    const double oldRep = des.GetVariableRep(dv);
-    const double newRep = this->GenerateNewRep(des, rm, dv, pndv);
+    const var_rep_t oldRep = des.GetVariableRep(dv);
+    const var_rep_t newRep = this->GenerateNewRep(des, rm, dv, pndv);
 
     // If we could not find a new value different from the old, don't bother
     // with the rest of this loop.
@@ -495,11 +497,11 @@ LocalDesignVariableMutator::PerformVerticalPairFullBlockChangeMutation(
     const size_t dv1 = vvec[ov1] + pndv;
     const size_t dv2 = vvec[ov2] + pndv;
 
-    const double oldRep1 = des.GetVariableRep(dv1);
-    const double newRep1 = this->GenerateNewRep(des, rm, dv1, pndv);
+    const var_rep_t oldRep1 = des.GetVariableRep(dv1);
+    const var_rep_t newRep1 = this->GenerateNewRep(des, rm, dv1, pndv);
 
-    const double oldRep2 = des.GetVariableRep(dv2);
-    const double newRep2 = this->GenerateNewRep(des, rm, dv2, pndv);
+    const var_rep_t oldRep2 = des.GetVariableRep(dv2);
+    const var_rep_t newRep2 = this->GenerateNewRep(des, rm, dv2, pndv);
 
     this->PerformFullBlockChangeMutation(
         des, rm, dv1, pndv, oldRep1, newRep1
@@ -533,7 +535,7 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
     // if the chosen dv is higher than the hi Opt, then it is a variable.
     // If that is the case, then we use the variable map and not the
     // option suboption maps.
-    const bool dvIsVar = (int)ldv > rm._hiOptVar;
+    const bool dvIsVar = this->DvIsVar(rm, ldv);
 
     // Figure out if we want to grow right or left.  This is only the
     // preferred.  If we can't go the preferred direction, we will check
@@ -542,7 +544,7 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
 
     // perform the mutation.  In order to identify locally equal variables,
     // store the old rep.
-    const double oldRep = des.GetVariableRep(dv);
+    const var_rep_t oldRep = des.GetVariableRep(dv);
 
     // If we are dealing with a variable, figure out which one.
     if(dvIsVar)
@@ -566,7 +568,7 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                 if(des.GetVariableRep(si) == oldRep) continue;
 
                 // Found one!  See if we can change it.
-                if(!dvis[si]->IsValidDoubleRep(oldRep)) break;
+                if(!dvis[si]->IsValidRep(oldRep)) break;
                 des.SetVariableRep(si, oldRep);
                 madeChange = true;
                 break;
@@ -581,7 +583,7 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                     if(des.GetVariableRep(si) == oldRep) continue;
 
                     // Found one!  See if we can change it.
-                    if(!dvis[si]->IsValidDoubleRep(oldRep)) break;
+                    if(!dvis[si]->IsValidRep(oldRep)) break;
                     des.SetVariableRep(si, oldRep);
                     madeChange = true;
                     break;
@@ -596,7 +598,7 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                 if(des.GetVariableRep(si) == oldRep) continue;
 
                 // Found one!  See if we can change it.
-                if(!dvis[si]->IsValidDoubleRep(oldRep)) break;
+                if(!dvis[si]->IsValidRep(oldRep)) break;
                 des.SetVariableRep(si, oldRep);
                 madeChange = true;
                 break;
@@ -612,7 +614,7 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                     if(des.GetVariableRep(si) == oldRep) continue;
 
                     // Found one!  See if we can change it.
-                    if(!dvis[si]->IsValidDoubleRep(oldRep)) break;
+                    if(!dvis[si]->IsValidRep(oldRep)) break;
                     des.SetVariableRep(si, oldRep);
                     madeChange = true;
                     break;
@@ -659,9 +661,9 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                     );
                 if(it == varIndexMap.end()) break;
 
-                const double newRep = static_cast<double>(it->second);
+                const var_rep_t newRep = static_cast<var_rep_t>(it->second);
 
-                if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+                if(!dvis[si]->IsValidRep(newRep)) break;
                 des.SetVariableRep(si, newRep);
                 madeChange = true;
                 break;
@@ -688,9 +690,9 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                         );
                     if(it == varIndexMap.end()) break;
 
-                    const double newRep = static_cast<double>(it->second);
+                    const var_rep_t newRep = static_cast<var_rep_t>(it->second);
 
-                    if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+                    if(!dvis[si]->IsValidRep(newRep)) break;
                     des.SetVariableRep(si, newRep);
                     madeChange = true;
                     break;
@@ -718,9 +720,9 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                     );
                 if(it == varIndexMap.end()) break;
 
-                const double newRep = static_cast<double>(it->second);
+                const var_rep_t newRep = static_cast<var_rep_t>(it->second);
 
-                if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+                if(!dvis[si]->IsValidRep(newRep)) break;
                 des.SetVariableRep(si, newRep);
                 madeChange = true;
                 break;
@@ -748,9 +750,9 @@ LocalDesignVariableMutator::PerformBlockExtensionMutation(
                         );
                     if(it == varIndexMap.end()) break;
 
-                    const double newRep = static_cast<double>(it->second);
+                    const var_rep_t newRep = static_cast<var_rep_t>(it->second);
 
-                    if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+                    if(!dvis[si]->IsValidRep(newRep)) break;
                     des.SetVariableRep(si, newRep);
                     madeChange = true;
                     break;
@@ -929,7 +931,7 @@ LocalDesignVariableMutator::PollForParameters(
 
     // If we did not find the space map file, then we cannot continue.
     JEGAIFLOG_CF_II_F(!success, this->GetLogger(), this,
-        text_entry(lfatal(), this->GetName() + ": The design space file name "
+        text_entry(lfatal(), this->GetName() + ": The design space map "
             "was not found in the parameter database.  This is a required "
             "input.")
         )
@@ -953,8 +955,7 @@ string&
 LocalDesignVariableMutator::ReadSingleChoiceOptionData(
     istream& iFile,
     string& line,
-    roadmap& rm,
-    const string& fileName
+    roadmap& rm
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -965,7 +966,7 @@ LocalDesignVariableMutator::ReadSingleChoiceOptionData(
     // mutation operations on it.  In order to determine that it is not a
     // constant, we need to read the next line.  If it starts with an 'x' then
     // there are values.  Otherwise if it starts with a 'c', then it is a const.
-    getline(iFile, line);
+    mygetline(iFile, line);
     line = TrimWhitespace(line);
     if(!line.empty() && line[0] == 'x') ++rm._numSCOpts;
     return line;
@@ -975,8 +976,7 @@ string&
 LocalDesignVariableMutator::ReadMultipleChoiceOptionData(
     istream& iFile,
     string& line,
-    roadmap& rm,
-    const string& fileName
+    roadmap& rm
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -986,7 +986,7 @@ LocalDesignVariableMutator::ReadMultipleChoiceOptionData(
     // any single change options.
     const size_t optNum = rm._optMap.size();
 
-    getline(iFile, line);
+    mygetline(iFile, line);
     const bool wasSpace = !line.empty() && isspace(line[0]) != 0;
     line = TrimWhitespace(line);
 
@@ -1003,7 +1003,7 @@ LocalDesignVariableMutator::ReadMultipleChoiceOptionData(
         if(line[0] == 'c')
         {
             this->ReadDateDVInfo(line, rm);
-            getline(iFile, line);
+            mygetline(iFile, line);
             line = TrimWhitespace(line);
             continue;
         }
@@ -1030,7 +1030,7 @@ LocalDesignVariableMutator::ReadMultipleChoiceOptionData(
 
         while(!iFile.eof())
         {
-            getline(iFile, line);
+            mygetline(iFile, line);
             if(!isspace(line[0])) break;
 
             line = TrimWhitespace(line);
@@ -1078,8 +1078,7 @@ string&
 LocalDesignVariableMutator::ReadVariableData(
     istream& iFile,
     string& line,
-    roadmap& rm,
-    const string& fileName
+    roadmap& rm
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -1094,7 +1093,7 @@ LocalDesignVariableMutator::ReadVariableData(
 
     while(!iFile.eof())
     {
-        getline(iFile, line);
+        mygetline(iFile, line);
         if(!isspace(line[0])) break;
 
         line = TrimWhitespace(line);
@@ -1107,15 +1106,15 @@ LocalDesignVariableMutator::ReadVariableData(
 
         JEGAIFLOG_CF_II_F(line[0] != 'x', this->GetLogger(), this,
             text_entry(lfatal(), this->GetName() + ": The design space "
-                "file \"" + fileName + "\" is not in the required format at "
+                "map input is not in the required format at "
                 "or near line reading \"" + line + '\"')
             )
 
         const size_t dvNum =
 			AsT<size_t>(line.substr(1, line.find_first_of(' ') - 1));
 
-        loDV = haveLoDV ? loDV : dvNum + rm._hiOptVar + 1;
-        hiDV = dvNum + rm._hiOptVar + 1;
+        loDV = haveLoDV ? loDV : dvNum + rm._hiOptVar + rm._numSCOpts + 1;
+        hiDV = dvNum + rm._hiOptVar + rm._numSCOpts + 1;
         haveLoDV = true;
     }
 
@@ -1164,8 +1163,8 @@ LocalDesignVariableMutator::PerformFullBlockChangeMutation(
     const roadmap& rm,
     const size_t dv,
     const size_t pndv,
-    double oldRep,
-    double newRep
+    var_rep_t oldRep,
+    var_rep_t newRep
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -1179,7 +1178,7 @@ LocalDesignVariableMutator::PerformFullBlockChangeMutation(
     const size_t ldv = dv - pndv;
     const DesignTarget& target = this->GetDesignTarget();
     const DesignVariableInfoVector& dvis = target.GetDesignVariableInfos();
-    const bool dvIsVar = static_cast<int>(ldv) > rm._hiOptVar;
+    const bool dvIsVar = this->DvIsVar(rm, ldv);
 
     // If we are dealing with a variable, figure out which one.
     if(dvIsVar)
@@ -1197,7 +1196,7 @@ LocalDesignVariableMutator::PerformFullBlockChangeMutation(
         {
             const size_t si = static_cast<size_t>(i+pndv);
             if(des.GetVariableRep(si) != oldRep) break;
-            if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+            if(!dvis[si]->IsValidRep(newRep)) break;
             des.SetVariableRep(si, newRep);
         }
 
@@ -1207,7 +1206,7 @@ LocalDesignVariableMutator::PerformFullBlockChangeMutation(
         {
             const size_t si = static_cast<size_t>(i+pndv);
             if(des.GetVariableRep(si) != oldRep) break;
-            if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+            if(!dvis[si]->IsValidRep(newRep)) break;
             des.SetVariableRep(si, newRep);
         }
     }
@@ -1246,9 +1245,9 @@ LocalDesignVariableMutator::PerformFullBlockChangeMutation(
             map<string, size_t>::const_iterator it(varIndexMap.find(newSO));
             if(it == varIndexMap.end()) break;
 
-            const double newRep = static_cast<double>(it->second);
+            const var_rep_t newRep = static_cast<var_rep_t>(it->second);
 
-            if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+            if(!dvis[si]->IsValidRep(newRep)) break;
             des.SetVariableRep(si, newRep);
         }
 
@@ -1269,15 +1268,15 @@ LocalDesignVariableMutator::PerformFullBlockChangeMutation(
             map<string, size_t>::const_iterator it(varIndexMap.find(newSO));
             if(it == varIndexMap.end()) break;
 
-            const double newRep = static_cast<double>(it->second);
+            const var_rep_t newRep = static_cast<var_rep_t>(it->second);
 
-            if(!dvis[si]->IsValidDoubleRep(newRep)) break;
+            if(!dvis[si]->IsValidRep(newRep)) break;
             des.SetVariableRep(si, newRep);
         }
     }
 }
 
-double
+var_rep_t
 LocalDesignVariableMutator::GenerateNewRep(
     Design& des,
     const roadmap& rm,
@@ -1289,25 +1288,31 @@ LocalDesignVariableMutator::GenerateNewRep(
 
     const DesignTarget& target = des.GetDesignTarget();
     const DesignVariableInfoVector& dvis = target.GetDesignVariableInfos();
+	
+    const bool dvIsVar = this->DvIsVar(rm, dv-pndv);
 
-    const bool dvIsVar = static_cast<int>(dv-pndv) > rm._hiOptVar;
-
-    const double oldRep = des.GetVariableRep(dv);
-    double newRep = oldRep;
+    const var_rep_t oldRep = des.GetVariableRep(dv);
+    var_rep_t newRep = oldRep;
 
     // We will do random reassignment for an option.  For a variable, we will
-    // choose between random reassignment and gaussian offset.
+    // choose between random reassignment and Gaussian offset.
     // See to it that the old and new reps are not the same if possible.
     for(int i=0; i<100 && oldRep == newRep; ++i)
     {
         if(dvIsVar || RandomNumberGenerator::RandomBoolean())
-            newRep = dvis[dv]->GetRandomDoubleRep();
+        {
+            newRep = dvis[dv]->GetRandomRep();
+        }
         else
-            newRep = dvis[dv]->GetNearestValidDoubleRep(
-                oldRep + RandomNumberGenerator::GaussianReal(
-                    0.0, 0.20*dvis[dv]->GetDoubleRepRange()
-                    )
+        {
+            const double offset = RandomNumberGenerator::GaussianReal(
+                0.0, 0.20*dvis[dv]->GetRepRange()
                 );
+
+            newRep = dvis[dv]->GetNearestValidRep(
+                oldRep + static_cast<var_rep_t>(offset)                
+                );
+        }
     }
 
     return newRep;

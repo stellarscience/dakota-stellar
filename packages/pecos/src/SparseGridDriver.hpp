@@ -47,53 +47,115 @@ public:
   ~SparseGridDriver();
 
   //
-  //- Heading: Virtual functions
+  //- Heading: New virtual functions
   //
 
   /// initializes old/active/evaluation sets for use within the 
   /// generalized sparse grid procedure
-  virtual void initialize_sets() = 0;
+  virtual void initialize_sets();
   /// update smolyakMultiIndex with a new trial set for use within the
   /// generalized sparse grid procedure
-  virtual void push_trial_set(const UShortArray& set) = 0;
+  virtual void increment_smolyak_multi_index(const UShortArray& set);
+
+  /// determine whether trial set is available for restoration (by push)
+  virtual bool push_trial_available(const UShortArray& key,
+				    const UShortArray& tr_set);
+  /// determine whether trial set is available for restoration (by push
+  virtual bool push_trial_available(const UShortArray& key);
+  /// determine whether trial set is available for restoration (by push
+  virtual bool push_trial_available();
+
+  /// determine index of trial set for restoration (by push)
+  virtual size_t push_trial_index(const UShortArray& key,
+				  const UShortArray& tr_set);
+  /// determine index of trial set for restoration (by push)
+  virtual size_t push_trial_index(const UShortArray& key);
+  /// determine index of trial set for restoration (by push)
+  virtual size_t push_trial_index();
+
+  /// return pushIndex (cached lookup result in derived Driver classes),
+  /// which may be combined (flattened) or hierarchical (level-specific) index
+  virtual size_t push_index(const UShortArray& key) const;
+  /// map pushIndex to consistent (flattened) representation
+  virtual size_t restore_index(const UShortArray& key) const;
+  /// return consistent (flattened) index
+  virtual size_t finalize_index(size_t i, const UShortArray& key) const;
+
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex
-  virtual void restore_set();
-  /// computes the tensor grid for the index set from push_trial_set()
-  virtual void compute_trial_grid(RealMatrix& var_sets);
+  virtual void push_set();
   /// remove the previously pushed trial set from smolyakMultiIndex
   /// during the course of the generalized sparse grid procedure
-  virtual void pop_trial_set() = 0;
-  /// merge reference sets with trial set and update reference set
-  virtual void merge_set();
+  virtual void pop_set();
   /// accept all remaining trial sets within the generalized sparse
   /// grid procedure
-  virtual void finalize_sets(bool output_sets, bool converged_within_tol);
+  virtual void finalize_sets(bool output_sets, bool converged_within_tol,
+			     bool reverted);
+
+  /// computes the tensor grid for the trial index set used in
+  /// increment_smolyak_multi_index()
+  virtual void compute_trial_grid(RealMatrix& var_sets);
+
+  /// computes a grid increment and evaluates the new parameter sets
+  virtual void compute_increment(RealMatrix& var_sets);
+  /// restores a previously computed grid increment (no new evaluations)
+  virtual void push_increment();
+  /// removes a previously computed grid increment
+  virtual void pop_increment();
+  /// merges a grid increment into the reference grid
+  virtual void merge_unique();
 
   /// update derived reference data, if required
   virtual void update_reference();
 
-  /// return the trial index set from push_trial_set()
-  virtual const UShortArray& trial_set() const = 0;
+  /// return the trial index set used in increment_smolyak_multi_index()
+  /// that corresponds to key
+  virtual const UShortArray& trial_set(const UShortArray& key) const;
+  /// return the trial index set used in increment_smolyak_multi_index()
+  /// that corresponds to activeKey
+  virtual const UShortArray& trial_set() const;
+
   /// return the number of unique collocation points in the trial index set
   virtual int unique_trial_points() const;
 
-  /// computes tensor grids for new index sets due to an isotropic/anisotropic
-  /// refinement
-  virtual void compute_grid_increment(RealMatrix& var_sets);
-
+  /// update smolyakMultiIndex and smolyakCoeffs while adapting grid
+  virtual void update_smolyak_arrays();
   /// print smolyakMultiIndex
   virtual void print_smolyak_multi_index() const = 0;
+
+  /// update active iterators based on activeKey
+  virtual void update_active_iterators();
+
+  //
+  //- Heading: virtual function redefinitions
+  //
+
+  void active_key(const UShortArray& key);
+  void clear_inactive();
+  void clear_keys();
 
   //
   //- Heading: Member functions
   //
 
+  /// return number of collocation points in active grid
+  int collocation_points() const;
+
   /// initialize all sparse grid settings except for distribution params
-  void initialize_grid(unsigned short ssg_level,
-    const RealVector& dim_pref, const ShortArray& u_types,
+  void initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
+    const MultivariateDistribution& u_dist,
     const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
     short growth_rate = MODERATE_RESTRICTED_GROWTH);
+
+  /// set flag indicating that the grid (and its size) requires updating
+  void clear_grid();
+
+  /// return pushIndex (cached lookup result in derived Driver classes)
+  size_t push_index() const;
+
+  /// precompute quadrature rules to the maximum current order for each basis
+  /// polynomial (efficiency optimization when rules are expensive to compute)
+  void precompute_rules();
 
   /// initialize collocPts1D and type{1,2}CollocWts1D
   void assign_1d_collocation_points_weights();
@@ -116,18 +178,18 @@ public:
   /// quadrature orders based on apiIntegrationRules/apiGrowthRules
   void level_to_order(const UShortArray& levels, UShortArray& orders);
 
-  /// set ssgLevel
+  /// set active ssgLevel
   void level(unsigned short ssg_level);
-  /// return ssgLevel
+  /// return active ssgLevel
   unsigned short level() const;
 
-  /// set anisoLevelWts
+  /// convert dimension preference and set anisoLevelWts
   void dimension_preference(const RealVector& dim_pref);
   /// set anisoLevelWts
   void anisotropic_weights(const RealVector& aniso_wts);
   /// return anisoLevelWts
   const RealVector& anisotropic_weights() const;
-  /// return dimIsotropic
+  /// indicates isotropic (empty) weights on sparse grid dimension levels
   bool isotropic() const;
 
   /// set growthRate
@@ -142,10 +204,10 @@ public:
   /// get refineControl
   short refinement_control() const;
 
-  /// return activeMultiIndex
+  /// return entry from activeMultiIndex corresponding to key
+  const UShortArraySet& active_multi_index(const UShortArray& key) const;
+  /// return entry from activeMultiIndex corresponding to activeKey
   const UShortArraySet& active_multi_index() const;
-  /// return computedTrialSets
-  const UShortArraySet& computed_trial_sets() const;
 
 protected:
 
@@ -167,15 +229,15 @@ protected:
   //- Heading: Data
   //
 
-  /// the Smolyak sparse grid level
-  unsigned short ssgLevel;
+  /// Smolyak sparse grid levels for each active key
+  std::map<UShortArray, unsigned short> ssgLevel;
+  /// iterator to the active Smolyak sparse grid level
+  std::map<UShortArray, unsigned short>::iterator ssgLevIter;
 
-  /// flag indicating a dimension isotropic grid
-  bool dimIsotropic;
-  // vector of dimension preference levels for dimension anisotropic grids
-  //RealVector dimPref;
   /// weighting vector for dimension anisotropic grids
-  RealVector anisoLevelWts;
+  std::map<UShortArray, RealVector> anisoLevelWts;
+  /// weighting vector for dimension anisotropic grids
+  std::map<UShortArray, RealVector>::iterator anisoWtsIter;
 
   /// enumeration for rate of exponential growth in nested rules
   short growthRate;
@@ -185,20 +247,25 @@ protected:
   /// algorithm control governing expansion refinement
   short refineControl;
 
-  /// the current number of unique points in the grid
-  int numCollocPts;
-  /// flag indicating when numCollocPts needs to be recomputed due to an
-  /// update to the sparse grid settings
-  bool updateGridSize;
+  /// the number of unique points in each grid
+  std::map<UShortArray, int> numCollocPts;
+  /// iterator to the number of unique points in the active grid
+  std::map<UShortArray, int>::iterator numPtsIter;
 
-  /// old reference index sets for generalized sparse grids
-  UShortArraySet oldMultiIndex; // or UShort2DArray
+  /// old reference index sets for generalized sparse grids.  Use std::set
+  /// for efficient lookups in add_active_neighbors().
+  std::map<UShortArray, UShortArraySet> oldMultiIndex;
   /// active index sets under current consideration for inclusion in a
-  /// generalized sparse grid
-  UShortArraySet activeMultiIndex; // or UShort2DArray
-  /// subset of active set that have been evaluated as trial sets
-  /// (incremented in compute_trial_grid() and decremented in update_sets())
-  UShortArraySet computedTrialSets; // or UShort2DArray
+  /// generalized sparse grid.  Use std::set for ordering of candidates.
+  std::map<UShortArray, UShortArraySet> activeMultiIndex;
+  /// subset of active trial sets that have been evaluated but not selected.
+  /// Use std::deque to retain append ordering (mirroring SurrogateData).
+  std::map<UShortArray, UShortArrayDeque> poppedTrialSets;
+
+  /// database key indicating the currently active integration configuration.
+  /// the key is a multi-index managing multiple modeling dimensions such as
+  /// model form, discretization level, etc.
+  UShortArray activeKey;
 
 private:
 
@@ -212,27 +279,39 @@ private:
 
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
-  RealVector axisLowerBounds;
+  std::map<UShortArray, RealVector> axisLowerBounds;
+  // iterator to the active set of axis lower bounds
+  //std::map<UShortArray, RealVector>::iterator axisLBndsIter;
 };
 
 
 inline SparseGridDriver::SparseGridDriver():
-  IntegrationDriver(BaseConstructor()), ssgLevel(0), dimIsotropic(true),
-  growthRate(MODERATE_RESTRICTED_GROWTH), numCollocPts(0), updateGridSize(true),
-  refineControl(NO_CONTROL)//refineType(NO_REFINEMENT)
-{ }
+  IntegrationDriver(BaseConstructor()), growthRate(MODERATE_RESTRICTED_GROWTH),
+  //ssgLevel(0), numCollocPts(0),
+  refineControl(NO_CONTROL)//, refineType(NO_REFINEMENT)
+{
+  std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
+  ssgLevIter = ssgLevel.insert(us_pair).first;
+
+  std::pair<UShortArray, int> ui_pair(activeKey, 0);
+  numPtsIter = numCollocPts.insert(ui_pair).first;
+}
 
 
 inline SparseGridDriver::
 SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 		 short growth_rate, short refine_control):
-  IntegrationDriver(BaseConstructor()), ssgLevel(ssg_level),
-  growthRate(growth_rate), numCollocPts(0), updateGridSize(true),
+  IntegrationDriver(BaseConstructor()), growthRate(growth_rate),
+  //ssgLevel(ssg_level), numCollocPts(0),
   refineControl(refine_control) //refineType(NO_REFINEMENT)
 {
-  if (dim_pref.empty())
-    dimIsotropic = true;
-  else {
+  std::pair<UShortArray, unsigned short> us_pair(activeKey, ssg_level);
+  ssgLevIter = ssgLevel.insert(us_pair).first;
+
+  std::pair<UShortArray, int> ui_pair(activeKey, 0);
+  numPtsIter = numCollocPts.insert(ui_pair).first; // count to be updated
+
+  if (!dim_pref.empty()) {
     numVars = dim_pref.length(); // unit length option not supported
     dimension_preference(dim_pref);
   }
@@ -243,23 +322,86 @@ inline SparseGridDriver::~SparseGridDriver()
 { }
 
 
+inline void SparseGridDriver::active_key(const UShortArray& key)
+{
+  if (activeKey != key) {
+    activeKey = key;
+    update_active_iterators();
+  }
+}
+
+
+inline void SparseGridDriver::update_active_iterators()
+{
+  ssgLevIter = ssgLevel.find(activeKey);
+  if (ssgLevIter == ssgLevel.end()) {
+    std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
+    ssgLevIter = ssgLevel.insert(us_pair).first;
+  }
+  numPtsIter = numCollocPts.find(activeKey);
+  if (numPtsIter == numCollocPts.end()) {
+    std::pair<UShortArray, int> ui_pair(activeKey, 0);
+    numPtsIter = numCollocPts.insert(ui_pair).first;
+  }
+  anisoWtsIter = anisoLevelWts.find(activeKey);
+  if (anisoWtsIter == anisoLevelWts.end()) {
+    std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
+    anisoWtsIter = anisoLevelWts.insert(urv_pair).first;
+  }
+  /*
+  axisLBndsIter = axisLowerBounds.find(activeKey);
+  if (axisLBndsIter == axisLowerBounds.end()) {
+    std::pair<UShortArray, RealVector> urv_pair(activeKey, RealVector());
+    axisLBndsIter = axisLowerBounds.insert(urv_pair).first;
+  }
+  */
+}
+
+
+inline void SparseGridDriver::clear_keys()
+{
+  activeKey.clear();
+
+  ssgLevel.clear();          ssgLevIter    =        ssgLevel.end();
+  numCollocPts.clear();      numPtsIter    =    numCollocPts.end();
+  anisoLevelWts.clear();     anisoWtsIter  =   anisoLevelWts.end();
+  axisLowerBounds.clear(); //axisLBndsIter = axisLowerBounds.end();
+
+  oldMultiIndex.clear();  activeMultiIndex.clear();  poppedTrialSets.clear();
+}
+
+
+inline int SparseGridDriver::collocation_points() const
+{ return numPtsIter->second; }
+
+
+inline void SparseGridDriver::clear_grid()
+{ numPtsIter->second = 0; } // special value indicating a grid update is reqd
+
+
+inline size_t SparseGridDriver::push_index() const
+{ return push_index(activeKey); }
+
+
 inline unsigned short SparseGridDriver::level() const
-{ return ssgLevel; }
+{ return ssgLevIter->second; }
 
 
 inline void SparseGridDriver::level(unsigned short ssg_level)
 {
-  if (ssgLevel != ssg_level)
-    { ssgLevel  = ssg_level; updateGridSize = true; }
+  if (ssgLevIter->second != ssg_level) {
+    ssgLevIter->second = ssg_level;
+    clear_grid();
+  }
 }
 
 
 inline const RealVector& SparseGridDriver::anisotropic_weights() const
-{ return anisoLevelWts; }
+{ return anisoWtsIter->second; }
 
 
 inline bool SparseGridDriver::isotropic() const
-{ return dimIsotropic; }
+{ return anisoWtsIter->second.empty(); }
 
 
 //inline short SparseGridDriver::refinement_type() const
@@ -282,49 +424,22 @@ inline short SparseGridDriver::growth_rate() const
 { return growthRate; }
 
 
+inline const UShortArraySet& SparseGridDriver::
+active_multi_index(const UShortArray& key) const
+{
+  std::map<UShortArray, UShortArraySet>::const_iterator cit
+    = activeMultiIndex.find(key);
+  if (cit == activeMultiIndex.end()) {
+    PCerr << "Error: active key not found in SparseGridDriver::"
+	  << "active_multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
+
+
 inline const UShortArraySet& SparseGridDriver::active_multi_index() const
-{ return activeMultiIndex; }
-
-
-inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
-{ return computedTrialSets; }
-
-
-inline void SparseGridDriver::update_reference()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::push_trial_set(const UShortArray& set)
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::restore_set()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::pop_trial_set()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::merge_set()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::
-finalize_sets(bool output_sets, bool converged_within_tol)
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
-{ /* default implementation is no-op */ }
-
-
-inline int SparseGridDriver::unique_trial_points() const
-{ return 0; /* default implementation */ }
+{ return active_multi_index(activeKey); }
 
 
 inline void SparseGridDriver::

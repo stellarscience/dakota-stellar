@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -23,6 +23,7 @@
 //-----------------------------------------------------------------------el-
 
 #include <queso/FiniteDistribution.h>
+#include <queso/RngBase.h>
 
 namespace QUESO {
 
@@ -36,8 +37,6 @@ FiniteDistribution::FiniteDistribution(
   m_prefix ((std::string)(prefix)+"fd_"),
   m_weights(inpWeights.size(),0.)
 {
-  queso_deprecated();
-
   if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 5)) {
     *m_env.subDisplayFile() << "Entering FiniteDistribution::constructor()"
                             << ": prefix = " << m_prefix
@@ -114,8 +113,6 @@ FiniteDistribution::FiniteDistribution(
 // Destructor ---------------------------------------
 FiniteDistribution::~FiniteDistribution()
 {
-  queso_deprecated();
-
   m_map.empty();
   m_weights.clear();
 }
@@ -123,24 +120,18 @@ FiniteDistribution::~FiniteDistribution()
 const BaseEnvironment&
 FiniteDistribution::env() const
 {
-  queso_deprecated();
-
   return m_env;
 }
 // Stats methods-------------------------------------
 const std::vector<double>&
 FiniteDistribution::weights() const
 {
-  queso_deprecated();
-
   return m_weights;
 }
 //---------------------------------------------------
 unsigned int
 FiniteDistribution::sample() const
 {
-  queso_deprecated();
-
   unsigned int result = 0;
 
   double aux = m_env.rngObject()->uniformSample();

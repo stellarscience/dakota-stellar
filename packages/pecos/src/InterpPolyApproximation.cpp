@@ -15,7 +15,6 @@
 #include "SharedInterpPolyApproxData.hpp"
 
 //#define DEBUG
-//#define INTERPOLATION_TEST
 
 namespace Pecos {
 
@@ -30,59 +29,42 @@ int InterpPolyApproximation::min_coefficients() const
 
 void InterpPolyApproximation::allocate_arrays()
 {
+  SharedInterpPolyApproxData* data_rep
+    = (SharedInterpPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
+
   allocate_total_sobol();
   allocate_component_sobol();
 
-  if (numericalMoments.empty()) {
-    SharedInterpPolyApproxData* data_rep
-      = (SharedInterpPolyApproxData*)sharedDataRep;
+  RealVector& numer_mom = numMomentsIter->second;
+  if (numer_mom.empty()) {
     size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
-    numericalMoments.sizeUninitialized(num_moments);
+    numer_mom.sizeUninitialized(num_moments);
   }
 }
 
 
-void InterpPolyApproximation::compute_coefficients()
+void InterpPolyApproximation::test_interpolation()
 {
-  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
-    PCerr << "Warning: neither expansion coefficients nor expansion "
-	  << "coefficient gradients\n         are active in "
-	  << "InterpPolyApproximation::compute_coefficients().\n         "
-	  << "Bypassing approximation construction." << std::endl;
-    return;
-  }
-
-  // For testing of anchor point logic:
-  //size_t index = surrData.points() - 1;
-  //surrData.anchor_point(surrData.variables_data()[index],
-  //                      surrData.response_data()[index]);
-  //surrData.pop(1);
-
-  size_t num_colloc_pts = surrData.points();
-  if (surrData.anchor()) // anchor point, if present, is first expansionSample
-    ++num_colloc_pts;
-  if (!num_colloc_pts) {
-    PCerr << "Error: nonzero number of sample points required in "
-	  << "InterpPolyApproximation::compute_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-
-  allocate_arrays();
-  compute_expansion_coefficients();
-
-#ifdef INTERPOLATION_TEST
   // SC should accurately interpolate the collocation data for TPQ and
   // SSG with fully nested rules, but will exhibit interpolation error
   // for SSG with other rules.
   if (expansionCoeffFlag) {
-    size_t i, index = 0, offset = (surrData.anchor()) ? 1 : 0,
-      w7 = WRITE_PRECISION+7, num_v = sharedDataRep->numVars;
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+
+    const SDVArray& sdv_array = modSurrData.variables_data();
+    const SDRArray& sdr_array = modSurrData.response_data();
+
+    size_t i, index = 0, num_colloc_pts = modSurrData.points(),
+      num_v = sharedDataRep->numVars, w7 = WRITE_PRECISION+7;
     Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
       val_rmse = 0., grad_rmse = 0.;
     PCout << std::scientific << std::setprecision(WRITE_PRECISION);
-    for (i=offset; i<num_colloc_pts; ++i, ++index) {
-      const RealVector& c_vars = surrData.continuous_variables(index);
-      Real      resp_fn = surrData.response_function(index);
+    for (i=0; i<num_colloc_pts; ++i, ++index) {
+      const RealVector& c_vars = sdv_array[index].continuous_variables();
+      const SurrogateDataResp& sdr = sdr_array[index];
+      Real resp_fn = sdr.response_function();
       interp_val = value(c_vars);
       err = (std::abs(resp_fn) > DBL_MIN) ? std::abs(1. - interp_val/resp_fn) :
 	                                    std::abs(resp_fn - interp_val);
@@ -92,8 +74,8 @@ void InterpPolyApproximation::compute_coefficients()
 	    << " relative error = " << std::setw(w7) << err <<'\n';
       if (err > val_max_err) val_max_err = err;
       val_rmse += err * err;
-      if (basisConfigOptions.useDerivs) {
-	const RealVector& resp_grad   = surrData.response_gradient(index);
+      if (use_derivs) {
+	const RealVector& resp_grad   = sdr.response_gradient();
 	const RealVector& interp_grad = gradient_basis_variables(c_vars);
 	for (size_t j=0; j<num_v; ++j) {
 	  err = (std::abs(resp_grad[j]) > DBL_MIN) ?
@@ -108,17 +90,16 @@ void InterpPolyApproximation::compute_coefficients()
 	}
       }
     }
-    val_rmse = std::sqrt(val_rmse/(num_colloc_pts-offset));
+    val_rmse = std::sqrt(val_rmse/num_colloc_pts);
     PCout << "\nValue interpolation errors:    " << std::setw(w7) << val_max_err
 	  << " (max) " << std::setw(w7) << val_rmse << " (RMS)\n";
-    if (basisConfigOptions.useDerivs) {
-      grad_rmse = std::sqrt(grad_rmse/(num_colloc_pts-offset)/num_v);
+    if (use_derivs) {
+      grad_rmse = std::sqrt(grad_rmse/num_colloc_pts/num_v);
       PCout << "Gradient interpolation errors: " << std::setw(w7)
 	    << grad_max_err << " (max) " << std::setw(w7) << grad_rmse
 	    << " (RMS)\n";
     }
   }
-#endif // INTERPOLATION_TEST
 }
 
 
@@ -154,7 +135,7 @@ void InterpPolyApproximation::compute_component_sobol()
     sobolIndices = 0.;
 #ifdef DEBUG
   PCout << "In InterpPolyApproximation::compute_component_sobol(), "
-	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
+	<< "sobolIndices =\n" << sobolIndices;
 #endif // DEBUG
 }
 
@@ -187,7 +168,7 @@ void InterpPolyApproximation::compute_total_sobol()
 
 #ifdef DEBUG
   PCout << "In InterpPolyApproximation::compute_total_sobol(), "
-	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
+	<< "totalSobolIndices =\n" << totalSobolIndices;
 #endif // DEBUG
 }
 

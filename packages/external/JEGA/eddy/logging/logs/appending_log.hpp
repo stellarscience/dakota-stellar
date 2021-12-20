@@ -303,7 +303,7 @@ class EDDY_SL_IEDECL appending_log
             // create a shorthand for the iterator of an appender list.
             typedef typename appender_list::iterator AL_IT;
 
-            // First, log it with the underlyer.
+            // First, log it with the primary log.
             this->_log.log(e);
 
             // now append it to all appenders if appropriate.
@@ -347,7 +347,7 @@ class EDDY_SL_IEDECL appending_log
 
         /// Removes app from the list of appenders.
         /**
-         * This will remove all occurances of the appender.
+         * This will remove all occurrences of the appender.
          *
          * \param app The appender to remove from the list of appenders.
          */

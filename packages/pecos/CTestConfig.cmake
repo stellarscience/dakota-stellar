@@ -1,3 +1,11 @@
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
 ## This file should be placed in the root directory of your project.
 ## Then modify the CMakeLists.txt file in the root directory of your
 ## project to incorporate the testing dashboard.

@@ -1,0 +1,58 @@
+PyDakota
+
+Python wrapper of Dakota surrogate and linear algebra utilities.
+
+The swig_examples directory contains a number of simple examples of how to use
+swig
+
+//----------------//
+// SYSTEM INSTALL //
+//----------------//
+The following assumes C++ libraries have already been built
+To Install run to site-packages
+python setup.py install
+
+To uninstall from site packages
+$ rm -r path/to/site-packges/PyDakota*
+
+To get location of site-packages use
+$ python -m site
+
+//----------------//
+// LOCAL INSTALL  //
+//----------------//
+The following assumes C++ libraries have already been built
+python setup.py install -prefix=/path/to/local/install
+To uninstall
+$ rm -r /path/to/local/install/PyDakota*
+
+//--------------//
+// Dependencies //
+//--------------//
+swig, boost, numpy, scipy, matplotlib, cmake, gcc, g++ and gfortran
+
+//-------------------//
+// Conda Environment //
+//-------------------//
+Miniconda or anaconda can be used to install the dependencies
+needed to build PyDakota. See https://conda.io/docs/test-drive.html
+for a basic tutorial on conda.
+
+First install conda then create a conda envrionment
+$ conda create -n env_name
+Activate the conda environment
+$ source activate env_name
+$ conda install numpy scipy matplotlib cmake boost=1.61.0 openblas=0.2.19 gcc swig
+on OS X may need to set the following in your .bash_profile
+DYLD_FALLBACK_LIBRARY_PATH=~/miniconda2/envs/env_name/lib
+to put gfotran library on library path
+
+//---------------------//
+// Build C++ libraries //
+//---------------------//
+build c++ libraries locally
+may need to provide more options to cmake
+$ cd /path/to/pecos/
+$ mkdir build && cd build
+$ cmake  -D CMAKE_CXX_FLAGS:STRING="-fPIC" ..
+$ make

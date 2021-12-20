@@ -72,7 +72,7 @@ typedef enum
  * use cobyla_rc_string[rc - COBYLA_MINRC] to get the message associated with
  * return code rc.
  */
-extern char *cobyla_rc_string[6];
+extern char *acro_cobyla_rc_string[6];
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,9 +116,9 @@ typedef int cobyla_function(int n, int m, double *x, double *f, double *con,
  * The cobyla function returns a code defined in the cobyla_rc enum.
  *
  */
-extern int cobyla(int n, int m, double *x, double rhobeg, double rhoend,
+extern int acro_cobyla(int n, int m, double *x, double rhobeg, double rhoend,
     double *lb, double *ub, int iprint, int *maxfun,
-    double minfval, cobyla_function *calcfc, void *state);
+    double minfval, cobyla_function *acro_calcfc, void *state);
 
 #ifdef __cplusplus
 }

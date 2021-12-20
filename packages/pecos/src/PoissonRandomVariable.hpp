@@ -50,15 +50,17 @@ public:
 
   Real pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
   Real mode() const;
   Real standard_deviation() const;
   Real variance() const;
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   //
   //- Heading: Member functions
@@ -131,27 +133,35 @@ inline Real PoissonRandomVariable::pdf(Real x) const
 { return bmth::pdf(*poissonDist, x); }
 
 
-inline Real PoissonRandomVariable::parameter(short dist_param) const
+inline void PoissonRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case P_LAMBDA: return poissonLambda; break;
+  case P_LAMBDA: val = poissonLambda; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in PoissonRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in PoissonRandomVariable::pull_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void PoissonRandomVariable::parameter(short dist_param, Real val)
+inline void PoissonRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case P_LAMBDA: poissonLambda = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in PoissonRandomVariable::parameter()." << std::endl;
+	  << " in PoissonRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new poissonDist instance
+}
+
+
+inline void PoissonRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(P_LAMBDA, poissonLambda);
   update_boost(); // create a new poissonDist instance
 }
 
@@ -176,7 +186,7 @@ inline Real PoissonRandomVariable::variance() const
 { return bmth::variance(*poissonDist); }
 
 
-inline RealRealPair PoissonRandomVariable::bounds() const
+inline RealRealPair PoissonRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

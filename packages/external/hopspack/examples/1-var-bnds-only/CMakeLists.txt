@@ -9,6 +9,7 @@
 #   the U.S. Government retains certain rights in this software.
 # ************************************************************************
 
+include(ModifyTargetRpath)
 
 #---- Copy the parameters file to the target location.
 SET (PARAMS_FILE_NAME examples/1-var-bnds-only/example1_params.txt)
@@ -24,6 +25,7 @@ ADD_EXECUTABLE (
 
 #---- Installation instructions.
 INSTALL (TARGETS var_bnds_only
-         DESTINATION examples/1-var-bnds-only)
+         DESTINATION ${DAKOTA_EXAMPLES_INSTALL}/examples/hopspack/1-var-bnds-only)
+ModifyTargetRpath( var_bnds_only 5)
 INSTALL (FILES ${HOPSPACK_SOURCE_DIR}/${PARAMS_FILE_NAME}
-         DESTINATION examples/1-var-bnds-only)
+         DESTINATION ${DAKOTA_EXAMPLES_INSTALL}/examples/hopspack/1-var-bnds-only)

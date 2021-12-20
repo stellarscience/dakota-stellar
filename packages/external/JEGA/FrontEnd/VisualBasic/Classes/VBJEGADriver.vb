@@ -100,7 +100,7 @@ Namespace JEGA.FrontEnd.VisualBasic
     ''' a call to <code>VBJEGADriver.InitializeJEGA</code>.  This should get
     ''' called once and only once.  Once that is done, the Driver can be used
     ''' in a number of ways and multiple Drivers can be operating
-    ''' simultaneously (from mutliple threads if JEGA was compiled with thread
+    ''' simultaneously (from multiple threads if JEGA was compiled with thread
     ''' awareness).  The most common way to use it is to create one with a
     ''' MProblemConfig or VBJEGAProblemConfigLoader as the constructor argument
     ''' in the usual VB syntax.  For example:
@@ -152,7 +152,7 @@ Namespace JEGA.FrontEnd.VisualBasic
     ''' MAlgorithmConfig object needed and load it by calling
     ''' <code>algConfigLoader.LoadConfiguration(newConfig)</code>.  It will
     ''' also create the necessary evaluator object from the supplied functor
-    ''' which must be done explicitely if using the first example.
+    ''' which must be done explicitly if using the first example.
     '''
     ''' You could use the driver to solve the same problem using multiple
     ''' algorithm configurations by repeating the above code over and over.  In
@@ -456,27 +456,28 @@ Namespace JEGA.FrontEnd.VisualBasic
         ''' otherwise.
         ''' </returns>
         Public Shared Function _
-        InitializeJEGA( _
-            ByVal globalLogFilename As String, _
-            ByVal globalLogDefLevel As Byte, _
-            Optional ByVal rSeed As Integer = 0, _
-            Optional ByVal fatalBehavior As MAlgorithmConfig.FatalBehavior = _
-                MAlgorithmConfig.FatalBehavior.ABORT _
+        InitializeJEGA(
+            ByVal globalLogFilename As String,
+            ByVal globalLogDefLevel As Byte,
+            Optional ByVal rSeed As Integer = 0,
+            Optional ByVal fatalBehavior As MAlgorithmConfig.FatalBehavior =
+                MAlgorithmConfig.FatalBehavior.ABORT,
+            Optional ByVal registerSignalHandlers As Boolean = True
             ) As Boolean
 
             Try
 
                 ' Simply call down to the managed front end application version.
-                Return MDriver.InitializeJEGA( _
-                    globalLogFilename, globalLogDefLevel, _
-                    System.Convert.ToUInt32(rSeed), _
-                    fatalBehavior _
+                Return MDriver.InitializeJEGA(
+                    globalLogFilename, globalLogDefLevel,
+                    System.Convert.ToUInt32(rSeed),
+                    fatalBehavior, registerSignalHandlers
                     )
 
             Catch ex As System.Exception
 
-                VBJEGAUtilities.DisplayError( _
-                    Err, "VBJEGADriver", "InitializeJEGA" _
+                VBJEGAUtilities.DisplayError(
+                    Err, "VBJEGADriver", "InitializeJEGA"
                     )
                 Return False
 

@@ -1,0 +1,3 @@
+*** Base Git Repo: Trilinos
+d2fcc2f [Sat Mar 2 02:14:57 2019 -0700] <trilinos-autotester@trilinos.org>
+Merge Pull Request #4531 from trilinos/Trilinos/master_merge_20190302_000620

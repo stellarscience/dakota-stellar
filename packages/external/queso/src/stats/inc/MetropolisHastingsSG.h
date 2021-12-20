@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -35,12 +35,15 @@
 #include <queso/ArrayOfSequences.h>
 #include <sys/time.h>
 #include <fstream>
-#include <boost/math/special_functions.hpp> // for Boost isnan. Note parentheses are important in function call.
+#include <queso/SharedPtr.h>
 
 namespace QUESO {
 
 class GslVector;
 class GslMatrix;
+
+template <class P_V, class P_M>
+class Algorithm;
 
 //--------------------------------------------------
 // MHRawChainInfoStruct --------------------------
@@ -126,14 +129,30 @@ public:
   //! @name Constructor/Destructor methods
   //@{
   //! Constructor.
-  /*! This method reads the options from the options input file. It calls commonConstructor().
-   * Requirements: 1) the image set of the vector random variable 'sourceRv' should belong to a
-   * vector space of dimension equal to the size of the vector 'initialPosition' and 2) if
-   * 'inputProposalCovMatrix' is not NULL, is should be square and its size should be equal to the
-   * size of 'initialPosition'. If the requirements are satisfied, the constructor then reads input
-   * options that begin with the string '\<prefix\>_mh_'. For instance, if 'prefix' is
-   * 'pROblem_775_ip_', then the constructor will read all options that begin with 'pROblem_775_ip_mh_'.
-    Options reading is handled by class 'MetropolisHastingsOptions'.*/
+  /*!
+   * This method reads the options from the options input file. It calls
+   * \c commonConstructor().
+   *
+   * Requirements:
+   *   -# the image set of the vector random variable 'sourceRv' should belong
+   *      to a vector space of dimension equal to the size of the vector
+   *      'initialPosition' and
+   *   -# if 'inputProposalCovMatrix' is not NULL, is should be square and its
+   *      size should be equal to the size of 'initialPosition'.
+   *
+   * If \c alternativeOptionsValues is NULL and an input file is specified, the
+   * constructor reads input options that begin with the string
+   * '\<prefix\>mh_'.  For instance, if 'prefix' is 'pROblem_775_ip_', then
+   * the constructor will read all options that begin with 'pROblem_775_ip_mh_'.
+   *
+   * If \c alternativeOptionsValues is not NULL, the input file is ignored and
+   * construction copies the object pointed to by \c alternativeOptionsValues
+   * to and stores the copy internally.  Users may delete the object poined to
+   * by \c alternativeOptionsValues.  Users cannot change the options object
+   * after MetropolisHastingsSG has been constructed.
+   *
+   * Options reading is handled by class 'MetropolisHastingsOptions'.
+   */
   MetropolisHastingsSG(const char*                         prefix,
 		       const MhOptionsValues*       alternativeOptionsValues, // dakota
 		       const BaseVectorRV<P_V,P_M>& sourceRv,
@@ -239,6 +258,28 @@ private:
   void adapt(unsigned int positionId,
       BaseVectorSequence<P_V, P_M> & workingChain);
 
+  //! Does delayed rejection
+  /*!
+   * When faced with an imminent rejection, this method computes a series of
+   * new candidates in the same proposal direction but with smaller proposal
+   * step sizes.  For each of these new candidates, we check if it will be
+   * accepted, if not we repeat the process until all the candidates have been
+   * tested.
+   *
+   * If there is a candidate that will be accepted, this method will return \c
+   * true, otherwise it returns \c false.
+   *
+   * \c currentCandidateData is updated whenever a new proposal is generated
+   * throughout the delayed rejection procedure.
+   *
+   * \c delayedRejection promises not to change \c currentPositionData, because
+   * changing the current position of the Markov chain would be grossly
+   * inappropriate.
+   */
+  bool delayedRejection(unsigned int positionId,
+      const MarkovChainPositionData<P_V> & currentPositionData,
+      MarkovChainPositionData<P_V> & currentCandidateData);
+
   //! This method reads the chain contents.
   void   readFullChain            (const std::string&                  inputFileName,
                                    const std::string&                  inputFileType,
@@ -254,16 +295,7 @@ private:
                                    P_V&                                       lastMean,
                                    P_M&                                       lastAdaptedCovMatrix);
 
-  //! Calculates acceptance ration.
-  /*! It is called by alpha(const std::vector<MarkovChainPositionData<P_V>*>& inputPositions,
-      const std::vector<unsigned int>& inputTKStageIds); */
-  double alpha                    (const MarkovChainPositionData<P_V>& x,
-                                   const MarkovChainPositionData<P_V>& y,
-                                   unsigned int                               xStageId,
-                                   unsigned int                               yStageId,
-                                   double*                                    alphaQuotientPtr = NULL);
-
-  //! Calculates acceptance ration.
+  //! Calculates acceptance ratio.
   /*! The acceptance ratio is used to decide whether to accept or reject a candidate. */
   double alpha                    (const std::vector<MarkovChainPositionData<P_V>*>& inputPositions,
                                    const std::vector<unsigned int                        >& inputTKStageIds);
@@ -286,32 +318,31 @@ private:
   bool m_nullInputProposalCovMatrix;
   unsigned int m_numDisabledParameters; // gpmsa2
   std::vector<bool> m_parameterEnabledStatus; // gpmsa2
-  const ScalarFunctionSynchronizer<P_V,P_M> * m_targetPdfSynchronizer;
+  typename ScopedPtr<const ScalarFunctionSynchronizer<P_V,P_M> >::Type m_targetPdfSynchronizer;
 
-  BaseTKGroup<P_V,P_M> * m_tk;
+  typename SharedPtr<BaseTKGroup<P_V,P_M> >::Type m_tk;
+  typename SharedPtr<Algorithm<P_V, P_M> >::Type m_algorithm;
   unsigned int m_positionIdForDebugging;
   unsigned int m_stageIdForDebugging;
   std::vector<unsigned int> m_idsOfUniquePositions;
   std::vector<double> m_logTargets;
   std::vector<double> m_alphaQuotients;
   double m_lastChainSize;
-  P_V * m_lastMean;
-  P_M * m_lastAdaptedCovMatrix;
+  typename ScopedPtr<P_V>::Type m_lastMean;
+  typename ScopedPtr<P_M>::Type m_lastAdaptedCovMatrix;
   unsigned int m_numPositionsNotSubWritten;
 
   MHRawChainInfoStruct m_rawChainInfo;
 
-  const MhOptionsValues * m_optionsObj;
-  MetropolisHastingsSGOptions * m_oldOptions;
+  ScopedPtr<const MhOptionsValues>::Type m_optionsObj;
 
 	bool m_computeInitialPriorAndLikelihoodValues;
 	double m_initialLogPriorValue;
 	double m_initialLogLikelihoodValue;
 
-  void transformInitialCovMatrixToGaussianSpace(const BoxSubset<P_V, P_M> &
-      boxSubset);
-
   bool m_userDidNotProvideOptions;
+
+  unsigned int m_latestDirtyCovMatrixIteration;
 };
 
 }  // End namespace QUESO

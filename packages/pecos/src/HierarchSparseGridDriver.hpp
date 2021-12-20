@@ -51,29 +51,43 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
+  void compute_grid();
   void compute_grid(RealMatrix& var_sets);
-  int grid_size();
+  int  grid_size();
+  void combine_grid();
+  void combined_to_active(bool clear_combined);
 
-  void store_grid(size_t index = _NPOS);
-  void restore_grid(size_t index = _NPOS);
-  void remove_stored_grid(size_t index = _NPOS);
-  void clear_stored();
+  void clear_inactive();
+  void clear_keys();
 
-  size_t maximal_grid() const;
-  void swap_grid(size_t index);
+  //const UShortArray& maximal_grid() const;
 
   void initialize_sets();
-  void push_trial_set(const UShortArray& set);
-  void restore_set();
+  void increment_smolyak_multi_index(const UShortArray& set);
+  bool push_trial_available(const UShortArray& key, const UShortArray& tr_set);
+  bool push_trial_available(const UShortArray& key);
+  bool push_trial_available();
+  size_t push_trial_index(const UShortArray& key, const UShortArray& tr_set);
+  size_t push_trial_index(const UShortArray& key);
+  size_t push_trial_index();
+  size_t push_index(const UShortArray& key) const;
+  size_t restore_index(const UShortArray& key) const;
+  size_t finalize_index(size_t i, const UShortArray& key) const;
+  void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
-  void pop_trial_set();
-  //void merge_set();
-  void finalize_sets(bool output_sets, bool converged_within_tol);
+  void pop_set();
+  void finalize_sets(bool output_sets, bool converged_within_tol,
+		     bool reverted);
 
+  const UShortArray& trial_set(const UShortArray& key) const;
   const UShortArray& trial_set() const;
+  unsigned short trial_level() const;
   int unique_trial_points() const;
 
-  void compute_grid_increment(RealMatrix& var_sets);
+  void compute_increment(RealMatrix& var_sets);
+  void push_increment();
+  void pop_increment();
+  //void merge_unique();
 
   void print_smolyak_multi_index() const;
 
@@ -101,47 +115,163 @@ public:
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
-    const ShortArray& u_types, const ExpansionConfigOptions& ec_options,
-    BasisConfigOptions& bc_options,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH,
-    bool track_colloc_indices = true);
+		       const MultivariateDistribution& u_dist,
+		       const ExpansionConfigOptions& ec_options,
+		       BasisConfigOptions& bc_options,
+		       short growth_rate = MODERATE_RESTRICTED_GROWTH,
+		       bool track_colloc_indices = true);
 
-  /// return incrementSets
+  void assign_collocation_key();
+  void assign_collocation_key(const UShort3DArray& sm_mi,
+			      UShort4DArray& colloc_key, bool ordered = true);
+  void update_collocation_key_from_trial(const UShortArray& trial_set);
+  void update_collocation_key_from_trial(const UShortArray& trial_set,
+					 const UShort3DArray& sm_mi,
+					 UShort4DArray& colloc_key);
+  void update_collocation_key_from_increment(UShortArray& incr_sets);
+  void update_collocation_key_from_increment(UShortArray& incr_sets,
+					     const UShort3DArray& sm_mi,
+					     UShort4DArray& colloc_key);
+
+  void assign_collocation_indices();
+  void assign_collocation_indices(const UShort4DArray& colloc_key,
+				  Sizet3DArray& colloc_indices,
+				  int& num_colloc_pts, bool ordered = true);
+  void update_collocation_indices_from_trial(const UShortArray& trial_set);
+  void update_collocation_indices_from_trial(const UShortArray& trial_set,
+					     const UShort4DArray& colloc_key,
+					     Sizet3DArray& colloc_indices,
+					     int& num_colloc_pts);
+  void update_collocation_indices_from_increment(const UShortArray& incr_sets);
+  void update_collocation_indices_from_increment(const UShortArray& incr_sets,
+					     const UShort4DArray& colloc_key,
+					     Sizet3DArray& colloc_indices,
+					     int& num_colloc_pts);
+
+  /// update active numCollocPts from active collocKey (contains unique points)
+  void update_collocation_points();
+  /// update num_colloc_pts from colloc_key (contains unique points)
+  void update_collocation_points(const UShort4DArray& colloc_key,
+				 int& num_colloc_pts);
+
+  /// return active entry in incrementSets
   const UShortArray& increment_sets() const;
 
-  /// return smolyakMultiIndex
+  // return number of sets within popped{T1,T2}WtSets identified by key
+  //size_t popped_sets(const UShortArray& key) const;
+  // return number of sets within popped{T1,T2}WtSets identified by activeKey
+  //size_t popped_sets() const;
+
+  /// return active entry in smolyakMultiIndex
   const UShort3DArray& smolyak_multi_index() const;
+  /// set active entry in smolyakMultiIndex
+  void smolyak_multi_index(const UShort3DArray& sm_mi);
+  /// return smolyakMultiIndex[key]
+  const UShort3DArray& smolyak_multi_index(const UShortArray& key) const;
+  /// return smolyakMultiIndex
+  const std::map<UShortArray, UShort3DArray>& smolyak_multi_index_map() const;
 
   /// set trackCollocIndices
   void track_collocation_indices(bool track_colloc_indices);
   /// get trackCollocIndices
   bool track_collocation_indices() const;
 
-  /// return collocKey
+  /// return active entry in collocKey
   const UShort4DArray& collocation_key() const;
-  /// return collocIndices
+  /// set active entry in collocKey
+  void collocation_key(const UShort4DArray& key);
+  /// return collocKey[key]
+  const UShort4DArray& collocation_key(const UShortArray& key) const;
+  /// return collocKey
+  const std::map<UShortArray, UShort4DArray>& collocation_key_map() const;
+
+  /// return active entry in collocIndices
   const Sizet3DArray& collocation_indices() const;
+  /// set active entry in collocIndices
+  void collocation_indices(const Sizet3DArray& indices);
+  /// return collocIndices[key]
+  const Sizet3DArray& collocation_indices(const UShortArray& key) const;
+  /// return collocIndices
+  const std::map<UShortArray, Sizet3DArray>& collocation_indices_map() const;
 
-  /// return storedLevMultiIndex
-  const UShort3DArray& stored_smolyak_multi_index(size_t index) const;
-  /// return storedCollocKey
-  const UShort4DArray& stored_collocation_key(size_t index) const;
-  // return storedCollocIndices
-  //const Sizet3DArray& stored_collocation_indices(size_t index) const;
-
-  /// discriminate portions of the level-set hierarchy that are
+  /// convert a one-sided increment as in incrementSets (assumes end is defined
+  /// by the total number of sets) to a two-sided key (with beginning and end)
+  void increment_sets_to_increment_key(const UShortArray& incr_sets,
+				       UShort2DArray& incr_key) const;
+  /// define portions of the active level-set hierarchy that are in the
+  /// current increment
+  void partition_increment_key(UShort2DArray& incr_key) const;
+  /// define portions of the active level-set hierarchy that are reference sets
+  void partition_reference_key(UShort2DArray& ref_key) const;
+  /// discriminate portions of the active level-set hierarchy that are
   /// reference sets from those in the current increment
-  void partition_keys(UShort2DArray& reference_set_range,
-		      UShort2DArray& increment_set_range) const;
-  /// discriminate portions of the level-set-point hierarchy that are
-  /// in the reference grid from those in the current increment
-  void partition_keys(UShort3DArray& reference_pt_range,
-		      UShort3DArray& increment_pt_range) const;
+  void partition_keys(UShort2DArray& ref_key, UShort2DArray& incr_key) const;
 
-  /// return type1WeightSets for use in hierarchical integration functions
-  const RealVector2DArray& type1_weight_set_arrays() const;
-  /// return type2WeightSets for use in hierarchical integration functions
-  const RealMatrix2DArray& type2_weight_set_arrays() const;
+  /// discriminate portions of the level-set hierarchy that are in the
+  /// current increment for each model key
+  void partition_increment_key(
+    std::map<UShortArray, UShort2DArray>& incr_key_map) const;
+  /// discriminate portions of the level-set hierarchy that are reference sets
+  /// for each model key
+  void partition_reference_key(
+    std::map<UShortArray, UShort2DArray>& ref_key_map) const;
+  /// discriminate portions of the level-set hierarchy that are reference sets
+  /// from those in the current increment for each model key
+  void partition_keys(std::map<UShortArray, UShort2DArray>& ref_key_map,
+    std::map<UShortArray, UShort2DArray>& incr_key_map) const;
+
+  /// discriminate portions of the active level-set-point hierarchy that are
+  /// in the reference grid from those in the current increment
+  void partition_keys(UShort3DArray&  ref_pt_range,
+		      UShort3DArray& incr_pt_range) const;
+
+  /// compute points and weights for all levels and sets of the hierarchical
+  /// sparse grid indicated by Smolyak multi-index and collocation key
+  void compute_points_weights(const UShort3DArray& sm_mi,
+			      const UShort4DArray& colloc_key,
+			      RealMatrix2DArray& pts, RealVector2DArray& t1_wts,
+			      RealMatrix2DArray& t2_wts);
+  /// compute points and weights for a trial set
+  void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
+			      RealMatrix& t2_wts);
+
+  // overlay all type{1,2}WeightSets and store in active key
+  //void combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
+  //			     RealVector2DArray& comb_t1_wts,
+  //			     RealMatrix2DArray& comb_t2_wts);
+
+  /// return active variableSets
+  const RealMatrix2DArray& hierarchical_variable_sets() const;
+  /// set active variableSets
+  void hierarchical_variable_sets(const RealMatrix2DArray& rm2);
+  /// return active type1WeightSets
+  const RealVector2DArray& type1_hierarchical_weight_sets() const;
+  /// set active type1WeightSets
+  void type1_hierarchical_weight_sets(const RealVector2DArray& t1_wts);
+  /// return active type2WeightSets
+  const RealMatrix2DArray& type2_hierarchical_weight_sets() const;
+  /// set active type2WeightSets
+  void type2_hierarchical_weight_sets(const RealMatrix2DArray& t2_wts);
+
+  /// return complete map for variableSets
+  const std::map<UShortArray, RealMatrix2DArray>& variable_sets_map() const;
+  /// return complete map for type1WeightSets
+  const std::map<UShortArray, RealVector2DArray>& type1_weight_sets_map() const;
+  /// return complete map for type2WeightSets
+  const std::map<UShortArray, RealMatrix2DArray>& type2_weight_sets_map() const;
+
+  /// return combinedSmolyakMultiIndex
+  const UShort3DArray& combined_smolyak_multi_index() const;
+  /// return combinedSmolyakMultiIndexMap
+  const Sizet3DArray& combined_smolyak_multi_index_map() const;
+  /// return combinedCollocKey
+  const UShort4DArray& combined_collocation_key() const;
+  /// return combinedVarSets
+  const RealMatrix2DArray& combined_hierarchical_variable_sets() const;
+  /// return combinedT1WeightSets
+  const RealVector2DArray& combined_type1_hierarchical_weight_sets() const;
+  /// return combinedT2WeightSets
+  const RealMatrix2DArray& combined_type2_hierarchical_weight_sets() const;
 
 private:
 
@@ -149,22 +279,20 @@ private:
   //- Heading: Convenience functions
   //
 
-  void update_smolyak_multi_index(bool clear_sm_mi = false);
-  void assign_collocation_key();
-  void update_collocation_key();
-  void assign_collocation_indices();
-  void update_collocation_indices();
+  /// update {smolMI,collocKey,collocInd}Iter from activeKey
+  void update_active_iterators();
 
-  /// kernel routine used for trial set and full sparse grid computations
-  void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
-			      RealMatrix& t2_wts, const UShortArray& sm_index,
-			      const UShort2DArray& colloc_key);
-  /// compute points and weights for a trial set
-  void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
-			      RealMatrix& t2_wts);
-  /// compute points and weights for all levels of the (initial) sparse grid
-  void compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
-			      RealMatrix2DArray& t2_wts);
+  /// update active smolyakMultiIndex for change in level and/or aniso weights
+  void update_smolyak_multi_index(bool clear_sm_mi = false);
+
+  /// moves all data from popped points/weights to active arrays
+  void push_popped_points_weights();
+
+  /// kernel routine used for computing points and weights for a tensor grid
+  /// corresponding to a single index set
+  void compute_points_weights(const UShortArray& sm_index,
+			      const UShort2DArray& colloc_key, RealMatrix& pts,
+			      RealVector& t1_wts, RealMatrix& t2_wts);
 
   //
   //- Heading: Data
@@ -174,100 +302,395 @@ private:
   /// collocation point increments
   bool nestedGrid;
 
+  /// due to the hierarchical structure, collocation indices only need
+  /// to be defined in special cases (e.g., generalized sparse grids
+  /// for which index sets can appear in different orders).
+  bool trackCollocIndices;
+
   /// interpolation depth by index set by numVars array for identifying
   /// the index to use within the polynomialBasis for a particular variable
   /** The index sets correspond to j (0-based) for use as indices, which
       are offset from the i indices (1-based) normally used in the Smolyak
       expressions.  The indices correspond to levels, one within each
       anisotropic tensor-product integration of a Smolyak recursion. */
-  UShort3DArray smolyakMultiIndex;
+  std::map<UShortArray, UShort3DArray> smolyakMultiIndex;
+  /// iterator for active entry within smolyakMultiIndex
+  std::map<UShortArray, UShort3DArray>::iterator smolMIIter;
 
-  /// level of trial evaluation set from push_trial_set(); trial set
-  /// corresponds to smolyakMultiIndex[trialLevel].back()
-  unsigned short trialLevel;
+  /// level of trial evaluation set passed to increment_smolyak_multi_index()
+  /// during an index set-based refinement
+  std::map<UShortArray, unsigned short> trialLevel;
+  /// iterator for active entry within trialLevel
+  std::map<UShortArray, unsigned short>::iterator trialLevIter;
   /// identifies the trailing index set increments within smolyakMultiIndex
   /// due to an isotropic/anistropic grid refinement
-  UShortArray incrementSets;
-
-  /// due to the hierarchical structure, collocation indices only need
-  /// to be defined in special cases (e.g., generalized sparse grids
-  /// for which index sets can appear in different orders).
-  bool trackCollocIndices;
+  std::map<UShortArray, UShortArray> incrementSets;
+  /// iterator for active entry within incrementSets
+  std::map<UShortArray, UShortArray>::iterator incrSetsIter;
 
   /// levels-by-index sets-by-numDeltaPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
-  UShort4DArray collocKey;
+  std::map<UShortArray, UShort4DArray> collocKey;
+  /// iterator for active entry within collocKey
+  std::map<UShortArray, UShort4DArray>::iterator collocKeyIter;
+
   /// levels-by-index sets-by-numTensorProductPts array for linking the
   /// set of tensor products to the unique collocation points evaluated
-  Sizet3DArray collocIndices;
+  std::map<UShortArray, Sizet3DArray> collocIndices;
+  /// iterator for active entry within collocIndices
+  std::map<UShortArray, Sizet3DArray>::iterator collocIndIter;
 
-  /// stored driver states: copies of smolyakMultiIndex
-  UShort4DArray storedLevMultiIndex;
-  /// stored driver states: copies of collocKey
-  UShort5DArray storedCollocKey;
-  // stored driver states: copies of collocIndices
-  //Sizet4DArray storedCollocIndices;
-
+  /// the set of points in the sparse grid
+  std::map<UShortArray, RealMatrix2DArray> variableSets;
+  /// iterator for active entry within variableSets
+  std::map<UShortArray, RealMatrix2DArray>::iterator varSetsIter;
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
-  RealVector2DArray type1WeightSets;
+  std::map<UShortArray, RealVector2DArray> type1WeightSets;
+  /// iterator for active entry within type1WeightSets
+  std::map<UShortArray, RealVector2DArray>::iterator t1WtIter;
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the sparse grid
-  RealMatrix2DArray type2WeightSets;
+  std::map<UShortArray, RealMatrix2DArray> type2WeightSets;
+  /// iterator for active entry within type2WeightSets
+  std::map<UShortArray, RealMatrix2DArray>::iterator t2WtIter;
+
+  /// multi-index that is the result of combining a set of level expansions
+  /// (defined from HierarchSparseGridDriver::smolyakMultiIndex)
+  UShort3DArray combinedSmolyakMultiIndex;
+  /// mapping of terms when aggregating HierarchSparseGridDriver::
+  /// smolyakMultiIndex into combinedSmolyakMultiIndex in pre_combine_data()
+  Sizet3DArray combinedSmolyakMultiIndexMap;
+  /// collocation key that is the result of combining a set of level expansions
+  /// (defined from combinedSmolyakMultiIndex)
+  UShort4DArray combinedCollocKey;
+
+  /// combination of grid point sets generated by HierarchSparseGridDriver
+  /** Could also be managed within SurrogateData, but would require data
+      sharing per HierarchInterpPolyApproximation instance. */
+  RealMatrix2DArray combinedVarSets;
+  /// combination of HierarchSparseGridDriver::type1WeightSets, consistent
+  /// with combination of level expansions
+  RealVector2DArray combinedT1WeightSets;
+  /// combination of HierarchSparseGridDriver::type2WeightSets, consistent
+  /// with combination of level expansions
+  RealMatrix2DArray combinedT2WeightSets;
 
   // concatenation of type1WeightSets RealVector2DArray into a RealVector
   //RealVector concatT1WeightSets;
   // concatenation of type2WeightSets RealMatrix2DArray into a RealMatrix
   //RealMatrix concatT2WeightSets;
 
-  /// stored driver state: copy of type1WeightSets
-  RealVector3DArray storedType1WeightSets;
-  /// stored driver state: copy of type2WeightSets
-  RealMatrix3DArray storedType2WeightSets;
+  /// popped trial sets that were computed but not selected
+  std::map<UShortArray, UShortArrayDequeArray> poppedLevMultiIndex;
+  /// hierarchical index into poppedLevMultiIndex[lev] for data to be pushed
+  std::map<UShortArray, size_t> pushIndex;
+  /// flattened index for data to be restored
+  std::map<UShortArray, size_t> restoreIndex;
+  /// flattened indices for data to be finalized
+  std::map<UShortArray, SizetArray> finalizeIndex;
 
-  /// type 1 weight sets popped during decrement for later restoration
-  /// to type1WeightSets
-  std::map<UShortArray, RealVector> poppedT1WtSets;
-  /// type 2 weight sets popped during decrement for later restoration
-  /// to type2WeightSets
-  std::map<UShortArray, RealMatrix> poppedT2WtSets;
+  /// point sets popped during decrement for later restoration to variableSets
+  std::map<UShortArray, RealMatrixDequeArray> poppedVarSets;
+  /// type 1 weight sets popped during decrement for later restoration to
+  /// type1WeightSets
+  std::map<UShortArray, RealVectorDequeArray> poppedT1WtSets;
+  /// type 2 weight sets popped during decrement for later restoration to
+  /// type2WeightSets
+  std::map<UShortArray, RealMatrixDequeArray> poppedT2WtSets;
 };
 
 
 inline HierarchSparseGridDriver::HierarchSparseGridDriver():
-  SparseGridDriver(), nestedGrid(true), trackCollocIndices(true)
-{ }
+  SparseGridDriver(), nestedGrid(true), trackCollocIndices(true),
+  smolMIIter(smolyakMultiIndex.end())
+{ update_active_iterators(); }
 
 
 inline HierarchSparseGridDriver::
 HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
-  nestedGrid(true), trackCollocIndices(true)
-{ }
+  nestedGrid(true), trackCollocIndices(true),
+  smolMIIter(smolyakMultiIndex.end())
+{ update_active_iterators(); }
 
 
 inline HierarchSparseGridDriver::~HierarchSparseGridDriver()
 { }
 
 
+inline void HierarchSparseGridDriver::update_active_iterators()
+{
+  // Test for change
+  if (smolMIIter != smolyakMultiIndex.end() && smolMIIter->first == activeKey)
+    return;
+
+  smolMIIter = smolyakMultiIndex.find(activeKey);
+  if (smolMIIter == smolyakMultiIndex.end()) {
+    std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
+    smolMIIter = smolyakMultiIndex.insert(u3a_pair).first;
+  }
+  trialLevIter = trialLevel.find(activeKey);
+  if (trialLevIter == trialLevel.end()) {
+    std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
+    trialLevIter = trialLevel.insert(us_pair).first;
+  }
+  incrSetsIter = incrementSets.find(activeKey);
+  if (incrSetsIter == incrementSets.end()) {
+    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());
+    incrSetsIter = incrementSets.insert(ua_pair).first;
+  }
+  collocKeyIter = collocKey.find(activeKey);
+  if (collocKeyIter == collocKey.end()) {
+    std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
+    collocKeyIter = collocKey.insert(u4a_pair).first;
+  }
+  collocIndIter = collocIndices.find(activeKey);
+  if (collocIndIter == collocIndices.end()) {
+    std::pair<UShortArray, Sizet3DArray> s3a_pair(activeKey, Sizet3DArray());
+    collocIndIter = collocIndices.insert(s3a_pair).first;
+  }
+  varSetsIter = variableSets.find(activeKey);
+  if (varSetsIter == variableSets.end()) {
+    std::pair<UShortArray, RealMatrix2DArray>
+      rm2_pair(activeKey, RealMatrix2DArray());
+    varSetsIter = variableSets.insert(rm2_pair).first;
+  }
+  t1WtIter = type1WeightSets.find(activeKey);
+  if (t1WtIter == type1WeightSets.end()) {
+    std::pair<UShortArray, RealVector2DArray>
+      rv2_pair(activeKey, RealVector2DArray());
+    t1WtIter = type1WeightSets.insert(rv2_pair).first;
+  }
+  t2WtIter = type2WeightSets.find(activeKey);
+  if (t2WtIter == type2WeightSets.end()) {
+    std::pair<UShortArray, RealMatrix2DArray>
+      rm2_pair(activeKey, RealMatrix2DArray());
+    t2WtIter = type2WeightSets.insert(rm2_pair).first;
+  }
+
+  SparseGridDriver::update_active_iterators();
+}
+
+
+inline void HierarchSparseGridDriver::assign_collocation_key()
+{ assign_collocation_key(smolMIIter->second, collocKeyIter->second); }
+
+
+inline void HierarchSparseGridDriver::
+update_collocation_key_from_trial(const UShortArray& trial_set)
+{
+  update_collocation_key_from_trial(trial_set, smolMIIter->second,
+				    collocKeyIter->second);
+}
+
+
+inline void HierarchSparseGridDriver::
+update_collocation_key_from_increment(UShortArray& incr_sets)
+{
+  update_collocation_key_from_increment(incr_sets, smolMIIter->second,
+					collocKeyIter->second);
+}
+
+
+inline void HierarchSparseGridDriver::assign_collocation_indices()
+{
+  assign_collocation_indices(collocKeyIter->second, collocIndIter->second,
+			     numPtsIter->second);
+}
+
+
+inline void HierarchSparseGridDriver::
+update_collocation_indices_from_trial(const UShortArray& trial_set)
+{
+  update_collocation_indices_from_trial(trial_set, collocKeyIter->second,
+					collocIndIter->second,
+					numPtsIter->second);
+}
+
+
+inline void HierarchSparseGridDriver::
+update_collocation_indices_from_increment(const UShortArray& incr_sets)
+{
+  update_collocation_indices_from_increment(incr_sets, collocKeyIter->second,
+					    collocIndIter->second,
+					    numPtsIter->second);
+}
+
+
+inline void HierarchSparseGridDriver::update_collocation_points()
+{ update_collocation_points(collocKeyIter->second, numPtsIter->second); }
+
+
+inline void HierarchSparseGridDriver::clear_keys()
+{
+  SparseGridDriver::clear_keys();
+
+  smolyakMultiIndex.clear();  smolMIIter    = smolyakMultiIndex.end();
+  trialLevel.clear();         trialLevIter  = trialLevel.end();
+  incrementSets.clear();      incrSetsIter  = incrementSets.end();
+  collocKey.clear();          collocKeyIter = collocKey.end();
+  collocIndices.clear();      collocIndIter = collocIndices.end();
+  variableSets.clear();       varSetsIter   = variableSets.end();
+  type1WeightSets.clear();    t1WtIter      = type1WeightSets.end();
+  type2WeightSets.clear();    t2WtIter      = type2WeightSets.end();
+
+  poppedLevMultiIndex.clear(); poppedT1WtSets.clear(); poppedT2WtSets.clear();
+}
+
+
+inline const UShortArray& HierarchSparseGridDriver::
+trial_set(const UShortArray& key) const
+{
+  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit
+    = smolyakMultiIndex.find(key);
+  std::map<UShortArray, unsigned short>::const_iterator tl_cit
+    = trialLevel.find(key);
+  if (sm_cit == smolyakMultiIndex.end() || tl_cit == trialLevel.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::trial_set()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return sm_cit->second[tl_cit->second].back();
+}
+
+
 inline const UShortArray& HierarchSparseGridDriver::trial_set() const
-{ return smolyakMultiIndex[trialLevel].back(); }
+{ return smolMIIter->second[trialLevIter->second].back(); }
+
+
+inline unsigned short HierarchSparseGridDriver::trial_level() const
+{ return trialLevIter->second; }
 
 
 inline int HierarchSparseGridDriver::unique_trial_points() const
-{ return collocKey[trialLevel].back().size(); }
+{ return collocKeyIter->second[trialLevIter->second].back().size(); }
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool HierarchSparseGridDriver::
+push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+{
+  size_t tr_lev = l1_norm(tr_set);
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  if (pop_mi.size() <= tr_lev)
+    return false;
+  else {
+    const UShortArrayDeque& pop_mi_l = pop_mi[tr_lev];
+    return
+      (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+  }
+}
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool HierarchSparseGridDriver::
+push_trial_available(const UShortArray& key)
+{
+  const UShortArray& tr_set = trial_set(key);
+  size_t tr_lev = l1_norm(tr_set);
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  if (pop_mi.size() <= tr_lev)
+    return false;
+  else {
+    const UShortArrayDeque& pop_mi_l = pop_mi[tr_lev];
+    return
+      (std::find(pop_mi_l.begin(), pop_mi_l.end(), tr_set) != pop_mi_l.end());
+  }
+}
+
+
+/** identify if newly-pushed trial set exists within stored data sets */
+inline bool HierarchSparseGridDriver::push_trial_available()
+{ return push_trial_available(activeKey, trial_set()); }
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t HierarchSparseGridDriver::
+push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+{
+  size_t tr_lev = l1_norm(tr_set);
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  return (pop_mi.size() <= tr_lev) ? _NPOS : find_index(pop_mi[tr_lev], tr_set);
+}
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t HierarchSparseGridDriver::push_trial_index(const UShortArray& key)
+{
+  const UShortArray& tr_set = trial_set(key);
+  size_t tr_lev = l1_norm(tr_set);
+  const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
+  return (pop_mi.size() <= tr_lev) ? _NPOS : find_index(pop_mi[tr_lev], tr_set);
+}
+
+
+/** identify where newly-pushed trial set exists within stored data sets */
+inline size_t HierarchSparseGridDriver::push_trial_index()
+{ return push_trial_index(activeKey, trial_set()); }
+
+
+inline size_t HierarchSparseGridDriver::push_index(const UShortArray& key) const
+{
+  std::map<UShortArray, size_t>::const_iterator cit = pushIndex.find(key);
+  return (cit == pushIndex.end()) ? _NPOS : cit->second;
+}
+
+
+inline size_t HierarchSparseGridDriver::
+restore_index(const UShortArray& key) const
+{
+  std::map<UShortArray, size_t>::const_iterator cit = restoreIndex.find(key);
+  return (cit == restoreIndex.end()) ? _NPOS : cit->second;
+}
+
+
+inline size_t HierarchSparseGridDriver::
+finalize_index(size_t i, const UShortArray& key) const
+{
+  std::map<UShortArray, SizetArray>::const_iterator cit
+    = finalizeIndex.find(key);
+  return (cit == finalizeIndex.end()) ? _NPOS : cit->second[i];
+}
 
 
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
-{ return incrementSets; }
+{ return incrSetsIter->second; }
+
+
+/*
+inline size_t HierarchSparseGridDriver::
+popped_sets(const UShortArray& key) const
+{
+  // Avoid double lookup since T2 cannot currently exist w/o T1
+  //return std::max(poppedT1WtSets[key].size(), poppedT2WtSets[key].size());
+
+  std::map<UShortArray, RealVectorDequeArray>::const_iterator cit
+    = poppedT1WtSets.find(key);
+  if (cit == poppedT1WtSets.end())
+    return 0;
+  else {
+    const RealVectorDequeArray& pop_t1w = cit->second;
+    size_t lev, num_lev = pop_t1w.size(), num_sets = 0;
+    for (lev=0; lev<num_lev; ++lev)
+      num_sets += pop_t1w[lev].size();
+    return num_sets;
+  }
+}
+
+
+inline size_t HierarchSparseGridDriver::popped_sets() const
+{ return popped_sets(activeKey); }
+*/
 
 
 inline void HierarchSparseGridDriver::print_smolyak_multi_index() const
 {
-  size_t i, j, k, num_lev = smolyakMultiIndex.size(), cntr = 1;
+  const UShort3DArray& sm_mi = smolMIIter->second;
+  size_t i, j, k, num_lev = sm_mi.size(), cntr = 1;
   for (i=0; i<num_lev; ++i) {
-    const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
+    const UShort2DArray& sm_mi_i = sm_mi[i];
     size_t num_sets = sm_mi_i.size();
     for (j=0; j<num_sets; ++j, ++cntr) {
       PCout << "Smolyak index set " << cntr << ':';
@@ -279,6 +702,30 @@ inline void HierarchSparseGridDriver::print_smolyak_multi_index() const
 
 inline const UShort3DArray& HierarchSparseGridDriver::
 smolyak_multi_index() const
+{ return smolMIIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+smolyak_multi_index(const UShort3DArray& sm_mi)
+{ smolMIIter->second = sm_mi; }
+
+
+inline const UShort3DArray& HierarchSparseGridDriver::
+smolyak_multi_index(const UShortArray& key) const
+{
+  std::map<UShortArray, UShort3DArray>::const_iterator cit
+    = smolyakMultiIndex.find(key);
+  if (cit == smolyakMultiIndex.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::"
+	  << "smolyak_multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
+
+
+inline const std::map<UShortArray, UShort3DArray>& HierarchSparseGridDriver::
+smolyak_multi_index_map() const
 { return smolyakMultiIndex; }
 
 
@@ -292,83 +739,164 @@ inline bool HierarchSparseGridDriver::track_collocation_indices() const
 
 
 inline const UShort4DArray& HierarchSparseGridDriver::collocation_key() const
+{ return collocKeyIter->second; }
+
+
+inline void HierarchSparseGridDriver::collocation_key(const UShort4DArray& key)
+{ collocKeyIter->second = key; }
+
+
+inline const UShort4DArray& HierarchSparseGridDriver::
+collocation_key(const UShortArray& key) const
+{
+  std::map<UShortArray, UShort4DArray>::const_iterator cit
+    = collocKey.find(key);
+  if (cit == collocKey.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::"
+	  << "collocation_key()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
+
+
+inline const std::map<UShortArray, UShort4DArray>& HierarchSparseGridDriver::
+collocation_key_map() const
 { return collocKey; }
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
+{ return collocIndIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+collocation_indices(const Sizet3DArray& indices)
+{ collocIndIter->second = indices; }
+
+
+inline const Sizet3DArray& HierarchSparseGridDriver::
+collocation_indices(const UShortArray& key) const
+{
+  std::map<UShortArray, Sizet3DArray>::const_iterator cit
+    = collocIndices.find(key);
+  if (cit == collocIndices.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::"
+	  << "collocation_indices()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
+
+
+inline const std::map<UShortArray, Sizet3DArray>& HierarchSparseGridDriver::
+collocation_indices_map() const
 { return collocIndices; }
 
 
-inline const UShort3DArray& HierarchSparseGridDriver::
-stored_smolyak_multi_index(size_t index) const
-{ return storedLevMultiIndex[index]; }
-
-
-inline const UShort4DArray& HierarchSparseGridDriver::
-stored_collocation_key(size_t index) const
-{ return storedCollocKey[index]; }
-
-
-//inline const Sizet3DArray& HierarchSparseGridDriver::
-//stored_collocation_indices(size_t index) const
-//{ return storedCollocIndices[index]; }
-
-
-/*
-inline const RealVector& HierarchSparseGridDriver::type1_weight_sets() // const
+inline void HierarchSparseGridDriver::
+compute_points_weights(RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts)
 {
-  if (concatT1WeightSets.length() != numCollocPts) {
-    concatT1WeightSets.sizeUninitialized(numCollocPts);
-    size_t lev, set, pt, cntr = 0, num_levels = type1WeightSets.size(),
-      num_sets, num_tp_pts;
-    for (lev=0; lev<num_levels; ++lev) {
-      num_sets = type1WeightSets[lev].size();
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = type1WeightSets[lev][set].length();
-	const SizetArray& colloc_index = collocIndices[lev][set];
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
-	  concatT1WeightSets[colloc_index[cntr]]
-	    = type1WeightSets[lev][set][pt];
-      }
-    }
-  }
-  return concatT1WeightSets;
+  unsigned short trial_lev = trialLevIter->second;
+  compute_points_weights(smolMIIter->second[trial_lev].back(),
+			 collocKeyIter->second[trial_lev].back(),
+			 pts, t1_wts, t2_wts);
 }
 
 
-inline const RealMatrix& HierarchSparseGridDriver::type2_weight_sets() // const
+inline void HierarchSparseGridDriver::
+compute_points_weights(const UShort3DArray& sm_mi,
+		       const UShort4DArray& colloc_key, RealMatrix2DArray& pts,
+		       RealVector2DArray& t1_wts, RealMatrix2DArray& t2_wts)
 {
-  if (concatT2WeightSets.numCols() != numCollocPts) {
-    concatT2WeightSets.shapeUninitialized(numVars, numCollocPts);
-    size_t lev, set, pt, v, cntr = 0, num_levels = type2WeightSets.size(),
-      num_sets, num_tp_pts;
-    for (lev=0; lev<num_levels; ++lev) {
-      num_sets = type2WeightSets[lev].size();
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = type2WeightSets[lev][set].numCols();
-	const SizetArray& colloc_index = collocIndices[lev][set];
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  Real* concat_t2_wts = concatT2WeightSets[colloc_index[cntr]];
-	  const Real*  t2_wts = type2WeightSets[lev][set][pt];
-	  for (v=0; v<numVars; ++v)
-	    concat_t2_wts[v] = t2_wts[v];
-	}
-      }
-    }
+  // size consolidated weights according to greatest interpolation depth
+  size_t lev, num_lev = sm_mi.size(), set, num_sets;
+  pts.resize(num_lev);  t1_wts.resize(num_lev);  t2_wts.resize(num_lev);
+  for (lev=0; lev<num_lev; ++lev) {
+    const UShort3DArray&   key_l = colloc_key[lev];
+    const UShort2DArray& sm_mi_l =  sm_mi[lev];   num_sets = sm_mi_l.size();
+    RealMatrixArray&       pts_l =    pts[lev];      pts_l.resize(num_sets);
+    RealVectorArray&    t1_wts_l = t1_wts[lev];   t1_wts_l.resize(num_sets);
+    RealMatrixArray&    t2_wts_l = t2_wts[lev];   t2_wts_l.resize(num_sets);
+    for (set=0; set<num_sets; ++set)
+      compute_points_weights(sm_mi_l[set], key_l[set], pts_l[set],
+			     t1_wts_l[set], t2_wts_l[set]);
   }
-  return concatT2WeightSets;
 }
-*/
-
-
-inline const RealVector2DArray& HierarchSparseGridDriver::
-type1_weight_set_arrays() const
-{ return type1WeightSets; }
 
 
 inline const RealMatrix2DArray& HierarchSparseGridDriver::
-type2_weight_set_arrays() const
+hierarchical_variable_sets() const
+{ return varSetsIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+hierarchical_variable_sets(const RealMatrix2DArray& rm2)
+{ varSetsIter->second = rm2; }
+
+
+inline const RealVector2DArray& HierarchSparseGridDriver::
+type1_hierarchical_weight_sets() const
+{ return t1WtIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+type1_hierarchical_weight_sets(const RealVector2DArray& rv2)
+{ t1WtIter->second = rv2; }
+
+
+inline const RealMatrix2DArray& HierarchSparseGridDriver::
+type2_hierarchical_weight_sets() const
+{ return t2WtIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+type2_hierarchical_weight_sets(const RealMatrix2DArray& rm2)
+{ t2WtIter->second = rm2; }
+
+
+inline const std::map<UShortArray, RealMatrix2DArray>&
+HierarchSparseGridDriver::variable_sets_map() const
+{ return variableSets; }
+
+
+inline const std::map<UShortArray, RealVector2DArray>&
+HierarchSparseGridDriver::type1_weight_sets_map() const
+{ return type1WeightSets; }
+
+
+inline const std::map<UShortArray, RealMatrix2DArray>&
+HierarchSparseGridDriver::type2_weight_sets_map() const
 { return type2WeightSets; }
+
+
+inline const UShort3DArray& HierarchSparseGridDriver::
+combined_smolyak_multi_index() const
+{ return combinedSmolyakMultiIndex; }
+
+
+inline const Sizet3DArray& HierarchSparseGridDriver::
+combined_smolyak_multi_index_map() const
+{ return combinedSmolyakMultiIndexMap; }
+
+
+inline const UShort4DArray& HierarchSparseGridDriver::
+combined_collocation_key() const
+{ return combinedCollocKey; }
+
+
+inline const RealMatrix2DArray& HierarchSparseGridDriver::
+combined_hierarchical_variable_sets() const
+{ return combinedVarSets; }
+
+
+inline const RealVector2DArray& HierarchSparseGridDriver::
+combined_type1_hierarchical_weight_sets() const
+{ return combinedT1WeightSets; }
+
+
+inline const RealMatrix2DArray& HierarchSparseGridDriver::
+combined_type2_hierarchical_weight_sets() const
+{ return combinedT2WeightSets; }
 
 
 inline void HierarchSparseGridDriver::

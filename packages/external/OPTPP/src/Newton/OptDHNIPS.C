@@ -37,6 +37,8 @@ void OptDHNIPS::reset()
 {
    NLP2* nlp2 = nlprob2();
    int   n    = nlp2->getDim();
+   if (nlp2->hasConstraints())
+     nlp2->getConstraints()->reset();
    nlp2->reset();
    OptimizeClass::defaultReset(n);
    indices = 0;

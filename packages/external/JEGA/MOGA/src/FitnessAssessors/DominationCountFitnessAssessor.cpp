@@ -242,7 +242,7 @@ DominationCountFitnessAssessor::AssessFitness(
         text_entry(ldebug(), this->GetName() + ": Assessing fitness.")
         )
 
-    size_t gSize = groups.GetTotalDesignCount();
+    const size_t gSize = groups.GetTotalDesignCount();
 
     // prepare our resulting fitness record.
     FitnessRecord* ret = new FitnessRecord(gSize);
@@ -251,7 +251,7 @@ DominationCountFitnessAssessor::AssessFitness(
     if(gSize == 0) return ret;
 
     // Now use a MultiObjectiveStatistician to compute the domination counts.
-    DesignCountMap res(
+    const DesignCountMap res(
         MultiObjectiveStatistician::ComputeDominatedByCounts(
             DesignStatistician::CollectDesignsByOF(groups)
             )

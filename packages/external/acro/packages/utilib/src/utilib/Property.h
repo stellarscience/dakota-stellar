@@ -26,7 +26,7 @@
 
 #ifdef UTILIB_HAVE_BOOST
 #include <boost/function.hpp>
-#include <boost/signal.hpp>
+#include <boost/signals2.hpp>
 #endif // UTILIB_HAVE_BOOST
 
 namespace utilib {
@@ -77,8 +77,8 @@ public:
    // [get & set function parameters are void(prop_data, external_value)]
    typedef boost::function<void( utilib::Any&, const utilib::Any  )> set_fcn_t;
    typedef boost::function<void( const utilib::Any&, utilib::Any& )> get_fcn_t;
-   typedef boost::signal< void( const ReadOnly_Property& ) >  onChange_t;
-   typedef boost::signal< bool( const ReadOnly_Property&, const Any& ), 
+   typedef boost::signals2::signal< void( const ReadOnly_Property& ) >  onChange_t;
+   typedef boost::signals2::signal< bool( const ReadOnly_Property&, const Any& ), 
                           logical_and_combiner >  validate_t;
 
    inline bool connected(set_fcn_t &f) const { return ! f.empty(); }

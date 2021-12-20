@@ -12,66 +12,85 @@
 //- Owner:        Mike Eldred
 
 #include "SharedInterpPolyApproxData.hpp"
+#include "MultivariateDistribution.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "TensorProductDriver.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "HierarchSparseGridDriver.hpp"
 
 namespace Pecos {
+
+
+void SharedInterpPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist,
+		const BasisConfigOptions& bc_options,
+		std::vector<BasisPolynomial>& poly_basis)
+{
+  ShortArray basis_types, colloc_rules;
+  initialize_driver_types_rules(u_dist, bc_options, basis_types, colloc_rules);
+  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
+
+  // The following update now occurs at run time:
+  //update_basis_distribution_parameters(u_dist, poly_basis);
+}
 
 
 /** This version provides the polynomial types needed to retrieve
     collocation points and weights by an integration driver.  These
     may involve orthogonal polynomials which will differ from the
     interpolation polynomial types used in the basis. */
-bool SharedInterpPolyApproxData::
-initialize_driver_types_rules(const ShortArray& u_types,
+void SharedInterpPolyApproxData::
+initialize_driver_types_rules(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      ShortArray& basis_types, ShortArray& colloc_rules)
 {
-  bool extra_dist_params = false;
-  size_t i, num_vars = u_types.size();
-  basis_types.resize(num_vars); colloc_rules.resize(num_vars);
+  const ShortArray&   u_types = u_dist.random_variable_types();
+  const BitArray& active_vars = u_dist.active_variables();
+  bool no_mask = active_vars.empty();
+  size_t i, av_cntr, num_v = u_types.size(),
+    num_av = (no_mask) ? num_v : active_vars.count();
+  basis_types.resize(num_av); colloc_rules.resize(num_av);
 
-  // Initialize basis_types, colloc_rules, and extra_dist_params from u_types.
-  // interpolation has different requirements from integration/projection; i.e,
-  // a good choice for interpolation nodes minimize the Lebesgue constant.  This
-  // goal is reflected in the STD_UNIFORM case below.
-  for (i=0; i<num_vars; ++i)
-    switch (u_types[i]) {
-    case STD_UNIFORM: // specialized for interpolation (min Lebesgue constant)
-      if (bc_options.piecewiseBasis) {
-	basis_types[i] = (bc_options.useDerivs) ?
-	  PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
-	if (bc_options.openRuleOverride) // closed nested rules required
-	  PCerr << "Warning: open rules not currently supported for piecewise "
-		<< "polynomial interpolants.  Ignoring override." << std::endl;
-	colloc_rules[i] = (bc_options.equidistantRules) ?
-	  NEWTON_COTES : CLENSHAW_CURTIS;
+  // Initialize basis_types and colloc_rules from u_types
+  // Note: interpolation has different requirements from integration/projection;
+  // i.e, a good choice for interpolation nodes minimize the Lebesgue constant.
+  // This goal is reflected in the STD_UNIFORM case below.
+  for (i=0, av_cntr=0; i<num_v; ++i)
+    if (no_mask || active_vars[i]) {
+      switch (u_types[i]) {
+      case STD_UNIFORM: // specialized for interpolation (min Lebesgue constant)
+	if (bc_options.piecewiseBasis) {
+	  basis_types[av_cntr] = (bc_options.useDerivs) ?
+	    PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
+	  if (bc_options.openRuleOverride) // closed nested rules required
+	    PCerr << "Warning: open rules not currently supported for piecewise"
+		  << " polynomial interpolants. Ignoring override."<< std::endl;
+	  colloc_rules[av_cntr] = (bc_options.equidistantRules) ?
+	    NEWTON_COTES : CLENSHAW_CURTIS;
+	}
+	else if (bc_options.gaussRuleOverride) {
+	  basis_types[av_cntr]  = (bc_options.useDerivs) ?
+	    HERMITE_INTERP : LEGENDRE_ORTHOG;
+	  colloc_rules[av_cntr] = (bc_options.nestedRules) ?
+	    GAUSS_PATTERSON : GAUSS_LEGENDRE;
+	}
+	else {
+	  // LEGENDRE_ORTHOG provides more rule options than CHEBYSHEV_ORTHOG
+	  // if driver mode is changed (removing need to update basis_types)
+	  basis_types[av_cntr]  = (bc_options.useDerivs) ?
+	    HERMITE_INTERP : LEGENDRE_ORTHOG;//CHEBYSHEV_ORTHOG;
+	  colloc_rules[av_cntr] = (bc_options.openRuleOverride) ?
+	    FEJER2 : CLENSHAW_CURTIS;
+	}
+	break;
+      default: // all other cases currently rely on Gaussian quadrature rules
+	initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
+					      basis_types[av_cntr],
+					      colloc_rules[av_cntr]);
+	break;
       }
-      else if (bc_options.gaussRuleOverride) {
-        basis_types[i]  = (bc_options.useDerivs) ?
-          HERMITE_INTERP : LEGENDRE_ORTHOG;
-        colloc_rules[i] = (bc_options.nestedRules) ?
-          GAUSS_PATTERSON : GAUSS_LEGENDRE;
-      }
-      else {
-	// LEGENDRE_ORTHOG provides more rule options than CHEBYSHEV_ORTHOG
-	// if driver mode is changed (removing need to update basis_types)
-	basis_types[i]  = (bc_options.useDerivs) ?
-	  HERMITE_INTERP : LEGENDRE_ORTHOG;//CHEBYSHEV_ORTHOG;
-	colloc_rules[i] = (bc_options.openRuleOverride) ?
-	  FEJER2 : CLENSHAW_CURTIS;
-      }
-      break;
-    default: // all other cases currently rely on Gaussian quadrature rules
-      if (initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
-						basis_types[i],colloc_rules[i]))
-	extra_dist_params = true;
-      break;
+      ++av_cntr;
     }
-
-  return extra_dist_params;
 }
 
 
@@ -92,6 +111,24 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
   default:
     poly_type_1d = NO_POLY; rule = NO_RULE; break;
   }
+}
+
+
+void SharedInterpPolyApproxData::active_key(const UShortArray& key)
+{
+  if (activeKey != key) {
+    activeKey = key;
+    update_active_iterators();
+    driverRep->active_key(key);
+  }
+}
+
+
+void SharedInterpPolyApproxData::clear_keys()
+{
+  SharedPolyApproxData::clear_keys();
+  pushAvail.clear();
+  driverRep->clear_keys();
 }
 
 
@@ -122,11 +159,12 @@ void SharedInterpPolyApproxData::allocate_data()
       update_tensor_interpolation_basis(tpq_driver->level_index());
     if (change_order) {
       allocate_component_sobol();
-      quadOrderPrev = quad_order;
+      quadOrderPrev = quad_order; //anisoWtsPrev = aniso_wts;
     }
     break;
   }
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+  case HIERARCHICAL_SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     unsigned short    ssg_level  = ssg_driver->level();
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
@@ -141,7 +179,7 @@ void SharedInterpPolyApproxData::allocate_data()
       update_sparse_interpolation_basis(ssg_level);
     if (change_lev) {
       allocate_component_sobol();
-      ssgLevelPrev = ssg_level; //ssgAnisoWtsPrev = aniso_wts;
+      ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
     }
     break;
   }
@@ -151,33 +189,57 @@ void SharedInterpPolyApproxData::allocate_data()
 
 void SharedInterpPolyApproxData::increment_data()
 {
-  unsigned short max_set_index = 0;
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: {
-    // As for allocate_arrays(), increments are performed in coarser steps
-    // than may be strictly necessary: all increments are filled in for all
-    // vars for a step in level (ignoring anisotropy or generalized indices).
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShortArray& trial_set = csg_driver->trial_set();
+  switch (expConfigOptions.refineControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    const UShortArray& trial_set = sg_driver->trial_set();
+    unsigned short max_set_index = 0;
     for (size_t i=0; i<numVars; ++i)
       if (trial_set[i] > max_set_index)
 	max_set_index = trial_set[i];
+    update_sparse_interpolation_basis(max_set_index);
+    increment_component_sobol();
     break;
   }
-  case HIERARCHICAL_SPARSE_GRID: {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
-    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-      const UShortArray& trial_set = hsg_driver->trial_set();
-      for (size_t i=0; i<numVars; ++i)
-	if (trial_set[i] > max_set_index)
-	  max_set_index = trial_set[i];
+  default: // uniform/anisotropic refinement
+    switch (expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE: {
+      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      update_tensor_interpolation_basis(tpq_driver->level_index());
+      allocate_component_sobol();
+      // For subsequent allocate_data():
+      //quadOrderPrev = tpq_driver->quadrature_order();
+      //anisoWtsPrev = aniso_wts;
       break;
     }
-    default: { // isotropic/anisotropic refinement
+    case INCREMENTAL_SPARSE_GRID: {
+      // As for allocate_arrays(), increments are performed in coarser steps
+      // than may be strictly necessary: all increments are filled in for all
+      // vars for a step in level (ignoring anisotropy or generalized indices).
+      IncrementalSparseGridDriver* isg_driver
+	= (IncrementalSparseGridDriver*)driverRep;
+      const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
+      size_t i, v, num_sm_mi = sm_mi.size(),
+	start_index = isg_driver->smolyak_coefficients_reference().size();
+      unsigned short max_set_index = 0;
+      for (i=start_index; i<num_sm_mi; ++i) {
+	const UShortArray& sm_mi_i = sm_mi[i];
+	for (v=0; v<numVars; ++v)
+	  if (sm_mi_i[v] > max_set_index)
+	    max_set_index = sm_mi_i[v];
+      }
+      //ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
+      update_sparse_interpolation_basis(max_set_index);
+      increment_component_sobol();
+      break;
+    }
+    case HIERARCHICAL_SPARSE_GRID: {
+      HierarchSparseGridDriver* hsg_driver
+	= (HierarchSparseGridDriver*)driverRep;
       const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
       const UShortArray& incr_sets = hsg_driver->increment_sets();
       size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets, v;
+      unsigned short max_set_index = 0;
       for (lev=0; lev<num_lev; ++lev) {
 	start_set = incr_sets[lev]; num_sets = sm_mi[lev].size();
 	for (set=start_set; set<num_sets; ++set) {
@@ -187,20 +249,20 @@ void SharedInterpPolyApproxData::increment_data()
 	      max_set_index = sm_set[v];
 	}
       }
+      // For subsequent allocate_data():
+      //ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
+      update_sparse_interpolation_basis(max_set_index);
+      increment_component_sobol();
       break;
     }
+    default:
+      PCerr << "Error: unsupported grid definition in SharedInterpPoly"
+	    << "ApproxData::increment_data()" << std::endl;
+      abort_handler(-1);
+      break;
     }
     break;
   }
-  default:
-    PCerr << "Error: unsupported grid definition in InterpPolyApproximation::"
-	  << "increment_coefficients()" << std::endl;
-    abort_handler(-1);
-    break;
-  }
-
-  update_sparse_interpolation_basis(max_set_index);
-  increment_component_sobol();
 }
 
 
@@ -208,74 +270,103 @@ void SharedInterpPolyApproxData::decrement_data()
 {
   // leave polynomialBasis as is
 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
-    // move previous expansion data to current expansion
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    poppedLevMultiIndex.push_back(ssg_driver->trial_set());
+  // Note: trial/increment sets are still available since expansion pop is
+  // ordered to precede grid pop (reverse order from increment grid +
+  // update / push expansion)
+  
+  switch (expConfigOptions.refineControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    //SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    //poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
     break;
   }
+  default:
+    // Neither of the derived SharedInterp classes have a convenient indicator
+    // from local popped data (as in SharedOrthog*), so use a separate flag.
+    pushAvail[activeKey] = true;
+
+    // Leave interpolation basis and component sobol in incremented state
+
+    break;
   }
 }
+
+
+bool SharedInterpPolyApproxData::push_available()
+{
+  switch (expConfigOptions.refineControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return sg_driver->push_trial_available();
+    break;
+  }
+  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
+  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
+  default:
+    return pushAvail[activeKey]; // initialized in update_active_iterators()
+    break;
+  }
+}
+
+
+/*
+void SharedInterpPolyApproxData::pre_push_data()
+{
+  // Note: pushIndex avoids need to recompute index f or each QoI approximation
+
+  switch (expConfigOptions.refineControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    //const UShortArray& tr_set = ((SparseGridDriver*)driverRep)->trial_set();
+    //pushIndex = candidate_index(activeKey, tr_set);
+    break;
+  }
+  default:
+
+    // Interpolation basis and component sobol already in incremented state
+
+    break;
+  }
+}
+*/
 
 
 void SharedInterpPolyApproxData::post_push_data()
 {
   // leave polynomialBasis as is (a previous increment is being restored)
 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
-    // move previous expansion data to current expansion
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    std::deque<UShortArray>::iterator sit
-      = std::find(poppedLevMultiIndex.begin(), poppedLevMultiIndex.end(),
-		  ssg_driver->trial_set());
-    if (sit != poppedLevMultiIndex.end())
-      poppedLevMultiIndex.erase(sit);
+  switch (expConfigOptions.refineControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    //UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
+    //popped_lev_mi.erase(popped_lev_mi.begin() + pushIndex);
     break;
   }
+  default:
+    pushAvail[activeKey] = false;
+
+    // Interpolation basis and component sobol already in incremented state
+
+    break;
   }
 }
 
 
+/*
 void SharedInterpPolyApproxData::post_finalize_data()
 {
   // leave polynomialBasis as is (all previous increments are being restored)
 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID:
-    // move previous expansion data to current expansion
-    poppedLevMultiIndex.clear();
+  switch (expConfigOptions.refineControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
+    //poppedLevMultiIndex[activeKey].clear();
+    break;
+  default:
+
+    // Interpolation basis and component sobol already in incremented state
+
     break;
   }
 }
-
-
-size_t SharedInterpPolyApproxData::pre_combine_data(short combine_type)
-{
-  // Sufficient for two grids: if not currently the maximal grid, then swap
-  // with the stored grid (only one is stored)
-  //bool swap = !driverRep->maximal_grid();
-  //if (swap) { driverRep->swap_grid(); allocate_component_sobol(); }
-
-  // For open-ended number of stored grids: retrieve the most refined from the
-  // existing grids (from sequence specification + any subsequent refinement).
-  // Note: if we assume that multiIndex subsets are enforced across a hierarchy,
-  // then the maximal grid is sufficient to allow reinterpolation of all data.
-  size_t max_index = driverRep->maximal_grid();
-  if (max_index != _NPOS)
-    { driverRep->swap_grid(max_index); allocate_component_sobol(); }
-
-  // Most general: overlay all grid refinement levels to create a new superset:
-  //size_t new_index = driverRep->overlay_maximal_grid();
-  //if (current_grid_index() != new_index) driverRep->swap_grid(new_index);
-
-  return max_index;
-}
-
-
-void SharedInterpPolyApproxData::post_combine_data(short combine_type)
-{ driverRep->clear_stored(); }
+*/
 
 
 void SharedInterpPolyApproxData::
@@ -411,6 +502,11 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 		     const UShortArray& basis_index, const UShort2DArray& key,
 		     const SizetArray& colloc_index)
 {
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to value summation is zero.
+  if (exp_t1_coeffs.empty())
+    return 0.;
+
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -630,6 +726,11 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 		     const SizetArray& subset_colloc_index,
 		     const SizetList& subset_indices)
 {
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to value summation is zero.
+  if (subset_t1_coeffs.empty())
+    return 0.;
+
   // Note: subset_* are consistent with the reduced variable subset,
   // but x and basis_index are full space.
 
@@ -640,7 +741,8 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 
     size_t num_subset_v = subset_indices.size(),
       num_act_v = barycentric_active_variables(basis_index, subset_indices);
-    if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
+    if (num_act_v == 0) { // all x in subset correspond to interp pts
+      // convert 1-D exact indices into an n-D colloc index:
       size_t pt_index = barycentric_exact_index(basis_index, subset_indices);
       // Note: pt_index calculation utilizes only the subset variables
       if (pt_index == _NPOS) // if exactIndex but not exactDeltaIndex, then
@@ -748,8 +850,13 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 {
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
-  size_t i, j, num_colloc_pts = key.size();
 
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (exp_t1_coeffs.empty())
+    { tpGradient = 0.; return tpGradient; }
+
+  size_t i, j, num_colloc_pts = key.size();
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -847,8 +954,13 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 {
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
-  size_t i, j, num_colloc_pts = subset_key.size();
 
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (subset_t1_coeffs.empty())
+    { tpGradient = 0.; return tpGradient; }
+
+  size_t i, j, num_colloc_pts = subset_key.size();
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -947,12 +1059,16 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 					const SizetArray& colloc_index,
 					const SizetArray& dvv)
 {
-  size_t i, j, deriv_index, num_colloc_pts = key.size(),
-    num_deriv_vars = dvv.size();
+  size_t num_deriv_vars = dvv.size();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   if (!num_deriv_vars) return tpGradient;
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (exp_t1_coeffs.empty())
+    { tpGradient = 0.; return tpGradient; }
 
+  size_t i, j, deriv_index, num_colloc_pts = key.size();
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -1100,6 +1216,10 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
   size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
+  // Empty set of tensor pts can happen for restricted growth in (hierarchical)
+  // sparse grids --> tensor contribution to gradient summation is zero.
+  if (exp_t1_coeff_grads.numCols() == 0)
+    { tpGradient = 0.; return tpGradient; }
 
   if (barycentricFlag) {
 

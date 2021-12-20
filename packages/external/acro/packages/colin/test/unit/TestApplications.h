@@ -35,7 +35,7 @@ protected:  // data
 
    compute_map_t compute_map;
 
-   boost::signal<void()>  configure_signal;
+   boost::signals2::signal<void()>  configure_signal;
 
 protected: // methods
    virtual void 

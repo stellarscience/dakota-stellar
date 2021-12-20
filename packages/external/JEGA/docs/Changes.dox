@@ -101,13 +101,13 @@ Document this file
  *     new implementation is safer, faster, more robust, and more portable.
  * - Overhaul of Statistician classes for increased flexibility with data
  *     structures.
- * - Intrduction of ParameterDatabase interface and associated Basic Impl
+ * - Introduction of ParameterDatabase interface and associated Basic Impl
  *     to avoid the need for "two-way" dependencies when using JEGA as a third
  *     party library.
  * - Introduction of the ParameterExtractor class to ease the use of obtaining
  *     values from ParameterDatabase class objects.
  * - Elimination of "Plug-in" design style for Designs and Design Groups in favor
- *     of returning sepecialized data structures with relevant information.  This
+ *     of returning specialized data structures with relevant information.  This
  *     results in short-lived value storage which is safer than attempting to keep
  *     such information up-to-date during the course of an algorithm especially when
  *     it is usually only needed immediately after it is calculated.

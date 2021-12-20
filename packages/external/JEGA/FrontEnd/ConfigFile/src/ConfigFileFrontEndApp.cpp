@@ -188,7 +188,7 @@ eat_white(
     return stream;
 }
 
-/// Replaces all occurances of "&lb" with the pound (#) character.
+/// Replaces all occurrences of "&lb" with the pound (#) character.
 /**
  * \param in The string in which to do the replacing.
  * \return The supplied \a in string is returned for convenience.
@@ -201,7 +201,8 @@ process_pounds(
     static const char* lbstr = "&lb";
     string::size_type next(in.find(lbstr));
 
-    while(next != string::npos) {
+    while(next != string::npos)
+	{
         in.replace(next, 3, "#");
         next = in.find(lbstr, next+1);
     }
@@ -266,7 +267,7 @@ read<string>(
         char last = '\0';
         while(!stream.eof())
         {
-            char next = stream.peek();
+            const char next = stream.peek();
 
             // if we found a " and it is not escaped, we are done.
             if(next == '\"' && last != '\\') { stream.ignore(); break; }
@@ -294,15 +295,15 @@ read<string>(
 /**
  * This specialization will read the input as a string (not using the read
  * specialization for strings, just using the std::operator >>) and then see
- * if it is a valid representation for a boolean.  Valid representations for
+ * if it is a valid representation for a Boolean.  Valid representations for
  * true include "t", "true", and "1" (case insensitive).  Valid representations
  * for false include "f", "false", and "0", also case insensitive.  If a
  * representation other than any of these is provided, then an exception is
  * thrown.
  *
  * \param stream The input stream from which to read a value.
- * \param into The boolean in which to store the read in value.
- * \return The supplied stream after extraction of the boolean.
+ * \param into The Boolean in which to store the read in value.
+ * \return The supplied stream after extraction of the Boolean.
  */
 template <>
 istream&
@@ -321,7 +322,7 @@ read<bool>(
     if     (temp == "t" || temp == "true"  || temp == "1") into = true;
     else if(temp == "f" || temp == "false" || temp == "0") into = false;
     else throw runtime_error(
-        "Unrecognized input for boolean \"" + orig + "\"."
+        "Unrecognized input for Boolean \"" + orig + "\"."
         );
     return stream;
 }
@@ -598,7 +599,7 @@ class ConfigFileFrontEndApp::InputDescriptors::Indices
          */
         static const char _plainString;
 
-        /// The constant used to identify the configuation filename input.
+        /// The constant used to identify the configuration filename input.
         static const char _cfgFile;
 
         /// The constant used to identify the help request input.
@@ -617,46 +618,46 @@ class ConfigFileFrontEndApp::InputDescriptors::Indices
         static const char _selector     ;
         static const char _converger    ;
 
-        static const char _intParams    ;
-        static const char _dblParams    ;
-        static const char _sztParams    ;
-        static const char _boolParams   ;
-        static const char _strParams    ;
-        static const char _intVecParams ;
-        static const char _dblVecParams ;
-        static const char _strVecParams ;
-        static const char _dblMatParams ;
+        static const char _intParams   ;
+        static const char _dblParams   ;
+        static const char _sztParams   ;
+        static const char _boolParams  ;
+        static const char _strParams   ;
+        static const char _intVecParams;
+        static const char _dblVecParams;
+        static const char _strVecParams;
+        static const char _dblMatParams;
 
-        static const char _rndSeed      ;
-        static const char _globLogFile  ;
-        static const char _globLogLevel ;
-        static const char _algType      ;
+        static const char _rndSeed     ;
+        static const char _globLogFile ;
+        static const char _globLogLevel;
+        static const char _algType     ;
 
-        static const char _contRealVar  ;
-        static const char _discRealVar  ;
-        static const char _contIntVar   ;
-        static const char _discIntVar   ;
-        static const char _boolVar      ;
-        static const char _varBounds    ;
-        static const char _varDiscVals  ;
+        static const char _contRealVar;
+        static const char _discRealVar;
+        static const char _contIntVar ;
+        static const char _discIntVar ;
+        static const char _boolVar    ;
+        static const char _varBounds  ;
+        static const char _varDiscVals;
 
-        static const char _linMinObj        ;
-        static const char _nonLinMinObj     ;
-        static const char _linMaxObj        ;
-        static const char _nonLinMaxObj     ;
-        static const char _linSkValObj      ;
-        static const char _nonLinSkValObj   ;
-        static const char _linSkRngObj      ;
-        static const char _nonLinSkRngObj   ;
+        static const char _linMinObj     ;
+        static const char _nonLinMinObj  ;
+        static const char _linMaxObj     ;
+        static const char _nonLinMaxObj  ;
+        static const char _linSkValObj   ;
+        static const char _nonLinSkValObj;
+        static const char _linSkRngObj   ;
+        static const char _nonLinSkRngObj;
 
-        static const char _linInEqCon           ;
-        static const char _nonLinInEqCon        ;
-        static const char _linEqCon             ;
-        static const char _nonLinEqCon          ;
-        static const char _linTwoSideIneqCon    ;
-        static const char _nonLinTwoSideIneqCon ;
-        static const char _linNotEqCon          ;
-        static const char _nonLinNotEqCon       ;
+        static const char _linInEqCon          ;
+        static const char _nonLinInEqCon       ;
+        static const char _linEqCon            ;
+        static const char _nonLinEqCon         ;
+        static const char _linTwoSideIneqCon   ;
+        static const char _nonLinTwoSideIneqCon;
+        static const char _linNotEqCon         ;
+        static const char _nonLinNotEqCon      ;
 
 
 }; // class ConfigFileFrontEndApp::InputDescriptors::Indices
@@ -749,10 +750,10 @@ typedef mpl::map32<
         vector<bt::tuple<string, size_t> >
         >,
 
-    // An entry for all inputs that are named boolean parameters.
+    // An entry for all inputs that are named Boolean parameters.
     mpl::pair<CFFE_CHVEC(_boolParams),
-        // string - The name of the boolean parameter
-        // bool - The value of the boolean parameter
+        // string - The name of the Boolean parameter
+        // bool - The value of the Boolean parameter
         vector<bt::tuple<string, bool> >
         >,                                                                // 5
 
@@ -834,7 +835,7 @@ typedef mpl::map32<
         vector<bt::tuple<size_t, string, IntVector> >
         >,                                                                // 15
 
-    // An entry for all inputs that describe a boolean variable.
+    // An entry for all inputs that describe a Boolean variable.
     mpl::pair<CFFE_CHVEC(_boolVar),
         // size_t - The zero based index of this variable.
         // string - The label for the new variable.
@@ -882,7 +883,7 @@ typedef mpl::map32<
         // double - The value being sought by the objective.
         // DoubleVector - The vector of variable coefficients used to evaluate
         //                this linear function.
-        vector<bt::tuple<size_t, string, double, DoubleVector> >
+        vector<bt::tuple<size_t, string, obj_val_t, DoubleVector> >
         >,
 
     // An entry for all inputs that describe a nonlinear seek value objective.
@@ -890,7 +891,7 @@ typedef mpl::map32<
         // size_t - The zero based index of this objective.
         // string - The label for the new objective.
         // double - The value being sought by the objective.
-        vector<bt::tuple<size_t, string, double> >
+        vector<bt::tuple<size_t, string, obj_val_t> >
         >,
 
     // An entry for all inputs that describe a linear seek range objective.
@@ -901,7 +902,7 @@ typedef mpl::map32<
         // double - The upper bound on the range sought by this objective.
         // DoubleVector - The vector of variable coefficients used to evaluate
         //                this linear function.
-        vector<bt::tuple<size_t, string, double, double, DoubleVector> >
+        vector<bt::tuple<size_t, string, obj_val_t, obj_val_t, DoubleVector> >
         >,
 
     // An entry for all inputs that describe a nonlinear seek range objective.
@@ -910,7 +911,7 @@ typedef mpl::map32<
         // string - The label for the new objective.
         // double - The lower bound on the range sought by this objective.
         // double - The upper bound on the range sought by this objective.
-        vector<bt::tuple<size_t, string, double, double> >
+        vector<bt::tuple<size_t, string, obj_val_t, obj_val_t> >
         >,
 
     // An entry for all inputs that describe a linear inequality constraint.
@@ -920,7 +921,7 @@ typedef mpl::map32<
         // double - The upper limiting value for this constraint function.
         // DoubleVector - The vector of variable coefficients used to evaluate
         //                this linear function.
-        vector<bt::tuple<size_t, string, double, DoubleVector> >
+        vector<bt::tuple<size_t, string, con_val_t, DoubleVector> >
         >,                                                                // 25
 
     // An entry for all inputs that describe a nonlinear inequality constraint.
@@ -928,7 +929,7 @@ typedef mpl::map32<
         // size_t - The zero based index of this constraint.
         // string - The label for the new constraint.
         // double - The upper limiting value for this constraint function.
-        vector<bt::tuple<size_t, string, double> >
+        vector<bt::tuple<size_t, string, con_val_t> >
         >,
 
     // An entry for all inputs that describe a linear equality constraint.
@@ -940,7 +941,7 @@ typedef mpl::map32<
         //          constraint function.
         // DoubleVector - The vector of variable coefficients used to evaluate
         //                this linear function.
-        vector<bt::tuple<size_t, string, double, double, DoubleVector> >
+        vector<bt::tuple<size_t, string, con_val_t, double, DoubleVector> >
         >,
 
     // An entry for all inputs that describe a nonlinear equality constraint.
@@ -950,7 +951,7 @@ typedef mpl::map32<
         // double - The target value for this constraint function.
         // double - The allowable violation from target value for this
         //          constraint function.
-        vector<bt::tuple<size_t, string, double, double> >
+        vector<bt::tuple<size_t, string, con_val_t, double> >
         >,
 
     // An entry for all inputs that describe a linear 2-sided inequality
@@ -962,7 +963,7 @@ typedef mpl::map32<
         // double - The upper limiting value for this constraint function.
         // DoubleVector - The vector of variable coefficients used to evaluate
         //                this linear function.
-        vector<bt::tuple<size_t, string, double, double, DoubleVector> >
+        vector<bt::tuple<size_t, string, con_val_t, con_val_t, DoubleVector> >
         >,
 
     // An entry for all inputs that describe a nonlinear 2-sided inequality
@@ -972,7 +973,7 @@ typedef mpl::map32<
         // string - The label for the new constraint.
         // double - The lower limiting value for this constraint function.
         // double - The upper limiting value for this constraint function.
-        vector<bt::tuple<size_t, string, double, double> >
+        vector<bt::tuple<size_t, string, con_val_t, con_val_t> >
         >,                                                                // 30
 
     // An entry for all inputs that describe a linear not-equality constraint.
@@ -982,7 +983,7 @@ typedef mpl::map32<
         // double - The taboo value for this constraint function.
         // DoubleVector - The vector of variable coefficients used to evaluate
         //                this linear function.
-        vector<bt::tuple<size_t, string, double, DoubleVector> >
+        vector<bt::tuple<size_t, string, con_val_t, DoubleVector> >
         >,
 
     // An entry for all inputs that describe a nonlinear not-equality
@@ -991,7 +992,7 @@ typedef mpl::map32<
         // size_t - The zero based index of this constraint.
         // string - The label for the new constraint.
         // double - The taboo value for this constraint function.
-        vector<bt::tuple<size_t, string, double> >
+        vector<bt::tuple<size_t, string, con_val_t> >
         >
 >
 all_opt_types;
@@ -1035,13 +1036,13 @@ class ConfigFileFrontEndApp::InputDescriptors::InputTags
         static const string _globLogLevel;
         static const string _algType     ;
 
-        static const string _contRealVar ;
-        static const string _discRealVar ;
-        static const string _contIntVar  ;
-        static const string _discIntVar  ;
-        static const string _boolVar     ;
-        static const string _varBounds   ;
-        static const string _varDiscVals ;
+        static const string _contRealVar;
+        static const string _discRealVar;
+        static const string _contIntVar ;
+        static const string _discIntVar ;
+        static const string _boolVar    ;
+        static const string _varBounds  ;
+        static const string _varDiscVals;
 
         static const string _linMinObj     ;
         static const string _nonLinMinObj  ;
@@ -1074,9 +1075,9 @@ class ConfigFileFrontEndApp::InputDescriptors::DefaultValues
     */
     public:
 
-        static const CFFE_TYPEOF(_cfgFile       ) _cfgFile  ;
-        static const CFFE_TYPEOF(_help          ) _help     ;
-        static const CFFE_TYPEOF(_version       ) _version  ;
+        static const CFFE_TYPEOF(_cfgFile       ) _cfgFile;
+        static const CFFE_TYPEOF(_help          ) _help   ;
+        static const CFFE_TYPEOF(_version       ) _version;
 
         static const CFFE_TYPEOF(_assessor      ) _assessor     ;
         static const CFFE_TYPEOF(_initializer   ) _initializer  ;
@@ -1140,9 +1141,9 @@ class ConfigFileFrontEndApp::InputDescriptors::DefaultValues
 Static Member Data Definitions
 ================================================================================
 */
-const string ITS::_cfgFile       ("cfgfile"  );
-const string ITS::_help          ("help"     );
-const string ITS::_version       ("version"  );
+const string ITS::_cfgFile       ("cfgfile");
+const string ITS::_help          ("help"   );
+const string ITS::_version       ("version");
 
 const string ITS::_assessor      ("FITNESS_ASSESSOR");
 const string ITS::_initializer   ("INITIALIZER"     );
@@ -1272,7 +1273,9 @@ const CFFE_TYPEOF(_contRealVar)
     DVS::_contRealVar(1, bt::make_tuple(0, ITS::_dummyTag, 0.0, 0.0, 0));
 
 const CFFE_TYPEOF(_discRealVar)
-    DVS::_discRealVar(1, bt::make_tuple(0, ITS::_dummyTag, DoubleVector(1, 0.0)));
+    DVS::_discRealVar(1, bt::make_tuple(
+		0, ITS::_dummyTag, DoubleVector(1, 0.0))
+		);
 
 const CFFE_TYPEOF(_contIntVar)
     DVS::_contIntVar(1, bt::make_tuple(0, ITS::_dummyTag, 0, 0));
@@ -1298,55 +1301,63 @@ const CFFE_TYPEOF(_nonLinMaxObj)
 const CFFE_TYPEOF(_linSkValObj)
     DVS::_linSkValObj(
         1,
-        bt::make_tuple(0, ITS::_dummyTag, 0.0, DoubleVector(1, 0.0))
+        bt::make_tuple(0, ITS::_dummyTag, obj_val_t(0), DoubleVector(1, 0.0))
         );
 
 const CFFE_TYPEOF(_nonLinSkValObj)
-    DVS::_nonLinSkValObj(1, bt::make_tuple(0, ITS::_dummyTag, 0.0));
+    DVS::_nonLinSkValObj(1, bt::make_tuple(0, ITS::_dummyTag, obj_val_t(0)));
 
 const CFFE_TYPEOF(_linSkRngObj)
     DVS::_linSkRngObj(
         1,
-        bt::make_tuple(0, ITS::_dummyTag, 0.0, 0.0, DoubleVector(1, 0.0))
+        bt::make_tuple(
+            0, ITS::_dummyTag, obj_val_t(0), obj_val_t(0), DoubleVector(1, 0.0)
+            )
         );
 
-const CFFE_TYPEOF(_nonLinSkRngObj)
-    DVS::_nonLinSkRngObj(1, bt::make_tuple(0, ITS::_dummyTag, 0.0, 0.0));
+const CFFE_TYPEOF(_nonLinSkRngObj) DVS::_nonLinSkRngObj(
+    1, bt::make_tuple(0, ITS::_dummyTag, obj_val_t(0), obj_val_t(0))
+    );
 
 const CFFE_TYPEOF(_linInEqCon)
     DVS::_linInEqCon(
         1,
-        bt::make_tuple(0, ITS::_dummyTag, 0.0, DoubleVector(1, 0.0))
+        bt::make_tuple(0, ITS::_dummyTag, con_val_t(0), DoubleVector(1, 0.0))
         );
 
 const CFFE_TYPEOF(_nonLinInEqCon)
-    DVS::_nonLinInEqCon(1, bt::make_tuple(0, ITS::_dummyTag, 0.0));
+    DVS::_nonLinInEqCon(1, bt::make_tuple(0, ITS::_dummyTag, con_val_t(0)));
 
 const CFFE_TYPEOF(_linEqCon)
     DVS::_linEqCon(
         1,
-        bt::make_tuple(0, ITS::_dummyTag, 0.0, 0.0, DoubleVector(1, 0.0))
+        bt::make_tuple(
+            0, ITS::_dummyTag, con_val_t(0), con_val_t(0), DoubleVector(1, 0.0)
+            )
         );
 
 const CFFE_TYPEOF(_nonLinEqCon)
-    DVS::_nonLinEqCon(1, bt::make_tuple(0, ITS::_dummyTag, 0.0, 0.0));
+    DVS::_nonLinEqCon(1, bt::make_tuple(0, ITS::_dummyTag, con_val_t(0), 0.0));
 
 const CFFE_TYPEOF(_linTwoSideIneqCon)
     DVS::_linTwoSideIneqCon(1,
-        bt::make_tuple(0, ITS::_dummyTag, 0.0, 0.0, DoubleVector(1, 0.0))
+        bt::make_tuple(
+            0, ITS::_dummyTag, con_val_t(0), con_val_t(0), DoubleVector(1, 0.0)
+            )
         );
 
-const CFFE_TYPEOF(_nonLinTwoSideIneqCon)
-    DVS::_nonLinTwoSideIneqCon(1, bt::make_tuple(0, ITS::_dummyTag, 0.0, 0.0));
+const CFFE_TYPEOF(_nonLinTwoSideIneqCon) DVS::_nonLinTwoSideIneqCon(
+    1, bt::make_tuple(0, ITS::_dummyTag, con_val_t(0), con_val_t(0))
+    );
 
 const CFFE_TYPEOF(_linNotEqCon)
     DVS::_linNotEqCon(
         1,
-        bt::make_tuple(0, ITS::_dummyTag, 0.0, DoubleVector(1, 0.0))
+        bt::make_tuple(0, ITS::_dummyTag, con_val_t(0), DoubleVector(1, 0.0))
         );
 
 const CFFE_TYPEOF(_nonLinNotEqCon)
-    DVS::_nonLinNotEqCon(1, bt::make_tuple(0, ITS::_dummyTag, 0.0));
+    DVS::_nonLinNotEqCon(1, bt::make_tuple(0, ITS::_dummyTag, con_val_t(0)));
 
 
 /*
@@ -1362,7 +1373,7 @@ ConfigFileFrontEndApp::GetValueOf(
 {
     EDDY_FUNC_DEBUGSCOPE
     // Keep this broken up into two statements for compilation with gcc.
-    const variable_value& vv = GetVariableValue(param);
+    const variable_value& vv = this->GetVariableValue(param);
     return vv.as<T>();
 }
 
@@ -1373,7 +1384,7 @@ ConfigFileFrontEndApp::ConcatenateVector(
     )
 {
     typedef typename mpl::at<all_opt_types, char[I]>::type BVT;
-    const BVT& all = GetValueOf<BVT>(tag);
+    const BVT& all = this->GetValueOf<BVT>(tag);
 
     // if all is empty, there is nothing to do.
     if(all.empty()) return vector<T>();
@@ -1472,16 +1483,27 @@ ConfigFileFrontEndApp::Run(
     try
     {
         // Begin by retrieving all user input.
-        RetrieveAllInput(argc, argv);
+        this->RetrieveAllInput(argc, argv);
 
-        ValidateAllInput();
+        this->ValidateAllInput();
 
         // All programs must initialize JEGA once and only once.
-        Driver::InitializeJEGA(
-            CFFE_GETVAR(_globLogFile),
-            ResolveLogLevel(CFFE_GETVAR(_globLogLevel)),
-            static_cast<unsigned int>(CFFE_GETVAR(_rndSeed))
-            );
+        if(!Driver::IsJEGAInitialized())
+        {
+            Driver::InitializeJEGA(
+                CFFE_GETVAR(_globLogFile),
+                this->ResolveLogLevel(CFFE_GETVAR(_globLogLevel)),
+                static_cast<unsigned int>(CFFE_GETVAR(_rndSeed))
+                );
+        }
+        else
+        {
+            //Driver::FlushGlobalLogStreams();
+            Driver::ResetGlobalLoggingLevel(
+                this->ResolveLogLevel(CFFE_GETVAR(_globLogLevel))
+                );
+            Driver::ReSeed(static_cast<unsigned int>(CFFE_GETVAR(_rndSeed)));
+        }
 
         this->LoadParameterDatabase();
         this->LoadProblemConfig();
@@ -1491,7 +1513,7 @@ ConfigFileFrontEndApp::Run(
 
         // start by creating our algorithm config.  To do that, we need an
         // evaluator creator
-        auto_ptr<EvaluatorCreator> evalCreator(this->GetEvaluatorCreator());
+        unique_ptr<EvaluatorCreator> evalCreator(this->GetEvaluatorCreator());
         AlgorithmConfig aConfig(*evalCreator, *this->_theParamDB);
         this->LoadAlgorithmParameters(aConfig);
 
@@ -1726,14 +1748,14 @@ ConfigFileFrontEndApp::PrintHelpMessage(
             "through the configuration file only.  See the listings below for "
             "a complete reference of available inputs.\n\n"
 
-            "Inputs to the command line are preceeded with two hyphens when "
+            "Inputs to the command line are preceded with two hyphens when "
             "no abbreviation is used and with a single hyphen if using an "
             "accepted abbreviation.  For example:\n\n"
 
             "\t>> jega --help\n"
             "\t>> jega -h\n\n"
 
-            "are equivolent and will print this message.\n\n"
+            "are equivalent and will print this message.\n\n"
 
             "Inputs to the configuration file are quite different.  Each is "
             "identified using an all-caps identifier.  See the listing below "
@@ -1826,9 +1848,9 @@ ConfigFileFrontEndApp::LoadProblemConfig(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    LoadDesignVariables();
-    LoadObjectiveFunctions();
-    LoadConstraints();
+    this->LoadDesignVariables();
+    this->LoadObjectiveFunctions();
+    this->LoadConstraints();
 
     // Find out if we should store discards or not.
     bool doStore = true;
@@ -2078,15 +2100,15 @@ ConfigFileFrontEndApp::RetrieveAllInput(
     EDDY_FUNC_DEBUGSCOPE
 
     // start with the command line input.
-    RetrieveCommandLineInput(argc, argv);
+    this->RetrieveCommandLineInput(argc, argv);
 
     // now, if a configuration file was not supplied, we are screwed!
-    if(!HasInputValueFor(ITS::_cfgFile)) throw runtime_error(
+    if(!this->HasInputValueFor(ITS::_cfgFile)) throw runtime_error(
         "The JEGA configuration file front end must be supplied an "
         "input file via the command line.  Use --help to see how."
         );
 
-    RetrieveConfigFileInput();
+    this->RetrieveConfigFileInput();
 }
 
 
@@ -2110,15 +2132,15 @@ ConfigFileFrontEndApp::RetrieveCommandLineInput(
     // the program than this.
 
     // The help flag is the first such instance we will look for.
-    if(HasInputValueFor(ITS::_help))
+    if(this->HasInputValueFor(ITS::_help))
     {
-        PrintHelpMessage(cerr);
+        this->PrintHelpMessage(cerr);
         exit(0);
     }
     // The version flag is the second such instance we will look for.
-    if(HasInputValueFor(ITS::_version))
+    if(this->HasInputValueFor(ITS::_version))
     {
-        PrintVersionMessage(cerr);
+        this->PrintVersionMessage(cerr);
         exit(0);
     }
 }
@@ -2130,7 +2152,7 @@ ConfigFileFrontEndApp::RetrieveConfigFileInput(
     EDDY_FUNC_DEBUGSCOPE
 
     // otherwise, open the file.
-    string cfgFileName(GetValueOf<string>(ITS::_cfgFile));
+    string cfgFileName(this->GetValueOf<string>(ITS::_cfgFile));
     ifstream ifile(cfgFileName.c_str());
 
     // if it didn't open, there is some other sort of problem that
@@ -2155,7 +2177,7 @@ ConfigFileFrontEndApp::ValidateAllInput(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    ValidateAlgorithmType();
+    this->ValidateAlgorithmType();
 }
 
 EvaluatorCreator*
@@ -2222,8 +2244,7 @@ ConfigFileFrontEndApp::CreateCommandLineOnlyInputOptions(
         (
             (ITS::_version + ",v").c_str(),
             "Prints the current JEGA version and build date."
-        )
-        ;
+        );
 
     return options;
 }
@@ -2288,7 +2309,7 @@ ConfigFileFrontEndApp::CreateConfigFileOnlyInputOptions(
             )
 
         OPTION_WD(_boolParams,
-            "Boolean parameters as name value pairs (string, boolean)."
+            "Boolean parameters as name value pairs (string, Boolean)."
             )
 
         OPTION_WD(_strParams,
@@ -2353,7 +2374,7 @@ ConfigFileFrontEndApp::CreateConfigFileOnlyInputOptions(
             )
 
         OPTION_WD(_boolVar,
-            "Declaration of a boolean variable "
+            "Declaration of a Boolean variable "
             "(unsigned integer, string-one of t, f, true, false, 1, 0)."
             )
 
@@ -2435,8 +2456,7 @@ ConfigFileFrontEndApp::CreateConfigFileOnlyInputOptions(
         OPTION_WD(_nonLinNotEqCon,
             "Declaration of a non-linear not-equality constraint "
             "(unsigned integer, string, real)."
-            )
-        ;
+            );
 
     return options;
 }
@@ -2473,7 +2493,7 @@ ConfigFileFrontEndApp::CreateAllInputOptions(
     // create the options_description object with the desired caption.
     options_description options("All Input Options");
 
-    // now add the comman line only, config file only, and shared options.
+    // now add the command line only, config file only, and shared options.
     options.add(CommandLineOnlyInputOptions());
     options.add(ConfigFileOnlyInputOptions());
     options.add(SharedInputOptions());
@@ -2487,7 +2507,6 @@ ConfigFileFrontEndApp::CreateAllInputOptions(
 Structors
 ================================================================================
 */
-
 
 ConfigFileFrontEndApp::ConfigFileFrontEndApp(
     ) :
@@ -2506,11 +2525,6 @@ ConfigFileFrontEndApp::~ConfigFileFrontEndApp(
     delete this->_theParamDB;
     delete this->_theProbConfig;
 }
-
-
-
-
-
 
 /*
 ================================================================================

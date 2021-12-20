@@ -73,12 +73,8 @@ protected:
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
-  /// return alphaPoly
-  Real alpha_polynomial() const;
-  /// set alphaPoly using the conversion alphaPoly = alpha_stat-1.
-  void alpha_stat(Real alpha);
-
-  /// override default definition (false) since GenLaguerre is parameterized
+  void pull_parameter(short dist_param, Real& param) const;
+  void push_parameter(short dist_param, Real  param);
   bool parameterized() const;
 
   Real length_scale() const;
@@ -99,7 +95,6 @@ inline GenLaguerreOrthogPolynomial::GenLaguerreOrthogPolynomial(): alphaPoly(0.)
 { collocRule = GEN_GAUSS_LAGUERRE; }
 
 
-// TO DO
 inline GenLaguerreOrthogPolynomial::
 GenLaguerreOrthogPolynomial(Real alpha_stat): alphaPoly(alpha_stat-1.)
 { collocRule = GEN_GAUSS_LAGUERRE; }
@@ -109,11 +104,23 @@ inline GenLaguerreOrthogPolynomial::~GenLaguerreOrthogPolynomial()
 { }
 
 
-inline Real GenLaguerreOrthogPolynomial::alpha_polynomial() const
-{ return alphaPoly; }
+inline void GenLaguerreOrthogPolynomial::
+pull_parameter(short dist_param, Real& param) const
+{
+  // return BE_ALPHA,BETA (unconverted)
+  switch (dist_param) {
+  case     GA_ALPHA: param = alphaPoly + 1.; break; // alpha poly to alpha stat
+  case GENLAG_ALPHA: param = alphaPoly;      break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in GenLaguerreOrthog"
+	  << "Polynomial::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
 
 
-inline void GenLaguerreOrthogPolynomial::alpha_stat(Real alpha)
+inline void GenLaguerreOrthogPolynomial::
+push_parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -121,14 +128,24 @@ inline void GenLaguerreOrthogPolynomial::alpha_stat(Real alpha)
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    alphaPoly = alpha - 1.;
+    switch (dist_param) {
+    case     GA_ALPHA: alphaPoly = param - 1.; break;// alpha stat to alpha poly
+    case GENLAG_ALPHA: alphaPoly = param;      break;
+    }
   }
-  else {
-    parametricUpdate = false;
-    Real ap = alpha - 1.;
-    if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
-  }
+  else
+    switch (dist_param) {
+    case GA_ALPHA: {
+      Real ap = param - 1.; // alpha stat to beta poly
+      if (real_compare(alphaPoly, ap)) parametricUpdate = false;
+      else { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+      break;
+    }
+    case GENLAG_ALPHA:
+      if (real_compare(alphaPoly, param)) parametricUpdate = false;
+      else { alphaPoly = param; parametricUpdate = true; reset_gauss(); }
+      break;
+    }
 }
 
 

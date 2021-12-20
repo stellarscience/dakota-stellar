@@ -6,6 +6,7 @@ std::string DDaceOASampler::typeName_ = "DDaceOASampler";
 
 extern "C" {
   int bose_link( int n, int ninputs, int str, int ***AA );
+  int bose_free( int n, int ninputs, int str, int ***AA );
   int OA_strength( int q,int nrow,int ncol,int** A,int *str,int verbose );
 }
 
@@ -127,9 +128,11 @@ void DDaceOASampler::initPattern()
 				{
 					symbolMap_[i][j] = pTmp[i][j];
 				}
-			delete[] pTmp[i];
+			//delete[] pTmp[i];
 		}
-	delete[] pTmp;
+	//delete[] pTmp;
+	// BMA 20190502: Added a bose_free that mirrors the bose_link allocation
+	status = bose_free(nSamples_, nInputs_, 2, &pTmp);
 }
 
 /**

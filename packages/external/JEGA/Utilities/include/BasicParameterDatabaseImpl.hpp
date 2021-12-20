@@ -180,9 +180,9 @@ Class Definition
  *
  * The Get methods throw errors when attempts are made to retrieve parameters
  * that are not in the map.  Use the JEGA::Utilities::ParameterExtractor for
- * methods that automatically handle these errors and return a boolean.
+ * methods that automatically handle these errors and return a Boolean.
  *
- * Here is an example of the useage of this class.
+ * Here is an example of the usage of this class.
  * \code
         BasicParameterDatabaseImpl pdb;
         pdb.AddIntegralParam("myInt", 123);
@@ -231,7 +231,7 @@ class JEGA_SL_IEDECL BasicParameterDatabaseImpl :
         MY_MAP_T<std::string, std::size_t>
         SizeTParamMap;
 
-        /// The type of the map of strings to boolean parameters.
+        /// The type of the map of strings to Boolean parameters.
         typedef
         MY_MAP_T<std::string, bool>
         BoolParamMap;
@@ -283,7 +283,7 @@ class JEGA_SL_IEDECL BasicParameterDatabaseImpl :
         /// The map of size_t parameters
         SizeTParamMap _sizeTParams;
 
-        /// The map of boolean parameters
+        /// The map of Boolean parameters
         BoolParamMap _boolParams;
 
         /// The map of string parameters
@@ -376,9 +376,9 @@ class JEGA_SL_IEDECL BasicParameterDatabaseImpl :
             const std::string& tag
             ) const;
 
-        /// Tests the boolean param map for a value mapped to the supplied tag.
+        /// Tests the Boolean param map for a value mapped to the supplied tag.
         /**
-         * \param tag The key to search for in the boolean param map.
+         * \param tag The key to search for in the Boolean param map.
          * \return true if \a tag is found as a key and false otherwise.
          */
         bool
@@ -478,7 +478,7 @@ class JEGA_SL_IEDECL BasicParameterDatabaseImpl :
          * \param theMap The map into which the key-value pair is to be
          *               inserted.
          * \return True if the insertion succeeds and false otherwise.
-         *         Insertion always succeeds but may be a replacment.
+         *         Insertion always succeeds but may be a replacement.
          */
         template <typename T>
         bool
@@ -517,7 +517,7 @@ class JEGA_SL_IEDECL BasicParameterDatabaseImpl :
          * Each non-empty map of values is written to the string with each
          * mapping on it's own line in the form key = value.  In the case
          * of vector or matrix valued parameters, the output for each key
-         * may take multiple lines.  Finally, each map is preceeded by
+         * may take multiple lines.  Finally, each map is preceded by
          * a description of its contents such as "Integer Parameters:".
          *
          * \return A string into which the contents of this database have been
@@ -535,7 +535,7 @@ class JEGA_SL_IEDECL BasicParameterDatabaseImpl :
          * Each non-empty map of values is written to the stream with each
          * mapping on it's own line in the form key = value.  In the case
          * of vector or matrix valued parameters, the output for each key
-         * may take multiple lines.  Finally, each map is preceeded by
+         * may take multiple lines.  Finally, each map is preceded by
          * a description of its contents such as "Integer Parameters:".
          *
          * \param stream The stream into which to write the contents of
@@ -741,7 +741,7 @@ class JEGA_SL_IEDECL BasicParameterDatabaseImpl :
             const std::size_t& value
             );
 
-        /// Maps the supplied boolean value to the supplied tag.
+        /// Maps the supplied Boolean value to the supplied tag.
         /**
          * The mapping will always succeed.  If the \a tag is already the key
          * for some other value, it will be replaced with the new value.

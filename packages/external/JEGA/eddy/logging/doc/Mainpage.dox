@@ -141,7 +141,7 @@ Specialize the Main Page
  * \section impl_sec Implementation
  *
  * The library is broken into a number of functional components all of which
- * are meant to be extensible and replacable.  There are a number of
+ * are meant to be extensible and replaceable.  There are a number of
  * pre-existing implementations for each to cover the basic usage of the
  * library.
  *
@@ -264,7 +264,7 @@ Specialize the Main Page
  * Furthermore, since the level gateways will be comparing levels for order,
  * it would be wise to create a total order such that the most serious levels
  * (those at which only the most important loggings should register) have the
- * largest value and the values decend from there as the seriousness decends.
+ * largest value and the values descend from there as the seriousness descends.
  * Consider the Log4j levels supplied by the library.  They are ordered like
  * this:
  * - Off = (max for data type)

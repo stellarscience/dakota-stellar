@@ -556,8 +556,8 @@ class EDDY_SL_IEDECL ts_vector
             _Iter _Last
             )
         {
-            mutex_lock lock(_mutex);
-            _container.assign(_First, _Last);
+            mutex_lock lock(this->_mutex);
+            this->_container.assign(_First, _Last);
         }
 
         /// Assigns the contents of this vector to \a _Count copies of \a _Val.
@@ -598,8 +598,8 @@ class EDDY_SL_IEDECL ts_vector
             _Iter _Last
             )
         {
-            mutex_lock lock(_mutex);
-            _container.insert(_Where, _First, _Last);
+            mutex_lock lock(this->_mutex);
+            this->_container.insert(_Where, _First, _Last);
         }
 
         /// Removes the element pointed to by \a _Where from the vector.

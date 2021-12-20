@@ -307,7 +307,15 @@ class NullCrosser :
 
 
     protected:
-
+        
+        virtual
+        bool
+        PollForParameters(
+            const JEGA::Utilities::ParameterDatabase& db
+            )
+        {
+            return true;
+        }
 
     private:
 

@@ -145,7 +145,7 @@ Class Definition
 /// Performs crossover by random design variable selection.
 /**
  * This crosser performs crossover by choosing design variables at random from
- * a prespecified number of parents enough times that the requested number of
+ * a pre-specified number of parents enough times that the requested number of
  * children are produced.
  *
  * For example, consider the case of 3 parents producing 2 children.  This
@@ -257,7 +257,7 @@ class RandomDesignVariableCrosser :
          * The returned text is:
          * \verbatim
             This crosser randomly selects a design variable donor
-            from amongs the parents and assigns that variable value
+            from amongst the parents and assigns that variable value
             into a child.  In this way, it creates a random shuffling
             the design variables from the parents for each child.  The
             number of mutations is the rate times the size of the group
@@ -283,8 +283,6 @@ class RandomDesignVariableCrosser :
         Create(
             GeneticAlgorithm& algorithm
             );
-
-
 
     /*
     ============================================================================

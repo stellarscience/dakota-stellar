@@ -12,7 +12,9 @@
 //- Owner:        Mike Eldred
 
 #include "SharedOrthogPolyApproxData.hpp"
+#include "MultivariateDistribution.hpp"
 #include "pecos_global_defs.hpp"
+#include "pecos_math_util.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
@@ -23,28 +25,36 @@ namespace Pecos {
 
 void SharedOrthogPolyApproxData::allocate_data()
 {
+  UShortArray&  approx_order =  approxOrdIter->second;
+  UShort2DArray& multi_index = multiIndexIter->second;
+
   // detect changes since previous construction
-  bool update_exp_form = (approxOrder != approxOrderPrev);
+  // *** TO DO: replace with a flag updated in set functions, once sobol
+  // ***        index bookkeeping is more modular.
+  bool update_exp_form
+    = (approx_order != prevApproxOrder || activeKey != prevActiveKey);
   //bool restore_exp_form = (multiIndex.size() != t*_*_terms(approxOrder));
 
-  if (update_exp_form) { //|| restore_exp_form) {
-    inflate_scalar(approxOrder, numVars); // promote scalar->vector, if needed
+  if (/*updateExpForm*/update_exp_form) { //|| restore_exp_form) {
+    inflate_scalar(approx_order, numVars); // promote scalar->vector, if needed
     switch (expConfigOptions.expBasisType) {
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
     case TOTAL_ORDER_BASIS:
-      total_order_multi_index(approxOrder, multiIndex);    break;
+      total_order_multi_index(approx_order, multi_index);    break;
     case TENSOR_PRODUCT_BASIS:
-      tensor_product_multi_index(approxOrder, multiIndex); break;
+      tensor_product_multi_index(approx_order, multi_index); break;
     }
-    allocate_component_sobol(multiIndex);
+    precompute_maximal_rules(approx_order);
+    allocate_component_sobol(multi_index);
     // Note: defer this if update_exp_form is needed downstream
-    approxOrderPrev = approxOrder;
+    prevApproxOrder = approx_order;
+    prevActiveKey   = activeKey;
   }
 
   // output (candidate) expansion form
   PCout << "Orthogonal polynomial approximation order = { ";
   for (size_t i=0; i<numVars; ++i)
-    PCout << approxOrder[i] << ' ';
+    PCout << approx_order[i] << ' ';
   switch (expConfigOptions.expBasisType) {
   case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
   case TOTAL_ORDER_BASIS:
@@ -52,18 +62,49 @@ void SharedOrthogPolyApproxData::allocate_data()
   case TENSOR_PRODUCT_BASIS:
     PCout << "} using tensor-product expansion of ";      break;
   }
-  PCout << multiIndex.size() << " terms\n";
+  PCout << multi_index.size() << " terms\n";
 }
 
 
-void SharedOrthogPolyApproxData::allocate_data(const UShort2DArray& mi)
+void SharedOrthogPolyApproxData::active_key(const UShortArray& key)
 {
-  multiIndex = mi;
-  allocate_component_sobol(mi);
+  if (activeKey != key) {
+    activeKey = key; // SharedPolyApproxData::active_key(key);
+    update_active_iterators();
+
+    switch (expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+      driverRep->active_key(key); break;
+    }
+  }
+}
+
+
+void SharedOrthogPolyApproxData::clear_keys()
+{
+  SharedPolyApproxData::clear_keys();
+
+  approxOrder.clear(); approxOrdIter = approxOrder.end();
+  multiIndex.clear(); multiIndexIter = multiIndex.end();
+  tpMultiIndex.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
+  poppedMultiIndex.clear(); poppedMultiIndexMap.clear();
+  poppedMultiIndexMapRef.clear();
+
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+    driverRep->clear_keys(); break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::allocate_data(const UShort2DArray& multi_index)
+{
+  multiIndexIter->second = multi_index;
+  allocate_component_sobol(multi_index);
 
   // output form of imported expansion
   PCout << "Orthogonal polynomial approximation using imported expansion of "
-	<< multiIndex.size() << " terms\n";
+	<< multi_index.size() << " terms\n";
 }
 
 
@@ -88,7 +129,8 @@ allocate_component_sobol(const UShort2DArray& multi_index)
 	  allocate_main_interaction_sobol(num_v); // all n-way interactions
       }
       else {
-	bool update_exp_form = (approxOrder != approxOrderPrev);
+	bool update_exp_form
+	  = (approxOrder != prevApproxOrder || activeKey != prevActiveKey);
 	if (update_exp_form)
 	  allocate_main_interaction_sobol(max_order);
       }
@@ -98,24 +140,84 @@ allocate_component_sobol(const UShort2DArray& multi_index)
 }
 
 
+bool SharedOrthogPolyApproxData::push_available()
+{
+  switch (expConfigOptions.refineControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
+    return isg_driver->push_trial_available();
+    break;
+  }
+  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
+  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
+  default:
+    return !poppedMultiIndex[activeKey].empty(); break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::
+precompute_maximal_rules(const UShort2DArray& multi_index)
+{
+  // This version scans the multiIndex for maximal order per variable.
+  // Due to the overhead of processing multiIndex, protect this processing
+  // according to polynomial basis type (would be better to encapsulate
+  // within the BasisPolynomial hierarchy).
+
+  size_t i, num_mi_terms = multi_index.size();
+  for (i=0; i<numVars; ++i)
+    switch (polynomialBasis[i].basis_type()) {
+    case NUM_GEN_ORTHOG: {
+      unsigned short max_order = multi_index[0][i];
+      for (size_t j=1; j<num_mi_terms; ++j)
+	if (multi_index[j][i] > max_order)
+	  max_order = multi_index[j][i];
+      polynomialBasis[i].precompute_rules(max_order);
+      break;
+    }
+    // default is no-op
+    }
+}
+
+
+void SharedOrthogPolyApproxData::
+precompute_maximal_rules(const UShortArray& approx_order)
+{
+  // This version employs an incoming approx order, eliminating the overhead
+  // of scanning the multiIndex contents.  Since the over head is reduced,
+  // can call for each basis polynomial and rely on virtual precompute_rules()
+  // to target polynomials that support precomputation optimizations.
+
+  for (size_t i=0; i<numVars; ++i)
+    //switch (polynomialBasis[i].basis_type()) {
+    //case NUM_GEN_ORTHOG:
+    polynomialBasis[i].precompute_rules(approx_order[i]); //break;
+    // default is no-op
+    //}
+}
+
+
 void SharedOrthogPolyApproxData::
 increment_trial_set(CombinedSparseGridDriver* csg_driver,
 		    UShort2DArray& aggregated_mi)
 {
-  size_t last_index = tpMultiIndex.size();
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  size_t last_index = tp_mi.size();
   // increment tpMultiIndex{,Map,MapRef} arrays
   UShort2DArray new_us2a; SizetArray new_sa;
-  tpMultiIndex.push_back(new_us2a);
-  tpMultiIndexMap.push_back(new_sa); tpMultiIndexMapRef.push_back(0);
+  tp_mi.push_back(new_us2a);
+  tp_mi_map.push_back(new_sa); tp_mi_map_ref.push_back(0);
   // update tpMultiIndex
   UShortArray exp_order(numVars);
   sparse_grid_level_to_expansion_order(csg_driver, csg_driver->trial_set(),
 				       exp_order);
-  tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
+  tensor_product_multi_index(exp_order, tp_mi[last_index]);
   // update multiIndex and append bookkeeping
-  append_multi_index(tpMultiIndex[last_index], aggregated_mi,
-		     tpMultiIndexMap[last_index],
-		     tpMultiIndexMapRef[last_index]);
+  append_multi_index(tp_mi[last_index], aggregated_mi,
+		     tp_mi_map[last_index], tp_mi_map_ref[last_index]);
 }
 
 
@@ -123,21 +225,22 @@ void SharedOrthogPolyApproxData::
 decrement_trial_set(const UShortArray& trial_set,
 		    UShort2DArray& aggregated_mi, bool save_map)
 {
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   // reset the aggregated multi-index
-  size_t num_exp_terms = tpMultiIndexMapRef.back();
+  size_t num_exp_terms = tp_mi_map_ref.back();
   aggregated_mi.resize(num_exp_terms); // truncate previous increment
 
   // reset tensor-product bookkeeping and save restorable data
-  poppedLevMultiIndex.push_back(trial_set);
-  poppedTPMultiIndex.push_back(tpMultiIndex.back());
+  //poppedLevMultiIndex[activeKey].push_back(trial_set);
+  poppedMultiIndex[activeKey].push_back(tp_mi.back());
   if (save_map) { // always needed if we want to mix and match
-    poppedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
-    poppedTPMultiIndexMapRef.push_back(num_exp_terms);
+    poppedMultiIndexMap[activeKey].push_back(tp_mi_map.back());
+    poppedMultiIndexMapRef[activeKey].push_back(num_exp_terms);
   }
 
-  tpMultiIndex.pop_back();
-  tpMultiIndexMap.pop_back();
-  tpMultiIndexMapRef.pop_back();
+  tp_mi.pop_back();  tp_mi_map.pop_back();  tp_mi_map_ref.pop_back();
 }
 
 
@@ -145,27 +248,31 @@ void SharedOrthogPolyApproxData::
 pre_push_trial_set(const UShortArray& trial_set,
 		      UShort2DArray& aggregated_mi, bool monotonic)
 {
-  pushIndex = find_index(poppedLevMultiIndex, trial_set);
-  size_t last_index = tpMultiIndex.size();
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
-  std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
-  std::advance(iit, pushIndex); tpMultiIndex.push_back(*iit);
+  // retrieve restoration index, previously-computed by ISGDriver
+  size_t p_index = push_index(), last_index = tp_mi.size();
+
+  UShort2DArrayDeque::iterator iit
+    = poppedMultiIndex[activeKey].begin() + p_index;
+  tp_mi.push_back(*iit);
 
   // update multiIndex
   if (monotonic) { // reuse previous Map,MapRef bookkeeping if possible
-    std::deque<SizetArray>::iterator mit = poppedTPMultiIndexMap.begin();
-    std::deque<size_t>::iterator     rit = poppedTPMultiIndexMapRef.begin();
-    std::advance(mit, pushIndex);    tpMultiIndexMap.push_back(*mit);
-    std::advance(rit, pushIndex);    tpMultiIndexMapRef.push_back(*rit);
-    append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
-		       tpMultiIndexMapRef[last_index], aggregated_mi);
+    SizetArrayDeque::iterator mit
+      = poppedMultiIndexMap[activeKey].begin() + p_index;
+    SizetDeque::iterator rit
+      = poppedMultiIndexMapRef[activeKey].begin() + p_index;
+    tp_mi_map.push_back(*mit);  tp_mi_map_ref.push_back(*rit);
+    append_multi_index(tp_mi[last_index], tp_mi_map[last_index],
+		       tp_mi_map_ref[last_index], aggregated_mi);
   }
   else { // replace previous Map,MapRef bookkeeping with new
-    SizetArray sa; tpMultiIndexMap.push_back(sa);
-    tpMultiIndexMapRef.push_back(0);
-    append_multi_index(tpMultiIndex[last_index], aggregated_mi,
-		       tpMultiIndexMap[last_index],
-		       tpMultiIndexMapRef[last_index]);
+    SizetArray sa; tp_mi_map.push_back(sa); tp_mi_map_ref.push_back(0);
+    append_multi_index(tp_mi[last_index], aggregated_mi,
+		       tp_mi_map[last_index], tp_mi_map_ref[last_index]);
   }
 }
 
@@ -174,15 +281,25 @@ void SharedOrthogPolyApproxData::
 post_push_trial_set(const UShortArray& trial_set,
 		       UShort2DArray& aggregated_mi, bool save_map)
 {
-  std::deque<UShortArray>::iterator   sit = poppedLevMultiIndex.begin();
-  std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
-  std::advance(sit, pushIndex);       poppedLevMultiIndex.erase(sit);
-  std::advance(iit, pushIndex);       poppedTPMultiIndex.erase(iit);
+  //UShortArrayDeque& popped_lev_mi = poppedLevMultiIndex[activeKey];
+  //UShortArrayDeque::iterator sit = popped_lev_mi.begin() + p_index;
+  //popped_lev_mi.erase(sit);
+
+  // retrieve restoration index, previously-computed by ISGDriver
+  size_t p_index = push_index();
+
+  UShort2DArrayDeque& popped_tp_mi = poppedMultiIndex[activeKey];
+  UShort2DArrayDeque::iterator iit = popped_tp_mi.begin() + p_index;
+  popped_tp_mi.erase(iit);
+
   if (save_map) { // always needed if we want to mix and match
-    std::deque<SizetArray>::iterator  mit = poppedTPMultiIndexMap.begin();
-    std::deque<size_t>::iterator      rit = poppedTPMultiIndexMapRef.begin();
-    std::advance(mit, pushIndex);     poppedTPMultiIndexMap.erase(mit);
-    std::advance(rit, pushIndex);     poppedTPMultiIndexMapRef.erase(rit);
+    SizetArrayDeque& popped_tp_mi_map = poppedMultiIndexMap[activeKey];
+    SizetArrayDeque::iterator mit = popped_tp_mi_map.begin() + p_index;
+    popped_tp_mi_map.erase(mit);
+
+    SizetDeque& popped_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
+    SizetDeque::iterator rit = popped_tp_mi_map_ref.begin() + p_index;
+    popped_tp_mi_map_ref.erase(rit);
   }
 }
 
@@ -198,170 +315,62 @@ update_component_sobol(const UShort2DArray& multi_index)
 }
 
 
-/** Default storage, specialized in derived classes. */
-void SharedOrthogPolyApproxData::store_data(size_t index)
-{
-  // Storing used for multifidelity; popping used for generalized sparse grids
-
-  bool push = (index == _NPOS || index == storedMultiIndex.size());
-  if (push) storedMultiIndex.push_back(multiIndex);
-  else      storedMultiIndex[index] = multiIndex;
-  
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: // both approx order and driver
-    if (push) storedApproxOrder.push_back(approxOrder);
-    else      storedApproxOrder[index] = approxOrder;
-    driverRep->store_grid(index); break;
-  case COMBINED_SPARSE_GRID: // driver only
-    driverRep->store_grid(index); break;
-  default: // approx order only
-    if (push) storedApproxOrder.push_back(approxOrder);
-    else      storedApproxOrder[index] = approxOrder;
-    break;
-  }
-}
-
-
-void SharedOrthogPolyApproxData::restore_data(size_t index)
-{
-  multiIndex = (index == _NPOS)
-    ? storedMultiIndex.back() : storedMultiIndex[index];
-  
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: // both approx order and driver
-    approxOrder = (index == _NPOS)
-      ? storedApproxOrder.back() : storedApproxOrder[index];
-    driverRep->restore_grid(index); break;
-  case COMBINED_SPARSE_GRID: // driver only
-    driverRep->restore_grid(index); break;
-  default: // approx order only
-    approxOrder = (index == _NPOS)
-      ? storedApproxOrder.back() : storedApproxOrder[index];
-    break;
-  }
-}
-
-
-void SharedOrthogPolyApproxData::remove_stored_data(size_t index)
-{
-  bool pop = (index == _NPOS || index == storedMultiIndex.size() - 1);
-  if (pop) storedMultiIndex.pop_back();
-  else {
-    UShort3DArray::iterator it = storedMultiIndex.begin();
-    std::advance(it, index); storedMultiIndex.erase(it);
-  }
-  
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: // both approx order and driver
-    if (pop) storedApproxOrder.pop_back();
-    else {
-      UShort2DArray::iterator it = storedApproxOrder.begin();
-      std::advance(it, index); storedApproxOrder.erase(it);
-    }
-    driverRep->remove_stored_grid(index); break;
-  case COMBINED_SPARSE_GRID: // driver only
-    driverRep->remove_stored_grid(index); break;
-  default: // approx order only
-    if (pop) storedApproxOrder.pop_back();
-    else {
-      UShort2DArray::iterator it = storedApproxOrder.begin();
-      std::advance(it, index); storedApproxOrder.erase(it);
-    }
-    break;
-  }
-}
-
-
-size_t SharedOrthogPolyApproxData::maximal_expansion()
+const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case COMBINED_SPARSE_GRID:
+  case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     return driverRep->maximal_grid(); break;
   //case : Not supported: different expansionSamples with same exp order
   default: {
-    if (storedApproxOrder.empty()) return _NPOS; // active is maximal
-    size_t i, j, max_index = _NPOS, num_stored = storedApproxOrder.size(),
-      len = approxOrder.size();
-    UShortArray max_ao = approxOrder;
-    for (i=0; i<num_stored; ++i) {
-      // first test for strict =, < , or >.  If inconclusive, resort to
-      // computing total_order_terms().
+    std::map<UShortArray, UShortArray>::iterator
+      ao_it = approxOrder.begin(), max_it = ao_it;
+    size_t j, len = ao_it->second.size();
+    ++ao_it;
+    for (; ao_it!=approxOrder.end(); ++ao_it) {
+      // first test for strict =, < , or >; if inconclusive, resort to
+      // computing total_order_terms()
       bool strict_eq = true, strict_less_eq = true, strict_great_eq = true;
-      UShortArray& stored_ao = storedApproxOrder[i];
+      UShortArray& ao = ao_it->second; UShortArray& max_ao = max_it->second;
       for (j=0; j<len; ++j) {
-	if      (stored_ao[j] < max_ao[j]) strict_eq = strict_great_eq = false;
-	else if (stored_ao[j] > max_ao[j]) strict_eq = strict_less_eq  = false;
+	if      (ao[j] < max_ao[j]) strict_eq = strict_great_eq = false;
+	else if (ao[j] > max_ao[j]) strict_eq = strict_less_eq  = false;
       }
       if (strict_eq || strict_less_eq) { }
       else if (strict_great_eq ||
-	       total_order_terms(stored_ao) > total_order_terms(max_ao))
-	{ max_index = i; max_ao = stored_ao; }
+	       total_order_terms(ao) > total_order_terms(max_ao))
+	max_it = ao_it;
     }
-    return max_index; break;
-  }
-  }
-}
-
-
-void SharedOrthogPolyApproxData::swap_data(size_t index)
-{
-  std::swap(storedMultiIndex[index], multiIndex);
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    std::swap(storedApproxOrder[index], approxOrder);
-    driverRep->swap_grid(index);                             break;
-  case COMBINED_SPARSE_GRID: driverRep->swap_grid(index);    break;
-  default: std::swap(storedApproxOrder[index], approxOrder); break;
-  }
-}
-
-
-size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
-{
-  // based on incoming combine_type, combine the data stored previously
-  // by store_coefficients()
-
-  // Sufficient for two grids: if not currently the maximal grid, then swap
-  // with the stored grid (only one is stored)
-  //bool swap = !maximal_expansion();
-  //if (swap) swap_data();
-  
-  // For open-ended number of stored grids: retrieve the most refined from the
-  // existing grids (from sequence specification + any subsequent refinement)
-  size_t max_index = maximal_expansion();
-  if (max_index != _NPOS) swap_data(max_index);
-
-  // Most general: overlay all grid refinement levels to create a new superset
-  //size_t new_index = overlay_maximal_grid();
-  //if (current_grid_index() != new_index) swap_data(new_index);
-
-  switch (combine_type) {
-  case ADD_COMBINE: {
-    // update multiIndex with any storedMultiIndex terms not yet included.
-    // An update in place is sufficient.
-    size_t i, stored_mi_map_ref, num_stored = storedMultiIndex.size();
-    storedMultiIndexMap.resize(num_stored);
-    for (i=0; i<num_stored; ++i)
-      //append_multi_index(multiIndex, storedMultiIndex[i], combinedMultiIndex,
-      //                   storedMultiIndexMap[i], stored_mi_map_ref);
-      append_multi_index(storedMultiIndex[i], multiIndex,
-			 storedMultiIndexMap[i], stored_mi_map_ref);
-    // reset sobolIndexMap from aggregated multiIndex
-    allocate_component_sobol(multiIndex);
+    return max_it->first; // return form/level key
     break;
   }
+  }
+}
+
+
+void SharedOrthogPolyApproxData::pre_combine_data()
+{
+  // For open-ended number of stored grids: retrieve the most refined from the
+  // existing grids (from sequence specification + any subsequent refinement)
+  //active_key(maximal_expansion());
+
+  switch (expConfigOptions.combineType) {
   case MULT_COMBINE: {
     // default implementation: product of total-order expansions
     // (specialized in SharedProjectOrthogPolyApproxData::pre_combine_data())
 
-    // update approxOrder and define combinedMultiIndex
-    size_t i, j, num_stored = storedApproxOrder.size();
-    for (i=0; i<num_stored; ++i)
+    // roll up approxOrders to define combinedMultiIndex
+    size_t cntr, j, num_seq = approxOrder.size() - 2; // bridge from 1st to last
+    if (num_seq) combinedMultiIndexSeq.resize(num_seq);
+    std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
+    UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
+    for (cntr=0; ao_it!=approxOrder.end(); ++ao_it, ++cntr) {
+      const UShortArray& ao = ao_it->second;
       for (j=0; j<numVars; ++j)
-	approxOrder[j] += storedApproxOrder[i][j];
-    total_order_multi_index(approxOrder, combinedMultiIndex);
-    // define sobolIndexMap from combinedMultiIndex
-    allocate_component_sobol(combinedMultiIndex);
+	combined_ao[j] += ao[j];
+      UShort2DArray& combined_mi = (cntr < num_seq) ?
+	combinedMultiIndexSeq[cntr] : combinedMultiIndex;
+      total_order_multi_index(combined_ao, combined_mi);
+    }
     break;
   }
   case ADD_MULT_COMBINE:
@@ -369,36 +378,136 @@ size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 	  << "in SharedOrthogPolyApproxData::combine_data()" << std::endl;
     abort_handler(-1);
     break;
+  default: { //case ADD_COMBINE:
+    // combine all multiIndex keys into combinedMultiIndex{,Map}
+    size_t i, num_combine = multiIndex.size(), combine_mi_map_ref;
+    combinedMultiIndex.clear();  combinedMultiIndexMap.resize(num_combine);
+    std::map<UShortArray, UShort2DArray>::iterator mi_it;
+    for (mi_it=multiIndex.begin(), i=0; mi_it!=multiIndex.end(); ++mi_it, ++i)
+      append_multi_index(mi_it->second, combinedMultiIndex,
+			 combinedMultiIndexMap[i], combine_mi_map_ref);
+    /*
+    // update active (maximal) multiIndex with any non-active multiIndex
+    // terms not yet included.  An update in place is sufficient.
+    size_t i, num_combine = multiIndex.size() - 1, cntr = 0, combine_mi_map_ref;
+    combinedMultiIndexMap.resize(num_combine);
+    std::map<UShortArray, UShort2DArray>::iterator mi_it;
+    combinedMultiIndex = multiIndexIter->second; // copy
+    for (mi_it = multiIndex.begin(); mi_it != multiIndex.end(); ++mi_it)
+      if (mi_it->first != activeKey) {
+	append_multi_index(mi_it->second, combinedMultiIndex,
+			   combinedMultiIndexMap[cntr], combine_mi_map_ref);
+	++cntr;
+      }
+    */
+    break;
+  }
   }
 
-  return max_index;
+  // reset sobolIndexMap from aggregated multiIndex
+  //allocate_component_sobol(combinedMultiIndex);
 }
 
 
-void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
+void SharedOrthogPolyApproxData::combined_to_active(bool clear_combined)
 {
-  // storedMultiIndex and storedApproxOrder used downstream in
-  // ProjectOrthogPolyApproximation::integrate_response_moments(),
-  // which calls ProjectOrthogPolyApproximation::stored_value()
+  // retrieve the most refined from the existing grids (from sequence
+  // specification + any subsequent refinement)
+  // *** This might still be a good idea (e.g., avoid temporarily inflating
+  // *** memory footprint), though not strictly required...
+  //active_key(maximal_expansion());
 
-  //storedMultiIndex.clear(); // needed in {OPA,POPA,ROPA}::stored_value()
-  storedMultiIndexMap.clear();
+  // combine level data for Driver into combinedSmolyak{MultiIndex,Coeffs},
+  // combined{Var,T1Weight,T2Weight}Sets, et al.
+  // Note: unlike Nodal SC, PCE only requires grid combination at the end, so
+  //       incremental combined grid updates are not necessary for efficiency.
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID:
-    driverRep->clear_stored(); break;
-  case QUADRATURE:
-    //storedApproxOrder.clear(); // needed in ProjectOPA::stored_value()
-    driverRep->clear_stored(); break;
-  default: // total-order expansions
-    storedApproxOrder.clear(); break;
-  }
-
-  switch (combine_type) {
-  case MULT_COMBINE:
-    std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
-    combinedMultiIndex.clear();
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: case QUADRATURE:
+  //case CUBATURE: // key-based data not implemented for multilevel
+    driverRep->combine_grid();
+    driverRep->combined_to_active(clear_combined);
     break;
   }
+
+  if (clear_combined) {
+    std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
+    combinedMultiIndex.clear();
+    combinedMultiIndexMap.clear(); combinedMultiIndexSeq.clear();
+  }
+  else
+    multiIndexIter->second = combinedMultiIndex; // copy
+
+  allocate_component_sobol();//(multiIndexIter->second);
+}
+
+
+void SharedOrthogPolyApproxData::clear_inactive_data()
+{
+  bool ao = false, tp = false;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+    tp = true; driverRep->clear_inactive(); break;
+  case QUADRATURE:
+    ao = true; driverRep->clear_inactive(); break;
+  default: // total-order expansions
+    ao = true;
+    if (expConfigOptions.expBasisType == ADAPTED_BASIS_GENERALIZED)
+      tp = true;
+    break;
+  }
+
+  std::map<UShortArray, UShort2DArray>::iterator  mi_it = multiIndex.begin();
+  std::map<UShortArray, UShortArray>::iterator    ao_it = approxOrder.begin();
+  std::map<UShortArray, UShort3DArray>::iterator tp1_it = tpMultiIndex.begin();
+  std::map<UShortArray, Sizet2DArray>::iterator  tp2_it
+    = tpMultiIndexMap.begin();
+  std::map<UShortArray, SizetArray>::iterator    tp3_it
+    = tpMultiIndexMapRef.begin();
+  while (mi_it != multiIndex.end())
+    if (mi_it == multiIndexIter) { // preserve active
+      ++mi_it;
+      if (ao) ++ao_it;
+      if (tp) { ++tp1_it; ++tp2_it;  ++tp3_it; }
+    }
+    else { // clear inactive: postfix increments manage iterator invalidations
+      multiIndex.erase(mi_it++);
+      if (ao) approxOrder.erase(ao_it++);
+      if (tp) {
+	tpMultiIndex.erase(tp1_it++);
+	tpMultiIndexMap.erase(tp2_it++);
+	tpMultiIndexMapRef.erase(tp3_it++);
+      }
+    }
+}
+
+
+void SharedOrthogPolyApproxData::
+product_multi_index(const UShort2DArray& multi_index_a,
+		    const UShort2DArray& multi_index_b,
+		    UShort2DArray& multi_index_c)
+{
+  // c = a * b
+
+  // Note: pareto set approach works when there is a conversion from sm_mi
+  // to tensor-product multi-index.  Working only with the multi-indices,
+  // we need to carry lower order (dominated) terms in order to fill in
+  // lower-order product terms.
+
+  size_t i, j, v, num_mi_a = multi_index_a.size(),
+    num_mi_b = multi_index_b.size();
+  UShortArray prod_mi(numVars); UShortArraySet prod_mi_sets;
+  for (i=0; i<num_mi_a; ++i)
+    for (j=0; j<num_mi_b; ++j) {
+      for (v=0; v<numVars; ++v)
+	prod_mi[v] = multi_index_a[i][v] + multi_index_b[j][v];
+      prod_mi_sets.insert(prod_mi); // sorted, unique
+    }
+
+  size_t num_mi_c = prod_mi_sets.size();
+  multi_index_c.resize(num_mi_c);
+  UShortArraySet::iterator mi_it;
+  for (i=0, mi_it=prod_mi_sets.begin(); i<num_mi_c; ++i, ++mi_it)
+    multi_index_c[i] = *mi_it;
 }
 
 
@@ -548,457 +657,6 @@ integrand_order_to_expansion_order(const UShortArray& int_order,
 }
 
 
-/** Append to combined_mi based on append_mi. */
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi)
-{
-  if (combined_mi.empty())
-    combined_mi = append_mi;
-  else {
-    size_t i, num_app_mi = append_mi.size();
-    for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = append_mi[i];
-      if (std::find(combined_mi.begin(), combined_mi.end(), search_mi) ==
-	  combined_mi.end())
-	combined_mi.push_back(search_mi);
-    }
-  }
-}
-
-
-/** Append to combined_mi based on append_mi. */
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShortArraySet& append_mi, UShort2DArray& combined_mi)
-{
-  UShortArraySet::const_iterator cit;
-  for (cit=append_mi.begin(); cit!=append_mi.end(); ++cit) {
-    const UShortArray& search_mi = *cit;
-    if (std::find(combined_mi.begin(), combined_mi.end(), search_mi) ==
-	combined_mi.end())
-      combined_mi.push_back(search_mi);
-  }
-}
-
-
-/** Append append_mi to combined_mi, and update append_mi_map
-    (SizetArray) and append_mi_map_ref to facilitate related
-    aggregations without repeated searching. */
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
-		   SizetArray& append_mi_map, size_t& append_mi_map_ref)
-{
-  size_t i, num_app_mi = append_mi.size();
-  append_mi_map.resize(num_app_mi);
-  if (combined_mi.empty()) {
-    combined_mi = append_mi;
-    append_mi_map_ref = 0;
-    for (i=0; i<num_app_mi; ++i)
-      append_mi_map[i] = i;
-  }
-  else {
-    append_mi_map_ref = combined_mi.size();
-    for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = append_mi[i];
-      size_t index = find_index(combined_mi, search_mi);
-      if (index == _NPOS) { // search_mi does not yet exist in multi_index
-	append_mi_map[i] = combined_mi.size();
-	combined_mi.push_back(search_mi);
-      }
-      else
-	append_mi_map[i] = index;
-    }
-  }
-}
-
-
-/** Append append_mi to combined_mi, and update append_mi_map
-    (SizetSet) and append_mi_map_ref to facilitate related
-    aggregations without repeated searching. */
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
-		   SizetSet& append_mi_map, size_t& append_mi_map_ref)
-{
-  size_t i, num_app_mi = append_mi.size();
-  append_mi_map.clear();
-  if (combined_mi.empty()) {
-    combined_mi = append_mi;
-    append_mi_map_ref = 0;
-    for (i=0; i<num_app_mi; ++i)
-      append_mi_map.insert(i);
-  }
-  else {
-    append_mi_map_ref = combined_mi.size();
-    for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = append_mi[i];
-      size_t index = find_index(combined_mi, search_mi);
-      if (index == _NPOS) { // search_mi does not yet exist in multi_index
-	append_mi_map.insert(combined_mi.size());
-	combined_mi.push_back(search_mi);
-      }
-      else
-	append_mi_map.insert(index);
-    }
-  }
-}
-
-
-/** Append append_mi to combined_mi, and update append_mi_map (SizetSet)
-    and append_mi_map_ref to facilitate related aggregations without
-    repeated searching.  This case is used when append_mi and
-    combined_mi follow a consistent order without gaps. */
-void SharedOrthogPolyApproxData::
-append_leading_multi_index(const UShort2DArray& append_mi,
-			   UShort2DArray& combined_mi,
-			   SizetSet& append_mi_map, size_t& append_mi_map_ref)
-{
-  size_t i, num_app_mi = append_mi.size();
-  append_mi_map.clear();
-  if (combined_mi.empty()) {
-    combined_mi = append_mi;
-    append_mi_map_ref = 0;
-    for (i=0; i<num_app_mi; ++i)
-      append_mi_map.insert(i);
-  }
-  else {
-    append_mi_map_ref = combined_mi.size();
-    for (i=0; i<num_app_mi; ++i) {
-      append_mi_map.insert(i);
-      if (i < append_mi_map_ref) {
-	// verify that append_mi is a leading subset with consistent ordering
-	if (append_mi[i] != combined_mi[i]) {
-	  PCerr << "Error: leading subset assumption violated in SharedOrthog"
-		<< "PolyApproxData::append_leading_multi_index()." << std::endl;
-	  abort_handler(-1);
-	}
-      }
-      else
-	combined_mi.push_back(append_mi[i]);
-    }
-  }
-}
-
-
-/** Append to combined_mi based on append_mi and previously defined
-    append_mi_map and append_mi_map_ref.  If necessary, update
-    append_mi_map and append_mi_map_ref. */
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& append_mi, SizetArray& append_mi_map,
-		   size_t& append_mi_map_ref,   UShort2DArray& combined_mi)
-{
-  if (combined_mi.empty())
-    combined_mi = append_mi; // assume append_mi_map{,_ref} are up to date
-  else {
-    size_t i, num_app_mi = append_mi.size(), num_mi = combined_mi.size();
-    if (num_mi == append_mi_map_ref) { // current mi corresponds to ref
-      for (i=0; i<num_app_mi; ++i)
-	if (append_mi_map[i] >= append_mi_map_ref)
-	  combined_mi.push_back(append_mi[i]);
-    }
-    else if (num_mi > append_mi_map_ref) { // mi has grown since ref taken
-      for (i=0; i<num_app_mi; ++i)
-	if (append_mi_map[i] >= append_mi_map_ref) { // previously appended
-	  const UShortArray& search_mi = append_mi[i];
-	  // search from reference pt forward
-	  UShort2DArray::iterator it, it_start = combined_mi.begin();
-	  std::advance(it_start, append_mi_map_ref);
-	  it = std::find(it_start, combined_mi.end(), search_mi);
-	  if (it == combined_mi.end()) { // still an append: update map, append
-	    append_mi_map[i] = combined_mi.size();
-	    combined_mi.push_back(append_mi[i]);
-	  }
-	  else // no longer an append: only update map
-	    append_mi_map[i] = append_mi_map_ref + std::distance(it_start, it);
-	}
-      append_mi_map_ref = num_mi; // reference point now updated
-    }
-    else { // combined_mi is not allowed to shrink since ref taken
-      PCerr << "Error: combined_mi inconsistent with reference size in "
-	    << "OrthogPolyApproximation::append_multi_index()." << std::endl;
-      abort_handler(-1);
-    }
-  }
-}
-
-
-/** Append to combined_mi based on append_mi and previously defined
-    append_mi_map and append_mi_map_ref.  If necessary, update
-    append_mi_map and append_mi_map_ref. */
-void SharedOrthogPolyApproxData::
-append_multi_index(SizetSet& sparse_indices, const UShort2DArray& append_mi,
-		   UShort2DArray& combined_mi, RealVector& exp_coeffs,
-		   RealMatrix& exp_coeff_grads)
-{
-  if (combined_mi.empty())
-    combined_mi = append_mi; // sparse indices & exp coeffs are up to date
-  else { // merge multi-indices; update sparse_indices and exp coeffs
-
-    bool sparse_append = !sparse_indices.empty(); // empty if over-determined LS
-    bool coeff_flag = !exp_coeffs.empty(), grad_flag = !exp_coeff_grads.empty();
-    RealVector old_exp_coeffs; RealMatrix old_exp_coeff_grads;
-    if (coeff_flag) old_exp_coeffs      = exp_coeffs;
-    if (grad_flag)  old_exp_coeff_grads = exp_coeff_grads;
- 
-    size_t i, combined_index, coeff_index, num_app_mi = append_mi.size(),
-      num_coeff = (sparse_append) ? sparse_indices.size() : num_app_mi;
-    SizetArray append_mi_map(num_app_mi);
-    for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = append_mi[i];
-      combined_index = find_index(combined_mi, search_mi);
-      if (combined_index == _NPOS) { // search_mi does not exist in combined_mi
-	combined_index = combined_mi.size();
-	combined_mi.push_back(search_mi);
-      }
-      append_mi_map[i] = combined_index;
-      if (!sparse_append)
-	sparse_indices.insert(combined_index); // becomes resorted
-    }
-
-    SizetSet old_sparse_indices; SizetSet::iterator it;
-    if (sparse_append) {
-      old_sparse_indices = sparse_indices;
-      sparse_indices.clear();
-      for (it=old_sparse_indices.begin(); it!=old_sparse_indices.end(); ++it)
-	sparse_indices.insert(append_mi_map[*it]); // becomes resorted
-      it = old_sparse_indices.begin(); // reset for loop to follow
-    }
-
-    // now that resorting is completed, reorder exp_coeff{s,_grads} to match
-    for (i=0; i<num_coeff; ++i) {
-      if (sparse_append) { combined_index = append_mi_map[*it]; ++it; }
-      else                 combined_index = append_mi_map[i];
-      coeff_index = std::distance(sparse_indices.begin(),
-				  sparse_indices.find(combined_index));
-      if (coeff_flag) exp_coeffs[coeff_index] = old_exp_coeffs[i];
-      if (grad_flag) {
-	Real *exp_coeff_grad     = exp_coeff_grads[coeff_index],
-	     *old_exp_coeff_grad = old_exp_coeff_grads[i];
-	for (size_t j=0; j<numVars; ++j)
-	  exp_coeff_grad[j] = old_exp_coeff_grad[j];
-      }
-    }
-  }
-}
-
-
-// The following variants maintain a separation between ref_mi and combined_mi,
-// rather than updating in place.  In current use cases, append_mi_map has
-// provided sufficient bookkeeping to allow in-place updating.
-
-/*  Create combined_mi by appending append_mi to ref_mi.
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
-		   UShort2DArray& combined_mi)
-{
-  if (ref_mi.empty())
-    combined_mi = append_mi;
-  else {
-    combined_mi = ref_mi;
-    size_t i, num_app_mi = append_mi.size();
-    for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = append_mi[i];
-      if (std::find(combined_mi.begin(), combined_mi.end(),
-		    search_mi) == combined_mi.end())
-	combined_mi.push_back(search_mi);
-    }
-  }
-}
-*/
-
-/*  Append append_mi to ref_mi to create combined_mi, and update
-    append_mi_map and append_mi_map_ref to facilitate related
-    aggregations without repeated searching.
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
-		   UShort2DArray& combined_mi,  SizetArray& append_mi_map,
-		   size_t& append_mi_map_ref)
-{
-  size_t i, num_app_mi = append_mi.size();
-  append_mi_map.resize(num_app_mi);
-  if (ref_mi.empty()) {
-    combined_mi = append_mi;
-    append_mi_map_ref = 0;
-    for (i=0; i<num_app_mi; ++i)
-      append_mi_map[i] = i;
-  }
-  else {
-    combined_mi = ref_mi;
-    append_mi_map_ref = combined_mi.size();
-    for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = app_mi[i];
-      size_t index = find_index(combined_mi, search_mi);
-      if (index == _NPOS) { // search_mi does not yet exist in multi_index
-	append_mi_map[i] = combined_mi.size();
-	combined_mi.push_back(search_mi);
-      }
-      else
-	append_mi_map[i] = index;
-    }
-  }
-}
-*/
-
-/*  Append append_mi to ref_mi to create combined_mi using previously
-    defined append_mi_map and append_mi_map_ref.  If necessary, update
-    append_mi_map and append_mi_map_ref.
-void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
-		   SizetArray& append_mi_map, size_t& append_mi_map_ref,
-		   UShort2DArray& combined_mi)
-{
-  if (ref_mi.empty())
-    combined_mi = append_mi; // assume append_mi_map{,_ref} are up to date
-  else {
-    combined_mi = ref_mi;
-    size_t i, num_app_mi = append_mi.size(), num_mi = combined_mi.size();
-    if (num_mi == append_mi_map_ref) { // current mi corresponds to ref
-      for (i=0; i<num_app_mi; ++i)
-	if (append_mi_map[i] >= append_mi_map_ref)
-	  combined_mi.push_back(append_mi[i]);
-    }
-    else if (num_mi > append_mi_map_ref) { // mi has grown since ref taken
-      for (i=0; i<num_app_mi; ++i)
-	if (append_mi_map[i] >= append_mi_map_ref) { // previously appended
-	  const UShortArray& search_mi = append_mi[i];
-	  // search from reference pt forward
-	  UShort2DArray::iterator it, it_start = combined_mi.begin();
-	  std::advance(it_start, append_mi_map_ref);
-	  it = std::find(it_start, combined_mi.end(), search_mi);
-	  if (it == combined_mi.end()) { // still an append: update map, append
-	    append_mi_map[i] = combined_mi.size();
-	    combined_mi.push_back(append_mi[i]);
-	  }
-	  else // no longer an append: only update map
-	    append_mi_map[i] = append_mi_map_ref + std::distance(it_start, it);
-	}
-      append_mi_map_ref = num_mi; // reference point now updated
-    }
-    else { // combined_mi is not allowed to shrink since ref taken
-      PCerr << "Error: ref_mi inconsistent with reference size in "
-	    << "OrthogPolyApproximation::append_multi_index()." << std::endl;
-      abort_handler(-1);
-    }
-  }
-}
-*/
-
-
-void SharedOrthogPolyApproxData::
-update_pareto_set(const UShortArray& mi_i, UShort2DArray& combined_pareto)
-{
-  std::list<UShort2DArray::iterator> removes;
-  UShort2DArray::iterator jit;
-  bool i_dominated = false, j_dominated;
-  for (jit=combined_pareto.begin(); jit!=combined_pareto.end(); ++jit) {
-    assess_dominance(mi_i, *jit, i_dominated, j_dominated);
-    if (i_dominated) break;
-    if (j_dominated) removes.push_back(jit);
-  }
-  // 
-  // prune newly dominated in reverse order (vector iterators
-  // following a point of insertion or deletion are invalidated)
-  while (!removes.empty())
-    { combined_pareto.erase(removes.back()); removes.pop_back(); }
-  // add nondominated
-  if (!i_dominated)
-    combined_pareto.push_back(mi_i);
-}
-
-
-void SharedOrthogPolyApproxData::
-update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier)
-{
-  std::list<UShortArraySet::iterator> removes;
-  UShortArraySet::iterator jit;
-  bool i_dominated = false, j_dominated;
-  for (jit=mi_frontier.begin(); jit!=mi_frontier.end(); ++jit) {
-    assess_strong_dominance(mi_i, *jit, i_dominated, j_dominated);
-    if (i_dominated) break;
-    if (j_dominated) removes.push_back(jit);
-  }
-  // prune newly dominated in any order
-  std::list<UShortArraySet::iterator>::iterator rm_iter;
-  for (rm_iter=removes.begin(); rm_iter!=removes.end(); ++rm_iter)
-    mi_frontier.erase(*rm_iter);
-  // add nondominated
-  if (!i_dominated)
-    mi_frontier.insert(mi_i);
-}
-
-
-/*
-bool SharedOrthogPolyApproxData::
-assess_dominance(const UShort2DArray& pareto,
-		 const UShort2DArray& combined_pareto)
-{
-  bool new_dominated = true, i_dominated, j_dominated;
-  size_t i, j, num_p = pareto.size(),
-    num_combined_p = combined_pareto.size();
-  for (i=0; i<num_p; ++i) {
-    const UShortArray& pareto_i = pareto[i];
-    i_dominated = false;
-    for (j=0; j<num_combined_p; ++j) {
-      assess_dominance(pareto_i, combined_pareto[j], i_dominated, j_dominated);
-      if (i_dominated) break;
-    }
-    if (!i_dominated) {
-      new_dominated = false;
-#ifdef DEBUG
-      PCout << "Nondominated new pareto member =\n" << pareto_i;
-#else
-      break;
-#endif // DEBUG
-    }
-  }
-  return new_dominated;
-}
-*/
-
-
-/** Weak Pareto dominance: multi_index a weakly dominates multi_index b
-    iff a_i >= b_i for all i and a_i > b_i for at least one dimension.
-    Here we add the additional distinction of a challenger versus an 
-    incumbent: tie goes to the incumbent (the challenger is dominated
-    and is not added redundantly to the Pareto set). */
-void SharedOrthogPolyApproxData::
-assess_dominance(const UShortArray& new_order,
-		 const UShortArray& existing_order,
-		 bool& new_dominated, bool& existing_dominated)
-{
-  // can't use std::vector::operator< (used for component-wise sorting)
-  size_t i, n = new_order.size();
-  bool equal = true, existing_dominated_temp = true;
-  new_dominated = true;
-  for (i=0; i<n; ++i)
-    if (new_order[i] > existing_order[i])
-      { equal = false; new_dominated = false; }
-    else if (existing_order[i] > new_order[i])
-      { equal = false; existing_dominated_temp = false; }
-  // asymmetric logic since incumbent wins a tie
-  existing_dominated = (!equal && existing_dominated_temp);
-}
-
-
-/** Strong Pareto dominance: multi_index a strongly dominates
-    multi_index b iff a_i > b_i for all i.  This case needs no notion
-    of challenger versus incumbent. */
-void SharedOrthogPolyApproxData::
-assess_strong_dominance(const UShortArray& order_a,
-			const UShortArray& order_b,
-			bool& a_dominated, bool& b_dominated)
-{
-  // can't use std::vector::operator< (used for component-wise sorting)
-  size_t i, n = order_a.size();
-  a_dominated = b_dominated = true;
-  for (i=0; i<n; ++i)
-    if (order_a[i] == order_b[i])
-      { a_dominated = b_dominated = false; break; }
-    else if (order_a[i] > order_b[i])
-      a_dominated = false;
-    else // order_b[i] > order_a[i]
-      b_dominated = false;
-}
-
-
 /** This test works in combination with DEBUG settings in
     (Legendre,Laguerre,Jacobi,GenLaguerre)OrthogPolynomial::type1_gradient(). */
 void SharedOrthogPolyApproxData::gradient_check()
@@ -1007,9 +665,9 @@ void SharedOrthogPolyApproxData::gradient_check()
     laguerre_poly(LAGUERRE_ORTHOG), jacobi_poly(JACOBI_ORTHOG),
     gen_laguerre_poly(GEN_LAGUERRE_ORTHOG), chebyshev_poly(CHEBYSHEV_ORTHOG);
   // alpha/beta selections mirror dakota_uq_rosenbrock_pce.in
-  jacobi_poly.alpha_stat(1.5);
-  jacobi_poly.beta_stat(2.);
-  gen_laguerre_poly.alpha_stat(2.5);
+  jacobi_poly.push_parameter(BE_ALPHA, 1.5);
+  jacobi_poly.push_parameter(BE_BETA, 2.);
+  gen_laguerre_poly.push_parameter(GA_ALPHA, 2.5);
 
   Real x = 0.5; // valid for all support ranges: [-1,1], [0,Inf], [-Inf, Inf]
   PCout << "-------------------------------------------------\n";

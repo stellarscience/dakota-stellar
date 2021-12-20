@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,7 +25,7 @@
 #ifndef UQ_GAUSSIAN_LIKELIHOOD_FULL_COV_RAND_COEFF_H
 #define UQ_GAUSSIAN_LIKELIHOOD_FULL_COV_RAND_COEFF_H
 
-#include <queso/GaussianLikelihood.h>
+#include <queso/LikelihoodBase.h>
 
 namespace QUESO {
 
@@ -36,11 +36,16 @@ class GslMatrix;
  * \file GaussianLikelihoodFullCovarianceRandomCoefficient.h
  *
  * \class GaussianLikelihoodFullCovarianceRandomCoefficient
- * \brief A class that represents a Gaussian likelihood with full covariance and random coefficient
+ * \brief A class that represents a Gaussian likelihood with full covariance
+ * and random coefficient.
+ *
+ * The random coefficient is a scalar that pre-multiplies the covariance
+ * matrix.  This is treated as a hyperparameter to be inferred during
+ * the sampling procedure.
  */
 
 template <class V = GslVector, class M = GslMatrix>
-class GaussianLikelihoodFullCovarianceRandomCoefficient : public BaseGaussianLikelihood<V, M> {
+class GaussianLikelihoodFullCovarianceRandomCoefficient : public LikelihoodBase<V, M> {
 public:
   //! @name Constructor/Destructor methods.
   //@{
@@ -62,16 +67,12 @@ public:
   virtual ~GaussianLikelihoodFullCovarianceRandomCoefficient();
   //@}
 
-  //! Actual value of the scalar function.
-  virtual double actualValue(const V & domainVector, const V * domainDirection,
-      V * gradVector, M * hessianMatrix, V * hessianEffect) const;
-
   //! Logarithm of the value of the scalar function.
-  virtual double lnValue(const V & domainVector, const V * domainDirection,
-      V * gradVector, M * hessianMatrix, V * hessianEffect) const;
+  virtual double lnValue(const V & domainVector) const;
+
+  using LikelihoodBase<V, M>::lnValue;
 
 private:
-  double m_covarianceCoefficient;
   const M & m_covariance;
 };
 

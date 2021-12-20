@@ -269,7 +269,8 @@ class JEGA_SL_IEDECL GeneticAlgorithmMutator :
         std::vector<JEGA::Utilities::DesignDVSortSet::iterator>
         ChooseDesignsToMutate(
             std::size_t howMany,
-            JEGA::Utilities::DesignGroup& from
+            JEGA::Utilities::DesignGroup& from,
+            const bool& allowRepeats = true
             );
 
     /*

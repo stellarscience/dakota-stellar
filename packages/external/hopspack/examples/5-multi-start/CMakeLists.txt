@@ -9,6 +9,7 @@
 #   the U.S. Government retains certain rights in this software.
 # ************************************************************************
 
+include(ModifyTargetRpath)
 
 #---- Copy the parameters file to the target location.
 SET (PARAMS_FILE_NAME examples/5-multi-start/example5_params.txt)
@@ -24,6 +25,7 @@ ADD_EXECUTABLE (
 
 #---- Installation instructions.
 INSTALL (TARGETS multi_start
-         DESTINATION examples/5-multi-start)
+         DESTINATION ${DAKOTA_EXAMPLES_INSTALL}/examples/hopspack/5-multi-start)
+ModifyTargetRpath( multi_start 5)
 INSTALL (FILES ${HOPSPACK_SOURCE_DIR}/${PARAMS_FILE_NAME}
-         DESTINATION examples/5-multi-start)
+         DESTINATION ${DAKOTA_EXAMPLES_INSTALL}/examples/hopspack/5-multi-start)

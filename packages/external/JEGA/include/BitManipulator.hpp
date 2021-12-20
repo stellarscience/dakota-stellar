@@ -232,7 +232,7 @@ class BitManipulator
     */
     public:
 
-        /// Returns the target known by this object (const).
+        /// Returns the target known by this object (constant).
         /**
          * The target must have been supplied to the constructor.  This allows
          * const-qualified access to it.
@@ -309,7 +309,7 @@ class BitManipulator
          * \return The \a dv'th variable of \a des divided by 10^prec.
          */
         inline
-        double
+        var_rep_t
         ConvertFromShiftedInt(
             eddy::utilities::int64_t val,
             std::size_t dv
@@ -373,7 +373,7 @@ class BitManipulator
          * \brief Returns the total number of bits required to represent an
          *        entire genome.
          *
-         * This is equivolent to summing the return values of
+         * This is equivalent to summing the return values of
          * GetNumberOfBits(dv) for all dv (0 to ndv-1).
          *
          * \return The number of bits needed to represent an entire design in

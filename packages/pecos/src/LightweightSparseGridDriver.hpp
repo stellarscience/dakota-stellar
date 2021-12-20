@@ -49,9 +49,10 @@ public:
   //
 
   void initialize_sets();
-  void push_trial_set(const UShortArray& set);
-  void pop_trial_set();
+  void increment_smolyak_multi_index(const UShortArray& set);
+  void pop_set();
   const UShortArray& trial_set() const;
+  const UShortArray& trial_set(const UShortArray& key) const;
   void print_smolyak_multi_index() const;
 
   //
@@ -102,16 +103,22 @@ inline LightweightSparseGridDriver::~LightweightSparseGridDriver()
 { }
 
 
-inline void LightweightSparseGridDriver::push_trial_set(const UShortArray& set)
+inline void LightweightSparseGridDriver::
+increment_smolyak_multi_index(const UShortArray& set)
 { smolyakMultiIndex.push_back(set); }
 
 
-inline void LightweightSparseGridDriver::pop_trial_set()
+inline void LightweightSparseGridDriver::pop_set()
 { smolyakMultiIndex.pop_back(); }
 
 
 inline const UShortArray& LightweightSparseGridDriver::trial_set() const
 { return smolyakMultiIndex.back(); }
+
+
+inline const UShortArray& LightweightSparseGridDriver::
+trial_set(const UShortArray& key) const
+{ return smolyakMultiIndex.back(); } // key ignored in this case
 
 
 inline void LightweightSparseGridDriver::print_smolyak_multi_index() const

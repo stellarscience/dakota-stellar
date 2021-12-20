@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -55,12 +55,12 @@ ConstantVectorFunction<P_V,P_M,Q_V,Q_M>::~ConstantVectorFunction()
 template<class P_V,class P_M,class Q_V,class Q_M>
 void
 ConstantVectorFunction<P_V,P_M,Q_V,Q_M>::compute(
-  const P_V&                    domainVector,
-  const P_V*                    domainDirection,
+  const P_V&                    /* domainVector */,
+  const P_V*                    /* domainDirection */,
         Q_V&                    imageVector,
-        DistArray<P_V*>* gradVectors,     // Yes, 'P_V'
-        DistArray<P_M*>* hessianMatrices, // Yes, 'P_M'
-        DistArray<P_V*>* hessianEffects) const
+        DistArray<P_V*>* /* gradVectors */,     // Yes, 'P_V'
+        DistArray<P_M*>* /* hessianMatrices */, // Yes, 'P_M'
+        DistArray<P_V*>* /* hessianEffects */) const
 {
   queso_require_msg(m_constantImageVector, "m_constantImageVector is NULL");
 

@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{808d01fb-39fb-4607-9cf0-01e364a35bcd}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;asm</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{15d2a9f0-3d76-43a3-8aed-00b24f7e11d1}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm</Extensions>
+    </Filter>
+    <Filter Include="include\inline">
+      <UniqueIdentifier>{7fd0187d-e856-4b53-af5e-b0156b269f14}</UniqueIdentifier>
+      <Extensions>inl</Extensions>
+    </Filter>
+    <Filter Include="pthreads">
+      <UniqueIdentifier>{cdb055ab-7ce1-40f7-ad6c-85eaa165c3ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pthreads\include">
+      <UniqueIdentifier>{e29b4b96-b999-48d8-885d-59a05d92ccd7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pthreads\lib">
+      <UniqueIdentifier>{334ccc67-3cf8-449d-87ba-fe4f2e1c185e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pthreads\lib\x64">
+      <UniqueIdentifier>{17c6fa31-fe47-4ea2-8e64-ef950fde3497}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pthreads\lib\x86">
+      <UniqueIdentifier>{42c6426a-c77f-424c-9bb1-b63d23c7e970}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="doc">
+      <UniqueIdentifier>{e3b16f5a-84a2-4701-ae56-63d56d80563b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\condition.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mutex.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\thread.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\thread_exceptions.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\thread_pool.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\condition.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\config.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\mutex.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\mutex_lock.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\mutexed_variable.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\scoped_lock_concept.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\thread.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\thread_exceptions.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\thread_pool.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ts_list.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ts_map.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ts_multimap.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ts_multiset.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ts_set.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ts_vector.hpp">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pthreads\include\pthread.h">
+      <Filter>pthreads\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pthreads\include\sched.h">
+      <Filter>pthreads\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\pthreads\include\semaphore.h">
+      <Filter>pthreads\include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\include\inline\condition.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\mutex.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\mutex_lock.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\mutexed_variable.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\scoped_lock_concept.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\thread.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\thread_exceptions.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\thread_pool.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\ts_list.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\ts_map.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\ts_multimap.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\ts_multiset.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\ts_set.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\include\inline\ts_vector.hpp.inl">
+      <Filter>include\inline</Filter>
+    </None>
+    <None Include="..\doc\Doxyfile">
+      <Filter>doc</Filter>
+    </None>
+    <None Include="..\doc\Mainpage.dox">
+      <Filter>doc</Filter>
+    </None>
+    <None Include="FGENFILE" />
+    <None Include="..\Makefile.am" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\pthreads\lib\x64\pthreadVC2.lib">
+      <Filter>pthreads\lib\x64</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\pthreads\lib\x86\pthreadVC2.lib">
+      <Filter>pthreads\lib\x86</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

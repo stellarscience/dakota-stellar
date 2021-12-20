@@ -166,9 +166,9 @@ Class Definition
  * \verbatim
    dv0<delim>dv1...dvN[<delim>of0<delim>of1...ofM<delim>con0<delim>con1...conK]
    \endverbatim
- * The delimeter can be any string.  If it is the empty string, then the
+ * The delimiter can be any string.  If it is the empty string, then the
  * automatic delimiter detection algorithm will be employed as described in
- * the documation for the DesignFileReader class.  It will continue to read
+ * the documentation for the DesignFileReader class.  It will continue to read
  * until the end of the file.  It will discard any configurations for which it
  * was unable to retrieve at least the number of design variables.  The
  * objective and constraint entries are not required but if all are present,
@@ -183,7 +183,7 @@ Class Definition
  * The delimiter and file names are extracted from the parameter database using
  * the names "method.jega.initializer_delimiter" and "method.flat_file"
  * respectively.  The delimiter is extracted as a string.  The file names can
- * come in in either of two ways.  They may be supplied as a vector of strings
+ * come in either of two ways.  They may be supplied as a vector of strings
  * or they/it may be supplied as a single string.  Regardless of how they are
  * supplied, each string received will be parsed into multiple file names if it
  * is tab-delimited.  If the delimiter is not supplied in the parameter
@@ -304,7 +304,7 @@ class FlatFileInitializer :
             following format:
             dv0<delim>dv1...dvN[<delim>of0<delim>of1...ofM<delim>con0<delim>
             con1...conK]
-            The delimeter can be any string.  If it is the empty string, then
+            The delimiter can be any string.  If it is the empty string, then
             the automatic delimiter detection algorithm will be employed as
             described in the documation for the DesignFileReader class.  It
             will continue to read until the end of the file.  It will discard

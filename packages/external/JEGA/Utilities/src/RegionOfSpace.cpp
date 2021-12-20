@@ -149,11 +149,11 @@ RegionOfSpace::Intersects(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    EDDY_ASSERT(_limits.size() == other._limits.size())
+    EDDY_ASSERT(this->_limits.size() == other._limits.size())
 
     if(&other == this) return true;
 
-    // An n-dimensional Euclidean retion intersects another if at least
+    // An n-dimensional Euclidean region intersects another if at least
     // one of it's corners lies within the other.  There are 2^n corners
     // where n is the dimensionality.  The Corners are defined as the set of
     // all possible extreme vectors such as all maxs, all mins, or any
@@ -170,7 +170,7 @@ RegionOfSpace::Intersects(
 
 bool
 RegionOfSpace::Intersects(
-    DoubleExtremes::size_type dim,
+    extremes<var_rep_t>::size_type dim,
     double lowerLimit,
     double upperLimit
     ) const
@@ -179,8 +179,8 @@ RegionOfSpace::Intersects(
 
     // There is no intersection if either upper limit is less than the other's
     // lower limit or visa versa.
-    if(_limits.get_max(dim) <= lowerLimit) return false;
-    if(upperLimit >= _limits.get_min(dim)) return false;
+    if(this->_limits.get_max(dim) <= lowerLimit) return false;
+    if(upperLimit >= this->_limits.get_min(dim)) return false;
 
     // Otherwise we have intersection.
     return true;
@@ -192,7 +192,7 @@ RegionOfSpace::Contains(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    EDDY_ASSERT(_limits.size() == other._limits.size())
+    EDDY_ASSERT(this->_limits.size() == other._limits.size())
 
     if(&other == this) return true;
 
@@ -201,8 +201,8 @@ RegionOfSpace::Contains(
     // equal to those of A.
     for(DoubleVector::size_type i=0; i<_limits.size(); ++i)
     {
-        if(_limits.get_max(i) < other._limits.get_max(i)) return false;
-        if(_limits.get_min(i) > other._limits.get_min(i)) return false;
+        if(this->_limits.get_max(i) < other._limits.get_max(i)) return false;
+        if(this->_limits.get_min(i) > other._limits.get_min(i)) return false;
     }
 
     return true;
@@ -213,7 +213,7 @@ RegionOfSpace::Clear(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    _limits.clear(0.0, 0.0);
+    this->_limits.clear(var_rep_t(0), var_rep_t(0));
 }
 
 RegionOfSpace
@@ -222,12 +222,12 @@ RegionOfSpace::Intersection(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    EDDY_ASSERT(_limits.size() == other._limits.size())
+    EDDY_ASSERT(this->_limits.size() == other._limits.size())
 
     if(&other == this) return other;
 
     // Create an initially empty region for return.
-    RegionOfSpace ret(_limits.size());
+    RegionOfSpace ret(this->_limits.size());
 
     // If they don't intersect, just return the empty region.
     if(!Intersects(other)) return ret;
@@ -239,11 +239,11 @@ RegionOfSpace::Intersection(
     for(DoubleVector::size_type i=0; i<_limits.size(); ++i)
     {
         ret._limits.set_min(i,
-            Math::Max(_limits.get_min(i), other._limits.get_min(i))
+            Math::Max(this->_limits.get_min(i), other._limits.get_min(i))
             );
 
         ret._limits.set_max(i,
-            Math::Min(_limits.get_max(i), other._limits.get_max(i))
+            Math::Min(this->_limits.get_max(i), other._limits.get_max(i))
             );
     }
 
@@ -259,7 +259,7 @@ RegionOfSpace::IsEmpty(
     EDDY_FUNC_DEBUGSCOPE
 
     for(DoubleVector::size_type i=0; i<_limits.size(); ++i)
-        if(_limits.get_max(i) == _limits.get_min(i)) return true;
+        if(this->_limits.get_max(i) == this->_limits.get_min(i)) return true;
 
     return false;
 }
@@ -272,7 +272,7 @@ RegionOfSpace::Volume(
 
     double vol = 1.0;
     for(DoubleVector::size_type i=0; i<_limits.size(); ++i)
-        vol *= (_limits.get_range(i));
+        vol *= (this->_limits.get_range(i));
 
     return vol;
 }
@@ -285,9 +285,9 @@ RegionOfSpace::StreamOut(
     EDDY_FUNC_DEBUGSCOPE
 
     // Write out the min max pairs after the index of each.
-    for(DoubleExtremes::size_type i=0; i<_limits.size(); ++i)
-        stream << i << ": " << _limits.get_min(i) << ", "
-               << _limits.get_max(i) << '\n';
+    for(extremes<var_rep_t>::size_type i=0; i<_limits.size(); ++i)
+        stream << i << ": " << this->_limits.get_min(i) << ", "
+               << this->_limits.get_max(i) << '\n';
 
     return stream;
 }
@@ -306,7 +306,7 @@ RegionOfSpace::IsValid(
     EDDY_FUNC_DEBUGSCOPE
 
     for(DoubleVector::size_type i=0; i<_limits.size(); ++i)
-        if(_limits.get_max(i) < _limits.get_min(i)) return false;
+        if(this->_limits.get_max(i) < this->_limits.get_min(i)) return false;
 
     return true;
 }
@@ -350,9 +350,9 @@ Structors
 */
 
 RegionOfSpace::RegionOfSpace(
-    DoubleExtremes::size_type nDim
+    extremes<var_rep_t>::size_type nDim
     ) :
-        _limits(nDim, 0.0, 0.0)
+        _limits(nDim, var_rep_t(0), var_rep_t(0))
 {
     EDDY_FUNC_DEBUGSCOPE
     EDDY_ASSERT(nDim > 0)

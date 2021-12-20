@@ -240,9 +240,9 @@ SimpleFunctorEvaluator::Evaluate(
     const size_t nof = target.GetNOF();
     const size_t ncn = target.GetNCN();
 
-    DoubleVector x(ndv);
-    DoubleVector f(nof, 0.0);
-    DoubleVector g(ncn, 0.0);
+    std::vector<double> x(ndv);
+    std::vector<obj_val_t> f(nof, obj_val_t(0));
+    std::vector<con_val_t> g(ncn, con_val_t(0));
 
     for(size_t i=0; i<ndv; ++i) x[i] = des.GetVariableValue(i);
     for(size_t i=0; i<nof; ++i) f[i] = des.GetObjective(i);

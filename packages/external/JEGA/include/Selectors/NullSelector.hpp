@@ -317,13 +317,17 @@ class JEGA_SL_IEDECL NullSelector :
             ) const;
 
     protected:
-
+        
+        virtual
+        bool
+        PollForParameters(
+            const JEGA::Utilities::ParameterDatabase& db
+            )
+        {
+            return true;
+        }
 
     private:
-
-
-
-
 
     /*
     ============================================================================

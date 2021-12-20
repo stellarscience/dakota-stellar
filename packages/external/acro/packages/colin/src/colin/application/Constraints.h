@@ -96,14 +96,14 @@ protected: // methods
 
 protected: // data
 
-   boost::signal<void(AppRequest::request_map_t&)>  constraint_request_signal;
+   boost::signals2::signal<void(AppRequest::request_map_t&)>  constraint_request_signal;
 
-   boost::signal< size_t( VectorType,
-                          EqualityFilter,
-                          bool&,
-                          std::list<utilib::Any>&,
-                          AppResponse::response_map_t& ),
-                  boost_extras::sum<size_t> >  constraint_info_signal;
+   boost::signals2::signal< size_t( VectorType,
+				    EqualityFilter,
+				    bool&,
+				    std::list<utilib::Any>&,
+				    AppResponse::response_map_t& ),
+     boost_extras::sum<size_t> >  constraint_info_signal;
 
 private:  // methods
 

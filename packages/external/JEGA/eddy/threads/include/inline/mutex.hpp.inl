@@ -112,7 +112,7 @@ void
 mutex::lock(
     ) const
 {
-    int err_code = pthread_mutex_lock( &_mutex );
+    int err_code = pthread_mutex_lock( &(this->_mutex) );
     if(err_code != 0) throw lock_error("Mutex failed to lock.", err_code);
 
 } // mutex::lock
@@ -122,7 +122,7 @@ void
 mutex::unlock(
     ) const
 {
-    int err_code = pthread_mutex_unlock( &_mutex );
+    int err_code = pthread_mutex_unlock( &(this->_mutex) );
     if(err_code != 0) throw lock_error("Mutex failed to unlock.", err_code);
 
 } // mutex::unlock
@@ -167,7 +167,7 @@ inline
 mutex::operator pthread_mutex_t* (
     ) const
 {
-    return &this->_mutex;
+    return &(this->_mutex);
 }
 
 

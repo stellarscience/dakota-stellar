@@ -62,8 +62,13 @@ protected:
   //
 
   void allocate_data();
+
   void allocate_component_sobol();
   void increment_component_sobol();
+
+  void pre_combine_data();
+  //void post_combine_data();
+  void combined_to_active(bool clear_combined = true);
 
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);
@@ -78,10 +83,8 @@ protected:
   //- Heading: Member functions
   //
 
-  /// return driverRep cast to requested derived type
-  TensorProductDriver*      tpq_driver();
-  /// return driverRep cast to requested derived type
-  CombinedSparseGridDriver* csg_driver();
+  /// return driverRep
+  IntegrationDriver* driver();
 
 private:
 
@@ -154,6 +157,11 @@ private:
   /// expansion moments using sufficiently high-order Gaussian quadrature
   /// rules on the interpolant
   IntegrationDriver expMomentIntDriver;
+
+  // the active key to restore following the expansion combination process
+  // (this process activates a maximal expansion to facilitate assembly of
+  // combined multi-indices and coefficients)
+  //UShortArray prevActiveKey;
 
   /// map from random index to unique nonZerosMapArray
   SizetArray nonZerosMapIndices;
@@ -288,12 +296,8 @@ barycentric_exact_index(const UShortArray& basis_index,
 }
 
 
-inline TensorProductDriver* SharedNodalInterpPolyApproxData::tpq_driver()
-{ return (TensorProductDriver*)driverRep; }
-
-
-inline CombinedSparseGridDriver* SharedNodalInterpPolyApproxData::csg_driver()
-{ return (CombinedSparseGridDriver*)driverRep; }
+inline IntegrationDriver* SharedNodalInterpPolyApproxData::driver()
+{ return driverRep; }
 
 } // namespace Pecos
 

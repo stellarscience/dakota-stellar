@@ -37,7 +37,7 @@ PM_LCG  gRandomLCG(1);
 Uniform gRandom(&gRandomLCG);
 
 
-seed_t randomSeed=1;
+utilib::seed_t randomSeed=1;
 
 
 RNG* gRandomRNG() {return &gRandomLCG;}

@@ -57,9 +57,10 @@ public:
   /// lookup value based on UShortMultiSet key within tripleProductMap;
   /// returns false if not stored
   bool triple_product(const UShortMultiSet& ijk_key, Real& trip_prod) const;
-  /// lookup value based on three size_t keys within tripleProductMap;
+  /// lookup value based on three UShort keys within tripleProductMap;
   /// returns false if not stored
-  bool triple_product(size_t i, size_t j, size_t k, Real& trip_prod) const;
+  bool triple_product(unsigned short i, unsigned short j, unsigned short k,
+		      Real& trip_prod) const;
 
   /// perform unit testing on Gauss points/weights
   void gauss_check(unsigned short order);
@@ -133,7 +134,8 @@ triple_product(const UShortMultiSet& ijk_key, Real& trip_prod) const
 
 
 inline bool OrthogonalPolynomial::
-triple_product(size_t i, size_t j, size_t k, Real& trip_prod) const
+triple_product(unsigned short i, unsigned short j, unsigned short k,
+	       Real& trip_prod) const
 {
   UShortMultiSet ijk_key;
   ijk_key.insert(i); ijk_key.insert(j); ijk_key.insert(k);

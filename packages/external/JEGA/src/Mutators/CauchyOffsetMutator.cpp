@@ -162,7 +162,7 @@ CauchyOffsetMutator::Description(
         "It then chooses a random design variable and adds a Cauchy random "
         "amount to it.  The amount has a mean of 0 and a standard deviation "
         "that depends on the offset range.  The offset range is interpreted "
-        "as a precentage of the total range of the variable and that amount "
+        "as a percentage of the total range of the variable and that amount "
         "is in turn interpreted as the standard deviation.  The number of "
         "mutations is the rate times the size of the group passed in rounded "
         "to the nearest whole number."
@@ -214,9 +214,9 @@ CauchyOffsetMutator::GetOffsetAmount(
     EDDY_FUNC_DEBUGSCOPE
 
     // compute the actual std deviation
-    double sigma = this->GetOffsetRange()*varInfo.GetDoubleRepRange();
+    double sigma = this->GetOffsetRange()*varInfo.GetRepRange();
 
-    // now return a gaussian number with mean 0.0 and stddev
+    // now return a Cauchy number with mean 0.0 and stddev
     // of sigma.
     double ret = RandomNumberGenerator::CauchyReal(0.0, sigma);
     for(size_t i=0; i<100 && ret == 0.0; ++i)

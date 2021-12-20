@@ -1,4 +1,14 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
 #include "FaultTolerance.hpp"
+#include "linear_algebra.hpp"
+#include "math_tools.hpp"
 
 namespace Pecos {
 
@@ -36,7 +46,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	msg += "inconsistent";
 	throw( std::runtime_error( msg ) );
       }
-      range(index_mapping,0,(int)fault_info.num_surr_data_pts);  
+      util::range(index_mapping,0,(int)fault_info.num_surr_data_pts);
     }
   // compute the number of rows in a that are function values. The remainder
   // are gradient values
@@ -58,7 +68,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 
   // sorted indices are needed to use fail_booleans
   // I is needed to access the correct row in A.
-  argsort( index_map, sorted_indices, I );
+  util::argsort( index_map, sorted_indices, I );
   
   SizetShortMap::const_iterator fit;
 
@@ -156,7 +166,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	{
 	  RealMatrix A_grad_tmp( Teuchos::View, A_grad, a_grad_cntr, 
 				 num_cols_A );
-	  row_append( A_grad_tmp, A_new );
+	  util::row_append( A_grad_tmp, A_new );
 	}
       size_t b_fn_cntr = 0, b_grad_cntr = 0;
       RealMatrix B_fn( fault_info.num_data_pts_fn, num_rhs, true );
@@ -190,7 +200,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	{
 	  RealMatrix B_grad_tmp( Teuchos::View, B_grad, b_grad_cntr, 
 				 num_rhs );
-	  row_append( B_grad_tmp, B_new );
+	  util::row_append( B_grad_tmp, B_new );
 	}
     }
 

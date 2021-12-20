@@ -20,6 +20,7 @@
 #define colin_BoostExtras_h
 
 #include <acro_config.h>
+#include <boost/signals2/last_value.hpp>
 
 namespace colin
 {
@@ -30,16 +31,16 @@ namespace boost_extras {
  *  order from which they were registered (i.e. Last in, First out).
  */
 template<typename Signature, // function type R (T1, T2, ..., TN)
-         typename Combiner = boost::last_value
+         typename Combiner = boost::signals2::last_value
              <typename boost::function_traits<Signature>::result_type>,
          typename Group = int,
          typename GroupCompare = std::less<Group>,
          typename SlotFunction = boost::function<Signature>
 >
-class lifo_signal : public boost::signal<Signature, Combiner, Group, 
+class lifo_signal : public boost::signals2::signal<Signature, Combiner, Group, 
                                          GroupCompare, SlotFunction> 
 {
-   typedef boost::signal<Signature, Combiner, Group, 
+   typedef boost::signals2::signal<Signature, Combiner, Group, 
                          GroupCompare, SlotFunction>  signal_t;
 
 public:
@@ -49,17 +50,17 @@ public:
    {}
 
    // Connect a slot to this signal
-   boost::signals::connection
+   boost::signals2::connection
    connect(const typename signal_t::slot_type& fcn)
    {
-      return signal_t::connect(fcn, boost::signals::at_front);
+      return signal_t::connect(fcn, boost::signals2::at_front);
    }
       
-   boost::signals::connection
+   boost::signals2::connection
    connect(const typename signal_t::group_type& group, 
            const typename signal_t::slot_type& fcn)
    {
-      return signal_t::connect(group, fcn, boost::signals::at_front);
+      return signal_t::connect(group, fcn, boost::signals2::at_front);
    }
 };
 

@@ -14,7 +14,7 @@
 #include <sstream>
 #include <vector>
 
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "SharedProjectOrthogPolyApproxData.hpp"
 #include "ProjectOrthogPolyApproximation.hpp"
 #include "TensorProductDriver.hpp"
@@ -144,9 +144,9 @@ int main(int argc, char* argv[])
     quadRule = GENZ_KEISTER   ;
   }
 
-  if ( verb>2) {
-    PCout << "Instantiating CombinedSparseGridDriver:\n";
-  }
+  if (verb > 2)
+    PCout << "Instantiating IncrementalSparseGridDriver:\n";
+
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
@@ -156,14 +156,13 @@ int main(int argc, char* argv[])
   // use IntegrationDriver() and then assign letter.
   IntegrationDriver int_driver; // empty envelope
   // assign letter using assign_rep()
-  CombinedSparseGridDriver* csg_driver
-    = new CombinedSparseGridDriver(strtlev, dimension_pref, growth_rate,
+  IncrementalSparseGridDriver* csg_driver
+    = new IncrementalSparseGridDriver(strtlev, dimension_pref, growth_rate,
 				   refine_cntl);
   int_driver.assign_rep(csg_driver, false); // don't increment ref count
 
-  if (verb>2) { 
+  if (verb > 2)
     PCout << "Instantiating basis...\n";
-  }
 
   std::vector<BasisPolynomial> poly_basis(nvar); // array of envelopes
   for (int i=0; i<nvar; ++i) {
@@ -172,20 +171,22 @@ int main(int argc, char* argv[])
   }
   csg_driver->initialize_grid(poly_basis);
 
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "  - done\n";
-  }
 
   // Instantiate Pecos Objects
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "Instantiating pecos objects...\n";
-  }
-  ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID, // expsolnapp
+  ExpansionConfigOptions expcfgopt(INCREMENTAL_SPARSE_GRID, // expsolnapp
                                    DEFAULT_BASIS,        // expbassus
+				   NO_COMBINE,           // exp combine type
+				   NO_DISCREP,           // discrepancy type
                                    SILENT_OUTPUT,        // output level
                                    true,                 // vbd flag
                                    2,                    // vbd order
                                    refine_cntl,          // refinement control
+				   COVARIANCE_METRIC,    // refine metric
+				   ACTIVE_EXPANSION_STATS,// refine stats type
                                    100,                  // max refine iter
                                    100,                  // max solver iter
                                    1.e-5,                // conv tol
@@ -205,9 +206,8 @@ int main(int argc, char* argv[])
     poly_approx[iQoI].assign_rep(new 
       ProjectOrthogPolyApproximation(shared_data), false); // assign letter
 
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "  - done\n";
-  }
  
 #ifdef GSGREST
   /* Define saved data*/
@@ -225,9 +225,9 @@ int main(int argc, char* argv[])
   csg_driver->compute_grid(var_sets);
   int numPts = var_sets.numCols();
   assert(nvar==var_sets.numRows());
-  if ( verb > 1 ) { 
+  if (verb > 1) { 
     PCout<<var_sets<<endl; 
-    if ( verb > 2 ) {
+    if (verb > 2) {
       PCout << "Evaluate function on reference grid, ";
       PCout << "instantiate SurrogateData and compute coefficients ...\n"; 
     }
@@ -246,8 +246,9 @@ int main(int argc, char* argv[])
 
   // Create SurrogateData instances and assign to 
   // ProjectOrthogPolyApproximation instances
+  bool handle = true;
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    SurrogateData     sdi;
+    SurrogateData sdi(handle);
     for( int jCol = 0; jCol < numPts; jCol++) {
       SurrogateDataVars sdv(nvar,0,0);
       SurrogateDataResp sdr(1,nvar); // no gradient or hessian
@@ -264,13 +265,13 @@ int main(int argc, char* argv[])
     poly_approx[iQoI].print_coefficients(PCout,false);
   }
   
-  if ( verb > 2 ) {
+  if (verb > 2)
     PCout << "  - done\n";
-  }
 
   // start refinement
   csg_driver->initialize_sets();
   UShortArraySet a;
+  bool conv_within_tol = false;
   for ( size_t iter = 0; iter < nIter; iter++) {
 
     /* Compute base variance */
@@ -284,10 +285,9 @@ int main(int argc, char* argv[])
     std::vector<short unsigned int> asave;
 
     a = csg_driver->active_multi_index();
-    if ( verb > 1 ) {
-      PCout<<"Refine, iteration: "<<iter+1<<'\n';
-      PCout<<"  ... starting variance:\n"<<respVariance<<'\n';
-    }
+    if (verb > 1)
+      PCout<<"Refine, iteration: "<<iter+1
+	   <<"\n  ... starting variance:\n"<<respVariance<<'\n';
  
 #ifdef GSGREST
     /* Iterate through all proposed sets and save/exit if some vals
@@ -300,9 +300,9 @@ int main(int argc, char* argv[])
     	fev = getFeval(evalGrid,evalFlag,evalData,var_sets,foundFlag);
         if ( !foundFlag ) foundAllSets = false ;
       } else {
-	csg_driver->restore_set();
+	csg_driver->push_set();
       }
-      csg_driver->pop_trial_set();
+      csg_driver->pop_set();
     }
     if ( !foundAllSets ) {
       saveData((char *)"func",evalGrid,evalFlag,evalData);
@@ -313,26 +313,24 @@ int main(int argc, char* argv[])
     int choose = 0;
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
 
-      csg_driver->push_trial_set(*it);
+      csg_driver->increment_smolyak_multi_index(*it);
 
       // Update surrogate data
       numPts = 0;
       if (shared_poly_data->push_available()) {
 
-        if ( verb>1 ) {
+        if (verb > 1)
           PCout<<"Restoring existing index set:\n"<<*it<<endl;
-	}
 
         // Set available -> restore in csg and the rest
-	csg_driver->restore_set();
+	csg_driver->push_set();
 
-        size_t idxRestore = shared_poly_data->retrieval_index();
+        size_t idxRestore = shared_poly_data->restore_index();
 	shared_poly_data->pre_push_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  poly_approx[iQoI].push_coefficients();
           // Also restore the corresponding surrogate data
-	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-	  numPts = sdi.push(idxRestore,true);
+	  poly_approx[iQoI].surrogate_data().push(idxRestore,true);
 	}
 	shared_poly_data->post_push_data();
 
@@ -343,7 +341,7 @@ int main(int argc, char* argv[])
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 	csg_driver->compute_trial_grid(var_sets);
         numPts = var_sets.numCols();
-        if ( verb>1 ) {
+        if (verb > 1) {
           PCout<<"Computing new index set:\n"<<*it<<endl;
           //PCout<<RealMatrix(var_sets,Teuchos::TRANS)<<endl;
 	}
@@ -358,7 +356,7 @@ int main(int argc, char* argv[])
 #endif
 
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
+	  SurrogateData& sdi = poly_approx[iQoI].surrogate_data();
 	  for( int jCol = 0; jCol < numPts; jCol++) {
   	    SurrogateDataVars sdv(nvar,0,0);
 	    SurrogateDataResp sdr(1,nvar); // no gradient or hessian
@@ -366,7 +364,7 @@ int main(int argc, char* argv[])
 	    sdr.response_function(fev(jCol,iQoI));
 	    sdi.push_back(sdv,sdr);
 	  } // done loop over number of points
-	  //poly_approx[iQoI].surrogate_data(sdi);
+	  sdi.pop_count(numPts);
 	} // done loop over QoIs
         
 	shared_poly_data->increment_data();
@@ -382,14 +380,14 @@ int main(int argc, char* argv[])
 	  (PolynomialApproximation *) poly_approx[iQoI].approx_rep();
 	respVarianceNew[iQoI] = poly_approx_rep->variance() ;
       }
-      if ( verb > 1 ) {
+      if (verb > 1) {
         PCout<<"  ... new variance:\n";
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) 
 	  PCout<<respVarianceNew[iQoI]<<" ";
 	PCout<<"\n";
       }
       respVarianceNew -= respVariance;
-      if ( verb > 1 ) {
+      if (verb > 1) {
         PCout<<"  ... delta variance:\n";
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) 
 	  PCout<<respVarianceNew[iQoI]<<" ";
@@ -401,43 +399,41 @@ int main(int argc, char* argv[])
         asave = *it;
       }
 
-      csg_driver->pop_trial_set();
-
       shared_poly_data->decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	poly_approx[iQoI].decrement_coefficients();
+	poly_approx[iQoI].pop_coefficients(true);
 	// Also restore the corresponding surrogate data
-	SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-	sdi.pop(numPts,true);
+	poly_approx[iQoI].surrogate_data().pop(true);
       }
+      csg_driver->pop_set(); // reverse order from increment
 
     } /* End iteration over proposed sets */
 
-    if ( verb>1 ) {
-      PCout<<"Choosing :\n"<<asave<<std::endl ;
-      PCout<<"  ... with relative variance: "<<deltaVar<<std::endl ;
-    }
+    if (verb > 1)
+      PCout<<"Choosing :\n"<<asave
+	   <<"\n  ... with relative variance: "<<deltaVar<<std::endl ;
     
     if ( asave.size() > 0 ) {
       csg_driver->update_sets(asave);
 
       //need to restore the data
-      size_t idxRestore = shared_poly_data->retrieval_index();
+      size_t idxRestore = shared_poly_data->restore_index();
       shared_poly_data->pre_push_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
         poly_approx[iQoI].push_coefficients();
-        SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-        int numPts = sdi.push(idxRestore,true);
+        poly_approx[iQoI].surrogate_data().push(idxRestore,true);
       }
       shared_poly_data->post_push_data();
       csg_driver->update_reference();
     }
 
-    if ( deltaVar < varEps ) break ;
+    if ( deltaVar < varEps )
+      { conv_within_tol = true; break; }
 
   } /* end iteration loop */
 
-  csg_driver->finalize_sets(true, false); // use embedded output option
+  // output sets; implementation above applies best refinement (no revert)
+  csg_driver->finalize_sets(true, conv_within_tol, false);
 
   // sequence from ApproximationInterface::finalize_approximation():
 
@@ -447,10 +443,10 @@ int main(int argc, char* argv[])
   // per-approximation finalize:
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     // from Approximation::finalize() called from PecosApproximation::finalize()
-    SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-    size_t i, num_restore = sdi.popped_trials(); // # of popped trial sets
+    SurrogateData& sdi = poly_approx[iQoI].surrogate_data();
+    size_t i, num_restore = sdi.popped_sets(); // # of popped trial sets
     for (i=0; i<num_restore; ++i)
-      sdi.push(shared_poly_data->finalization_index(i),false);
+      sdi.push(shared_poly_data->finalize_index(i),false);
     sdi.clear_popped();
     // from PecosApproximation::finalize()
     poly_approx[iQoI].finalize_coefficients();

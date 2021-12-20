@@ -154,7 +154,7 @@ Class Definition
  * to compute "fitnesses" in place of proper responses unless you REALLY know
  * what you're doing.  Leave that to JEGA.
  */
-MANAGED_INTERFACE(public, MEvaluationFunctor)
+public interface class MEvaluationFunctor
 {
     /*
     ============================================================================
@@ -180,22 +180,22 @@ MANAGED_INTERFACE(public, MEvaluationFunctor)
          * \return Your method should return true if the evaluation completed
          *         successfully and false otherwise.  This provides you a
          *         mechanism to reject certain design configurations as
-         *         "un-evaluatable".  If you return false, the objectives and
+         *         "un-evaluable".  If you return false, the objectives and
          *         constraints will be ignored and the solution point will be
-         *         marked as illconditioned.
+         *         marked as ill-conditioned.
          */
         virtual
         bool
         Evaluate(
-            MDesign MOH des,
-            System::Collections::Generic::List<MDesign MOH> MOH injections
+            MDesign^ des,
+            System::Collections::Generic::List<MDesign^>^ injections
             ) = 0;
 
         virtual
         bool
         Evaluate(
-            DesignVector MOH designs,
-            System::Collections::Generic::List<MDesign MOH> MOH injections
+            DesignVector^ designs,
+            System::Collections::Generic::List<MDesign^>^ injections
             ) = 0;
 
         virtual
@@ -211,7 +211,7 @@ MANAGED_INTERFACE(public, MEvaluationFunctor)
 }; // class EvaluationFunctor
 
 //
-//MANAGED_ABSTRACT_CLASS(public, MBasicEvaluationFunctorImpl) :
+//public ref class MBasicEvaluationFunctorImpl abstract :
 //    public MEvaluationFunctor
 //{
 //    public:
@@ -219,17 +219,17 @@ MANAGED_INTERFACE(public, MEvaluationFunctor)
 //        virtual
 //        bool
 //        Evaluate(
-//            MDesign MOH des
+//            MDesign^ des
 //            ) = 0;
 //
 //        virtual
 //        bool
 //        Evaluate(
-//            DesignVector MOH designs
+//            DesignVector^ designs
 //            )
 //        {
 //            bool ret = true;
-//            for each (MDesign MOH des in designs)
+//            for each (MDesign^ des in designs)
 //                ret &= this->Evaluate(des);
 //            return ret;
 //        }

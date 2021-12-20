@@ -53,7 +53,7 @@ public: // data
 protected: // methods
 
    /// A callback for collecting the domain size from derived classes
-   boost::signal<size_t(), boost_extras::sum<size_t> > get_domain_size_signal;
+   boost::signals2::signal<size_t(), boost_extras::sum<size_t> > get_domain_size_signal;
 
    /// Register derived class callback function for initialize()
    cb_initializer_t& domain_initializer(std::string element)

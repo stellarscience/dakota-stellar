@@ -170,7 +170,7 @@ In-Namespace File Scope Typedefs
     unsigned short
     uint16_t;
 
-    /// A 32 bit unsigned unsiged integer type.
+    /// A 32 bit unsigned unsigned integer type.
     typedef
     unsigned int
     uint32_t;
@@ -234,22 +234,22 @@ typedef
 uint64_t
 uintmax_t;
 
-/// A type to serve as the bit-holder in an 8 bit bitmask.
+/// A type to serve as the bit-holder in an 8 bit bit mask.
 typedef
 uint8_t
 bitmask8_t;
 
-/// A type to serve as the bit-holder in a 16 bit bitmask.
+/// A type to serve as the bit-holder in a 16 bit bit mask.
 typedef
 uint16_t
 bitmask16_t;
 
-/// A type to serve as the bit-holder in a 32 bit bitmask.
+/// A type to serve as the bit-holder in a 32 bit bit mask.
 typedef
 uint32_t
 bitmask32_t;
 
-/// A type to serve as the bit-holder in a 64 bit bitmask.
+/// A type to serve as the bit-holder in a 64 bit bit mask.
 typedef
 uint64_t
 bitmask64_t;

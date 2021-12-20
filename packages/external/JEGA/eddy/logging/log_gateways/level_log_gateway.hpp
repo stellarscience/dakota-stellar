@@ -160,7 +160,7 @@ Class Definition
  * severity of those circumstances in the logs and even discriminate against
  * entries with an insufficient severity level.
  *
- * It is also common to want to be able to control the "verbocity" of the
+ * It is also common to want to be able to control the "verbosity" of the
  * logs created without disabling logging all together.  This gateway and
  * any similar were created in order to accomplish that.  Entries that pass
  * through this gateway are subject to rejection based on logging levels.
@@ -217,7 +217,7 @@ Class Definition
  *
  * There are also a number of ways to indicate to this gateway the level at
  * which you want an entry to be logged and the cutoff level that should be
- * applied to it.  In order to accomodate the various ways, there are a few
+ * applied to it.  In order to accommodate the various ways, there are a few
  * overloads of the log function.  Some of them accept the entry level and
  * issuer level, some of them make default assumptions, and some accept the
  * identity of the issuer (type or instance).
@@ -438,7 +438,7 @@ class EDDY_SL_IEDECL level_log_gateway :
          *
          * \param e The entry to be logged to the known log.
          * \return True no matter what (return is only provided for
-         *         consistancy with other logging methods).
+         *         consistency with other logging methods).
          */
         template <typename ET>
         inline
@@ -541,7 +541,7 @@ class EDDY_SL_IEDECL level_log_gateway :
         } // set_logging_level(IssType, level_type)
 
         /**
-         * \brief Sets the logging level for all obects of the supplied type
+         * \brief Sets the logging level for all objects of the supplied type
          * to the supplied level.
          *
          * Any individual objects for whom the level has been explicitly
@@ -844,7 +844,7 @@ class EDDY_SL_IEDECL level_log_gateway :
          * be set to true.
          *
          * \param issuer A pointer to the instance to find in the level map.
-         * \param found A boolean used to indicate whether or not a specific
+         * \param found A Boolean used to indicate whether or not a specific
          *        level was found for \a issuer.
          * \return The level at which issuer or type is allowed to log or the
          *         default level if no specific level is found.

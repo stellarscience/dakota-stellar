@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implementaion of class LinearConstraintNature.
+        Implementation of class LinearConstraintNature.
 
     NOTES:
 
@@ -261,7 +261,7 @@ LinearConstraintNature::EvaluateConstraint(
         result += this->_coeffs[i] * des.GetVariableValue(i);
 
     // now record the result with the Design class object.
-    des.SetConstraint(cnInfo.GetNumber(), result);
+    des.SetConstraint(cnInfo.GetNumber(), static_cast<con_val_t>(result));
     return true;
 }
 

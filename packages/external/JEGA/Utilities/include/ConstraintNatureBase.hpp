@@ -202,7 +202,7 @@ class JEGA_SL_IEDECL ConstraintNatureBase
         GetType(
             );
 
-        /// Returns the ConstraintTypeBase known by this object (const)
+        /// Returns the ConstraintTypeBase known by this object (constant)
         /**
          * \return The ConstraintTypeBase for of the ConstraintInfo for which
          *         this is the nature.
@@ -301,7 +301,7 @@ class JEGA_SL_IEDECL ConstraintNatureBase
         ToString(
             ) const = 0;
 
-        /// This method attempts to evalutate this constraint for "des".
+        /// This method attempts to evaluate this constraint for "des".
         /**
          * This may not be possible.  Generally, only linear constraints
          * can be evaluated in this way.  The method returns true if the

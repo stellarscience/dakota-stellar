@@ -125,7 +125,7 @@ NPointCrosserBase::_LoadCrossoverPoints(
     // ancpts is how many we will actually use.
 
     // Figure out what ancpts should be.
-    eddy::utilities::uint32_t ancpts =
+    const eddy::utilities::uint32_t ancpts =
         Math::Min<eddy::utilities::uint32_t>(ncpts, hi-lo+1);
 
     // if the actual number of crossover points is equal to the number

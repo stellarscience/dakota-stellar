@@ -140,7 +140,7 @@ namespace JEGA {
 In-Namespace Forward Declares
 ================================================================================
 */
-MANAGED_CLASS_FORWARD_DECLARE(public, MGeneticAlgorithmEvaluator);
+ref class MGeneticAlgorithmEvaluator;
 
 
 
@@ -171,7 +171,7 @@ Class Definition
  *
  *
  */
-MANAGED_CLASS(public, MGeneticAlgorithmEvaluator)
+public ref class MGeneticAlgorithmEvaluator
 {
     /*
     ============================================================================

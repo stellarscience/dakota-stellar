@@ -154,7 +154,7 @@ Public Methods
 */
 double
 ConstraintInfo::GetViolationPercentage(
-   double of
+   con_val_t of
    ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -190,15 +190,15 @@ ConstraintInfo::GetPreferredDesign(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    double val1 = this->GetViolationAmount(des1);
-    double val2 = this->GetViolationAmount(des2);
+    const double val1 = this->GetViolationAmount(des1);
+    const double val2 = this->GetViolationAmount(des2);
     return (val1 < val2 ) ? &des1 : (val1 > val2 ) ? &des2 : 0;
 
 } // ConstraintInfo::GetPreferredDesign
 
 void
 ConstraintInfo::RecordViolation(
-    double rawValue
+    con_val_t rawValue
     )
 {
     EDDY_FUNC_DEBUGSCOPE

@@ -32,7 +32,7 @@
 #include <utilib/ReferenceCounted.h>
 #include <utilib/PropertyDict.h>
 
-#include <boost/signals.hpp>
+#include <boost/signals2.hpp>
 #include <boost/bind.hpp>
 #include <colin/BoostExtras.h>
 
@@ -256,11 +256,11 @@ protected: // methods and members for managing Application inheritance diamond
 
    boost_extras::lifo_signal<void()>  finalize_signal;
 
-   boost::signal<void(std::ostream&)>  print_signal;
+   boost::signals2::signal<void(std::ostream&)>  print_signal;
 
-   boost::signal<cb_expand_request_t>  request_expansion_signal;
+   boost::signals2::signal<cb_expand_request_t>  request_expansion_signal;
 
-   boost::signal<cb_map_request_t>  request_transform_signal;
+   boost::signals2::signal<cb_map_request_t>  request_transform_signal;
 
    /** This signal allows derived classes to participate in the mapping
     *  of responses back to the original caller.  Each slot (callback)
@@ -275,7 +275,7 @@ protected: // methods and members for managing Application inheritance diamond
 
 
    /// Register derived class callback function for initialize()
-   typedef boost::signal<void(TiXmlElement*)>  cb_initializer_t;
+   typedef boost::signals2::signal<void(TiXmlElement*)>  cb_initializer_t;
    cb_initializer_t& initializer(std::string element)
    {
       return *(initializer_signals[element]);

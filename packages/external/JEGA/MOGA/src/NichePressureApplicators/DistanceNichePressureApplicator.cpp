@@ -127,7 +127,7 @@ DistanceNichePressureApplicator::SetDistancePercentages(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    std::size_t nof = this->GetDesignTarget().GetNOF();
+    const std::size_t nof = this->GetDesignTarget().GetNOF();
 
     JEGAIFLOG_CF_II(nof < pcts.size(), this->GetLogger(), lquiet(), this,
         text_entry(lquiet(),
@@ -151,7 +151,7 @@ DistanceNichePressureApplicator::SetDistancePercentages(
 
     this->_distPcts = pcts;
 
-    double fill_val =
+    const double fill_val =
         (this->_distPcts.size() == 1) ? this->_distPcts[0] : DEFAULT_DIST_PCT;
 
     if(nof > this->_distPcts.size())
@@ -176,7 +176,7 @@ DistanceNichePressureApplicator::SetDistancePercentages(
         static const double minPct = std::numeric_limits<double>::min();
         )
 
-    std::size_t nof = this->GetDesignTarget().GetNOF();
+    const std::size_t nof = this->GetDesignTarget().GetNOF();
 
     JEGAIFLOG_CF_II(pct < 0.0, this->GetLogger(), lquiet(), this,
         ostream_entry(lquiet(),
@@ -216,8 +216,8 @@ DistanceNichePressureApplicator::SetDistancePercentage(
         )
 
     const DesignTarget& target = GetDesignTarget();
-    std::size_t nof = target.GetNOF();
-    JEGA::DoubleVector::size_type dvsof =
+    const std::size_t nof = target.GetNOF();
+    const JEGA::DoubleVector::size_type dvsof =
         static_cast<JEGA::DoubleVector::size_type>(of);
 
     // make sure we have enough locations in the percentages vector.
@@ -339,27 +339,29 @@ Subclass Visible Methods
 
 JEGA::DoubleVector
 DistanceNichePressureApplicator::ComputeCutoffDistances(
-    const DoubleExtremes& paretoExtremes
+    const eddy::utilities::extremes<obj_val_t>& exts
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
 
+    typedef eddy::utilities::extremes<obj_val_t> extremes_t;
+
     // the cutoff distance is a percentage of the range of the objective
     // considering only the non-dominated designs.
-    std::size_t nof = this->GetDesignTarget().GetNOF();
+    const std::size_t nof = this->GetDesignTarget().GetNOF();
 
-    JEGAIFLOG_CF_II_F(nof != paretoExtremes.size(), GetLogger(), this,
+    JEGAIFLOG_CF_II_F(nof != exts.size(), GetLogger(), this,
         ostream_entry(lfatal(), this->GetName() + ": Extremes contain "
-            "record of ") << paretoExtremes.size() << " objectives for an "
+            "record of ") << exts.size() << " objectives for an "
             << nof << " objective problem."
         )
 
     // Prepare a vector for return.
     JEGA::DoubleVector ret(nof);
 
-    for(DoubleExtremes::size_type i=0; i<nof; ++i)
+    for(extremes_t::size_type i=0; i<nof; ++i)
         ret[i] = Math::Abs(
-            this->GetDistancePercentage(i) * paretoExtremes.get_range(i)
+            this->GetDistancePercentage(i) * exts.get_range(i)
             );
 
     // return the square route of the sum of squares.
@@ -385,7 +387,7 @@ DistanceNichePressureApplicator::ComputePointCountBound(
     EDDY_FUNC_DEBUGSCOPE
 
     double sum = 0.0;
-    size_t nof = this->GetDesignTarget().GetNOF();
+    const size_t nof = this->GetDesignTarget().GetNOF();
 
     for(size_t i=0; i<nof; ++i)
     {
@@ -441,7 +443,7 @@ DistanceNichePressureApplicator::PollForParameters(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    bool success = ParameterExtractor::GetDoubleVectorFromDB(
+    const bool success = ParameterExtractor::GetDoubleVectorFromDB(
         db, "method.jega.niche_vector", this->_distPcts
         );
 
@@ -469,14 +471,14 @@ DistanceNichePressureApplicator::PreSelection(
     // if we are not caching designs, we needn't do anything here.
     if(!this->GetCacheDesigns()) return;
 
-    // Sychronize the lists just in case.
+    // Synchronize the lists just in case.
     population.SynchronizeOFAndDVContainers();
 
     JEGA_LOGGING_IF_ON(
         const DesignOFSortSet::size_type initPSize = population.SizeOF();
         )
 
-    // Re-assimilate the bufferred designs into the population so that they
+    // Re-assimilate the buffered designs into the population so that they
     // can be considered when making the initial selection.  We will cull
     // them out again when ApplyNichePressure is called later if appropriate.
     this->ReAssimilateBufferedDesigns(population);
@@ -500,18 +502,22 @@ DistanceNichePressureApplicator::ApplyNichePressure(
     // If the population is empty, we needn't go any further.
     if(population.IsEmpty()) return;
 
+    // Make sure that the Taboo mark is clear on all designs.
+    for(DesignDVSortSet::const_iterator it(population.BeginDV());
+        it!=population.EndDV(); ++it) (*it)->ModifyAttribute(TABOO_MARK, false);
+
     // in case we are not caching, we will need the target below.
     DesignTarget& target = this->GetDesignTarget();
 
     // we will need the number of objectives for a few things here.
-    size_t nof = target.GetNOF();
+    const size_t nof = target.GetNOF();
 
-    // Sychronize the lists just in case.
+    // Synchronize the lists just in case.
     population.SynchronizeOFAndDVContainers();
 
     // we are only going to consider the "best" (which should be the
     // non-dominated) designs as defined by the fitnesses.  We will call them
-    // the pareto even though they may not be.
+    // the Pareto even though they may not be.
     DesignOFSortSet pareto(
         GetBest(population.GetOFSortContainer(), fitnesses)
         );
@@ -523,25 +529,16 @@ DistanceNichePressureApplicator::ApplyNichePressure(
 
     JEGA_LOGGING_IF_ON(std::size_t prevParetoSize = pareto.size();)
 
-    // Now continue by extracting the pareto extremes
-    DoubleExtremes paretoExtremes(
-        DesignStatistician::GetObjectiveFunctionExtremes(pareto)
-        );
+    // Now continue by tagging the Pareto extremes so they can be skipped
+    this->TagTabooNicheDesigns(pareto);
 
     // We will figure which designs are too close by normalized
     // distance from the current design.  Fortunately, we are using
     // the same cutoff distance for all designs and so we can compute that
     // now for all designs.
-    JEGA::DoubleVector dists(this->ComputeCutoffDistances(paretoExtremes));
-
-    // now, we start with the first design and search the range for all
-    // those that are too close.  We remove those that are too close but, if we
-    // are caching, put them in a temporary storage container so that they are
-    // not lost.  We also never remove an extreme Design.  Since there can only
-    // be as many extreme designs as there are objectives, keep the count of
-    // the number encountered to possibly reduce the cost of testing for
-    // extremes.
-    size_t nExtremesFound = 0;
+    const JEGA::DoubleVector dists(this->ComputeCutoffDistances(
+        DesignStatistician::GetObjectiveFunctionExtremes(pareto)
+        ));
 
     // prepare to output the number of designs cut out.
     JEGA_LOGGING_IF_ON(prevParetoSize = pareto.size();)
@@ -557,17 +554,14 @@ DistanceNichePressureApplicator::ApplyNichePressure(
         DesignOFSortSet::iterator next(curr);
         for(++next; next!=pareto.end();)
         {
-            double obj0Dist = this->ComputeObjectiveDistance(**curr, **next, 0);
+            if((*next)->HasAttribute(TABOO_MARK)) { ++next; continue; }
+
+            const double obj0Dist =
+                this->ComputeObjectiveDistance(**curr, **next, 0);
 
             // If the distance at obj0 is large enough, we can get out of this
             // inner loop and move onto the next "curr".
             if(obj0Dist > dists[0]) break;
-
-            // if next is an extreme design, we keep it no matter what.
-            if(nExtremesFound < nof &&
-               MultiObjectiveStatistician::IsExtremeDesign(
-                **next, paretoExtremes
-                )){ ++next; ++nExtremesFound; continue; }
 
             // prepare to store whether or not we will be keeping next.
             bool keep = false;
@@ -586,7 +580,7 @@ DistanceNichePressureApplicator::ApplyNichePressure(
 
             // If we make it here, it is too close on all dimensions so we kill
             // off next by removing it from the population and putting it into
-            // our design buffer.  It also comes out of pareto so that we don't
+            // our design buffer.  It also comes out of Pareto so that we don't
             // consider it anymore.
             population.Erase(*next);
 

@@ -71,6 +71,7 @@ Includes
 #include <../Utilities/include/DesignMultiSet.hpp>
 #include <GeneticAlgorithmNichePressureApplicator.hpp>
 #include <../Utilities/include/ParameterExtractor.hpp>
+#include <../Utilities/include/MultiObjectiveStatistician.hpp>
 
 
 
@@ -115,6 +116,12 @@ Static Member Data Definitions
 */
 const bool GeneticAlgorithmNichePressureApplicator::DEFAULT_CACHE_FLAG(true);
 
+const std::size_t
+GeneticAlgorithmNichePressureApplicator::DEFAULT_MAX_CACHE_SIZE(
+    std::numeric_limits<std::size_t>::max()
+    );
+
+const size_t GeneticAlgorithmNichePressureApplicator::TABOO_MARK(7);
 
 
 
@@ -151,7 +158,26 @@ GeneticAlgorithmNichePressureApplicator::SetCacheDesigns(
     JEGALOG_II(this->GetLogger(), lverbose(), this,
         ostream_entry(lverbose(),
             this->GetName() + ": Niched design caching now set to ")
-            << (cache ? "true" : "false") << "."
+            << (this->_cacheDesigns ? "true" : "false") << "."
+        )
+}
+
+
+void
+GeneticAlgorithmNichePressureApplicator::SetMaxDesignCacheSize(
+    std::size_t maxSize
+    )
+{
+    EDDY_FUNC_DEBUGSCOPE
+
+    this->_maxBufSize = maxSize;
+
+    // Don't bother reducing the cache size at this point.  Just let it go
+    // until the next iteration when it will automatically get reduced.
+    JEGALOG_II(this->GetLogger(), lverbose(), this,
+        ostream_entry(lverbose(),
+            this->GetName() + ": Niched design caching max size now set to ")
+            << this->_maxBufSize << "."
         )
 }
 
@@ -215,8 +241,10 @@ GeneticAlgorithmNichePressureApplicator::BufferDesign(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    if(this->_cacheDesigns) this->_desBuffer.insert(const_cast<Design*>(des));
-    return this->_cacheDesigns;
+    const bool doCache =
+        this->_cacheDesigns && (this->_desBuffer.size() < this->_maxBufSize);
+    if(doCache) this->_desBuffer.insert(const_cast<Design*>(des));
+    return doCache;
 }
 
 DesignOFSortSet
@@ -233,7 +261,7 @@ GeneticAlgorithmNichePressureApplicator::GetBest(
     for(DesignOFSortSet::const_iterator it(of.begin()); it!=of.end(); ++it)
     {
         double currFit = fitnesses.GetFitness(**it);
-        if(currFit == -DBL_MAX) continue;
+		if(currFit == -std::numeric_limits<double>::max()) continue;
 
         if(currFit > bestFit)
         {
@@ -245,6 +273,17 @@ GeneticAlgorithmNichePressureApplicator::GetBest(
     }
 
     return ret;
+}
+
+
+std::size_t
+GeneticAlgorithmNichePressureApplicator::TagTabooNicheDesigns(
+    const DesignOFSortSet& designs,
+    const std::size_t tag
+    ) const
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return MultiObjectiveStatistician::TagParetoExtremeDesigns(designs, tag);
 }
 
 
@@ -267,7 +306,7 @@ GeneticAlgorithmNichePressureApplicator::PreSelection(
     JEGALOG_II(this->GetLogger(), ldebug(), this,
         text_entry(
             ldebug(), this->GetName() +
-            ": Using default pre-seletion operation."
+            ": Using default pre-selection operation."
             )
         )
 }
@@ -292,6 +331,21 @@ GeneticAlgorithmNichePressureApplicator::PollForParameters(
         )
 
     this->SetCacheDesigns(this->_cacheDesigns);
+
+    
+    success = ParameterExtractor::GetSizeTypeFromDB(
+        db, "method.jega.max_niche_cache_size", this->_maxBufSize
+        );
+
+    // If we did not find the max size value, warn about it and use the default
+    // value.  Note that if !success, then _maxBufSize has not been altered.
+    JEGAIFLOG_CF_II(!success, this->GetLogger(), lverbose(), this,
+        ostream_entry(lverbose(), this->GetName() + ": The max niche cache "
+            "size value was not found in the parameter database.  Using the "
+            "current value of ") << this->_cacheDesigns
+        )
+
+    this->SetMaxDesignCacheSize(this->_maxBufSize);
 
     return true;
 }
@@ -351,7 +405,8 @@ GeneticAlgorithmNichePressureApplicator(
     ) :
         GeneticAlgorithmOperator(algorithm),
         _cacheDesigns(DEFAULT_CACHE_FLAG),
-        _desBuffer()
+        _desBuffer(),
+        _maxBufSize(DEFAULT_MAX_CACHE_SIZE)
 {
     EDDY_FUNC_DEBUGSCOPE
 }
@@ -362,7 +417,8 @@ GeneticAlgorithmNichePressureApplicator(
     ) :
         GeneticAlgorithmOperator(copy),
         _cacheDesigns(copy._cacheDesigns),
-        _desBuffer(copy._desBuffer)
+        _desBuffer(copy._desBuffer),
+        _maxBufSize(copy._maxBufSize)
 {
     EDDY_FUNC_DEBUGSCOPE
 }
@@ -373,7 +429,9 @@ GeneticAlgorithmNichePressureApplicator(
     GeneticAlgorithm& algorithm
     ) :
         GeneticAlgorithmOperator(copy, algorithm),
-        _cacheDesigns(copy._cacheDesigns)
+        _cacheDesigns(copy._cacheDesigns),
+        _desBuffer(copy._desBuffer),
+        _maxBufSize(copy._maxBufSize)
 {
     EDDY_FUNC_DEBUGSCOPE
 }

@@ -20,7 +20,7 @@
 
 namespace Pecos {
 
-class AleatoryDistParams;
+class MultivariateDistribution;
 class ExpansionConfigOptions;
 class BasisConfigOptions;
 
@@ -59,14 +59,16 @@ public:
   /// set within poly_basis)
   virtual void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
   /// set int_rules and growth_rules from u_types and mode booleans
-  virtual void initialize_grid(const ShortArray& u_types,
+  virtual void initialize_grid(const MultivariateDistribution& u_dist,
 			       const ExpansionConfigOptions& ec_options,
 			       const BasisConfigOptions& bc_options);
-  /// update polynomialBasis with data from AleatoryDistParams
-  virtual void initialize_grid_parameters(const ShortArray& u_types,
-					  const AleatoryDistParams& adp);
+  /// update polynomialBasis with data from MultivariateDistribution
+  virtual void initialize_grid_parameters(
+			       const MultivariateDistribution& mv_dist);
 
-  /// compute scaled variable and weight sets for the TPQ grid
+  /// compute variable and weight sets for the grid
+  virtual void compute_grid();
+  /// compute variable and weight sets for the grid
   virtual void compute_grid(RealMatrix& var_sets);
   /// compute number of collocation points
   virtual int grid_size();
@@ -76,29 +78,47 @@ public:
   virtual void reinterpolated_tensor_grid(const UShortArray& lev_index,
 					  const SizetList& reinterp_indices);
 
-  /// store configuration settings for the current grid before advancing to the
-  /// next settings within a prescribed grid sequence (default is push_back)
-  virtual void store_grid(size_t index = _NPOS);
-  /// restore configuration settings from a previously stored grid
-  virtual void restore_grid(size_t index = _NPOS);
-  /// remove configuration settings for a stored grid (default is pop_back)
-  virtual void remove_stored_grid(size_t index = _NPOS);
-  /// clear stored grid settings following their usage/combination
-  virtual void clear_stored();
+  /// set key identifying active data set
+  virtual void active_key(const UShortArray& key);
+  /// remove all keyed data sets
+  virtual void clear_keys();
 
-  /// return the index of the maximal stored grid state (_NPOS if the
-  /// current unstored grid state)
-  virtual size_t maximal_grid() const;
-  /// swap settings between the current grid and the stored grid
-  /// identified by index
-  virtual void swap_grid(size_t index);
+  /// clear inactive grid settings following their usage/combination
+  virtual void clear_inactive();
 
-  /// return type1WeightSets from Cubature/TensorProduct/CombinedSparseGrid
-  /// or concatenate type1WeightSets in HierarchSparseGrid
+  /// return the key of the maximal stored grid state
+  virtual const UShortArray& maximal_grid();
+
+  /// combine grid data and points/weights
+  virtual void combine_grid();
+  /// promote combined grid data and points/weights to active data
+  virtual void combined_to_active(bool clear_combined);
+
+  /// return active variableSets for Cubature/TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::variableSets is 2DArray)
+  virtual const RealMatrix& variable_sets() const;
+  /// return active type1WeightSets from Cubature/TensorProduct/
+  /// CombinedSparseGrid (HierarchSparseGridDriver::type1WeightSets is 2DArray)
   virtual const RealVector& type1_weight_sets() const;
-  /// return type2WeightSets from Cubature/TensorProduct/CombinedSparseGrid
-  /// or concatenate type2WeightSets in HierarchSparseGrid
+  /// return active type2WeightSets from Cubature/TensorProduct/
+  /// CombinedSparseGrid (HierarchSparseGridDriver::type2WeightSets is 2DArray)
   virtual const RealMatrix& type2_weight_sets() const;
+  /// return variableSets[key] for TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::variableSets is 2DArray)
+  virtual const RealMatrix& variable_sets(const UShortArray& key) const;
+  /// return type1WeightSets[key] from TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::type1WeightSets is 2DArray)
+  virtual const RealVector& type1_weight_sets(const UShortArray& key) const;
+  /// return type2WeightSets[key] from TensorProduct/CombinedSparseGrid
+  /// (HierarchSparseGridDriver::type2WeightSets is 2DArray)
+  virtual const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+
+  /// return combinedVarSets for TensorProduct/CombinedSparseGrid
+  virtual const RealMatrix& combined_variable_sets() const;
+  /// return combinedT1WeightSets for TensorProduct/CombinedSparseGrid
+  virtual const RealVector& combined_type1_weight_sets();
+  /// return combinedT2WeightSets for TensorProduct/CombinedSparseGrid
+  virtual const RealMatrix& combined_type2_weight_sets();
 
   //
   //- Heading: Member functions
@@ -120,16 +140,15 @@ public:
 
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
+  /// return polynomialBasis
+  std::vector<BasisPolynomial>& polynomial_basis();
+  /// set polynomialBasis
+  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
   /// set driverMode
   void mode(short driver_mode);
   /// get driverMode
   short mode() const;
-
-  // append to end of type1WeightSets
-  //void append_type1_weight_sets(const RealVector& t1_wts);
-  // append to end of type2WeightSets
-  //void append_type2_weight_sets(const RealMatrix& t2_wts);
 
   /// return collocPts1D
   const Real3DArray& collocation_points_1d()  const;
@@ -210,13 +229,6 @@ protected:
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
 
-  // the set of type1 weights (for integration of value interpolants)
-  // associated with each point in the {TPQ,SSG,Cub} grid
-  //RealVector type1WeightSets;
-  // the set of type2 weights (for integration of gradient interpolants)
-  // for each derivative component and for each point in the {TPQ,SSG} grid
-  //RealMatrix type2WeightSets;
-
   /// num_levels_per_var x numVars sets of 1D collocation points
   Real3DArray collocPts1D;
   /// num_levels_per_var x numVars sets of 1D type1 collocation weights
@@ -272,6 +284,18 @@ IntegrationDriver::polynomial_basis() const
 { return (driverRep) ? driverRep->polynomialBasis : polynomialBasis; }
 
 
+inline std::vector<BasisPolynomial>& IntegrationDriver::polynomial_basis()
+{ return (driverRep) ? driverRep->polynomialBasis : polynomialBasis; }
+
+
+inline void IntegrationDriver::
+polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
+{
+  if (driverRep) driverRep->polynomialBasis = poly_basis;
+  else           polynomialBasis = poly_basis;
+}
+
+
 inline void IntegrationDriver::mode(short driver_mode)
 {
   if (driverRep) driverRep->driverMode = driver_mode;
@@ -281,44 +305,6 @@ inline void IntegrationDriver::mode(short driver_mode)
 
 inline short IntegrationDriver::mode() const
 { return (driverRep) ? driverRep->driverMode : driverMode; }
-
-
-/*
-inline void IntegrationDriver::
-append_type1_weight_sets(const RealVector& t1_wts)
-{
-  if (driverRep)
-    driverRep->append_type1_weight_sets(t1_wts);
-  else {
-    size_t i, num_curr_t1_wts = type1WeightSets.length(),
-      num_new_t1_wts = t1_wts.length(),
-      num_total_t1_wts = num_curr_t1_wts + num_new_t1_wts;
-    type1WeightSets.resize(num_total_t1_wts);
-    for (i=0; i<num_new_t1_wts; ++i)
-      type1WeightSets[num_curr_t1_wts+i] = t1_wts[i];
-  }
-}
-
-
-inline void IntegrationDriver::
-append_type2_weight_sets(const RealMatrix& t2_wts)
-{
-  if (driverRep)
-    driverRep->append_type2_weight_sets(t2_wts);
-  else {
-    size_t i, j, num_curr_t2_wts = type2WeightSets.numCols(),
-      num_new_t2_wts = t2_wts.numCols(),
-      num_total_t2_wts = num_curr_t2_wts + num_new_t2_wts;
-    type2WeightSets.reshape(numVars, num_total_t2_wts);
-    for (i=0; i<num_new_t2_wts; ++i) {
-      Real*      curr_t2_i = type2WeightSets[num_curr_t2_wts+i];
-      const Real* new_t2_i = t2_wts[i];
-      for (j=0; j<numVars; ++j)
-	curr_t2_i[j] = new_t2_i[j];
-    }
-  }
-}
-*/
 
 
 inline const Real3DArray& IntegrationDriver::collocation_points_1d() const

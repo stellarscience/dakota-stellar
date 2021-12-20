@@ -1,3 +1,11 @@
+#  _______________________________________________________________________
+#
+#  PECOS: Parallel Environment for Creation Of Stochastics
+#  Copyright (c) 2011, Sandia National Laboratories.
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Pecos directory.
+#  _______________________________________________________________________
+
 # Manage a package that may appear in the local packages/ directory,
 # or may have been previously defined with PACKAGE_DIR by a parent
 #   package: package name in capitals

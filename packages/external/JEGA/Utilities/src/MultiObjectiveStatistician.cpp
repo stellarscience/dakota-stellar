@@ -166,7 +166,7 @@ MultiObjectiveStatistician::DominationCompare(
 
     // if the designs are not feasible, then preference will be given
     // to finding feasibility so the constraints will be compared first.
-    // Note that des1's feasiblilty is representative of both
+    // Note that des1's feasibility is representative of both
     // Designs feasibility (see beginning of method).
     if(!des1.IsFeasible())
     {
@@ -243,7 +243,7 @@ MultiObjectiveStatistician::FlushDominatedFrom(
 
 } // MultiObjectiveStatistician::FlushDominatedFrom
 
-eddy::utilities::DoubleExtremes
+eddy::utilities::extremes<obj_val_t>
 MultiObjectiveStatistician::FindParetoExtremes(
     const DesignOFSortSet& of
     )
@@ -598,35 +598,6 @@ MultiObjectiveStatistician::ComputeLayers(
 
 } // MultiObjectiveStatistician::ComputeLayers
 
-bool
-MultiObjectiveStatistician::IsExtremeDesign(
-    const JEGA::Utilities::Design& des,
-    const eddy::utilities::DoubleExtremes& paretoExtremes
-    )
-{
-    EDDY_FUNC_DEBUGSCOPE
-
-    // If des has the max or min value for at least all but 1 dimension,
-    // it is an extreme design.
-    size_t numOutDims = 0;
-
-    const DesignTarget& target = des.GetDesignTarget();
-    const size_t nof = target.GetNOF();
-
-    JEGAIFLOG_CF_IT_G_F(nof != paretoExtremes.size(),
-        MultiObjectiveStatistician,
-        ostream_entry(lfatal(), "Multi-objective Statistician: Extremes "
-            "contain record of ") << paretoExtremes.size()
-             << " objectives for an " << nof << " objective problem."
-        )
-
-    for(DoubleExtremes::size_type i=0; i<nof; ++i)
-        if(!paretoExtremes.equals_max_or_min(i, des.GetObjective(i)))
-            if((++numOutDims) > 1) return false;
-
-    return true;
-}
-
 DesignCountMap
 MultiObjectiveStatistician::ComputeDominatedByCounts(
     const DesignOFSortSet& designs,
@@ -635,7 +606,7 @@ MultiObjectiveStatistician::ComputeDominatedByCounts(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    // if designs is empty, there is nothign to do.
+    // if designs is empty, there is nothing to do.
     if(designs.empty()) return DesignCountMap();
 
     // start by breaking "designs" into feasible and infeasible
@@ -664,15 +635,29 @@ MultiObjectiveStatistician::ComputeDominatedByCounts(
     // prepare to now do the infeasible.  if there are none, skip it.
     if(!infeasible.empty())
     {
+        const size_t fSize = feasible.size();
+
         // The initial penalty is the number of feasible.  Feasible always
-        // dominate infeasible.
-        // Add in the count of dominating designs to each.
-        for(DesignOFSortSet::const_iterator iit(infeasible.begin());
-            iit!=infeasible.end(); ++iit) ret.AddToValue(
-                *iit,
-                feasible.size() +
-                CountNumDominating(**iit, infeasible, iit, cutoff)
-                );
+        // dominate infeasible. Add in the count of dominating designs to each.
+
+        // If the number of feasible meets or exceeds the cutoff, then we don't
+        // actually need to count.
+        if(cutoff >= 0 && fSize >= static_cast<std::size_t>(cutoff))
+        {
+            for(DesignOFSortSet::const_iterator iit(infeasible.begin());
+                iit!=infeasible.end(); ++iit) ret.AddToValue(*iit, fSize);
+        }
+        else
+        {
+            const int modCut =
+                cutoff < 0 ? cutoff : static_cast<int>(cutoff - fSize);
+
+            for(DesignOFSortSet::const_iterator iit(infeasible.begin());
+                iit!=infeasible.end(); ++iit) ret.AddToValue(
+                    *iit,
+                    fSize + CountNumDominating(**iit, infeasible, iit, modCut)
+                    );
+        }
     }
 
     ret.ResumeStatistics(true);
@@ -688,7 +673,7 @@ MultiObjectiveStatistician::ComputeDominatingCounts(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    // if designs is empty, there is nothign to do.
+    // if designs is empty, there is nothing to do.
     if(designs.empty()) return DesignCountMap();
 
     // start by breaking "designs" into feasible and infeasible
@@ -747,7 +732,7 @@ MultiObjectiveStatistician::ComputeDominationCounts(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    // if designs is empty, there is nothign to do.
+    // if designs is empty, there is nothing to do.
     if(designs.empty()) return DesignDoubleCountMap();
 
     // start by breaking "designs" into feasible and infeasible

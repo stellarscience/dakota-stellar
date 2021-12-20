@@ -1,0 +1,115 @@
+
+
+\section{Variables}
+
+The Variables class is intended to encapsulate the creation, augmentation
+and realization of random variables.  Single variables are characterized
+by such properties as probability distribution, ranges, hyperparameters,
+etc. A base class provides only the bare minimum via a {\texttt num\_vars}
+attribute and a pure virtual {\texttt realize()} method. The rest of
+the functionality is implemented in the derived classes and require that
+variable transformations or approximations which use the derived classses
+to know what additional functions are implemented. (These could change.)
+
+\subsection{Requirements}
+
+The following are requirements the the Variables class must support in any design and
+implementation:
+
+\begin{enumerate}
+  \item Functionality and use cases currently supported in the
+        Pceos::RandomVariable class must be preserved.
+  \item Appropriate leveraging of Boost's stastical distributions should
+        be preserved.
+  \item Consistent and performant extensions to available distributions
+        should be added as needed, eg distributions based on underlying
+        user-supplied data.
+  \item Extensions to multivariables ranging in type from iids to
+        aggregations of varying distributions should be implemented
+        in a way that preserves good performance while scaling up to
+        high dimensions.
+  \item Correlations among variables should be able to be specified at
+        construction or updated thereafter.
+  \item Transformations (including inverse when possible) should be supported
+        with checks for appropriateness and consistency.
+  \item Where appropriate transformations should support distributions, e.g.
+        return a new distribution, and realizations, e.g. map realizations from
+        one underlying distribution to a value coreresponding to another distribution.
+  \item The previous transformation reuirements should apply to multivariables
+        irespecting correlations where appropriate.
+  \item Variables (single and multiple) should be able to be serialzied for the 
+        purpose of export/import, e.g. for supporting restart capabilitiy
+\end{enumerate}
+
+
+
+\subsection{Creation APIs}
+
+The following examples illuatrate candidate APIs for creating single
+and multi-variable instances.
+
+\begin{codelisting}{Example of single variable construction}
+  Teuchos::ParameterList & var_opts;
+  var_opts.set("distribution", "Uniform");
+  var_opts.set("alpha", "-1.0");
+  var_opts.set("beta" , "1.0");
+  auto sVar = VariableFactory::create<>( var_opts );
+\end{codelisting}
+
+
+\begin{codelisting}{Example of creating an independent IID multivariable}
+  Teuchos::ParameterList & var_opts1;
+  var_opts1.set("distribution", "Uniform");
+  var_opts1.set("alpha", "-1.0");
+  var_opts1.set("beta" , "1.0");
+  auto sVar = VariableFactory::create<>( var_opts1 );
+
+  // Create a 10-dim uniform(-1.0, 1.0) iid multivariable
+  auto iidVar = VariableFactory::IID( sVar, 10 );
+\end{codelisting}
+
+
+\begin{codelisting}{Example of creating an independent joint multivariable}
+  Teuchos::ParameterList & var_opts1;
+  var_opts1.set("distribution", "Uniform");
+  var_opts1.set("alpha", "-1.0");
+  var_opts1.set("beta" , "1.0");
+  auto sVar1 = VariableFactory::create<>( var_opts1 );
+
+  Teuchos::ParameterList & var_opts2;
+  var_opts2.set("distribution", "Standard-Normal");
+  auto sVar2 = VariableFactory::create<>( var_opts2 );
+
+  auto mVar = VariableFactory::Joint( std::vector<VariableBase> {sVar1, sVar2} );
+\end{codelisting}
+
+
+\subsection{Sampling APIs}
+
+The following examples demonstrate how to obtain variates (realizations
+of random variables).
+
+\begin{codelisting}{Example of variable realization (sampling)}
+  auto sample = mVar.realize(); // would return a vector<Real> of size 2 
+                                // using the multivariable creation  example
+\end{codelisting}
+
+
+\subsection{Modification APIs}
+
+The following examples demonstrate how to reset existing instances
+of random variables and provide a possible means of efficient variate
+realizations for large dimension variables.
+
+\begin{codelisting}{Resetting an existing uniform variable configuration}
+  auto suVar = VariableFactory::create<>( var_opts );
+
+  std::cout << "Value 1 = " << suVar.realize() << std::endl;
+  auto old_config = suVar.param();
+  suVar.param(Surrogate::UniformDistribution<>::param_type {-1.0, 1.0});
+  std::cout << "Value 2 = " << suVar.realize() << std::endl;
+  suVar.param(old_range);
+  std::cout << "Value 3 = " << suVar.realize() << std::endl;
+\end{codelisting}
+
+

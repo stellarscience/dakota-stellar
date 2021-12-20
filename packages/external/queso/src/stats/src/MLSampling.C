@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -22,10 +22,18 @@
 //
 //-----------------------------------------------------------------------el-
 
+#include <algorithm>
+
+#include <unistd.h> // sleep
+
 #include <queso/MLSampling.h>
 #include <queso/InstantiateIntersection.h>
 #include <queso/GslVector.h>
 #include <queso/GslMatrix.h>
+#include <queso/BayesianJointPdf.h>
+#include <queso/FilePtr.h>
+
+#include <queso/FiniteDistribution.h>
 
 namespace QUESO {
 
@@ -2161,7 +2169,7 @@ MLSampling<P_V,P_M>::restartML(
       *ifsVar >> m_logEvidenceFactors[i];
     }
     *ifsVar >> checkingString; // 6 = ML_CHECKPOINT_FIXED_AMOUNT_OF_DATA
-    queso_require_equal_to_msg(checkingString, "COMPLETE", "control txt input file is not complete");
+    queso_require_equal_to_msg(checkingString, std::string("COMPLETE"), std::string("control txt input file is not complete"));
 
     if ((m_env.subDisplayFile()) && (m_env.displayVerbosity() >= 2)) {
       *m_env.subDisplayFile() << "Restart input file has the following information:"

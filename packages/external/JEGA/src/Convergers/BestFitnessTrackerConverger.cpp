@@ -219,17 +219,17 @@ BestFitnessTrackerConverger::GetMetricValue(
             text_entry(lquiet(), this->GetName() +
                 ": Empty group received for fitness assessment.")
             )
-        return DBL_MAX;
+        return std::numeric_limits<double>::max();
     }
 
-    double bestFit = -DBL_MAX;
+    double bestFit = -std::numeric_limits<double>::max();
 
     for(DesignOFSortSet::const_iterator it(group.BeginOF());
         it!=group.EndOF(); ++it)
     {
-        double currFit = fitnesses.GetFitness(**it);
+        const double currFit = fitnesses.GetFitness(**it);
 
-        if(currFit != -DBL_MAX)
+        if(currFit != -std::numeric_limits<double>::max())
             bestFit = Math::Max(bestFit, currFit);
 
         JEGA_LOGGING_IF_ON(else)

@@ -49,8 +49,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NIDR_SQUAWKMAX 10
 #endif
 
-#if !(defined(_WIN32) || defined(_WIN64))
 /* for isatty(), getegid() */
+#if defined(_WIN32) || defined(_WIN64)
+#include <io.h>
+#else
 #include <unistd.h>
 #endif
 

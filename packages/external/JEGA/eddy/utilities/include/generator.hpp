@@ -138,7 +138,7 @@ In-Namespace File Scope Typedefs
  * The usage of this generator is a bit nonintuitive.  Because functions like
  * std::generate do not pass arguments into their generators, this class keeps
  * a copy of the iterator and increments it at each use.  It does not check
- * to see that that iterator is valid in any way or that it has not yet reached
+ * to see that the iterator is valid in any way or that it has not yet reached
  * the end.  That must be handled by the function using the generate.  An
  * example of the usage would be:
  * \code

@@ -92,7 +92,6 @@ namespace eddy
     namespace utilities
     {
         template <typename T> class extremes;
-        typedef extremes<double> DoubleExtremes;
     }
 }
 
@@ -202,6 +201,10 @@ class DistanceNichingPostProcessor :
 
         /// The default value used for all distance percentages.
         static const double DEFAULT_DIST_PCT;
+
+    protected:
+        
+        static const std::size_t TABOO_MARK;
 
     private:
 
@@ -381,7 +384,7 @@ class DistanceNichingPostProcessor :
          */
         JEGA::DoubleVector
         ComputeCutoffDistances(
-            const eddy::utilities::DoubleExtremes& paretoExtremes
+            const eddy::utilities::extremes<obj_val_t>& paretoExtremes
             ) const;
 
         /**

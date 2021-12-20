@@ -295,7 +295,7 @@ class EDDY_SL_IEDECL ts_map
 
         /// A pair of const_iterators.
         /**
-         * This is the return type fo the const version of the equal_range
+         * This is the return type for the const version of the equal_range
          * method.
          */
         typedef
@@ -304,7 +304,7 @@ class EDDY_SL_IEDECL ts_map
 
         /// A pair of iterators.
         /**
-         * This is the return type fo the non-const version of the equal_range
+         * This is the return type for the non-const version of the equal_range
          * method.
          */
         typedef
@@ -370,8 +370,7 @@ class EDDY_SL_IEDECL ts_map
         /// Locks this map until an unlock is issued.
         /**
          * All methods lock the map for their duration.
-         * Use this method if you need to lock the map over
-         * multiple actions.
+         * Use this method if you need to lock the map over multiple actions.
          *
          * The map may be locked recursively.
          */
@@ -531,7 +530,7 @@ class EDDY_SL_IEDECL ts_map
          *        matches \a key or end() if no such element can be found.
          *
          * \param key The key sought in this map.
-         * \return An iterator to the first occurance of a match to \a key
+         * \return An iterator to the first occurrence of a match to \a key
          *         or end if not found.
          */
         inline
@@ -545,7 +544,7 @@ class EDDY_SL_IEDECL ts_map
          *        matches \a key or end() if no such element can be found.
          *
          * \param key The key sought in this map.
-         * \return An iterator to the first occurance of a match to \a key
+         * \return An iterator to the first occurrence of a match to \a key
          *         or end if not found.
          */
         inline
@@ -608,8 +607,8 @@ class EDDY_SL_IEDECL ts_map
             InputIterator last
             )
         {
-            mutex_lock lock(_mutex);
-            _container.insert(first, last);
+            mutex_lock lock(this->_mutex);
+            this->_container.insert(first, last);
         }
 
         /**

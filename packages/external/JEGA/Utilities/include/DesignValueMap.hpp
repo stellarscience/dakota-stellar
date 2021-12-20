@@ -166,7 +166,7 @@ Class Definition
  *
  * This can be used any time you want to associated a collection of designs
  * with some set of values.  An example of its usage is the WeightedSumMap
- * in which Designs are assocated with a weighted sum value according to some
+ * in which Designs are associated with a weighted sum value according to some
  * set of weights.
  *
  * In general, VT must be an arithmetic type like double, int, etc.
@@ -286,7 +286,7 @@ class JEGA_SL_IEDECL DesignValueMap :
 
         /// Returns the stored min value in this map.
         /**
-         * \return The smallest Svalue known to this value map.
+         * \return The smallest value known to this value map.
          */
         inline
         const value_type&

@@ -68,8 +68,10 @@ public:
   //Real to_standard(Real x) const;
   //Real from_standard(Real z) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -170,6 +172,7 @@ inline Real InvGammaRandomVariable::pdf_gradient(Real x) const
   PCerr << "Error: InvGammaRandomVariable::pdf_gradient() not implemented."
 	<< std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -189,6 +192,7 @@ inline Real InvGammaRandomVariable::pdf_hessian(Real x) const
   PCerr << "Error: InvGammaRandomVariable::pdf_hessian() not implemented."
 	<< std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -265,29 +269,39 @@ inline Real InvGammaRandomVariable::log_standard_pdf_hessian(Real z) const
 }
 
 
-inline Real InvGammaRandomVariable::parameter(short dist_param) const
+inline void InvGammaRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case IGA_ALPHA: return alphaShape; break;
-  case IGA_BETA:  return betaScale;  break;
+  case IGA_ALPHA: val = alphaShape; break;
+  case IGA_BETA:  val = betaScale;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in InvGammaRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in InvGammaRandomVariable::pull_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void InvGammaRandomVariable::parameter(short dist_param, Real val)
+inline void InvGammaRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case IGA_ALPHA: alphaShape = val; break;
   case IGA_BETA:  betaScale  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in InvGammaRandomVariable::parameter()." << std::endl;
+	  << " in InvGammaRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new invGammaDist instance
+}
+
+
+inline void InvGammaRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(IGA_ALPHA, alphaShape);
+  //ExponentialRandomVariable::copy_parameters(rv); // different enum used
+  rv.pull_parameter(IGA_BETA,  betaScale);
   update_boost(); // create a new invGammaDist instance
 }
 
@@ -319,6 +333,7 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   PCerr << "Error: InvGammaRandomVariable::correlation_warping_factor() not "
 	<< "implemented." << std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -328,6 +343,7 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   // hide ExponentialRandomVariable implementation
   PCerr << "Error: InvGammaRandomVariable::dx_ds() not implemented."<<std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 
@@ -338,6 +354,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
   PCerr << "Error: InvGammaRandomVariable::dz_ds_factor() not implemented."
 	<< std::endl;
   abort_handler(-1);
+  return std::numeric_limits<Real>::quiet_NaN();
 }
 
 

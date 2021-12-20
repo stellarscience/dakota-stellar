@@ -1,0 +1,456 @@
+#+TITLE: Surrogate Model Summary
+#+AUTHOR: Brian and John
+#+DATE: [2016-02-08 Mon]
+
+* Goals
+  + Survey Dakota, Pecos, Surfpack use cases and propose initial
+    refactor
+  + What are the essential things we need to know to be able to move
+    forward with design/implementation?
+  
+* Surfpack General Capabilities
+(See also surfpack/docs/surfpack_users_manual.tex)
+
+Note that some Surfpack capabilities are supported in the parser and
+some in the C++ API, but not all are supported in both.  Is it
+important to support a plain text input file to drive surrogate
+creation?  Does Python scripting suffice?
+
+There was an attempt at a SurfpackInterface, which is used by the
+command-line interpreter, but these functions aren't used by Dakota's
+interface.
+
+Surfpack models work on a factory pattern; you configure the factory
+properties and then can have it produce models on different data sets.
+
+** Third-party libraries
+   There are surfpack C++ wrappers for these, in some cases duplicated in NKM
+   + BLAS/LAPACK
+   + CONMIN: local optimization of GP correlation lengths
+   + NCSU DiRECT: global optimization of GP correlation lengths
+   + MARS: Fortran MARS model from StatLib
+
+** Data structures
+   + SurfpackMatrix: Contiguous memory with option for C or Fortran ordering
+
+   + SurfPoint: A single point of training or evaluation data
+     - vector<double> x
+     - vector<double> f
+     - vector<vector<double>> fGradients
+     - vector<SurfpackMatrix> fHessians
+
+   + SurfData: A training or evaluation data set.  Consists of a
+     dimension information. Includes ability to include/exclude
+     points, for example in cross-validation.  Can be loaded from a
+     binary or text data file.
+     - vector<SurfPoint*>
+     - SurfPoint constraintPoint for equality-constrained builds
+     - labels 
+
+** Scale training data
+   Ability to scale training and/or evaluation points as needed.  See:
+   + ModelScaler
+   + ScaledSurfData
+
+** Utilities
+   + Quality metrics: RMS, other error metrics
+   + Cross-validation and PRESS
+   + Query a surrogate model type for minimum and recommended number
+     of build points
+
+** Console command / input file parser
+   User can specify commands either interactively or in a Surfpack
+   .spk command file. Key commands:
+   + CreateAxes: Create a hyperrectangle on which to define a surrogate
+   + CreateSample: Basic random DOE over the input variables
+   + CreateSurface: Build a surrogate model of a specific type
+   + Evaluate: Evaluate a model at another set of points
+   + Fitness: Compute quality metrics such as RMS or cross-validation
+   + Save: Save model to serialized text or binary format (not
+     intended to be human-readable). Save data set to text format.
+   + Load: Load model or data from the above saved formats, or new
+     training data from text.
+
+** Application examples
+   Various training data sets and examples of running the above
+   commands with them.
+
+* Surfpack Surrogate Models (C++ API)
+
+** Neural Network (DirectANNModel)
+   Direct training neural network using atanh() activation function
+   with single hidden layer
+   + Stores a basis set with with weights
+   + Direct solve using random inner weights, outer solve via linear
+     algebra (no optimization)
+   + Uses orthogonal matching pursuit to choose bases or user can fix
+     number of nodes
+   + Evaluation of gradient of model
+   + Can write human-readable algebraic form
+
+** Kriging Model (KrigingModel)
+   Originally a simple Kriging model that used CONMIN to optimize
+   correlation lengths.  Now just a wrapper around NKM.
+   + Evaluation of variance, gradient, Hessian
+   + Can write human-readable algebraic form
+
+** Surfpack New Kriging Model (nkm/NKM_KrigingModel)
+   Keith's Gaussian Process model
+   + Arbitrary trend order, with option to omit cross terms (main
+     effects polynomial)
+   + Pivoted Cholesky
+   + Build from functions, gradient, Hessians
+   + Support for anchor (constraint) point
+   + Scale to bounds
+   + Correlation forms: powered exponential (including Gaussian),
+     Matern 0.5, 1.5, 2.5, Inf,
+   + Correlation estimation: none, local, global, sampling,
+     global/local, multistart local
+   + Nugget (diagonal scaling) option, including auto-nugget 
+
+   This model reimplements many Surfpack data structures and utilities
+   as a proposed next design, including classes: SurfMat, SurfData,
+   Optimize, SurfPackModel, SurfPack, BlockPivotChol
+
+** Polynomial (LinearRegression)
+   + 0, 1, 2, 3 order (though no implementation limitation on higher)
+   + Stores basis set and coefficients
+   + Basis computed through a coloring scheme
+   + Anchor (constraint) point, including function, gradient, Hessian
+   + Evaluation of gradient of model
+   + Can write human-readable algebraic form
+
+** Multivariate Adaptive Regression Splines (Mars)
+   Thin wrapper around Jerome Friedman's old Statlib Fortran code.
+   We've tried to maintain the Fortran, but don't trust it any longer.
+   + Piecewise linear or cubic n-d splines
+   + Control of max bases and max interactions
+   + NO gradient eval
+
+** Moving Least Squares (MovingLeastSquares)
+   This prototype model never really made it to prime time.
+   + Stores a single linear regression model basis set with coefficients
+   + Choice of a few different weight functions / kernels with 1st,
+     2nd, or 3rd order continuity.
+   + Evalution of gradient of model
+
+** Radial Basis Function (RadialBasisFunction)
+   Appears to be a network of radial basis functions, each of which
+   stores a center and radius.
+   + Appears to use a Gaussian kernel
+   + Lots of inefficient CVT and other geometry searches going on
+   + User control of number centers, CVT quality, max subsets, and min partition
+   + Evaluation of gradient of model
+   + Can write human-readable algebraic form
+
+* PECOS Surrogate Utilities
+  + SurrogateDataVars/SurrogateDataResp
+  + SurrogateData
+    - Anchor vars/resp
+    - Arrays of data
+    - Ability to push/pop data
+  + LinearAlgebra
+  + Cross validation
+
+* PECOS Surrogates
+  All are polynomials
+** RegressOrthogPolyApproximation
+   Fits our basic case coeff/basis
+** Interpolation Polynomials (InterpPolyApproximation)
+   Fit the model of linear combo of coeffs/basis, except when doing
+   Barycentric interp
+   + NodalInterpPolyApproximation (may not be orthogonal)
+   + HierarchInterpPolyApproximation
+** ProjectOrthogPolyApproximation: Pseudospectral projection
+   Will produce simple linear combination of coeffs on bases
+
+  + Orthogonal Polynomials
+  + Richer set of build / evaluate functions than any other
+  + Extensive point selection and coefficient estimation approaches
+
+* Dakota Surrogates
+  A few surrogates are implemented directly in Dakota
+** Gaussian Process (GaussProcApproximation)
+   Laura's GP implementation which using nugget for ill-conditioning
+   and global optimization for correlation lengths.  A simple,
+   efficient surrogate.
+   + Constant, linear, reduced quadratic (main effects) trend
+   + Maps Dakota approxData into a real matrix
+   + Normalize data
+   + Option for greedy point down-selection
+   + Automatic nugget until Cholesky works
+   + Evaluate function, gradient, variance
+
+** Local Taylor (TaylorApproximation)
+   + Zeroth, first, or second-order Taylor series
+   + Train from function, gradient, Hessian of single point
+
+** Two-point Exponential (TANA3Approximation)
+   + Train from current and last point
+
+* Voronoi Piecewise Surrogates (VPSApproximation)
+  Mohamed and Ahmad's computational geometry-based surrogates that can
+  create domain-decomposition surrogates on local domains
+  + Minimal (no?) TPLs; may even implement their own linear algebra
+  + Own polynomial regression: support arbitrary order
+  + Own radial basis functions
+  + Use Surfpack or other GP
+
+
+
+* Emerging design notes
+  Place graphic of Dakota Approximation classes here...[link][https://dakota.sandia.gov//sites/default/files/docs/6.3/html-dev/classDakota_1_1Approximation.png]
+
+  Approximation API may be a reasonable starting point
+
+  Ask someone more qualified than use about inheritance and how to
+  deal with varying needs of derived classes
+
+** Multiple responses
+   + Allow shared data objects, e.g., sample sets, to allow multiple
+     responses to share a common set of build data (x values)
+
+
+
+** Separation of responsiblities
+  PCE Model
+  - evaluate(), variance()
+  - 
+
+  Sparse Grid
+  - Hierarchical surplus
+  
+
+  PCE Adaptor
+  - Get next grid level
+  - Append data
+  - rebuild
+
+  Be able to return either an Approximation object, or a richer Model object
+
+
+* Functions to prune()
+  combine()?
+
+Propose initial design for Approximation and Surrogate Data Container
+  Is Pecos::surrogatedata a viable starting point?
+    Need to store fn value, grad, Hess
+    Fault information
+  Is Dakota::Approximation a viable starting point?
+  Where does cross validation live?
+   What does the most lightweight instantiation of a surrogate look like?
+   How do we wrap it to make it richer for say Dakota use?
+     Write pseudo-code / class diagram for each surrogate type?  For simple...
+     What more complex do we support
+
+Use case to test: (to see about define an iterator, approx object,
+  Can we have the same builders be used to do
+    simple linear regression
+    OMP
+  For all of the following
+    orthog poly, neural net, simple poly, rbf, mls
+   
+
+  Build basis matrix
+  Allow notion of faulty data 
+  Use fn values to evaluate coefficients from basis matrix optionally w/ CV
+  Set final coeffs
+  Compute diagnostics
+
+Ask Mike why he doesn't just use Inf for faults?
+
+
+* High-level Schedule
+  1. Design document/notes showing key classes and responsibility
+  2. Sketch code and associated unit tests; implement a couple
+     surrogate types.  Write unit tests and .hpp with API
+     concurrently.  Consider use cases (in rough order)
+     1. Regression: important due to shared with SP, VPS; make simple poly
+     2. Sparse grid: important due to adaption (builder/iterator)
+     3. Surfpack
+     4. VPS
+  3. Evaluate feasibility and adapt before moving to rest of models
+
+* Sequence of stories
+
+** Story: Surrogates: Design Coordination
+   + Get Mike's buy-in for some exploratory directories for surrogate
+     data and linear algebra (done)
+   + Create new directories in Pecos (trivial)
+   + Sketch key classes and APIs
+   + Discussion about design with Mike, John, other interested parties
+
+** Epic: Surrogates: Linear Solvers
+   Teuchos-based linear solver utilities with minimal dependencies on
+   Teuchos, BLAS/LAPACK.  Include linear algebra, compressive sensing,
+   cross-validation?  Eventually all linear algebra extensions to
+   Teuchos needed for Dakota and its dependent libraries.  Notes:
+   + Try to preserve JDJ Git repo history when doing this
+   + John to primarily work on CS; need help on other linear solvers
+
+   Proposed stories:
+   1. Create new directory of linear algebra utilities, probably to live in
+      dakota-utils repo (initially in Pecos sub-directory)
+   1. Basic linear solvers for simple regression polynomial cases;
+      establish API patterns and unit tests
+   1. Add all linear solver capabilities needed for Pecos, Dakota, and
+      Surfpack surrogates, e.g., compressive sensing, SVD, pivoted LU,
+      etc.  Focus specifically on those needed for surrogates.  Unit test.
+
+** Epic: Surrogates: Data Container
+   Create a new surrogate data container to be used as the core
+   storage for the new surrogate models.  Principles:
+   + Incorporate strengths of Pecos, Surfpack, Dakota ideas
+   + Keep as lightweight as possible, striking a balance between
+     contiguous vs. container storage (see design notes).
+   + Ability to take non-contiguous slices
+   + Ability to mark/handle faults
+   + (Likely non-member) readers/writers/serialization
+
+   Proposed stories:
+   1. Initial data container that can store sample points and
+      (potentially heterogeneous) function, gradient, Hessian
+      information, with unit tests for storage and retrieval.
+   1. Add Ability to take views/slides of the data and test with
+      cross-validation-like unit test loop.
+   1. Demonstrate applying linear solver tools as appropriate via unit
+      tests.
+
+** Epic: Surrogates: Approximation Builders
+   Create a family of surrogate builders to include basic regression,
+   cross-validation-based approaches, correlation length optimization,
+   etc.  Want to be able to mix and match some builders and
+   approximation types, e.g., basic regression or OMP should apply to
+   any coefficient/basis-based approximation.
+
+   1. New, likely templatized regression builder akin to linsolve,
+      with unit tests
+      #+BEGIN_SRC C++ :exports code
+      regressionbuilder<Approximation>(solver_type, samples, values)
+      matrix = approximation.build_basis_matrix(samples)
+      # values could be replaced with a call to a function(samples)
+      #+END_SRC
+      Notes: 
+      + Can this be a cross validation build with 1 fold?  (or at
+        least same function call and shared operations)
+
+   1. Cross-validation solvers; both tailored (for example to
+      orthogonal matching pursuit) and wrapper (basic cross-validation
+      that wraps a standard surrogate build process)
+      Notes:
+      + Do we preprocess for faults, e.g samples = samples.non_faults
+        or do we pass faults to linear_solver and it takes care of
+        them?  This is important when using cross validation.
+      + Need general capability that just operates on wrapper of and
+        ApproximationBuilder that only takes sampes and returns
+        approximation.
+
+      #+BEGIN_SRC python :exports code
+      # remove all samples where all requested data e.g. func, grads and hessians fail
+      remove_complete_failures(matrix,values) 
+      folds = determine_folds(samples, semi_faults)
+      for k in num_folds:
+      extract_sub_data(matrix,values,folds[k])
+      remove_faults(matrix,values)
+      coeff = linear_solve(matrix,values,solver_type)
+      approximation.set_coefficients(coeff)
+      compute_cv_metrics()=
+      #+END_SRC
+      
+** Epic: Surrogates: Approximation class (Model-like class)
+   Create classes that store the state of built surrogates such that
+   they can be evaluated at new points.
+   
+   Proposed stories:
+   1. Create abstract API for a generic approximation, including
+      functions to evaluate, e.g., function, gradient, Hessian,
+      variance.  Sketch unit tests for common cases such as exact
+      polynomial evaluation, does the GP interpolate, etc.
+   1. Implement Pecos regression polynomial to include Surfpack use
+      cases.  Perhaps generalize Pecos to support monomials (or don't
+      support monomials and translate, e.g., to Legendre?) and wrap
+      with new API.
+   1. Ability to import/export models to various formats.
+   1. Generalize to other surrogates that use paired
+      basis/coefficients, e.g, neural network, radial basis functions,
+      etc., as appropriate.  Extend builders as needed to support.
+   1. Re-implement Gaussian process model: build on John's initial
+      design, incorporate relevant ideas from Laura, Keith.
+   1. Integrate remaining Dakota, Surfpack, and Pecos models, wrapping
+      or re-implementing as appropriate.
+
+** Epic: Surrogates: Python interface
+   Enable Python interface to new surrogate components (including
+   foundational components like data and solvers) using SWIG
+
+   Proposed stories:
+   1. Enable SWIG in Dakota CMake (will require new optional TPL SWIG)
+   1. In parallel (or for all) component, add SWIG wrappers and test
+      approximation capabilities from Python
+
+
+
+
+
+* Linear Solver Design
+  High-level:
+  + Solve Ax = b with various approaches
+  + Extend to complex via templating (of some functions)
+  + Some take a matrix-free approach (only need action of A on v);
+    uses MatVec class; like Apply/ApplyInverse
+  + Test in Python vs. migrate to C++?  Maybe C++ for
+    performance-oriented testing, Python in general (examples of PCE
+    validation tests from SPARCO?)
+  + Python bindings can definitely require NumPy, hopefully SciPy
+  + pecos/src/
+      linear_solvers/
+        src
+        unit
+      surrogates
+        src
+        unit
+
+** APIs
+   TODO: which should be templatized on floating point type?
+
+   Options:
+   + Need to specify an ordering (integer vector ordering)
+   + Convergence tolerance(s), max_iterations, inner/outer tol, etc.
+   + Could consider parameter list for most general (many option) /
+     specific (per-solver) cases
+   + Store factorization?  Should we return it?
+   + Want to support both separate return, and modify in-place where
+     appropriate, e.g., overwrite the columns of a matrix if user
+     requests
+   + Is linear solver a good name for this?  It may generalize to
+     eigensolves, SVD, optimization, etc...
+
+   #+BEGIN_SRC C++ :exports code
+   solve(const MatVecOp& matvec, const RealVector& b, RealVector& x)
+
+   solve(const RealMatrix& A, const RealVector& b, RealVector& x)
+   // multiple RHS (default/only?) interface:
+   solve(const RealMatrix& A, const RealMatrix& B, RealMatrix& X)
+
+   // is it important to have an API that returns the solution by value?
+
+   // maybe separate factor / apply as in Teuchos
+   // with variants to store or not depending on API used
+
+   // options handling?  seems want to store these as member data?
+
+   #+END_SRC  
+
+   In general see pecos LinearSolver; need to extend for basic use cases
+
+   Simple use cases (used for Leja and surrogate both):
+   + DGELS: SVD-based linear least squares
+   + QR-based linear least squares (useful when we know full-rank)
+   + LU-based
+   + Equality-constrained
+   + Row-based preconditioning (with user scales vs. equilibrate)
+
+   Utilities (for linear algegra utils)
+   + Normalizing columns and data for RealMatrix
+
+** 

@@ -153,7 +153,7 @@ Class Definition
  * The methods in this class are all static and needn't have anything in common
  * except that they have no other home.
  */
-MANAGED_CLASS(public, ManagedUtils)
+public ref class ManagedUtils
 {
     /*
     ============================================================================
@@ -218,10 +218,10 @@ MANAGED_CLASS(public, ManagedUtils)
         /// Converts a const char* into a System::String.
         /**
          * \param cstr The c-style string to convert into a System::String.
-         * \return The Microsoft System::String equivolent of \a cstr.
+         * \return The Microsoft System::String equivalent of \a cstr.
          */
         static
-        System::String MOH
+        System::String^
         ToSysString(
             const char* cstr
             );
@@ -229,10 +229,10 @@ MANAGED_CLASS(public, ManagedUtils)
         /// Converts a std::string into a System::String.
         /**
          * \param stdStr The STL style string to convert into a System::String.
-         * \return The Microsoft System::String equivolent of \a stdStr.
+         * \return The Microsoft System::String equivalent of \a stdStr.
          */
         static
-        System::String MOH
+        System::String^
         ToSysString(
             const std::string& stdStr
             );
@@ -306,10 +306,10 @@ MANAGED_CLASS(public, ManagedUtils)
  */
 JEGA::DoubleVector
 ToStdDoubleVector(
-    JEGA::FrontEnd::Managed::DoubleVector MOH ar
+    JEGA::FrontEnd::Managed::DoubleVector^ ar
     );
 
-JEGA::FrontEnd::Managed::DoubleVector MOH
+JEGA::FrontEnd::Managed::DoubleVector^
 ToSysDoubleVector(
     const JEGA::DoubleVector& ar
     );
@@ -324,42 +324,42 @@ ToSysDoubleVector(
  */
 JEGA::IntVector
 ToStdIntVector(
-    JEGA::FrontEnd::Managed::IntVector MOH ar
+    JEGA::FrontEnd::Managed::IntVector^ ar
     );
 
 JEGA::StringVector
 ToStdStringVector(
-    JEGA::FrontEnd::Managed::StringVector MOH ar
+    JEGA::FrontEnd::Managed::StringVector^ ar
     );
 
-JEGA::FrontEnd::Managed::IntVector MOH
+JEGA::FrontEnd::Managed::IntVector^
 ToSysIntVector(
     const JEGA::IntVector& ar
     );
 
-JEGA::FrontEnd::Managed::StringVector MOH
+JEGA::FrontEnd::Managed::StringVector^
 ToSysStringVector(
     const JEGA::StringVector& ar
     );
 
 /// Converts a System::String into a std::string.
 /**
- * \param sysStr The microsoft System::String to convert into a std::
+ * \param sysStr The Microsoft System::String to convert into a std::
  *               string.
- * \return The STL std::string equivolent of \a sysStr.
+ * \return The STL std::string equivalent of \a sysStr.
  */
 std::string
 ToStdStr(
-    System::String MOH sysStr
+    System::String^ sysStr
     );
 
 
 JEGA::DoubleMatrix
 ToStdDoubleMatrix(
-    JEGA::FrontEnd::Managed::DoubleMatrix MOH ar
+    JEGA::FrontEnd::Managed::DoubleMatrix^ ar
     );
 
-JEGA::FrontEnd::Managed::DoubleMatrix MOH
+JEGA::FrontEnd::Managed::DoubleMatrix^
 ToSysDoubleMatrix(
     const JEGA::DoubleMatrix& ar
     );

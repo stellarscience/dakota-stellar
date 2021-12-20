@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -25,15 +25,17 @@
 #ifndef UQ_VECTOR_SET_H
 #define UQ_VECTOR_SET_H
 
-#include <queso/Environment.h>
-#include <queso/Defines.h>
+#include <queso/ScopedPtr.h>
+
+#include <string>
 
 namespace QUESO {
 
 class GslVector;
 class GslMatrix;
+class BaseEnvironment;
 
-/*! \file uqVectorSet.h
+/*! \file VectorSet.h
  * \brief A templated class for handling sets.
  *
  * \class VectorSet
@@ -42,8 +44,8 @@ class GslMatrix;
  * This class allows the mathematical definition of a scalar function such as:
  * \f$ \pi: B \subset R^n \rightarrow R \f$, since it requires the specification
  * of the domain \f$ B \f$, which is a subset of the vector space \f$ R^n \f$,
- * which is itself a set.*/
-
+ * which is itself a set.
+ */
 
 template <class V, class M>
 class VectorSpace;
@@ -81,6 +83,32 @@ public:
 
   //! Checks whether a set contains vector \c vec. See template specialization.
   virtual       bool                     contains   (const V& vec)     const = 0;
+
+  //! Returns the set centroid in the vector \c vec. See template specialization.
+  virtual       void                     centroid   (V& vec)     const = 0;
+
+  //! Returns the set moments of inertia in the matrix \c mat. See template specialization.
+  virtual       void                     moments    (M& mat)     const = 0;
+
+  //! Returns a vector filled with lower extent in every dimension
+  /*/
+   * Throws an exception unless the lower extent is set with setMinValues()
+   * first
+   */
+  virtual const V & minValues() const;
+
+  //! Returns a vector filled with upper extent in every dimension
+  /*/
+   * Throws an exception unless the upper extent is set with setMaxValues()
+   * first
+   */
+  virtual const V & maxValues() const;
+
+  //! Sets the lower extent in every dimension
+  virtual void setMinValues(const V & mins);
+
+  //! Sets the upper extent in every dimension
+  virtual void setMaxValues(const V & maxs);
   //@}
 
   //! @name I/O methods.
@@ -103,6 +131,9 @@ private:
   //! Default Constructor
   /*! It should not be used by the user.*/
   VectorSet();
+
+  typename ScopedPtr<V>::Type m_mins;
+  typename ScopedPtr<V>::Type m_maxs;
 };
 
 }  // End namespace QUESO

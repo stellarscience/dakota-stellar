@@ -176,7 +176,7 @@ Class Definition
 /**
  * This is the base class for groups of compatible GeneticAlgorithm operators.
  * Each group has registries associated with each type of operator.  Only
- * operators that can be used in conjuction with one another should be put into
+ * operators that can be used in conjunction with one another should be put into
  * the same group. For example, if you wish to devise a custom crossover scheme
  * that is intimately tied to a custom mutation scheme such that other mutation
  * schemes will cause incorrect behavior, then the two custom schemes should
@@ -294,7 +294,7 @@ Class Definition
  * Finally, registration of the desired operators and absorption of the desired
  * operator groups should take place in the constructor.  This can be done by
  * writing a static method in each derived class that will perform the
- * necessary operations.  It is recommended that you use a static boolean
+ * necessary operations.  It is recommended that you use a static Boolean
  * within the class to prevent re-acquisition (which will not hurt anything, it
  * will just be wasted effort).
  */

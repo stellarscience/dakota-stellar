@@ -231,7 +231,7 @@ class NPointRealCrosser :
             number in the genome
 
             The rate is used to determine how many members of the
-            passed in group (population) should be given an oportunity to
+            passed in group (population) should be given an opportunity to
             participate in a crossover operation.  Each operation
             involves 2 members of the passed in group and creates 2 new
             designs.  So the number of operations is round(rate*size/2)

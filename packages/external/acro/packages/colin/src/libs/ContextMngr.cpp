@@ -23,6 +23,7 @@ using std::vector;
 using utilib::Any;
 using utilib::BasicArray;
 using utilib::MixedIntVars;
+using utilib::OK;
 
 namespace colin {
 

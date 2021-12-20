@@ -284,7 +284,7 @@ class EDDY_SL_IEDECL mutex_lock
         /**
          * Construction causes locking of the supplied \a mutex.
          *
-         * \param mutex The mutext to lock in this constructor and unlock in
+         * \param mutex The mutex to lock in this constructor and unlock in
          *              the destructor.
          * \throw lock_error If \a mutex cannot be locked.
          */

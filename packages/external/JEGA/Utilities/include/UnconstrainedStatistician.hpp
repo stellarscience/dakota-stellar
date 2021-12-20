@@ -158,7 +158,7 @@ Class Definition
 ================================================================================
 */
 
-/// A classe that computes unconstrained statistics about DesignGroups.
+/// A class that computes unconstrained statistics about DesignGroups.
 /**
  * This class has the capabilities to compute various unconstrained
  * statistics about collections of Designs such as DesignGroups.  Examples are:
@@ -198,7 +198,7 @@ class UnconstrainedStatistician
                  *        penalty computation.
                  *
                  * To be suitable, \a des must be evaluated and
-                 * non-illconditioned.  This method logs warnings if either of
+                 * non-ill-conditioned.  This method logs warnings if either of
                  * these criteria are not met.
                  *
                  * \param des The Design to check.

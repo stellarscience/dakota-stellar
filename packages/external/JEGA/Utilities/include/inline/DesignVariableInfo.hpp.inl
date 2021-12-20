@@ -123,7 +123,7 @@ DesignVariableInfo::GetRepBoundViolation(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetRepBoundViolation(this->WhichDoubleRep(des));
+    return this->GetRepBoundViolation(this->WhichRep(des));
 }
 
 inline
@@ -185,7 +185,7 @@ DesignVariableInfo::GetValueRange(
 inline
 double
 DesignVariableInfo::GetValueOf(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -202,77 +202,77 @@ DesignVariableInfo::GetRandomValue(
 }
 
 inline
-double
-DesignVariableInfo::GetDefaultDoubleRep(
+var_rep_t
+DesignVariableInfo::GetDefaultRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetDefaultDoubleRep();
+    return this->GetType().GetDefaultRep();
 }
 
 inline
-double
-DesignVariableInfo::GetMaxDoubleRep(
+var_rep_t
+DesignVariableInfo::GetMaxRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetMaxDoubleRep();
+    return this->GetType().GetMaxRep();
 }
 
 inline
-double
-DesignVariableInfo::GetMinDoubleRep(
+var_rep_t
+DesignVariableInfo::GetMinRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetMinDoubleRep();
+    return this->GetType().GetMinRep();
 }
 
 inline
-double
-DesignVariableInfo::GetDoubleRepRange(
+var_rep_t
+DesignVariableInfo::GetRepRange(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetMaxDoubleRep() - this->GetMinDoubleRep();
+    return this->GetMaxRep() - this->GetMinRep();
 }
 
 inline
-double
-DesignVariableInfo::GetDoubleRepOf(
+var_rep_t
+DesignVariableInfo::GetRepOf(
     double value
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetDoubleRepOf(value);
+    return this->GetType().GetRepOf(value);
 }
 
 inline
-double
-DesignVariableInfo::GetRandomDoubleRep(
+var_rep_t
+DesignVariableInfo::GetRandomRep(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetRandomDoubleRep();
+    return this->GetType().GetRandomRep();
 }
 
 inline
-double
-DesignVariableInfo::GetRandomDoubleRep(
+var_rep_t
+DesignVariableInfo::GetRandomRep(
     const RegionOfSpace& within
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetRandomDoubleRep(within);
+    return this->GetType().GetRandomRep(within);
 }
 
 inline
-double
-DesignVariableInfo::GetDistanceBetweenDoubleReps(
+var_rep_t
+DesignVariableInfo::GetDistanceBetweenReps(
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().GetDistanceBetweenDoubleReps();
+    return this->GetType().GetDistanceBetweenReps();
 }
 
 inline
@@ -297,7 +297,7 @@ DesignVariableInfo::IsValueInBounds(
 inline
 bool
 DesignVariableInfo::IsRepInBounds(
-    double rep
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -343,12 +343,12 @@ DesignVariableInfo::IsValidValue(
 
 inline
 bool
-DesignVariableInfo::IsValidDoubleRep(
-    double rep
+DesignVariableInfo::IsValidRep(
+    var_rep_t rep
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
-    return this->GetType().IsValidDoubleRep(rep);
+    return this->GetType().IsValidRep(rep);
 }
 
 inline

@@ -35,59 +35,80 @@ public:
   /// destructor
   ~CharlierOrthogPolynomial();
 
+protected:
+
   //
   //- Heading: Virtual function redefinitions
   //
 
-protected:
+  Real type1_value( Real x, unsigned short order ) override;
+  Real type1_gradient( Real x, unsigned short order ) override;
+  Real type1_hessian( Real x, unsigned short order ) override;
+  Real norm_squared( unsigned short order ) override;
 
-  Real type1_value( Real x, unsigned short order );
-  Real type1_gradient( Real x, unsigned short order );
-  Real type1_hessian( Real x, unsigned short order );
-  Real norm_squared( unsigned short order );
-
-  /// return alphaPoly
-  Real alpha_polynomial() const;
-  /// set betaPoly
-  void alpha_stat(Real alpha);
+  void pull_parameter(short dist_param, Real& param) const override;
+  void push_parameter(short dist_param, Real  param) override;
+  bool parameterized() const override;
 
 private: 
   
-  /// Poisson distributioon is the probability that a realziations of 
-  /// a random variable X with mean alpha_stat occurring k times in a 
-  /// fixed interval.
-  /// expected value of the random variable X
-  Real alphaPoly;
+  /// Poisson distribution is the probability that a realization of a random
+  /// variable X with mean lambda occurring k times in a fixed interval.
 
+  /// expected value of the random variable X
+  Real lambdaStat;
 };
 
-inline CharlierOrthogPolynomial::CharlierOrthogPolynomial()
-{};
+
+inline CharlierOrthogPolynomial::CharlierOrthogPolynomial():
+  lambdaStat(0.) // dummy value prior to update
+{ }
+
 
 inline CharlierOrthogPolynomial::~CharlierOrthogPolynomial()
-{};
+{ }
 
-inline Real CharlierOrthogPolynomial::alpha_polynomial() const
-{ return alphaPoly; }
 
-inline void CharlierOrthogPolynomial::alpha_stat(Real alpha)
+inline void CharlierOrthogPolynomial::
+pull_parameter(short dist_param, Real& param) const
 {
+  switch (dist_param) {
+  case P_LAMBDA: param = lambdaStat; break;
+  default:
+    PCerr << "Error: unsupported distribution parameter in CharlierOrthog"
+	  << "Polynomial::pull_parameter()." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+inline void CharlierOrthogPolynomial::
+push_parameter(short dist_param, Real param)
+{
+  if (dist_param != P_LAMBDA) {
+    PCerr << "Error: unsupported distribution parameter in CharlierOrthog"
+	  << "Polynomial::push_parameter()." << std::endl;
+    abort_handler(-1);
+  }
+
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
   if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
-    alphaPoly = alpha;
+    lambdaStat = param;
   }
-  else {
+  else if (real_compare(lambdaStat, param))
     parametricUpdate = false;
-    Real ap = alpha;
-    if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
-  }
+  else
+    { lambdaStat = param; parametricUpdate = true; reset_gauss(); }
 }
 
-#endif // CHARLIER_ORTHOG_POLYNOMIAL_HPP
+
+inline bool CharlierOrthogPolynomial::parameterized() const
+{ return true; }
 
 } // namespace Pecos
+
+#endif // CHARLIER_ORTHOG_POLYNOMIAL_HPP

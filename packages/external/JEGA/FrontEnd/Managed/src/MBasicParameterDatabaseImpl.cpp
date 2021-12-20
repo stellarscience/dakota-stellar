@@ -153,7 +153,7 @@ MBasicParameterDatabaseImpl::Manifest(
 
 bool
 MBasicParameterDatabaseImpl::HasIntegralParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -162,7 +162,7 @@ MBasicParameterDatabaseImpl::HasIntegralParam(
 
 bool
 MBasicParameterDatabaseImpl::HasShortParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -171,7 +171,7 @@ MBasicParameterDatabaseImpl::HasShortParam(
 
 bool
 MBasicParameterDatabaseImpl::HasDoubleParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -180,7 +180,7 @@ MBasicParameterDatabaseImpl::HasDoubleParam(
 
 bool
 MBasicParameterDatabaseImpl::HasSizeTypeParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -189,7 +189,7 @@ MBasicParameterDatabaseImpl::HasSizeTypeParam(
 
 bool
 MBasicParameterDatabaseImpl::HasBooleanParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -198,7 +198,7 @@ MBasicParameterDatabaseImpl::HasBooleanParam(
 
 bool
 MBasicParameterDatabaseImpl::HasStringParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -207,7 +207,7 @@ MBasicParameterDatabaseImpl::HasStringParam(
 
 bool
 MBasicParameterDatabaseImpl::HasDoubleVectorParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -216,7 +216,7 @@ MBasicParameterDatabaseImpl::HasDoubleVectorParam(
 
 bool
 MBasicParameterDatabaseImpl::HasIntVectorParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -225,7 +225,7 @@ MBasicParameterDatabaseImpl::HasIntVectorParam(
 
 bool
 MBasicParameterDatabaseImpl::HasDoubleMatrixParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -234,7 +234,7 @@ MBasicParameterDatabaseImpl::HasDoubleMatrixParam(
 
 bool
 MBasicParameterDatabaseImpl::HasStringVectorParam(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -243,7 +243,7 @@ MBasicParameterDatabaseImpl::HasStringVectorParam(
 
 int
 MBasicParameterDatabaseImpl::GetIntegral(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -252,7 +252,7 @@ MBasicParameterDatabaseImpl::GetIntegral(
 
 short
 MBasicParameterDatabaseImpl::GetShort(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -261,7 +261,7 @@ MBasicParameterDatabaseImpl::GetShort(
 
 double
 MBasicParameterDatabaseImpl::GetDouble(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -270,7 +270,7 @@ MBasicParameterDatabaseImpl::GetDouble(
 
 eddy::utilities::uint64_t
 MBasicParameterDatabaseImpl::GetSizeType(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -279,52 +279,52 @@ MBasicParameterDatabaseImpl::GetSizeType(
 
 bool
 MBasicParameterDatabaseImpl::GetBoolean(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     return this->_thePDB->GetBoolean(ToStdStr(tag));
 }
 
-System::String MOH
+System::String^
 MBasicParameterDatabaseImpl::GetString(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     return ManagedUtils::ToSysString(this->_thePDB->GetString(ToStdStr(tag)));
 }
 
-JEGA::FrontEnd::Managed::DoubleVector MOH
+JEGA::FrontEnd::Managed::DoubleVector^
 MBasicParameterDatabaseImpl::GetDoubleVector(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     return ToSysDoubleVector(this->_thePDB->GetDoubleVector(ToStdStr(tag)));
 }
 
-JEGA::FrontEnd::Managed::IntVector MOH
+JEGA::FrontEnd::Managed::IntVector^
 MBasicParameterDatabaseImpl::GetIntVector(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     return ToSysIntVector(this->_thePDB->GetIntVector(ToStdStr(tag)));
 }
 
-JEGA::FrontEnd::Managed::DoubleMatrix MOH
+JEGA::FrontEnd::Managed::DoubleMatrix^
 MBasicParameterDatabaseImpl::GetDoubleMatrix(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    return MANAGED_NULL_HANDLE;
+    return nullptr;
 }
 
-JEGA::FrontEnd::Managed::StringVector MOH
+JEGA::FrontEnd::Managed::StringVector^
 MBasicParameterDatabaseImpl::GetStringVector(
-    System::String MOH tag
+    System::String^ tag
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -333,7 +333,7 @@ MBasicParameterDatabaseImpl::GetStringVector(
 
 bool
 MBasicParameterDatabaseImpl::AddIntegralParam(
-    String MOH tag,
+    String^ tag,
     int value
     )
 {
@@ -343,7 +343,7 @@ MBasicParameterDatabaseImpl::AddIntegralParam(
 
 bool
 MBasicParameterDatabaseImpl::AddDoubleParam(
-    String MOH tag,
+    String^ tag,
     double value
     )
 {
@@ -353,7 +353,7 @@ MBasicParameterDatabaseImpl::AddDoubleParam(
 
 bool
 MBasicParameterDatabaseImpl::AddSizeTypeParam(
-    String MOH tag,
+    String^ tag,
     eddy::utilities::uint64_t value
     )
 {
@@ -365,7 +365,7 @@ MBasicParameterDatabaseImpl::AddSizeTypeParam(
 
 bool
 MBasicParameterDatabaseImpl::AddBooleanParam(
-    String MOH tag,
+    String^ tag,
     bool value
     )
 {
@@ -375,8 +375,8 @@ MBasicParameterDatabaseImpl::AddBooleanParam(
 
 bool
 MBasicParameterDatabaseImpl::AddStringParam(
-    String MOH tag,
-    String MOH value
+    String^ tag,
+    String^ value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -385,8 +385,8 @@ MBasicParameterDatabaseImpl::AddStringParam(
 
 bool
 MBasicParameterDatabaseImpl::AddDoubleVectorParam(
-    String MOH tag,
-    DoubleVector MOH value
+    String^ tag,
+    DoubleVector^ value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -397,8 +397,8 @@ MBasicParameterDatabaseImpl::AddDoubleVectorParam(
 
 bool
 MBasicParameterDatabaseImpl::AddIntVectorParam(
-    String MOH tag,
-    IntVector MOH value
+    String^ tag,
+    IntVector^ value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -409,8 +409,8 @@ MBasicParameterDatabaseImpl::AddIntVectorParam(
 
 bool
 MBasicParameterDatabaseImpl::AddDoubleMatrixParam(
-    String MOH tag,
-    DoubleMatrix MOH value
+    String^ tag,
+    DoubleMatrix^ value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -421,19 +421,19 @@ MBasicParameterDatabaseImpl::AddDoubleMatrixParam(
 
 bool
 MBasicParameterDatabaseImpl::AddStringVectorParam(
-    String MOH tag,
-    StringVector MOH value
+    String^ tag,
+    StringVector^ value
     )
 {
     EDDY_FUNC_DEBUGSCOPE
     JEGA::StringVector svec;
-    svec.resize(value->Count);
-    JEGA::StringVector::size_type i=0;
+    svec.reserve(value->Count);
 
-    MANAGED_IENUMERATOR(String MOH) MOH oe = value->GetEnumerator();
+    System::Collections::Generic::IEnumerator<String^>^ oe =
+        value->GetEnumerator();
 
     while(oe->MoveNext())
-        svec.push_back(ToStdStr(SAFE_CAST(String MOH, oe->Current)));
+        svec.push_back(ToStdStr(safe_cast<String^>(oe->Current)));
 
     return this->_thePDB->AddStringVectorParam(ToStdStr(tag), svec);
 }
@@ -462,7 +462,7 @@ Subclass Overridable Methods
 ================================================================================
 */
 void
-MBasicParameterDatabaseImpl::MANAGED_DISPOSE(
+MBasicParameterDatabaseImpl::DoDispose(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -508,7 +508,7 @@ MBasicParameterDatabaseImpl::~MBasicParameterDatabaseImpl(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    MANAGED_DISPOSE();
+    DoDispose();
 }
 
 /*

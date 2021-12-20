@@ -204,7 +204,7 @@ InequalityConstraintType::IsNatureLocked(
 
 double
 InequalityConstraintType::GetViolationAmount(
-    double of
+    con_val_t of
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE

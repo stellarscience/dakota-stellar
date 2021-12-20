@@ -107,8 +107,8 @@ UnconstrainedStatistician::Penalizer::CheckDesign(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    bool evald = des->IsEvaluated();
-    bool illCond = des->IsIllconditioned();
+    const bool evald = des->IsEvaluated();
+    const bool illCond = des->IsIllconditioned();
 
     JEGAIFLOG_CF_IT_G(!evald, lquiet(), UnconstrainedStatistician,
         text_entry(lquiet(), "Applying penalty to non-evaluated Design.  "
@@ -116,11 +116,11 @@ UnconstrainedStatistician::Penalizer::CheckDesign(
         )
 
     JEGAIFLOG_CF_IT_G(illCond, lquiet(), UnconstrainedStatistician,
-        text_entry(lquiet(), "Applying penalty to illconditioned Design.  "
+        text_entry(lquiet(), "Applying penalty to ill-conditioned Design.  "
             "Result may be nonsensical.")
         )
 
-    return evald && !illCond;
+    return evald & !illCond;
 }
 
 double
@@ -133,16 +133,16 @@ UnconstrainedStatistician::BoundsPenalizer::operator()(
 
     const DesignVariableInfoVector& infos =
         des->GetDesignTarget().GetDesignVariableInfos();
-    size_t ndv = infos.size();
+    const size_t ndv = infos.size();
 
     double pen2Add = 0.0;
 
     for(size_t i=0; i<ndv; ++i)
     {
-        double above = infos[i]->GetMaxDoubleRep() - des->GetVariableRep(i);
+        const var_rep_t above = infos[i]->GetMaxRep() - des->GetVariableRep(i);
         if(above < 0.0) { pen2Add += above * above; continue; }
 
-        double below = des->GetVariableRep(i) - infos[i]->GetMinDoubleRep();
+        const var_rep_t below = des->GetVariableRep(i) - infos[i]->GetMinRep();
         if(below < 0.0) pen2Add += below * below;
     }
 

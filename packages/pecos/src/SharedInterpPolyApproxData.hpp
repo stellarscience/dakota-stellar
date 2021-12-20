@@ -19,6 +19,8 @@
 
 namespace Pecos {
 
+class MultivariateDistribution;
+
 
 /// Derived approximation class for interpolation polynomials (global
 /// approximation).
@@ -60,14 +62,14 @@ public:
       computing their Gauss points and weights within integration drivers;
       thus they differ in general from the interpolation polynomial basis
       used for approximation. */
-  static bool initialize_driver_types_rules(const ShortArray& u_types,
+  static void initialize_driver_types_rules(
+    const MultivariateDistribution& u_dist,
     const BasisConfigOptions& bc_options, ShortArray& basis_types,
     ShortArray& colloc_rules);
   /// initialize basis types and collocation rules, construct a vector of basis
   /// polynomials for driver usage (not the vector<vector<BasisPolynomial> >
   /// used herein), and initialize distribution parameters within this basis
-  static void construct_basis(const ShortArray& u_types,
-			      const AleatoryDistParams& adp,
+  static void construct_basis(const MultivariateDistribution& u_dist,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis);
 
@@ -77,16 +79,31 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void active_key(const UShortArray& key);
+  void clear_keys();
+
   void allocate_data();
   void increment_data();
   void decrement_data();
+
+  bool push_available();
+  //void pre_push_data();
   void post_push_data();
-  void post_finalize_data();
-  size_t pre_combine_data(short combine_type);
-  void post_combine_data(short combine_type);
-  void store_data(size_t index = _NPOS);
-  void restore_data(size_t index = _NPOS);
-  void remove_stored_data(size_t index = _NPOS);
+
+  //void post_finalize_data();
+
+  void clear_inactive_data();
+
+  void construct_basis(const MultivariateDistribution& u_dist);
+  void update_basis_distribution_parameters(
+    const MultivariateDistribution& u_dist);
+
+  /// get polynomialBasis for grid points/weights from driverRep (const)
+  const std::vector<BasisPolynomial>& polynomial_basis() const;
+  /// get polynomialBasis for grid points/weights from driverRep
+  std::vector<BasisPolynomial>& polynomial_basis();
+  /// set polynomialBasis for grid points/weights using driverRep
+  void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
   //
   //- Heading: New virtual functions
@@ -139,8 +156,11 @@ protected:
 						unsigned short level_i);
 
   //
-  //- Heading: Convenience functions
+  //- Heading: Member functions
   //
+
+  /// update {multiIndex,approxOrd}Iter from activeKey
+  void update_active_iterators();
 
   /// return value of type 1 interpolation polynomial using all dimensions
   Real type1_interpolant_value(const RealVector& x, const UShortArray& key,
@@ -300,13 +320,16 @@ protected:
   /// 2D array of one-dimensional basis polynomial objects used in
   /// constructing the multivariate orthogonal/interpolation polynomials.
   /** Each variable (inner array size = numVars) has multiple
-      integration orders associated with it (outer array size = max
-      quadrature order nfor TPQ or sparse grid level + 1 for SSG). */
+      integration orders associated with it (outer array size). */
   std::vector<std::vector<BasisPolynomial> > polynomialBasis;
 
   /// flag indicating use of barycentric interpolation for global
   /// value-based Lagrange interpolation
   bool barycentricFlag;
+
+  /// flag indicating availability of pushing (restoring) a previous
+  /// grid increment
+  std::map<UShortArray, bool> pushAvail;
 
 private:
 
@@ -379,7 +402,7 @@ private:
 inline SharedInterpPolyApproxData::
 SharedInterpPolyApproxData(short basis_type, size_t num_vars):
   SharedPolyApproxData(basis_type, num_vars)
-{ }
+{ update_active_iterators(); }
 
 
 inline SharedInterpPolyApproxData::
@@ -387,24 +410,36 @@ SharedInterpPolyApproxData(short basis_type, size_t num_vars,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options)
-{ }
+{ update_active_iterators(); }
 
 
 inline SharedInterpPolyApproxData::~SharedInterpPolyApproxData()
 { }
 
 
-inline void SharedInterpPolyApproxData::
-construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
-		const BasisConfigOptions& bc_options,
-		std::vector<BasisPolynomial>& poly_basis)
+inline void SharedInterpPolyApproxData::update_active_iterators()
 {
-  ShortArray basis_types, colloc_rules;
-  bool dist_params = initialize_driver_types_rules(u_types, bc_options,
-						   basis_types, colloc_rules);
-  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
-  if (dist_params)
-    update_basis_distribution_parameters(u_types, adp, poly_basis);
+  if (pushAvail.find(activeKey) == pushAvail.end())
+    pushAvail[activeKey] = false; // initialize
+}
+
+
+inline void SharedInterpPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist)
+{
+  // This basis is only used for point/weight generation;
+  // polynomialBasis provides the num_vars x num_levels interpolant basis
+  std::vector<Pecos::BasisPolynomial> driver_basis;
+  construct_basis(u_dist, basisConfigOptions, driver_basis);
+  driverRep->polynomial_basis(driver_basis); // set basis but defer grid init
+}
+
+
+inline void SharedInterpPolyApproxData::
+update_basis_distribution_parameters(const MultivariateDistribution& u_dist)
+{
+  SharedPolyApproxData::
+    update_basis_distribution_parameters(u_dist, driverRep->polynomial_basis());
 }
 
 
@@ -432,6 +467,7 @@ resize_polynomial_basis(const UShortArray& lev_index)
 }
 
 
+/*
 inline void SharedInterpPolyApproxData::store_data(size_t index)
 { driverRep->store_grid(index); }
 
@@ -442,6 +478,26 @@ inline void SharedInterpPolyApproxData::restore_data(size_t index)
 
 inline void SharedInterpPolyApproxData::remove_stored_data(size_t index)
 { driverRep->remove_stored_grid(index); }
+*/
+
+
+inline void SharedInterpPolyApproxData::clear_inactive_data()
+{ driverRep->clear_inactive(); }
+
+
+inline const std::vector<BasisPolynomial>& SharedInterpPolyApproxData::
+polynomial_basis() const
+{ return driverRep->polynomial_basis(); }
+
+
+inline std::vector<BasisPolynomial>& SharedInterpPolyApproxData::
+polynomial_basis()
+{ return driverRep->polynomial_basis(); }
+
+
+inline void SharedInterpPolyApproxData::
+polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
+{ driverRep->polynomial_basis(poly_basis); }
 
 
 inline Real SharedInterpPolyApproxData::

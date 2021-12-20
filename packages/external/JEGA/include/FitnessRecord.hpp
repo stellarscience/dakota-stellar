@@ -264,10 +264,10 @@ class FitnessRecord
 
         /// Computes and returns the average fitness value in this record.
         /**
-         * If there are no records, the return is -DBL_MAX
+         * If there are no records, the return is -limits::max()
          *
          * \return The average fitness of all designs in this record or
-         *         -DBL_MAX if no fitnesses are on record.
+         *         -limits::max() if no fitnesses are on record.
          */
         inline
         double
@@ -304,14 +304,14 @@ class FitnessRecord
 
         /// Required override of the FitnessRecord base class.
         /**
-         * This implemenation uses the DesignValueMap base class for retrieval
-         * of the fitnesses assocated with supplied designs.
+         * This implementation uses the DesignValueMap base class for retrieval
+         * of the fitnesses associated with supplied designs.
          *
          * If the fitness of des cannot be determined from this record, then
-         * -DBL_MAX is returned.
+         * -limits::max is returned.
          *
          * \param des The Design to retrieve the fitness of.
-         * \return The fitness of \a des or -DBL_MAX if \a des not found.
+         * \return The fitness of \a des or -limits::max if \a des not found.
          */
         inline
         double

@@ -218,8 +218,8 @@ ObjectiveFunctionTypeBase::EvaluateObjective(
 
 double
 ObjectiveFunctionTypeBase::GetPreferredAmount(
-    double val1,
-    double val2
+    obj_val_t val1,
+    obj_val_t val2
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE

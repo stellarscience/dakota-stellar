@@ -81,7 +81,7 @@ public:
       std::string    description;
       size_t         id;
 #ifdef UTILIB_HAVE_BOOST
-      boost::signals::scoped_connection  source;
+      boost::signals2::scoped_connection  source;
 #endif
    };
 

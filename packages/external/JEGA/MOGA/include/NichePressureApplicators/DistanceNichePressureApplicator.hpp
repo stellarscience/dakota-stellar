@@ -156,9 +156,9 @@ Class Definition
  *        along all of the dimensions individually.
  *
  * Removal proceeds from the beginning of the collection of designs to the
- * end and the only variation from the removal rule is that this will not
- * remove an extreme design.  See the base class IsExtremeDesign method for
- * a definition of an extremem Design.
+ * end and the only variation from the removal rule is that this will keep at
+ * least one extreme design from each dimension.  See the base class
+ * IsExtremeDesign method for a definition of an extreme Design.
  *
  * The distances are calculated using percentages of the ranges of the
  * objectives.  If a supplied percentage is 0.1, then the required minimum
@@ -382,7 +382,7 @@ class DistanceNichePressureApplicator :
          */
         JEGA::DoubleVector
         ComputeCutoffDistances(
-            const eddy::utilities::DoubleExtremes& paretoExtremes
+            const eddy::utilities::extremes<obj_val_t>& paretoExtremes
             ) const;
 
         /**
@@ -439,11 +439,11 @@ class DistanceNichePressureApplicator :
          *
          * The selection operators include fitness assessment, selection, and
          * niche pressure,  This method is called prior to them all.  This
-         * implementation of it re-assimilates any bufferred designs back into
+         * implementation of it re-assimilates any buffered designs back into
          * the population.
          *
          * \param population The current population prior to selection.  It is
-         *                   into this group that bufferred designs will be
+         *                   into this group that buffered designs will be
          *                   placed.
          */
         virtual
@@ -453,7 +453,7 @@ class DistanceNichePressureApplicator :
             );
 
         /**
-         * \brief Overriden to carry out the specific niche pressure algorithm.
+         * \brief Overridden to carry out the specific niche pressure algorithm.
          *
          * Applies niche pressure to the supplied group according to the
          * assigned fitnesses as can be found in the supplied fitness record.

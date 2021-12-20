@@ -11,10 +11,10 @@
     NOTES:
 
         This project is modeled heavily after the boost thread library.  Some
-        Serious shortcommings of the boost thread library make this one
+        Serious shortcomings of the boost thread library make this one
         necessary such as the lack of ability to cancel threads.
 
-        Hopefully, the shortcommings of the boost library will be taken care of
+        Hopefully, the shortcomings of the boost library will be taken care of
         at which time this library will likely be changed to use it.
 
         Also, see notes under Class Definition section of this file.
@@ -161,7 +161,7 @@ Class Definition
  * A thread object exists independently of the actual thread of execution
  * in much the way a file stream exists independently of a file.
  *
- * It can be used as a means of managing a particular thread of exectution.
+ * It can be used as a means of managing a particular thread of execution.
  * It provides a useful interface ...
  */
 class EDDY_SL_IEDECL thread
@@ -284,67 +284,67 @@ class EDDY_SL_IEDECL thread
 
         /**
          * \brief Causes the attached thread to be canceled at the next
-         *        cancelation point.
+         *        cancellation point.
          */
         void
         cancel(
             );
 
-        /// Sets the current thread cancelation type to asynchronous.
+        /// Sets the current thread cancellation type to asynchronous.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
-         * The cancelation type prior to this call can be restored by calling
-         * restore_cancelation_state.
+         * This does not cancel the thread.  Only sets the cancellation type.
+         * The cancellation type prior to this call can be restored by calling
+         * restore_cancellation_state.
          */
         static
         void
-        set_asynch_cancelation(
+        set_asynch_cancellation(
             );
 
-        /// Sets the current thread cancelation type to deferred.
+        /// Sets the current thread cancellation type to deferred.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
-         * The cancelation type prior to this call can be restored by calling
-         * restore_cancelation_state.
+         * This does not cancel the thread.  Only sets the cancellation type.
+         * The cancellation type prior to this call can be restored by calling
+         * restore_cancellation_state.
          */
         static
         void
-        set_deferred_cancelation(
+        set_deferred_cancellation(
             );
 
-        /// Sets the current thread cancelation type to disabled.
+        /// Sets the current thread cancellation type to disabled.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
-         * The cancelation type prior to this call can be restored by calling
-         * restore_cancelation_state.
+         * This does not cancel the thread.  Only sets the cancellation type.
+         * The cancellation type prior to this call can be restored by calling
+         * restore_cancellation_state.
          */
         static
         void
-        disable_cancelation(
+        disable_cancellation(
             );
 
-        /// Sets the current thread cancelation type to enable.
+        /// Sets the current thread cancellation type to enable.
         /**
-         * This does not cancel the thread.  Only sets the cancelization type.
-         * The cancelation type prior to this call can be restored by calling
-         * restore_cancelation_state.
+         * This does not cancel the thread.  Only sets the cancellation type.
+         * The cancellation type prior to this call can be restored by calling
+         * restore_cancellation_state.
          */
         static
         void
-        enable_cancelation(
+        enable_cancellation(
             );
 
         /**
-         * \brief Restores the thread cancelization state to what it was prior
-         *        to a call to set_deferred_cancelation, disable_cancelation,
-         *        set_asynch_cancelation, etc.
+         * \brief Restores the thread cancellation state to what it was prior
+         *        to a call to set_deferred_cancellation, disable_cancellation,
+         *        set_asynch_cancellation, etc.
          *
          * This only keeps one previous state and so repeated calls without
          * calls to the above methods will result in state toggling.
          */
         static
         void
-        restore_cancelation_state(
+        restore_cancellation_state(
             );
 
         /// Returns true if \a other wraps the same thread as this.
@@ -410,7 +410,7 @@ class EDDY_SL_IEDECL thread
          */
         static
         void
-        set_cancelation(
+        set_cancellation(
             int state
             );
 

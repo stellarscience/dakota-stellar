@@ -113,6 +113,8 @@ void OptCG::reset() // Reset parameters
 {
    NLP1* nlp = nlprob();
    int   n   = nlp->getDim();
+   if (nlp->hasConstraints())
+     nlp->getConstraints()->reset();
    nlp->reset();
    OptimizeClass::defaultReset(n);
    grad_evals = 0;

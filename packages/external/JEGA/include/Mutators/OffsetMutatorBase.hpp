@@ -141,7 +141,7 @@ Class Definition
 /// Base class for offset mutators.
 /**
  * This is a base class for any mutator that wishes to modify design variables
- * by adding random ammounts to them.  This base class takes care of most of
+ * by adding random amounts to them.  This base class takes care of most of
  * the work.  All that is required of derived classes is that they provide
  * offset amounts through an overridden method call.
  *

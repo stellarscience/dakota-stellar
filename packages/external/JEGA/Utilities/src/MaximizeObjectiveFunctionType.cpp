@@ -168,9 +168,9 @@ Subclass Overridable Methods
 ================================================================================
 */
 
-double
+obj_val_t
 MaximizeObjectiveFunctionType::GetValueForMinimization(
-    double val
+    obj_val_t val
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -226,9 +226,7 @@ MaximizeObjectiveFunctionType::MaximizeObjectiveFunctionType(
         ObjectiveFunctionTypeBase(info)
 {
     EDDY_FUNC_DEBUGSCOPE
-
-
-} // MaximizeObjectiveFunctionType::MaximizeObjectiveFunctionType
+}
 
 MaximizeObjectiveFunctionType::MaximizeObjectiveFunctionType(
     const MaximizeObjectiveFunctionType& copy,
@@ -237,17 +235,13 @@ MaximizeObjectiveFunctionType::MaximizeObjectiveFunctionType(
         ObjectiveFunctionTypeBase(copy, info)
 {
     EDDY_FUNC_DEBUGSCOPE
-
-
-} // MaximizeObjectiveFunctionType::MaximizeObjectiveFunctionType
+}
 
 MaximizeObjectiveFunctionType::~MaximizeObjectiveFunctionType(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-
-
-} // MaximizeObjectiveFunctionType::~MaximizeObjectiveFunctionType
+}
 
 
 

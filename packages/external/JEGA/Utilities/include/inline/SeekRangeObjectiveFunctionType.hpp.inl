@@ -87,19 +87,19 @@ Inline Mutators
 inline
 void
 SeekRangeObjectiveFunctionType::SetLowerBound(
-    double value
+    obj_val_t value
     )
 {
-    _lowerBound = value;
+    this->_lowerBound = value;
 }
 
 inline
 void
 SeekRangeObjectiveFunctionType::SetUpperBound(
-    double value
+    obj_val_t value
     )
 {
-    _upperBound = value;
+    this->_upperBound = value;
 }
 
 
@@ -113,19 +113,19 @@ Inline Accessors
 */
 
 inline
-double
+obj_val_t
 SeekRangeObjectiveFunctionType::GetLowerBound(
     ) const
 {
-    return _lowerBound;
+    return this->_lowerBound;
 }
 
 inline
-double
+obj_val_t
 SeekRangeObjectiveFunctionType::GetUpperBound(
     ) const
 {
-    return _upperBound;
+    return this->_upperBound;
 }
 
 

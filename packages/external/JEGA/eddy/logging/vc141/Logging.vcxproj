@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="all|Win32">
+      <Configuration>all</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="all|x64">
+      <Configuration>all</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl_for_dl_WSTAT|Win32">
+      <Configuration>Debug_mt_sl_for_dl_WSTAT</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_mt_sl_for_dl_WSTAT|x64">
+      <Configuration>Debug_mt_sl_for_dl_WSTAT</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8B10EBC4-720C-4D0E-8877-CECE9AB7CE53}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='all|Win32'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|Win32'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='all|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='all|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='all|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>11.0.60315.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='all|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|Win32'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='all|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'">
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='all|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_mt_sl_for_dl_WSTAT|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\entries\ostream_entry.hpp" />
+    <ClInclude Include="..\entries\text_entry.hpp" />
+    <ClInclude Include="..\include\config.hpp" />
+    <ClInclude Include="..\include\default_types.hpp" />
+    <ClInclude Include="..\include\entries.hpp" />
+    <ClInclude Include="..\include\exceptions.hpp" />
+    <ClInclude Include="..\include\level_classes.hpp" />
+    <ClInclude Include="..\include\log_gateways.hpp" />
+    <ClInclude Include="..\include\logs.hpp" />
+    <ClInclude Include="..\include\macros.hpp" />
+    <ClInclude Include="..\log_gateways\basic_log_gateway.hpp" />
+    <ClInclude Include="..\log_gateways\cb_level_log_gateway.hpp" />
+    <ClInclude Include="..\log_gateways\level_log_gateway.hpp" />
+    <ClInclude Include="..\logs\appending_log.hpp" />
+    <ClInclude Include="..\logs\decorator_log.hpp" />
+    <ClInclude Include="..\logs\file_log.hpp" />
+    <ClInclude Include="..\logs\file_ring_log.hpp" />
+    <ClInclude Include="..\logs\list_log.hpp" />
+    <ClInclude Include="..\logs\null_log.hpp" />
+    <ClInclude Include="..\logs\ostream_log.hpp" />
+    <ClInclude Include="..\detail\macros.hpp" />
+    <ClInclude Include="..\detail\threadsafe.hpp" />
+    <ClInclude Include="..\level_classes\cougaar_levels.hpp" />
+    <ClInclude Include="..\level_classes\dakota_levels.hpp" />
+    <ClInclude Include="..\level_classes\java_util_levels.hpp" />
+    <ClInclude Include="..\level_classes\log4j_levels.hpp" />
+    <ClInclude Include="..\level_classes\minimal_levels.hpp" />
+    <ClInclude Include="..\level_classes\volume_levels.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\doc\Doxyfile" />
+    <None Include="..\doc\Mainpage.dox" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

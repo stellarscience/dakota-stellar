@@ -20,6 +20,7 @@ namespace Pecos {
 
 class TensorProductDriver;
 class CombinedSparseGridDriver;
+class IncrementalSparseGridDriver;
 class CubatureDriver;
 
 
@@ -60,15 +61,22 @@ public:
   ~SharedProjectOrthogPolyApproxData();
 
   //
-  //- Cosmin Heading: Virtual function redefinitions
+  //- Heading: Virtual function redefinitions
   //
+
   void allocate_data();
-  void pre_push_data();
-  void post_push_data();
   void increment_data();
   void decrement_data();
+
+  void pre_push_data();
+  void post_push_data();
+
   void pre_finalize_data();
   void post_finalize_data();
+
+  void pre_combine_data();
+
+  //void construct_basis(const MultivariateDistribution& u_dist);
 
 protected:
 
@@ -76,20 +84,14 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  size_t pre_combine_data(short combine_type);
-
   void increment_component_sobol();
 
   //
   //- Heading: Member functions
   //
 
-  /// return driverRep cast to requested derived type
-  TensorProductDriver*      tpq_driver();
-  /// return driverRep cast to requested derived type
-  CombinedSparseGridDriver* csg_driver();
-  /// return driverRep cast to requested derived type
-  CubatureDriver*           cub_driver();
+  /// return driverRep
+  IntegrationDriver* driver();
 
 private:
 
@@ -100,6 +102,16 @@ private:
   /// initialize multi_index using a sparse grid expansion
   void sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 			       UShort2DArray& multi_index);
+  /// increment multi_index after a grid refinement
+  void increment_sparse_grid_multi_index(
+    IncrementalSparseGridDriver* isg_driver, UShort2DArray& multi_index);
+  /// decrement multi_index after a grid contraction
+  void decrement_sparse_grid_multi_index(
+    IncrementalSparseGridDriver* isg_driver, UShort2DArray& multi_index);
+  /// return multi_index to a previously incremented state
+  void push_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
+				    UShort2DArray& multi_index);
+
   // initialize tp_multi_index from tpMultiIndexMap
   //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
   //				        size_t tp_index);
@@ -114,9 +126,8 @@ private:
   //- Heading: Data
   //
 
-  /// combination type for stored expansions; cached in class to bridge
-  /// combine_coefficients() and integrate_response_moments()
-  short storedExpCombineType;
+  /// popped instances of approxOrder that were computed but not selected
+  std::map<UShortArray, UShortArrayDeque> poppedApproxOrder;
 };
 
 
@@ -124,8 +135,7 @@ inline SharedProjectOrthogPolyApproxData::
 SharedProjectOrthogPolyApproxData(short basis_type,
 				  const UShortArray& approx_order,
 				  size_t num_vars):
-  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars),
-  storedExpCombineType(NO_COMBINE)
+  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars)
 { }
 
 
@@ -135,8 +145,8 @@ SharedProjectOrthogPolyApproxData(short basis_type,
 				  size_t num_vars,
 				  const ExpansionConfigOptions& ec_options,
 				  const BasisConfigOptions& bc_options):
-  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars, ec_options,
-			     bc_options), storedExpCombineType(NO_COMBINE)
+  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars,
+			     ec_options, bc_options)
 { }
 
 
@@ -144,16 +154,20 @@ inline SharedProjectOrthogPolyApproxData::~SharedProjectOrthogPolyApproxData()
 { }
 
 
-inline TensorProductDriver* SharedProjectOrthogPolyApproxData::tpq_driver()
-{ return (TensorProductDriver*)driverRep; }
+/*
+// Good for self-contained Pecos, but driverRep grid initialization is
+// currently integrated with Dakota::NonDIntegration initialization
+inline void SharedProjectOrthogPolyApproxData::
+construct_basis(const MultivariateDistribution& u_dist)
+{
+  SharedOrthogPolyApproxData::construct_basis(u_dist);
+  driverRep->initialize_grid(polynomialBasis);
+}
+*/
 
 
-inline CombinedSparseGridDriver* SharedProjectOrthogPolyApproxData::csg_driver()
-{ return (CombinedSparseGridDriver*)driverRep; }
-
-
-inline CubatureDriver* SharedProjectOrthogPolyApproxData::cub_driver()
-{ return (CubatureDriver*)driverRep; }
+inline IntegrationDriver* SharedProjectOrthogPolyApproxData::driver()
+{ return driverRep; }
 
 } // namespace Pecos
 

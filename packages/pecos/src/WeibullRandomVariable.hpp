@@ -54,8 +54,10 @@ public:
 
   Real log_pdf(Real x) const;
 
-  Real parameter(short dist_param) const;
-  void parameter(short dist_param, Real val);
+  void pull_parameter(short dist_param, Real& val) const;
+  void push_parameter(short dist_param, Real  val);
+
+  void copy_parameters(const RandomVariable& rv);
 
   Real mean() const;
   Real median() const;
@@ -63,7 +65,7 @@ public:
   Real standard_deviation() const;
   Real variance() const;
 
-  RealRealPair bounds() const;
+  RealRealPair distribution_bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
@@ -191,29 +193,38 @@ inline Real WeibullRandomVariable::log_pdf(Real x) const
 }
 
 
-inline Real WeibullRandomVariable::parameter(short dist_param) const
+inline void WeibullRandomVariable::
+pull_parameter(short dist_param, Real& val) const
 {
   switch (dist_param) {
-  case W_ALPHA: return alphaStat; break;
-  case W_BETA:  return betaStat;  break;
+  case W_ALPHA: val = alphaStat; break;
+  case W_BETA:  val = betaStat;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in WeibullRandomVariable::parameter()." << std::endl;
-    abort_handler(-1); return 0.; break;
+	  << " in WeibullRandomVariable::pull_parameter(Real)." << std::endl;
+    abort_handler(-1); break;
   }
 }
 
 
-inline void WeibullRandomVariable::parameter(short dist_param, Real val)
+inline void WeibullRandomVariable::push_parameter(short dist_param, Real val)
 {
   switch (dist_param) {
   case W_ALPHA: alphaStat = val; break;
   case W_BETA:  betaStat  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
-	  << " in WeibullRandomVariable::parameter()." << std::endl;
+	  << " in WeibullRandomVariable::push_parameter(Real)." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new weibullDist instance
+}
+
+
+inline void WeibullRandomVariable::copy_parameters(const RandomVariable& rv)
+{
+  rv.pull_parameter(W_ALPHA, alphaStat);
+  rv.pull_parameter(W_BETA,  betaStat);
   update_boost(); // create a new weibullDist instance
 }
 
@@ -238,7 +249,7 @@ inline Real WeibullRandomVariable::variance() const
 { return bmth::variance(*weibullDist); }
 
 
-inline RealRealPair WeibullRandomVariable::bounds() const
+inline RealRealPair WeibullRandomVariable::distribution_bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 

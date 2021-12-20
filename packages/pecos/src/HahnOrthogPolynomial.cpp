@@ -19,36 +19,42 @@ namespace Pecos {
 
 Real HahnOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
-  Real t1_val;
-  Real omN = 1.0 - betaPoly;
-  Real om1 = Real(order) - 1.0;
+  Real t1_val, nd = (Real)numDrawn, tp = (Real)totalPop, sp = (Real)selectPop;
 
   switch (order) {
-    case 0:
-      t1_val = 1.;
-      break;
+  case 0:
+    t1_val = 1.;
+    break;
 
-    case 1:
-      t1_val = 1.0 + (2.0+alphaPoly+betaPoly)/((-gammaPoly)*(alphaPoly+1.0))*x;
-      break;
+  case 1:
+    t1_val = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x;
+    break;
 
-    case 2:
-      t1_val = 1.0 - 2.0*(3.0+alphaPoly+betaPoly)*x/(gammaPoly*(alphaPoly+1.0)) + (3.0+alphaPoly+betaPoly)*(4.0+alphaPoly+betaPoly)/((alphaPoly+1.0)*(alphaPoly+2.0)*gammaPoly*(gammaPoly-1.0))*x*(x-1.0);
-      break;
+  case 2:
+    t1_val = 1. - 2.*(3.+tp+sp)*x/(nd*(tp+1.))
+           + (3.+tp+sp)*(4.+tp+sp)/((tp+1.)*(tp+2.)*nd*(nd-1.))*x*(x-1.);
+    break;
 
-    default: {
-      // Support higher order polynomials using the 3 point recursion formula:
-      Real fm2 = type1_value(x, order-2);
-      Real fm1 = type1_value(x, order-1);
-      Real A = (om1+alphaPoly+betaPoly+1.0)*(om1+alphaPoly+1.0)*(gammaPoly-om1)/((2.0*om1+alphaPoly+betaPoly+1.0)*(2.0*om1+alphaPoly+betaPoly+2.0));
-      Real C = om1*(om1+alphaPoly+betaPoly+gammaPoly+1.0)*(om1+betaPoly)/((2.0*om1+alphaPoly+betaPoly)*(2.0*om1+alphaPoly+betaPoly+1.0));
-      t1_val = ((A+C-x)*fm1 - C*fm2)/A;
-      break;
+  default: {
+    // Support higher order polynomials using the 3 point recursion formula:
+    Real Ha_nm1 = 1. + (2.+tp+sp)/(-nd*(tp+1.))*x,                        //1
+         Ha_n   = 1. - 2.*(3.+tp+sp)*x/(nd*(tp+1.))
+           + (3.+tp+sp)*(4.+tp+sp)/((tp+1.)*(tp+2.)*nd*(nd-1.))*x*(x-1.); //2
+    Real om1, A, C;
+    for (size_t i=3; i<=order; i++) {
+      om1 = (Real)i-1.;
+      A = (om1+tp+sp+1.)*(om1+tp+1.)*(nd-om1)
+	/ ((2.*om1+tp+sp+1.)*(2.*om1+tp+sp+2.));
+      C = om1*(om1+tp+sp+nd+1.)*(om1+sp)/((2.*om1+tp+sp)*(2.*om1+tp+sp+1.));
+      t1_val = ((A+C-x)*Ha_n - C*Ha_nm1)/A; // Ha_nplus1
+      if (i < order)
+	{ Ha_nm1 = Ha_n;  Ha_n = t1_val; }
     }
+    break;
+  }
   }
 
   return t1_val;
 }
-
 
 } // namespace Pecos

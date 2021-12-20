@@ -22,6 +22,7 @@ using boost::bind;
 
 using utilib::Any;
 using utilib::MixedIntVars;
+using utilib::OK;
 
 namespace colin {
 

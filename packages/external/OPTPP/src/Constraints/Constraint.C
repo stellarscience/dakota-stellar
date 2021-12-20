@@ -73,6 +73,11 @@ OptppArray<int> Constraint::getConstraintMappingIndices() const
   return result;
 }
 
+void Constraint::reset()
+{
+  ptr_->reset();
+}
+
 void Constraint::evalCFGH(const SerialDenseVector<int,double> & xcurrent) const
 {
    ptr_->evalCFGH(xcurrent);

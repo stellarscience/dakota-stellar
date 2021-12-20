@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemenation of class FlatFileInitializer.
+        Implementation of class FlatFileInitializer.
 
     NOTES:
 
@@ -200,7 +200,7 @@ FlatFileInitializer::Description(
         "following format:\n\n"
         "dv0<delim>dv1...dvN[<delim>of0<delim>of1...ofM<delim>con0<delim>con1"
         "...conK]\n\n"
-        "The delimeter can be any string.  It will continue to read until "
+        "The delimiter can be any string.  It will continue to read until "
         "the end of the file.  It will discard any configurations for which "
         "it was unable to retrieve at least the number of design variables.  "
         "The objective and constraint entries are not required but if all are "
@@ -318,7 +318,7 @@ FlatFileInitializer::GetNextField(
     // Check for trivial abort condition.
     if(off >= from.size()) return string();
 
-    // Find the next occurance of the delimiter.
+    // Find the next occurrence of the delimiter.
     string::size_type end = from.find(delim, off);
 
     // return the substring consisting of everything from

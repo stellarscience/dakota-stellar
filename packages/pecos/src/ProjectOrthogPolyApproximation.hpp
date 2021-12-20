@@ -15,6 +15,7 @@
 #define PROJECT_ORTHOG_POLY_APPROXIMATION_HPP
 
 #include "OrthogPolyApproximation.hpp"
+#include "SharedProjectOrthogPolyApproxData.hpp"
 
 namespace Pecos {
 
@@ -42,17 +43,18 @@ public:
   ~ProjectOrthogPolyApproximation();
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
-  //
-  //- Cosmin Heading: Virtual function redefinitions and member functions
-  //
   void compute_coefficients();
-  void push_coefficients();
   void increment_coefficients();
-  void decrement_coefficients();
+  void pop_coefficients(bool save_data);
+  void push_coefficients();
   void finalize_coefficients();
+
+  //
+  //- Heading: Member functions
+  //
 
 protected:
 
@@ -60,18 +62,20 @@ protected:
   //- Heading: Virtual function redefinitions and member functions
   //
 
-  int  min_coefficients() const;
+  int min_coefficients() const;
 
-  /// initialize polynomialBasis, multiIndex, et al.
   void allocate_arrays();
 
   Real value(const RealVector& x);
-  Real stored_value(const RealVector& x, size_t index);
+  Real stored_value(const RealVector& x, const UShortArray& key);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
-  void compute_moments();
-  /// compute expansion moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x);
+  void compute_moments(bool full_stats = true, bool combined_stats = false);
+  // compute expansion moments in all-variables mode to order 2
+  //void compute_moments(const RealVector& x, bool full_stats = true,
+  //		       bool combined_stats = false);
+
+  void combined_to_active(bool clear_combined = true);
 
 private:
 
@@ -79,13 +83,16 @@ private:
   //- Heading: Member functions
   //
 
+  /// perform sanity checks prior to numerical integration
+  void integration_checks();
+
   /// initialize multi_index using a sparse grid expansion
   void sparse_grid_multi_index(UShort2DArray& multi_index);
   // initialize tp_multi_index from tpMultiIndexMap
   //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
   //				        size_t tp_index);
 
-  /// extract tp_data_points from surrData and tp_weights from
+  /// extract tp_data_points from modSurrData and tp_weights from
   /// driverRep->type1CollocWts1D
   void integration_data(size_t tp_index, SDVArray& tp_data_vars,
 			SDRArray& tp_data_resp, RealVector& tp_weights);
@@ -96,6 +103,11 @@ private:
 			   const RealVector& wt_sets, RealVector& exp_coeffs,
 			   RealMatrix& exp_coeff_grads);
 
+  /// update surr_data with synthetic data (from evaluating the expansion)
+  /// following promotion of combined expansion to active (simplifies stats
+  /// computation for FINAL_RESULTS)
+  void synthetic_surrogate_data(SurrogateData& surr_data);
+
   /// computes the chaosCoeffs via averaging of samples
   /// (expCoeffsSolnApproach is SAMPLING)
   void expectation();
@@ -105,8 +117,8 @@ private:
   void append_tensor_expansions(size_t start_index);
 
   /// update numericalMoments using numerical integration applied
-  /// directly to surrData
-  void integrate_response_moments(size_t num_moments);
+  /// directly to modSurrData
+  void integrate_response_moments(size_t num_moments);//, bool combined_stats);
 
   //
   //- Heading: Data
@@ -120,14 +132,16 @@ private:
   RealMatrix prevExpCoeffGrads;
 
   /// the set of tensor-product contributions to expansionCoeffs
-  RealVectorArray tpExpansionCoeffs;
+  std::map<UShortArray, RealVectorArray> tpExpansionCoeffs;
   /// the set of tensor-product contributions to expansionCoeffGrads
-  RealMatrixArray tpExpansionCoeffGrads;
+  std::map<UShortArray, RealMatrixArray> tpExpansionCoeffGrads;
 
-  /// popped instances of tpExpansionCoeffs that were computed but not selected
-  std::deque<RealVector> poppedTPExpCoeffs;
-  /// popped tpExpansionCoeffGrads instances that were computed but not selected
-  std::deque<RealMatrix> poppedTPExpCoeffGrads;
+  /// popped instances of either expansionCoeffs or tpExpansionCoeffs,
+  /// depending on exp soln approach, that were computed but not selected
+  std::map<UShortArray, RealVectorDeque> poppedExpCoeffs;
+  /// popped instances of either expansionCoeffGrads or tpExpansionCoeffGrads,
+  /// depending on exp soln approach, that were computed but not selected
+  std::map<UShortArray, RealMatrixDeque> poppedExpCoeffGrads;
 };
 
 
@@ -141,28 +155,97 @@ inline ProjectOrthogPolyApproximation::~ProjectOrthogPolyApproximation()
 { }
 
 
-inline void ProjectOrthogPolyApproximation::compute_moments()
+inline void ProjectOrthogPolyApproximation::
+combined_to_active(bool clear_combined)
+{
+  OrthogPolyApproximation::combined_to_active(clear_combined);
+
+  // Create synthetic modSurrData for the combined-now-active coeffs, for
+  // supporting FINAL_RESULTS processing (numerical moments on combined grid)
+  // Note: exclude CUBATURE and SAMPLING, which lack combined grids.
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+    synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+    break;
+  }
+}
+
+
+inline void ProjectOrthogPolyApproximation::
+compute_moments(bool full_stats, bool combined_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
-  mean(); variance(); // updates expansionMoments[0] and [1]
-  //standardize_moments(expansionMoments);
+
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.resize(2);
+  if (combined_stats)
+    { combined_mean(); combined_variance(); } // for combinedExpCoeffs
+  else {
+    mean(); variance(); // updates first two expansionMoments
+    //standardize_moments(exp_mom);
+  }
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
-    integrate_response_moments(4);
+  // if full stats, augment analytic expansion moments with numerical moments
+  // (from quadrature applied to the SurrogateData)
+  if (full_stats &&
+      // > currently supported by TPQ, SSG, Cubature (Sampling also possible)
+      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) { //&&
+      // > combined expansions do not admit a unified set of collocation data
+      //   and backfilling direct response data with interpolated surrogate
+      //   values violates some of the intent (Other considerations: adds post-
+      //   processing expense, but adds support for higher order moments)
+    //!data_rep->expConfigOptions.combineType)
+
+    if (combined_stats) {
+      // current uses follow combined_to_active(), so don't need this for now
+      PCerr << "Error: combined mode unavailable for final stats.  Project"
+	    << "OrthogPolyApproximation::compute_moments()\n       currently "
+	    << "requires promotion of combined to active." << std::endl;
+      abort_handler(-1);
+    }
+    integrate_response_moments(4);//, combined_stats); // TO DO
+  }
+  else
+    numMomentsIter->second.resize(0);
 }
 
 
-inline void ProjectOrthogPolyApproximation::compute_moments(const RealVector& x)
+/* OrthogPolyApproximation::compute_moments(const RealVector&) is used for now
+
+inline void ProjectOrthogPolyApproximation::
+compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
-  // all variables mode only supports first two moments
-  mean(x); variance(x); // updates expansionMoments[0] and [1]
-  //standardize_moments(expansionMoments);
+  // all variables mode currently supports two expansion moments
 
-  //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  //if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
-  //  integrate_response_moments(2, x); // TO DO
+  RealVector& exp_mom = expMomentsIter->second;
+  if (exp_mom.length() != 2) exp_mom.resize(2);
+  if (combined_stats)
+    { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
+  else {
+    mean(x); variance(x); // updates first two expansionMoments
+    //standardize_moments(exp_mom);
+  }
+
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  if (full_stats &&
+      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING) {
+
+    // current uses follow combined_to_active(), so don't need this for now
+    if (combined_stats) {
+      PCerr << "Error: combined_stats unavailable.  ProjectOrthogPoly"
+            << "Approximation::compute_moments()\n       currently "
+            << "requires promotion of combined to active." << std::endl;
+      abort_handler(-1);
+    }
+    integrate_response_moments(2, x);//, combined_stats); // TO DO
+  }
+  else
+    numMomentsIter->second.resize(0);
 }
+*/
 
 } // namespace Pecos
 

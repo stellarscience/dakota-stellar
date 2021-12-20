@@ -16,7 +16,7 @@
 
 #include "SharedOrthogPolyApproxData.hpp"
 #include "LightweightSparseGridDriver.hpp"
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 
 namespace Pecos {
 
@@ -195,9 +195,32 @@ protected:
 
   void allocate_data();
   void increment_data();
-  //void decrement_data();
-  //void push_data();
-  //void finalize_data();
+  void decrement_data();
+
+  void pre_push_data();
+  //void post_push_data();
+
+  //void pre_finalize_data();
+  //void post_finalize_data();
+
+  //
+  //- Heading: Member functions
+  //
+
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi (consistent ordering assumed); define append_mi_map
+  /// and append_mi_map_ref
+  void append_leading_multi_index(const UShort2DArray& append_mi,
+				  UShort2DArray& combined_mi,
+				  SizetSet& append_mi_map,
+				  size_t& append_mi_map_ref);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi, updating sparse_indices, exp_coeffs, and exp_coeff_grads
+  void append_sparse_multi_index(SizetSet& sparse_indices,
+				 const UShort2DArray& append_mi,
+				 UShort2DArray& combined_mi,
+				 RealVector& exp_coeffs,
+				 RealMatrix& exp_coeff_grads);
 
 private:
 
@@ -207,6 +230,8 @@ private:
 
   /// update shared approxOrder based on settings computed for one of the QoI
   void update_approx_order(unsigned short new_order);
+  /// convert active approxOrder to active multiIndex according to basis type
+  void approx_order_to_multi_index();
 
   /// pack polynomial contributions to Psi matrix for regression
   void pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
@@ -278,12 +303,14 @@ inline void SharedRegressOrthogPolyApproxData::clear_adapted()
   switch (expConfigOptions.expBasisType) {
   case ADAPTED_BASIS_GENERALIZED:
     // reset tensor-product bookkeeping and save restorable data
-    poppedLevMultiIndex.clear();   poppedTPMultiIndex.clear();
-    poppedTPMultiIndexMap.clear(); poppedTPMultiIndexMapRef.clear();
+    //poppedLevMultiIndex[activeKey].clear();
+    poppedMultiIndex[activeKey].clear();
+    poppedMultiIndexMap[activeKey].clear();
+    poppedMultiIndexMapRef[activeKey].clear();
 
-    tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
-    tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
-    tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
+    tpMultiIndex[activeKey].clear();       // will be rebuilt in allocate_data()
+    tpMultiIndexMap[activeKey].clear();    // will be rebuilt in allocate_data()
+    tpMultiIndexMapRef[activeKey].clear(); // will be rebuilt in allocate_data()
     break;
   }
 }

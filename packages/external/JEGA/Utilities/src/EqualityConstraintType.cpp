@@ -6,7 +6,7 @@
 
     CONTENTS:
 
-        Implemntation of class EqualityConstraintType.
+        Implementation of class EqualityConstraintType.
 
     NOTES:
 
@@ -207,7 +207,7 @@ EqualityConstraintType::IsNatureLocked(
 
 double
 EqualityConstraintType::GetViolationAmount(
-    double of
+    con_val_t of
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
@@ -262,7 +262,7 @@ EqualityConstraintType::EqualityConstraintType(
     ConstraintInfo& info
     ) :
         ConstraintTypeBase(info),
-        _value(0.0),
+        _value(con_val_t(0)),
         _viol(0.0)
 {
     EDDY_FUNC_DEBUGSCOPE

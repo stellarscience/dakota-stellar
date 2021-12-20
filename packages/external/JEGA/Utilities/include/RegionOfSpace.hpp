@@ -179,7 +179,7 @@ class RegionOfSpace
     */
     private:
 
-        eddy::utilities::DoubleExtremes _limits;
+        eddy::utilities::extremes<var_rep_t> _limits;
 
 
     /*
@@ -192,23 +192,23 @@ class RegionOfSpace
         inline
         void
         SetLowerLimit(
-            eddy::utilities::DoubleExtremes::size_type dim,
-            double value
+            eddy::utilities::extremes<var_rep_t>::size_type dim,
+            var_rep_t value
             );
 
         inline
         void
         SetUpperLimit(
-            eddy::utilities::DoubleExtremes::size_type dim,
-            double value
+            eddy::utilities::extremes<var_rep_t>::size_type dim,
+            var_rep_t value
             );
 
         inline
         void
         SetLimits(
-            eddy::utilities::DoubleExtremes::size_type dim,
-            double lowerLimit,
-            double upperLimit
+            eddy::utilities::extremes<var_rep_t>::size_type dim,
+            var_rep_t lowerLimit,
+            var_rep_t upperLimit
             );
 
     protected:
@@ -229,7 +229,7 @@ class RegionOfSpace
          * \return The lower bounds of all dimensions of this space region.
          */
         inline
-        JEGA::DoubleVector
+        std::vector<var_rep_t>
         GetLowerLimits(
             ) const;
 
@@ -238,7 +238,7 @@ class RegionOfSpace
          * \return The upper bounds of all dimensions of this space region.
          */
         inline
-        JEGA::DoubleVector
+        std::vector<var_rep_t>
         GetUpperLimits(
             ) const;
 
@@ -250,9 +250,9 @@ class RegionOfSpace
          *         region.
          */
         inline
-        double
+        var_rep_t
         GetLowerLimit(
-            eddy::utilities::DoubleExtremes::size_type dim
+            eddy::utilities::extremes<var_rep_t>::size_type dim
             ) const;
 
         /**
@@ -263,9 +263,9 @@ class RegionOfSpace
          *         region.
          */
         inline
-        double
+        var_rep_t
         GetUpperLimit(
-            eddy::utilities::DoubleExtremes::size_type dim
+            eddy::utilities::extremes<var_rep_t>::size_type dim
             ) const;
 
     protected:
@@ -282,7 +282,7 @@ class RegionOfSpace
     public:
 
         inline
-        eddy::utilities::DoubleExtremes::size_type
+        eddy::utilities::extremes<var_rep_t>::size_type
         Dimensionality(
             ) const;
 
@@ -293,7 +293,7 @@ class RegionOfSpace
 
         bool
         Intersects(
-            eddy::utilities::DoubleExtremes::size_type dim,
+            eddy::utilities::extremes<var_rep_t>::size_type dim,
             double lowerLimit,
             double upperLimit
             ) const;
@@ -372,7 +372,7 @@ class RegionOfSpace
     public:
 
         RegionOfSpace(
-            eddy::utilities::DoubleExtremes::size_type nDim
+            eddy::utilities::extremes<var_rep_t>::size_type nDim
             );
 
 

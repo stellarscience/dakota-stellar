@@ -162,8 +162,7 @@ ConstraintTypeBase::GetDesignTarget(
 {
     EDDY_FUNC_DEBUGSCOPE
     return this->_info.GetDesignTarget();
-
-} // ConstraintTypeBase::GetDesignTarget
+}
 
 DesignTarget&
 ConstraintTypeBase::GetDesignTarget(
@@ -171,8 +170,7 @@ ConstraintTypeBase::GetDesignTarget(
 {
     EDDY_FUNC_DEBUGSCOPE
     return this->_info.GetDesignTarget();
-
-} // ConstraintTypeBase::GetDesignTarget
+}
 
 string
 ConstraintTypeBase::GetNatureString(
@@ -213,8 +211,7 @@ ConstraintTypeBase::EvaluateConstraint(
 {
     EDDY_FUNC_DEBUGSCOPE
     return this->GetNature().EvaluateConstraint(des);
-
-} // ConstraintTypeBase::EvaluateConstraint
+}
 
 double
 ConstraintTypeBase::GetPreferredAmount(
@@ -224,12 +221,11 @@ ConstraintTypeBase::GetPreferredAmount(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    double val1 = this->GetConstraintInfo().GetViolationAmount(des1);
-    double val2 = this->GetConstraintInfo().GetViolationAmount(des2);
+    const double val1 = this->GetConstraintInfo().GetViolationAmount(des1);
+    const double val2 = this->GetConstraintInfo().GetViolationAmount(des2);
 
     return (val1 < val2) ? (val2 - val1) : 0.0;
-
-} // ConstraintTypeBase::GetPreferredAmount
+}
 
 
 /*
@@ -259,8 +255,7 @@ ConstraintTypeBase::ConstraintTypeBase(
 {
     EDDY_FUNC_DEBUGSCOPE
     this->_nature = new NonLinearConstraintNature(*this);
-
-} // ConstraintTypeBase::ConstraintTypeBase
+}
 
 ConstraintTypeBase::ConstraintTypeBase(
     const ConstraintTypeBase& copy,
@@ -271,8 +266,7 @@ ConstraintTypeBase::ConstraintTypeBase(
 {
     EDDY_FUNC_DEBUGSCOPE
     this->_nature = copy._nature->Clone(*this);
-
-} // ConstraintTypeBase::ConstraintTypeBase
+}
 
 ConstraintTypeBase::~ConstraintTypeBase(
     )

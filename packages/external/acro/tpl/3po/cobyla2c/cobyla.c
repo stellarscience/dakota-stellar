@@ -65,7 +65,7 @@ static char const rcsid[] =
 /*
  * Return code strings
  */
-char *cobyla_rc_string[6] =
+char *acro_cobyla_rc_string[6] =
 {
   "N<0 or M<0",
   "Memory allocation failed",
@@ -75,20 +75,21 @@ char *cobyla_rc_string[6] =
   "User requested end of minimization"
 };
 
-static int cobylb(int *n, int *m, int *mpp, double *x, double *rhobeg,
+static int acro_cobylb(int *n, int *m, int *mpp, double *x, double *rhobeg,
     double *rhoend, double *lb, double *ub, int *iprint,
     int *maxfun, double minfval, double *con, double *sim, double *simi,
     double *datmat, double *a, double *vsig, double *veta, double *sigbar,
-    double *dx, double *w, int *iact, cobyla_function *calcfc, void *state);
-static int trstlp(int *n, int *m, double *a, double *b, double *rho,
+    double *dx, double *w, int *iact, cobyla_function *acro_calcfc, 
+    void *state);
+static int acro_trstlp(int *n, int *m, double *a, double *b, double *rho,
   double *dx, int *ifull, int *iact, double *z__, double *zdota, double *vmultc,
   double *sdirn, double *dxnew, double *vmultd);
 
 /* ------------------------------------------------------------------------ */
 
-int cobyla(int n, int m, double *x, double rhobeg, double rhoend,
+int acro_cobyla(int n, int m, double *x, double rhobeg, double rhoend,
     double *lb, double *ub, int iprint, int *maxfun,
-    double minfval, cobyla_function *calcfc, void *state)
+    double minfval, cobyla_function *acro_calcfc, void *state)
 {
   int icon, isim, isigb, idatm, iveta, isimi, ivsig, iwork, ia, idx, mpp, rc;
   int *iact;
@@ -200,10 +201,10 @@ int cobyla(int n, int m, double *x, double rhobeg, double rhoend,
   isigb = iveta + n;
   idx = isigb + n;
   iwork = idx + n;
-  rc = cobylb(&n, &m, &mpp, &x[1], &rhobeg, &rhoend, &lb[1], &ub[1], &iprint,
-      maxfun, minfval, &w[icon], &w[isim], &w[isimi], &w[idatm], &w[ia],
-      &w[ivsig], &w[iveta], &w[isigb], &w[idx], &w[iwork], &iact[1], calcfc,
-      state);
+  rc = acro_cobylb(&n, &m, &mpp, &x[1], &rhobeg, &rhoend, &lb[1], &ub[1], 
+      &iprint, maxfun, minfval, &w[icon], &w[isim], &w[isimi], &w[idatm],
+      &w[ia], &w[ivsig], &w[iveta], &w[isigb], &w[idx], &w[iwork], &iact[1],
+      acro_calcfc, state);
 
   /* Parameter adjustments (reverse) */
   ++iact;
@@ -216,11 +217,11 @@ int cobyla(int n, int m, double *x, double rhobeg, double rhoend,
 } /* cobyla */
 
 /* ------------------------------------------------------------------------- */
-int cobylb(int *n, int *m, int *mpp, double *x, double *rhobeg, double *rhoend,
-    double *lb, double *ub, int *iprint, int *maxfun,
+int acro_cobylb(int *n, int *m, int *mpp, double *x, double *rhobeg, 
+    double *rhoend, double *lb, double *ub, int *iprint, int *maxfun,
     double minfval, double *con, double *sim, double *simi, double *datmat,
     double *a, double *vsig, double *veta, double *sigbar, double *dx,
-    double *w, int *iact, cobyla_function *calcfc, void *state)
+    double *w, int *iact, cobyla_function *acro_calcfc, void *state)
 {
   /* System generated locals */
   int sim_dim1, sim_offset, simi_dim1, simi_offset, datmat_dim1, 
@@ -337,7 +338,7 @@ L40:
     goto L600;
   }
   ++nfvals;
-  if (calcfc(*n, *m, &x[1], &f, &con[1], state))
+  if (acro_calcfc(*n, *m, &x[1], &f, &con[1], state))
   {
     if (*iprint >= 1) {
       fprintf(stderr, "cobyla: user requested end of minimization.\n");
@@ -682,8 +683,8 @@ L370:
   isdirn = ivmc + mp;
   idxnew = isdirn + *n;
   ivmd = idxnew + *n;
-  trstlp(n, m, &a[a_offset], &con[1], &rho, &dx[1], &ifull, &iact[1], &w[
-      iz], &w[izdota], &w[ivmc], &w[isdirn], &w[idxnew], &w[ivmd]);
+  acro_trstlp(n, m, &a[a_offset], &con[1], &rho, &dx[1], &ifull, &iact[1], 
+      &w[iz], &w[izdota], &w[ivmc], &w[isdirn], &w[idxnew], &w[ivmd]);
   if (rc != 0) goto L600;
   /* SGJ: since the bound constraints are linear, we should never get
      a dx that lies outside the [lb,ub] constraints here, but we'll
@@ -975,7 +976,7 @@ L620:
 } /* cobylb */
 
 /* ------------------------------------------------------------------------- */
-int trstlp(int *n, int *m, double *a, 
+int acro_trstlp(int *n, int *m, double *a, 
     double *b, double *rho, double *dx, int *ifull, 
     int *iact, double *z__, double *zdota, double *vmultc,
      double *sdirn, double *dxnew, double *vmultd)

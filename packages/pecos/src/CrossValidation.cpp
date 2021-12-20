@@ -1,5 +1,13 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
 #include "CrossValidation.hpp"
-#include "MathTools.hpp"
+#include "math_tools.hpp"
 
 namespace Pecos {
 
@@ -50,13 +58,14 @@ void CrossValidationIterator::set_num_points( int num_points )
     }
 
   if ( seed_ < 0 )
-    range( indices_, 0, numPts_, 1 );
+    util::range( indices_, 0, numPts_, 1 );
   else if ( seed_ == 0 )
-    RNG_.permutation( indices_, numPts_, 1, (unsigned int)std::time(0) );
+    util::random_permutation(numPts_, 1, (unsigned int)std::time(0),
+				   indices_);
   else
     //get_permutations( indices_, numPts_, 1, (unsigned int)seed_ );
-    RNG_.permutation( indices_, numPts_, 1, (unsigned int)seed_ );
-};
+    util::random_permutation(numPts_, 1, (unsigned int)seed_, indices_);
+}
 
 void CrossValidationIterator::set_num_equations_per_point( int num_eq )
 {
@@ -380,9 +389,10 @@ void MultipleSolutionLinearModelCrossValidationIterator::compute_scores()
 	  // uniqueTols_ is in ascending order
 	  // but foldTols_[iter] and foldErrors_[iter] are in descending order
 	  // so we must reverse their order
-	  reverse( foldTols_[iter] );
-	  reverse( foldErrors_[iter] );
-	  LinearInterpolant1D interp( foldTols_[iter], foldErrors_[iter] );
+	  util::reverse( foldTols_[iter] );
+	  util::reverse( foldErrors_[iter] );
+	  util::LinearInterpolant1D interp(foldTols_[iter],
+						 foldErrors_[iter]);
 	  RealVector unique_cv_errors_col( Teuchos::View, 
 					   unique_cv_errors[iter],
 					   num_unique_tols );
@@ -542,7 +552,7 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
   if ( is_master() )
     {
       int argmin_index = 0;
-      argmin_index = argmin( scores_.length(), scores_.values()  );
+      argmin_index = util::argmin( scores_.length(), scores_.values()  );
       bestResidualTol_ = uniqueTols_[argmin_index];
       int training_size, validation_size;
       get_fold_size( 0, training_size, validation_size );
@@ -578,9 +588,9 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
   else return -1;
 }
 
-boost::shared_ptr<LinearModelCrossValidationIterator> MultipleSolutionLinearModelCrossValidationIterator::copy()
+std::shared_ptr<LinearModelCrossValidationIterator> MultipleSolutionLinearModelCrossValidationIterator::copy()
 {
-  boost::shared_ptr<LinearModelCrossValidationIterator> cv_iterator( new MultipleSolutionLinearModelCrossValidationIterator() );
+  std::shared_ptr<LinearModelCrossValidationIterator> cv_iterator( new MultipleSolutionLinearModelCrossValidationIterator() );
   cv_iterator->CrossValidationIterator::copy((CrossValidationIterator)(*this));
   cv_iterator->copy_solver( solver_ );
     

@@ -115,7 +115,7 @@ Inline Public Methods
 ================================================================================
 */
 inline
-double
+obj_val_t
 ObjectiveFunctionInfo::Which(
     const Design& des
     ) const
@@ -125,13 +125,33 @@ ObjectiveFunctionInfo::Which(
 }
 
 inline
-double
+obj_val_t
 ObjectiveFunctionInfo::WhichForMinimization(
     const Design& des
     ) const
 {
     EDDY_FUNC_DEBUGSCOPE
     return this->GetType().GetValueForMinimization(this->Which(des));
+}
+
+inline
+obj_val_t
+ObjectiveFunctionInfo::GetValueForMinimization(
+    const Design& des
+    ) const
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return this->GetValueForMinimization(this->Which(des));
+}
+
+inline
+obj_val_t
+ObjectiveFunctionInfo::GetValueForMinimization(
+    const obj_val_t& objVal
+    ) const
+{
+    EDDY_FUNC_DEBUGSCOPE
+    return this->GetType().GetValueForMinimization(objVal);
 }
 
 inline

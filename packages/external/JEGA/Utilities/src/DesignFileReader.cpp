@@ -228,7 +228,7 @@ DesignFileReader::ReadFlatFile(
     // prepare to store the file line-at-a-time for parsing.
     string line;
 
-    // the line should be no larget than 1KB
+    // the line should be no larger than 1KB
     line.reserve(1024);
 
     // Prepare to store the parsed response values in case they exist for any of
@@ -367,7 +367,7 @@ DesignFileReader::ParseValues(
     while(!valstr.empty())
     {
         // convert the string into a double
-        pair<bool, double> conv(ToDouble(valstr));
+        const pair<bool, double> conv(ToDouble(valstr));
 
         if(!conv.first) return;
 
@@ -395,21 +395,21 @@ DesignFileReader::DetermineDelimeter(
     JEGA_LOGGING_IF_ON(static const std::string AWS("All Whitespace");)
 
     // we are looking for a pattern whereby we have double precision values
-    // separated by some delimeter.  For this to be the case, the very first
+    // separated by some delimiter.  For this to be the case, the very first
     // thing we need to find is a double precision value.  If it is not the
     // first thing, then we have a problem.
 
     // the dumb but sure-fire way to do this is to consider the input 1
     // character at a time until we no longer have a double precision number.
     // Call that the first value, then traverse from there until we run
-    // into the next dp value and call everything in between the delimeter.
+    // into the next dp value and call everything in between the delimiter.
     string::size_type off = 0;
     string delimCandidate(FindCandidateDelimiter(from, off));
     if(delimCandidate.empty()) return delimCandidate;
 
     while(off < from.size())
     {
-        string nextCandidate(FindCandidateDelimiter(from, off));
+        const string nextCandidate(FindCandidateDelimiter(from, off));
         if(nextCandidate.empty())
         {
             JEGA_LOGGING_IF_ON(
@@ -517,8 +517,8 @@ DesignFileReader::FindCandidateDelimiter(
         if(isdigit(in[off]) ||
            (legitChars.find(in[off]) != string::npos)) break;
 
-    // by here we should have some delimeter.  Store it as our potential
-    // delimeter
+    // by here we should have some delimiter.  Store it as our potential
+    // delimiter
     return FormatDelimiter(in.substr(vpos, off-vpos));
 }
 
@@ -545,7 +545,7 @@ DesignFileReader::FormatDelimiter(
     EDDY_FUNC_DEBUGSCOPE
 
     // if the unformatted is nothing but whitespace, then we will make it
-    // a sentinal string that tells the reader to consider any sized
+    // a sentinel string that tells the reader to consider any sized
     // block of whitespace to be a delimiter.
     if(IsAllWhite(unformatted)) return WHITESPACE_DELIMITER;
 
@@ -572,11 +572,9 @@ DesignFileReader::RecordValues(
 
     // stop at the first of the number of needed values
     // and the number of values available.
-    size_t end =
-        Math::Min<size_t>(ndv+nof+ncn, from.size());
+    const size_t end = Math::Min<size_t>(ndv+nof+ncn, from.size());
 
-    // index will keep track of where we are in the "from"
-    // vector.
+    // index will keep track of where we are in the "from" vector.
     DoubleVector::size_type index = 0;
 
     // Interpret the first "ndv" entries as Design variables.
@@ -588,10 +586,12 @@ DesignFileReader::RecordValues(
     {
         // The file contains values but the Design class stores
         // double representations.  So we must convert here.
-        double rep = (*it)->GetNearestValidDoubleRep(from.at(index++));
+        const var_rep_t rep = (*it)->GetNearestValidRep(
+            (*it)->GetRepOf(from.at(index++))
+            );
 
-        // if the rep is not valid, this design is illconditioned
-        if(!(*it)->IsValidDoubleRep(rep)) into.SetIllconditioned(true);
+        // if the rep is not valid, this design is ill-conditioned
+        if(!(*it)->IsValidRep(rep)) into.SetIllconditioned(true);
 
         // continue on anyway and fill up the Design.
         into.SetVariableRep(i, rep);
@@ -599,11 +599,11 @@ DesignFileReader::RecordValues(
 
     // Next are the objective functions
     for(size_t i=0; index<end && i<nof; ++i)
-        into.SetObjective(i, from.at(index++));
+        into.SetObjective(i, static_cast<obj_val_t>(from.at(index++)));
 
     // Finish with constraints.
     for(size_t i=0; index<end && i<ncn; ++i)
-        into.SetConstraint(i, from.at(index++));
+        into.SetConstraint(i, static_cast<con_val_t>(from.at(index++)));
 }
 
 string
@@ -618,10 +618,11 @@ DesignFileReader::GetNextField(
     // Check for trivial abort condition.
     if(off >= from.size()) return string();
 
-    string::size_type beg = off;
+    const string::size_type beg = off;
 
-    bool whiteDelim = delim == WHITESPACE_DELIMITER;
-    // Find the next occurance of the delimiter.
+    const bool whiteDelim = delim == WHITESPACE_DELIMITER;
+
+    // Find the next occurrence of the delimiter.
     // If the delimiter is the whitespace delimiter, then search for the
     // next whitespace.
     off = whiteDelim ?
@@ -768,7 +769,7 @@ DesignFileReader::Result::~Result(
     )
 {
     EDDY_FUNC_DEBUGSCOPE
-    _designs.clear();
+    this->_designs.clear();
 
 } // DesignFileReader::Result::~Result
 

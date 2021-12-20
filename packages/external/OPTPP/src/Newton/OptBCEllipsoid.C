@@ -174,6 +174,8 @@ void OptBCEllipsoid::reset()
 {
    NLP1* nlp = nlprob();
    int   n   = nlp->getDim();
+   if (nlp->hasConstraints())
+     nlp->getConstraints()->reset();
    nlp->reset();
    OptimizeClass::defaultReset(n);
    initial_radius = -1.0e0;

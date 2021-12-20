@@ -4,7 +4,7 @@
 // QUESO - a library to support the Quantification of Uncertainty
 // for Estimation, Simulation and Optimization
 //
-// Copyright (C) 2008-2015 The PECOS Development Team
+// Copyright (C) 2008-2017 The PECOS Development Team
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the Version 2.1 GNU Lesser General
@@ -27,12 +27,12 @@
 
 #include <queso/Defines.h>
 
-#ifdef QUESO_HAS_TRILINOS
-#include <Epetra_MpiComm.h>
-#endif
-
 #ifdef QUESO_HAS_MPI
 #include <mpi.h>
+#endif
+
+#ifdef QUESO_HAS_TRILINOS
+class Epetra_Comm;
 #endif
 
 namespace QUESO {
@@ -159,7 +159,7 @@ private:
 
 #ifdef QUESO_HAS_MPI
 
-#define STANDARD_TYPE(cxxtype,mpitype)                                  \
+#define QUESO_STANDARD_TYPE(cxxtype,mpitype)                                  \
   template<>                                                            \
   class StandardType<cxxtype> : public DataType                         \
   {                                                                     \
@@ -170,7 +170,7 @@ private:
 
 #else
 
-#define STANDARD_TYPE(cxxtype,mpitype)                          \
+#define QUESO_STANDARD_TYPE(cxxtype,mpitype)                          \
   template<>                                                    \
   class StandardType<cxxtype> : public DataType                 \
   {                                                             \
@@ -181,10 +181,10 @@ private:
 
 #endif
 
-STANDARD_TYPE(char,MPI_CHAR);
-STANDARD_TYPE(int,MPI_INT);
-STANDARD_TYPE(unsigned int,MPI_UNSIGNED);
-STANDARD_TYPE(double,MPI_DOUBLE);
+QUESO_STANDARD_TYPE(char,MPI_CHAR);
+QUESO_STANDARD_TYPE(int,MPI_INT);
+QUESO_STANDARD_TYPE(unsigned int,MPI_UNSIGNED);
+QUESO_STANDARD_TYPE(double,MPI_DOUBLE);
 
 class BaseEnvironment;
 
@@ -242,8 +242,10 @@ public:
 
   //! @name Attribute Accessor Methods
   //@{
+#ifdef QUESO_HAS_MPI
   //! Extract MPI Communicator from a MpiComm object.
   RawType_MPI_Comm Comm     () const;
+#endif  // QUESO_HAS_MPI
 
   //! Return my process ID.
   int                MyPID    () const;
@@ -377,7 +379,7 @@ public:
 
 #ifdef QUESO_HAS_TRILINOS
   //! Extract MPI Communicator from a Epetra_MpiComm object.
-  const Epetra_MpiComm& epetraMpiComm() const;
+  const Epetra_Comm& epetraMpiComm() const;
 #endif
 
  //@}
@@ -391,11 +393,12 @@ private:
 
   // QUESO environment
   const BaseEnvironment& m_env;
-#ifdef QUESO_HAS_TRILINOS
 
-  // Epetra MPI communicator
-  Epetra_MpiComm*               m_epetraMpiComm;
+#ifdef QUESO_HAS_TRILINOS
+  // Epetra communicator
+  Epetra_Comm*               m_epetraComm;
 #endif
+
   //! Embedded wrapped opaque MPI_Comm object.
   RawType_MPI_Comm            m_rawComm;
 

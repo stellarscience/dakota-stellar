@@ -267,11 +267,11 @@ BitManipulator::AreContentsCurrent(
         if(mult != this->_mults[i]) return false;
 
         // store the minimum representation.
-        double mini = (*it)->GetMinDoubleRep();
+		var_rep_t mini = (*it)->GetMinRep();
         if(mini != this->_mins[i]) return false;
 
         // compute and store the number of bits for this variable.
-        double temp = ((*it)->GetMaxDoubleRep()-mini) * mult;
+        double temp = ((*it)->GetMaxRep()-mini) * mult;
 
         eddy::utilities::uint16_t nbits =
             static_cast<eddy::utilities::uint16_t>(
@@ -311,11 +311,11 @@ BitManipulator::ReValidateContents(
         this->_mults.push_back(mult);
 
         // store the minimum representation.
-        double mini = (*it)->GetMinDoubleRep();
+        var_rep_t mini = (*it)->GetMinRep();
         this->_mins.push_back(mini);
 
         // compute and store the number of bits for this variable.
-        double temp = ((*it)->GetMaxDoubleRep()-mini) * mult;
+        double temp = ((*it)->GetMaxRep()-mini) * mult;
 
         eddy::utilities::uint16_t nbits =
             static_cast<eddy::utilities::uint16_t>(

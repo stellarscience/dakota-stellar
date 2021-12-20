@@ -125,9 +125,9 @@ MetricTracker::SetStackMaxDepth(
 {
     EDDY_FUNC_DEBUGSCOPE
 
-    size_t oldSize = this->_stack.size();
+    const size_t oldSize = this->_stack.size();
     this->_maxDepth = depth;
-    PruneTheStack();
+    this->PruneTheStack();
     return oldSize < this->_stack.size() ? this->_stack.size()-oldSize : 0;
 }
 

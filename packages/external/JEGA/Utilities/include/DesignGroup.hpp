@@ -150,9 +150,9 @@ Class Definition
  * design variable and objective function value.  It also provides some
  * functionality for finding out information about those Design's.
  *
- * The philisophy surrounding the sorted containers that the sort is useful
+ * The philosophy surrounding the sorted containers that the sort is useful
  * for fast finding, insertion, removal, etc.  The design variable sort
- * provides a means of storing any design sorted heirchically by design
+ * provides a means of storing any design sorted hierarchically by design
  * variables.  The objective function sort does the same but for objective
  * function. The objective function sort exists because many methods and
  * algorithms can take advantage of this property when operating.
@@ -226,7 +226,7 @@ class JEGA_SL_IEDECL DesignGroup
 
         /**
          * \brief A list of all Designs that are part of this group
-         *        sorted heirarchically by design variable.
+         *        sorted hierarchically by design variable.
          */
         DVSortContainer _dvSort;
 
@@ -325,7 +325,7 @@ class JEGA_SL_IEDECL DesignGroup
          * \return An object containing the extreme values (min and max) for
          *         each design variable of the Designs contained in this group.
          */
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<var_rep_t>
         ComputeDVExtremes(
             ) const;
 
@@ -337,7 +337,7 @@ class JEGA_SL_IEDECL DesignGroup
          *         each objective function of the Designs contained in this
          *         group.
          */
-        eddy::utilities::DoubleExtremes
+        eddy::utilities::extremes<obj_val_t>
         ComputeOFExtremes(
             ) const;
 
@@ -815,7 +815,7 @@ class JEGA_SL_IEDECL DesignGroup
          * \brief Removes every Design in the group that returns true on
          *        IsIllconditioned().
          *
-         * This method sends all illconditioned Designs to be stored by their
+         * This method sends all ill-conditioned Designs to be stored by their
          * DesignTarget.
          *
          * \return The number of Designs removed.
@@ -857,7 +857,7 @@ class JEGA_SL_IEDECL DesignGroup
          * \brief Removes every Design in the group that returns false on
          *        IsIllconditioned().
          *
-         * This method sends all non-illconditioned Designs to be stored by
+         * This method sends all non-ill-conditioned Designs to be stored by
          * their DesignTarget.
          *
          * \return The number of Designs removed.
@@ -1281,8 +1281,7 @@ class JEGA_SL_IEDECL DesignGroup
          * \brief Goes through and removes all designs for which "pred"
          *        evaluates to true.
          *
-         * \param pred The predictate to execute with each design in this
-         *             group.
+         * \param pred The predicate to execute with each design in this group.
          * \return The number of Designs removed.
          */
         template <typename Predicate>

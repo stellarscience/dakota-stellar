@@ -391,6 +391,7 @@ int OptBCNewtonLike::computeStep(SerialDenseVector<int,double> sk)
 //
   stptmp = computeMaxStep(sk);
   stpmax = min(stpmax, stptmp);
+  TR_size = min(TR_size, stpmax);
 
   if (strategy == TrustRegion) {
     SerialSymDenseMatrix<int,double> H(Hessian.numRows());
@@ -900,6 +901,8 @@ void OptBCNewtonLike::reset()
 {
    NLP1* nlp = nlprob();
    int   n   = nlp->getDim();
+   if (nlp->hasConstraints())
+     nlp->getConstraints()->reset();
    nlp->reset();
    OptimizeClass::defaultReset(n);
    nactive  = 0;
