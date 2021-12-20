@@ -25,7 +25,7 @@
 *      12 Oct 94 - Originated by T. Plantenga, Sandia National Labs.
 **********************************************************************/
 
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 #include <stdio.h>
 #include <stdlib.h>

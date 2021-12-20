@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -136,7 +137,7 @@ private:
 
   /// activate model forms and, optionally, discretization levels within
   /// the HierarchSurrModel associated with trustRegions[tr_index]
-  void set_model_states(size_t tr_index);
+  void set_active_model(size_t tr_index);
 
   /// update trust region bounds, recurring top-down from tr_index_start
   void update_trust_region(size_t tr_index_start);
@@ -149,7 +150,7 @@ private:
 
   void multigrid_driver(const Variables &x0);
 
-  RealVector optimize(const RealVector &x, int max_iter, int index);
+  RealVector optimize(const RealVector &x, size_t max_iter, int index);
 
   RealVector linesearch(const RealVector &xk, const RealVector &pk,
                         double alpha0);
@@ -182,23 +183,8 @@ inline SurrBasedLevelData& HierarchSurrBasedLocalMinimizer::trust_region()
 { return trustRegions[minimizeIndex]; }
 
 
-inline void HierarchSurrBasedLocalMinimizer::set_model_states(size_t tr_index)
-{
-  if (multiLev) {
-    iteratedModel.surrogate_model_key(
-      trustRegions[tr_index].approx_model_form(),
-      trustRegions[tr_index].approx_model_level());
-    iteratedModel.truth_model_key(
-      trustRegions[tr_index].truth_model_form(),
-      trustRegions[tr_index].truth_model_level());
-  }
-  else {
-    iteratedModel.surrogate_model_key(
-      trustRegions[tr_index].approx_model_form());
-    iteratedModel.truth_model_key(
-      trustRegions[tr_index].truth_model_form());
-  }
-}
+inline void HierarchSurrBasedLocalMinimizer::set_active_model(size_t tr_index)
+{ iteratedModel.active_model_key(trustRegions[tr_index].paired_key()); }
 
 
 inline void HierarchSurrBasedLocalMinimizer::update_trust_region()

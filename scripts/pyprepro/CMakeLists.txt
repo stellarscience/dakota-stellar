@@ -1,9 +1,9 @@
 
 
-if(DAKOTA_ENABLE_TESTS AND PYTHONINTERP_FOUND AND
-    PYTHON_VERSION_STRING VERSION_GREATER 2.6)
+if(DAKOTA_ENABLE_TESTS AND Python_Interpreter_FOUND AND
+    Python_VERSION VERSION_GREATER 2.6)
   add_test(NAME pyprepro_test 
-	  COMMAND ${PYTHON_EXECUTABLE} -B run_tests.py
+	  COMMAND ${Python_EXECUTABLE} -B run_tests.py
 	  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   set_property(TEST pyprepro_test PROPERTY LABELS UnitTest)
   set_property(TEST pyprepro_test 
@@ -15,4 +15,5 @@ endif()
 install(PROGRAMS "pyprepro" DESTINATION "bin/")
 install(PROGRAMS "pyprepro.py" DESTINATION "bin/")
 install(PROGRAMS "dprepro" DESTINATION "bin/")
+install(PROGRAMS "dprepro3" DESTINATION "bin/")
 install(PROGRAMS "dprepro.py" DESTINATION "bin/")

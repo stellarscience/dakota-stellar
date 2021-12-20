@@ -53,7 +53,7 @@ public:
   const RealMatrix& variable_sets() const;
   const RealVector& type1_weight_sets() const;
   //const RealMatrix& type2_weight_sets() const;
-  //const UShortArray& maximal_grid() const;
+  //const ActiveKey& maximal_grid() const;
   int grid_size();
   void compute_grid();
   void compute_grid(RealMatrix& var_sets);

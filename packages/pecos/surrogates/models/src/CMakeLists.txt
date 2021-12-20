@@ -24,4 +24,4 @@ add_library(pecos_models ${SOURCES} ${HEADERS})
 include_directories(${DakotaSurrogates_SOURCE_DIR}/models/src
 	            ${Teuchos_INCLUDE_DIRS})
 
-target_link_libraries(pecos_models pecos_util ${Pecos_TPL_LIBS})
+target_link_libraries(pecos_models pecos_util ${Pecos_TPL_LIBS} Boost::boost)

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -19,11 +20,13 @@ static const char rcsId[]=
 
 namespace Dakota {
 
+extern Model dummy_model; // defined in DakotaModel.cpp
+
 
 HierarchSurrModel::HierarchSurrModel(ProblemDescDB& problem_db):
   SurrogateModel(problem_db),
   corrOrder(problem_db.get_short("model.surrogate.correction_order")),
-  correctionMode(SINGLE_CORRECTION)//, componentParallelKey(_NPOS,_NPOS)
+  correctionMode(SINGLE_CORRECTION), mfPrecedence(true), modeKeyBufferSize(0)
 {
   // Hierarchical surrogate models pass through numerical derivatives
   supportsEstimDerivs = false;
@@ -33,12 +36,12 @@ HierarchSurrModel::HierarchSurrModel(ProblemDescDB& problem_db):
   centralHess = problem_db.get_bool("responses.central_hess");
 
   const StringArray& ordered_model_ptrs
-    = problem_db.get_sa("model.surrogate.ordered_model_pointers");
+    = problem_db.get_sa("model.surrogate.ensemble_model_pointers");
 
   size_t i, num_models = ordered_model_ptrs.size(),
            model_index = problem_db.get_db_model_node(); // for restoration
 
-  const std::pair<short,short>& cv_view = currentVariables.view();
+  //const std::pair<short,short>& cv_view = currentVariables.view();
   orderedModels.resize(num_models);
   for (i=0; i<num_models; ++i) {
     problem_db.set_db_model_nodes(ordered_model_ptrs[i]);
@@ -53,74 +56,72 @@ HierarchSurrModel::HierarchSurrModel(ProblemDescDB& problem_db):
 
   problem_db.set_db_model_nodes(model_index); // restore
 
-  // default index values, to be overridden at run time
-  if (num_models == 1) { // first and last solution level (1 model)
-    surrModelKey.resize(2); truthModelKey.resize(2);
-    surrModelKey[0] = surrModelKey[1] = truthModelKey[0] = 0;
-    truthModelKey[1] = orderedModels[0].solution_levels() - 1;
-  }
-  else { // first and last model form (solution levels ignored)
-    surrModelKey.resize(1); truthModelKey.resize(1);
-    surrModelKey[0] = 0; truthModelKey[0] = num_models - 1;
-    //surrModelKey[1] = truthModelKey[1] = _NPOS;
-  }
-  check_model_interface_instance();
+  assign_default_keys();
 
   // Correction is required in HierarchSurrModel for some responseModes.
   // Enforcement of a correction type for these modes occurs in
   // surrogate_response_mode(short).
-  if (corrType) // initialize DiscrepancyCorrection using initial LF indices
-    deltaCorr[fidelity_keys()].initialize(surrogate_model(), surrogateFnIndices,
-					  corrType, corrOrder);
-
+  switch (responseMode) {
+  case MODEL_DISCREPANCY: case AUTO_CORRECTED_SURROGATE:
+    if (corrType) // initialize DiscrepancyCorrection using initial keys
+      deltaCorr[activeKey].initialize(surrogate_model(), surrogateFnIndices,
+				      corrType, corrOrder);
+    break;
+  }
   //truthResponseRef[truthModelKey] = currentResponse.copy();
+}
+
+
+void HierarchSurrModel::assign_default_keys()
+{
+  // default key data values, to be overridden at run time
+  unsigned short id = 0, last_m = orderedModels.size() - 1;
+  short r_type = Pecos::RAW_DATA;
+  if (multilevel_multifidelity()) { // first and last model form / soln levels
+    //size_t last_soln_lev = std::min(orderedModels[last_m].solution_levels(),
+    // 				      orderedModels[0].solution_levels());
+    //truthModelKey = Pecos::ActiveKey(id, r_type, last_m, last_soln_lev);
+    //surrModelKey  = Pecos::ActiveKey(id, r_type,      0, last_soln_lev);
+
+    // span both hierarchical dimensions by default
+    size_t truth_soln_lev = orderedModels[last_m].solution_levels();
+    truthModelKey = Pecos::ActiveKey(id, r_type, last_m, truth_soln_lev - 1);
+    surrModelKey  = Pecos::ActiveKey(id, r_type,      0, 0);
+  }
+  else if (multifidelity()) { // first and last model form (no soln levels)
+    // Note: for proper modeKeyBufferSize estimation, must maintain consistency
+    // with NonDExpansion::configure_{sequence,indices}() and key definition
+    // for NonDMultilevelSampling::control_variate_mc() in terms of SZ_MAX
+    // usage, since this suppresses allocation of a solution level array.
+    truthModelKey = Pecos::ActiveKey(id, r_type, last_m, SZ_MAX);
+    surrModelKey  = Pecos::ActiveKey(id, r_type,      0, SZ_MAX);
+  }
+  else if (multilevel()) { // first and last solution level (last model)
+    size_t truth_soln_lev = orderedModels[last_m].solution_levels();
+    truthModelKey = Pecos::ActiveKey(id, r_type, last_m, truth_soln_lev - 1);
+    surrModelKey  = Pecos::ActiveKey(id, r_type, last_m, 0);
+  }
+  activeKey.aggregate_keys(truthModelKey, surrModelKey,
+			   Pecos::SINGLE_REDUCTION); // default: reduction only
+
+  if (parallelLib.mpirun_flag()) {
+    MPIPackBuffer send_buff;  short mode;
+    send_buff << mode << activeKey; // serve_run() recvs single | aggregate key
+    modeKeyBufferSize = send_buff.size();
+  }
+
+  check_model_interface_instance();
 }
 
 
 void HierarchSurrModel::check_submodel_compatibility(const Model& sub_model)
 {
-  SurrogateModel::check_submodel_compatibility(sub_model);
-  
-  bool error_flag = false;
-  // Check for compatible array sizing between sub_model and currentResponse.
-  // HierarchSurrModel creates aggregations and DataFitSurrModel consumes them.
-  // For now, allow either a factor of 2 or 1 from aggregation or not.  In the
-  // future, aggregations may span a broader model hierarchy (e.g., factor =
-  // orderedModels.size()).  In general, the fn count check needs to be
-  // specialized in the derived classes.
-  size_t sm_qoi = sub_model.qoi();//, aggregation = numFns / sm_qoi;
-  if ( numFns % sm_qoi ) { //|| aggregation < 1 || aggregation > 2 ) {
-    Cerr << "Error: incompatibility between approximate and actual model "
-	 << "response function sets\n       within HierarchSurrModel: "<< numFns
-	 << " approximate and " << sm_qoi << " actual functions.\n       "
-	 << "Check consistency of responses specifications." << std::endl;
-    error_flag = true;
-  }
+  bool err1 = check_active_variables(sub_model),
+       err2 = check_inactive_variables(sub_model),
+       err3 = check_response_qoi(sub_model);
 
-  // TO DO: Bayes exp design (hi2lo) introduces new requirements on a
-  // hierarchical model, and MF active subspaces will as well.
-  // > For (simulation-based) OED, one option is to enforce consistency in
-  //   inactive state (config vars) and allow active parameterization to vary.
-  // > For hi2lo, this implies that the active variable subset could be null
-  //   for HF, as the active calibration variables only exist for LF.
-  size_t sm_icv = sub_model.icv(),  sm_idiv = sub_model.idiv(),
-    sm_idsv = sub_model.idsv(),     sm_idrv = sub_model.idrv(),
-    icv  = currentVariables.icv(),  idiv = currentVariables.idiv(),
-    idsv = currentVariables.idsv(), idrv = currentVariables.idrv();
-  if (sm_icv != icv || sm_idiv != idiv || sm_idsv != idsv || sm_idrv != idrv) {
-    Cerr << "Error: incompatibility between approximate and actual model "
-	 << "variable sets within\n       HierarchSurrModel: inactive "
-	 << "approximate = " << icv << " continuous, " << idiv
-	 << " discrete int, " << idsv << " discrete string, and " << idrv
-	 << " discrete real and\n       inactive actual = " << sm_icv
-	 << " continuous, " << sm_idiv << " discrete int, " << sm_idsv
-	 << " discrete string, and " << sm_idrv << " discrete real.  Check "
-	 << "consistency of variables specifications." << std::endl;
-    error_flag = true;
-  }
-
-  if (error_flag)
-    abort_handler(-1);
+  if (err1 || err2 || err3)
+    abort_handler(MODEL_ERROR);
 }
 
 
@@ -396,20 +397,18 @@ void HierarchSurrModel::build_approximation()
   // -->> move LF model out and restructure if(!approxBuilds)
   //ActiveSet temp_set = lf_model.current_response().active_set();
   //temp_set.request_values(1);
-  //if (sameModelInstance)
-  //  lf_model.solution_level_index(surrogate_level_index());
+  //if (sameModelInstance) assign_surrogate_key();
   //lf_model.evaluate(temp_set);
   //const Response& lo_fi_response = lf_model.current_response();
 
   Model& hf_model = truth_model();
   if (hierarchicalTagging) {
-    String eval_tag = evalTagPrefix + '.' +
-                      boost::lexical_cast<String>(surrModelEvalCntr+1);
+    String eval_tag = evalTagPrefix + '.' + std::to_string(surrModelEvalCntr+1);
     hf_model.eval_tag_prefix(eval_tag);
   }
 
   // set HierarchSurrModel parallelism mode to HF model
-  component_parallel_mode(TRUTH_MODEL);
+  component_parallel_mode(TRUTH_MODEL_MODE);
 
   // update HF model with current variable values/bounds/labels
   update_model(hf_model);
@@ -425,7 +424,8 @@ void HierarchSurrModel::build_approximation()
 
   // compute the response for the high fidelity model
   ShortArray total_asv, hf_asv, lf_asv;
-  DiscrepCorrMap::iterator dc_it = deltaCorr.find(fidelity_keys());
+  std::map<Pecos::ActiveKey, DiscrepancyCorrection>::iterator dc_it
+    = deltaCorr.find(activeKey);
   if (dc_it!=deltaCorr.end() && dc_it->second.initialized())
     total_asv.assign(numFns, dc_it->second.data_order());
   else
@@ -434,18 +434,16 @@ void HierarchSurrModel::build_approximation()
 
   if ( truthResponseRef.find(truthModelKey) == truthResponseRef.end() )
     truthResponseRef[truthModelKey] = currentResponse.copy();
-
   ActiveSet hf_set = currentResponse.active_set(); // copy
   hf_set.request_vector(hf_asv);
-  if (sameModelInstance)
-    hf_model.solution_level_index(truth_level_index());
+  if (sameModelInstance) assign_truth_key();
   hf_model.evaluate(hf_set);
   truthResponseRef[truthModelKey].update(hf_model.current_response());
 
   // could compute the correction to LF model here, but rely on an external
   // call for consistency with DataFitSurr and to facilitate SBO logic.  In
   // particular, lo_fi_response involves find_center(), hard conv check, etc.
-  //deltaCorr[indices].compute(..., truthResponseRef, lo_fi_response);
+  //deltaCorr[activeKey].compute(..., truthResponseRef, lo_fi_response);
 
   Cout << "\n<<<<< Hierarchical approximation build completed.\n";
   ++approxBuilds;
@@ -516,21 +514,22 @@ void HierarchSurrModel::derived_evaluate(const ActiveSet& set)
     hi_fi_eval = lo_fi_eval = mixed_eval = true;        break;
   }
 
-  Model& lf_model = surrogate_model();
-  Model& hf_model = truth_model();
+  Model&   hf_model = (hi_fi_eval) ?     truth_model() : dummy_model;
+  Model&   lf_model = (lo_fi_eval) ? surrogate_model() : dummy_model;
+  Model& same_model = (hi_fi_eval) ? hf_model : lf_model;
   if (hierarchicalTagging) {
-    String eval_tag = evalTagPrefix + '.' +
-                      boost::lexical_cast<String>(surrModelEvalCntr+1);
-    if (sameModelInstance) lf_model.eval_tag_prefix(eval_tag);
+    String eval_tag = evalTagPrefix + '.' + std::to_string(surrModelEvalCntr+1);
+    if (sameModelInstance)
+      same_model.eval_tag_prefix(eval_tag);
     else {
       if (hi_fi_eval) hf_model.eval_tag_prefix(eval_tag);
       if (lo_fi_eval) lf_model.eval_tag_prefix(eval_tag);
     }
   }
 
-  if (sameModelInstance) update_model(lf_model);
+  if (sameModelInstance) update_model(same_model);
 
-  // Notes on repetitive setting of model.solution_level_index():
+  // Notes on repetitive setting of model.solution_level_cost_index():
   // > when LF & HF are the same model, then setting the index for low or high
   //   invalidates the other fidelity definition.
   // > within a single derived_evaluate(), could protect these updates with
@@ -543,11 +542,9 @@ void HierarchSurrModel::derived_evaluate(const ActiveSet& set)
   // Compute high fidelity response
   // ------------------------------
   if (hi_fi_eval) {
-    component_parallel_mode(TRUTH_MODEL); // TO DO: sameModelInstance
-    if (sameModelInstance)
-      hf_model.solution_level_index(truth_level_index());
-    else
-      update_model(hf_model);
+    component_parallel_mode(TRUTH_MODEL_MODE); // TO DO: sameModelInstance
+    if (sameModelInstance) assign_truth_key();
+    else                   update_model(hf_model);
     switch (responseMode) {
     case UNCORRECTED_SURROGATE: case AUTO_CORRECTED_SURROGATE:
     case AGGREGATED_MODELS: {
@@ -588,11 +585,9 @@ void HierarchSurrModel::derived_evaluate(const ActiveSet& set)
       break;
     }
     // compute the LF response
-    component_parallel_mode(SURROGATE_MODEL); // TO DO: sameModelInstance
-    if (sameModelInstance)
-      lf_model.solution_level_index(surrogate_level_index());
-    else
-      update_model(lf_model);
+    component_parallel_mode(SURROGATE_MODEL_MODE); // TO DO: sameModelInstance
+    if (sameModelInstance) assign_surrogate_key();
+    else                   update_model(lf_model);
     ActiveSet lo_fi_set;
     switch (responseMode) {
     case UNCORRECTED_SURROGATE: case AUTO_CORRECTED_SURROGATE:
@@ -634,13 +629,12 @@ void HierarchSurrModel::derived_evaluate(const ActiveSet& set)
   // ------------------------------
   switch (responseMode) {
   case MODEL_DISCREPANCY: {
-    // don't update surrogate data within deltaCorr[indices]'s Approximations;
+    // don't update surrogate data within deltaCorr[key]'s Approximations;
     // just update currentResponse (managed as surrogate data at a higher level)
     bool quiet_flag = (outputLevel < NORMAL_OUTPUT);
     currentResponse.active_set(set);
-    deltaCorr[fidelity_keys()].compute(hi_fi_response,
-				       lf_model.current_response(),
-				       currentResponse, quiet_flag);
+    deltaCorr[activeKey].compute(hi_fi_response, lf_model.current_response(),
+				 currentResponse, quiet_flag);
     break;
   }
   case AGGREGATED_MODELS:
@@ -666,34 +660,35 @@ void HierarchSurrModel::derived_evaluate_nowait(const ActiveSet& set)
 {
   ++surrModelEvalCntr;
 
-  Model& lf_model = surrogate_model();
-  Model& hf_model = truth_model();
-
-  ShortArray hi_fi_asv, lo_fi_asv;
-  bool hi_fi_eval, lo_fi_eval, asynch_lo_fi = lf_model.asynch_flag(),
-                               asynch_hi_fi = hf_model.asynch_flag();
+  ShortArray hi_fi_asv, lo_fi_asv;  bool hi_fi_eval, lo_fi_eval;
   switch (responseMode) {
   case UNCORRECTED_SURROGATE: case AUTO_CORRECTED_SURROGATE:
   case AGGREGATED_MODELS:
     asv_split(set.request_vector(), hi_fi_asv, lo_fi_asv, false);
     hi_fi_eval = !hi_fi_asv.empty();  lo_fi_eval = !lo_fi_asv.empty();  break;
   case BYPASS_SURROGATE:
-    hi_fi_eval = true; lo_fi_eval = false;                              break;
+    hi_fi_eval = true;  lo_fi_eval = false;                             break;
   case MODEL_DISCREPANCY:
     hi_fi_eval = lo_fi_eval = true;                                     break;
   }
 
+  Model&   hf_model = (hi_fi_eval) ?     truth_model() : dummy_model;
+  Model&   lf_model = (lo_fi_eval) ? surrogate_model() : dummy_model;
+  Model& same_model = (hi_fi_eval) ? hf_model : lf_model;
+  bool asynch_hi_fi = (hi_fi_eval) ? hf_model.asynch_flag() : false,
+       asynch_lo_fi = (lo_fi_eval) ? lf_model.asynch_flag() : false;
+
   if (hierarchicalTagging) {
-    String eval_tag = evalTagPrefix + '.' +
-                      boost::lexical_cast<String>(surrModelEvalCntr+1);
-    if (sameModelInstance) lf_model.eval_tag_prefix(eval_tag);
+    String eval_tag = evalTagPrefix + '.' + std::to_string(surrModelEvalCntr+1);
+    if (sameModelInstance)
+      same_model.eval_tag_prefix(eval_tag);
     else {
       if (hi_fi_eval) hf_model.eval_tag_prefix(eval_tag);
       if (lo_fi_eval) lf_model.eval_tag_prefix(eval_tag);
     }
   }
 
-  if (sameModelInstance) update_model(lf_model);
+  if (sameModelInstance) update_model(same_model);
 
   // perform Model updates and define active sets for LF and HF evaluations
   ActiveSet hi_fi_set, lo_fi_set;
@@ -733,22 +728,20 @@ void HierarchSurrModel::derived_evaluate_nowait(const ActiveSet& set)
   // To manage general case of mixed asynch, launch nonblocking evals first,
   // followed by blocking evals.
 
-  // For notes on repetitive setting of model.solution_level_index(), see
+  // For notes on repetitive setting of model.solution_level_cost_index(), see
   // derived_evaluate() above.
 
   // launch nonblocking evals before any blocking ones
   if (hi_fi_eval && asynch_hi_fi) { // HF model may be executed asynchronously
     // don't need to set component parallel mode since only queues the job
-    if (sameModelInstance)
-      hf_model.solution_level_index(truth_level_index());
+    if (sameModelInstance) assign_truth_key();
     hf_model.evaluate_nowait(hi_fi_set);
     // store map from HF eval id to HierarchSurrModel id
     truthIdMap[hf_model.evaluation_id()] = surrModelEvalCntr;
   }
   if (lo_fi_eval && asynch_lo_fi) { // LF model may be executed asynchronously
     // don't need to set component parallel mode since only queues the job
-    if (sameModelInstance)
-      lf_model.solution_level_index(surrogate_level_index());
+    if (sameModelInstance) assign_surrogate_key();
     lf_model.evaluate_nowait(lo_fi_set);
     // store map from LF eval id to HierarchSurrModel id
     surrIdMap[lf_model.evaluation_id()] = surrModelEvalCntr;
@@ -759,17 +752,15 @@ void HierarchSurrModel::derived_evaluate_nowait(const ActiveSet& set)
 
   // now launch any blocking evals
   if (hi_fi_eval && !asynch_hi_fi) { // execute HF synchronously & cache resp
-    component_parallel_mode(TRUTH_MODEL);
-    if (sameModelInstance)
-      hf_model.solution_level_index(truth_level_index());
+    component_parallel_mode(TRUTH_MODEL_MODE);
+    if (sameModelInstance) assign_truth_key();
     hf_model.evaluate(hi_fi_set);
     // not part of rekey_synch(); can rekey to surrModelEvalCntr immediately
     cachedTruthRespMap[surrModelEvalCntr] = hf_model.current_response().copy();
   }
   if (lo_fi_eval && !asynch_lo_fi) { // execute LF synchronously & cache resp
-    component_parallel_mode(SURROGATE_MODEL);
-    if (sameModelInstance)
-      lf_model.solution_level_index(surrogate_level_index());
+    component_parallel_mode(SURROGATE_MODEL_MODE);
+    if (sameModelInstance) assign_surrogate_key();
     lf_model.evaluate(lo_fi_set);
     Response lo_fi_response(lf_model.current_response().copy());
     // correct LF response prior to caching
@@ -834,9 +825,8 @@ derived_synchronize_sequential(IntResponseMap& hf_resp_map_rekey,
   // --------------------------
   // synchronize HF model evals
   // --------------------------
-  IntRespMCIter r_cit;
   if (!truthIdMap.empty()) { // synchronize HF evals
-    component_parallel_mode(TRUTH_MODEL);
+    component_parallel_mode(TRUTH_MODEL_MODE);
     rekey_synch(truth_model(), block, truthIdMap, hf_resp_map_rekey);
   }
   // add cached truth evals from:
@@ -851,7 +841,7 @@ derived_synchronize_sequential(IntResponseMap& hf_resp_map_rekey,
   // synchronize LF model evals
   // --------------------------
   if (!surrIdMap.empty()) { // synchronize LF evals
-    component_parallel_mode(SURROGATE_MODEL);
+    component_parallel_mode(SURROGATE_MODEL_MODE);
     // Interface::rawResponseMap should _not_ be corrected directly since
     // rawResponseMap, beforeSynchCorePRPQueue, and data_pairs all share a
     // responseRep -> modifying rawResponseMap affects data_pairs.
@@ -904,7 +894,7 @@ derived_synchronize_combine(const IntResponseMap& hf_resp_map,
   bool quiet_flag = (outputLevel < NORMAL_OUTPUT);
   switch (responseMode) {
   case MODEL_DISCREPANCY: {
-    DiscrepancyCorrection& delta_corr = deltaCorr[fidelity_keys()];
+    DiscrepancyCorrection& delta_corr = deltaCorr[activeKey];
     for (; hf_cit != hf_resp_map.end() && lf_cit != lf_resp_map.end();
 	 ++hf_cit, ++lf_cit) {
       check_key(hf_cit->first, lf_cit->first);
@@ -1000,9 +990,9 @@ derived_synchronize_combine_nowait(const IntResponseMap& hf_resp_map,
   IntRespMIter  lf_it  = lf_resp_map.begin();
   Response empty_resp;
   bool quiet_flag = (outputLevel < NORMAL_OUTPUT);
-  DiscrepCorrMap::iterator dc_it;
+  std::map<Pecos::ActiveKey, DiscrepancyCorrection>::iterator dc_it;
   if (responseMode == MODEL_DISCREPANCY)
-    dc_it = deltaCorr.find(fidelity_keys());
+    dc_it = deltaCorr.find(activeKey);
   while (hf_cit != hf_resp_map.end() || lf_it != lf_resp_map.end()) {
     // these have been rekeyed already to top-level surrModelEvalCntr:
     int hf_eval_id = (hf_cit == hf_resp_map.end()) ? INT_MAX : hf_cit->first;
@@ -1066,13 +1056,179 @@ derived_synchronize_combine_nowait(const IntResponseMap& hf_resp_map,
 }
 
 
+void HierarchSurrModel::create_tabular_datastream()
+{
+  OutputManager& mgr = parallelLib.output_manager();
+  mgr.open_tabular_datastream();
+
+  switch (responseMode) {
+  case AGGREGATED_MODELS: case MODEL_DISCREPANCY: // two models/resolutions
+  case BYPASS_SURROGATE: { // use same row len since commonly alternated
+
+    bool mf = multifidelity();  StringArray iface_ids;
+    if (mf) { // sameInterfaceInstance can't be used since it varies at run time
+      iface_ids.push_back("HF_interf");
+      iface_ids.push_back("LF_interf");
+    }
+    else
+      iface_ids.push_back("interface");
+    mgr.create_tabular_header(iface_ids); // includes graphics cntr
+
+    // identify solution level control variable
+    size_t av_index = truth_model().solution_control_variable_index();
+    if (av_index == _NPOS)
+      mgr.append_tabular_header(currentVariables);
+    else {
+      mgr.append_tabular_header(currentVariables, 0, av_index); // leading set
+
+      // output paired solution control values
+      const String& soln_cntl_label = solution_control_label();
+      StringArray tab_labels(2);
+      tab_labels[0] = "HF_" + soln_cntl_label;
+      tab_labels[1] = "LF_" + soln_cntl_label;
+      mgr.append_tabular_header(tab_labels);
+
+      ++av_index; // output completed for the active soln control
+      mgr.append_tabular_header(currentVariables, av_index,
+				currentVariables.tv() - av_index);
+    }
+
+    //mgr.append_tabular_header(currentResponse);
+    // Add HF/LF/Del prepends
+    StringArray labels = currentResponse.function_labels(); // copy
+    size_t q, num_qoi = qoi(), num_labels = labels.size();
+    if (responseMode == MODEL_DISCREPANCY)
+      for (q=0; q<num_qoi; ++q)
+	labels[q].insert(0, "Del_");
+    else {
+      for (q=0; q<num_qoi; ++q)
+	labels[q].insert(0, "HF_");
+      for (q=num_qoi; q<num_labels; ++q)
+	labels[q].insert(0, "LF_");
+    }
+    mgr.append_tabular_header(labels, true); // with endl
+    break;
+  }
+  case NO_SURROGATE:
+  case UNCORRECTED_SURROGATE: case AUTO_CORRECTED_SURROGATE:
+    mgr.create_tabular_header(currentVariables, currentResponse);
+    break;
+  }
+}
+
+
+const String& HierarchSurrModel::solution_control_label()
+{
+  Model&  hf_model = truth_model();
+  size_t adv_index = hf_model.solution_control_discrete_variable_index();
+  switch (hf_model.solution_control_variable_type()) {
+  case DISCRETE_DESIGN_RANGE:       case DISCRETE_DESIGN_SET_INT:
+  case DISCRETE_INTERVAL_UNCERTAIN: case DISCRETE_UNCERTAIN_SET_INT:
+  case DISCRETE_STATE_RANGE:        case DISCRETE_STATE_SET_INT:
+    return currentVariables.all_discrete_int_variable_labels()[adv_index];
+    break;
+  case DISCRETE_DESIGN_SET_STRING:  case DISCRETE_UNCERTAIN_SET_STRING:
+  case DISCRETE_STATE_SET_STRING:
+    return currentVariables.all_discrete_string_variable_labels()[adv_index];
+    break;
+  case DISCRETE_DESIGN_SET_REAL:  case DISCRETE_UNCERTAIN_SET_REAL:
+  case DISCRETE_STATE_SET_REAL:
+    return currentVariables.all_discrete_real_variable_labels()[adv_index];
+    break;
+  }
+}
+
+
+void HierarchSurrModel::
+derived_auto_graphics(const Variables& vars, const Response& resp)
+{
+  //parallelLib.output_manager().add_tabular_data(vars, interface_id(), resp);
+
+  // manage interface id(s) and resolution control
+  Model &lf_model = surrogate_model(), &hf_model = truth_model();
+  OutputManager& output_mgr = parallelLib.output_manager();
+
+  switch (responseMode) {
+  case AGGREGATED_MODELS: case MODEL_DISCREPANCY: // two models/resolutions
+  case BYPASS_SURROGATE: { // use same row len since commonly alternated
+
+    // output interface ids, potentially paired
+    bool mf = multifidelity();  StringArray iface_ids;
+    if (mf) { // sameInterfaceInstance can't be used since it varies at run time
+      if (truthModelKey.empty()) iface_ids.push_back("N/A");//preserve row len
+      else                       iface_ids.push_back(hf_model.interface_id());
+      if ( surrModelKey.empty()) iface_ids.push_back("N/A");//preserve row len
+      else                       iface_ids.push_back(lf_model.interface_id());
+    }
+    else
+      iface_ids.push_back(hf_model.interface_id());
+    output_mgr.add_tabular_data(iface_ids); // includes graphics cntr
+
+    // identify solution level control variable
+    size_t av_index = hf_model.solution_control_variable_index();
+    if (av_index == _NPOS)
+      output_mgr.add_tabular_data(vars);
+    else {
+      output_mgr.add_tabular_data(vars, 0, av_index);//leading set in spec order
+
+      // output paired solution control values
+      bool truth_key = !truthModelKey.empty(), surr_key = !surrModelKey.empty();
+      if (sameModelInstance && truth_key && surr_key) {
+	// HF soln cntl was overwritten by LF and must be temporarily restored
+	assign_truth_key();      add_tabular_solution_level_value(hf_model);
+	assign_surrogate_key();  add_tabular_solution_level_value(lf_model);
+      }
+      else { // HF and LF soln levels are not overlapping
+	if (truth_key)  add_tabular_solution_level_value(hf_model);
+	else output_mgr.add_tabular_scalar("N/A");// preserve consistent row len
+	if ( surr_key)  add_tabular_solution_level_value(lf_model);
+	else output_mgr.add_tabular_scalar("N/A");// preserve consistent row len
+      }
+
+      ++av_index; // output completed for the active soln control
+      output_mgr.add_tabular_data(vars, av_index, vars.tv()-av_index);//trailing
+    }
+     
+    output_mgr.add_tabular_data(resp);
+    break;
+  }
+  case NO_SURROGATE:
+    output_mgr.add_tabular_data(hf_model.current_variables(),
+				hf_model.interface_id(), resp);
+    break;
+  case UNCORRECTED_SURROGATE: case AUTO_CORRECTED_SURROGATE:
+    output_mgr.add_tabular_data(lf_model.current_variables(),
+				lf_model.interface_id(), resp);
+    break;
+  }
+}
+
+
+void HierarchSurrModel::add_tabular_solution_level_value(Model& model)
+{
+  OutputManager& output_mgr = parallelLib.output_manager();
+  switch (model.solution_control_variable_type()) {
+  case DISCRETE_DESIGN_RANGE:       case DISCRETE_DESIGN_SET_INT:
+  case DISCRETE_INTERVAL_UNCERTAIN: case DISCRETE_UNCERTAIN_SET_INT:
+  case DISCRETE_STATE_RANGE:        case DISCRETE_STATE_SET_INT:
+    output_mgr.add_tabular_scalar(model.solution_level_int_value());    break;
+  case DISCRETE_DESIGN_SET_STRING:  case DISCRETE_UNCERTAIN_SET_STRING:
+  case DISCRETE_STATE_SET_STRING:
+    output_mgr.add_tabular_scalar(model.solution_level_string_value()); break;
+  case DISCRETE_DESIGN_SET_REAL:  case DISCRETE_UNCERTAIN_SET_REAL:
+  case DISCRETE_STATE_SET_REAL:
+    output_mgr.add_tabular_scalar(model.solution_level_real_value());   break;
+  }
+}
+
+
 void HierarchSurrModel::compute_apply_delta(IntResponseMap& lf_resp_map)
 {
   // Incoming we have a completed LF evaluation that may be used to compute a
   // correction and may be the target of application of a correction.
 
   // First, test if a correction is previously available or can now be computed
-  DiscrepancyCorrection& delta_corr = deltaCorr[fidelity_keys()];
+  DiscrepancyCorrection& delta_corr = deltaCorr[activeKey];
   bool corr_comp = delta_corr.computed(), cache_for_pending_corr = false,
       quiet_flag = (outputLevel < NORMAL_OUTPUT);
   if (!corr_comp) {
@@ -1082,7 +1238,7 @@ void HierarchSurrModel::compute_apply_delta(IntResponseMap& lf_resp_map)
       // if corresponding LF response is complete, compute the delta
       IntRespMCIter lf_corr_cit = lf_resp_map.find(v_corr_cit->first);
       if (lf_corr_cit != lf_resp_map.end()) {
-        delta_corr.compute(v_corr_cit->second,truthResponseRef[truthModelKey],
+        delta_corr.compute(v_corr_cit->second, truthResponseRef[truthModelKey],
 			   lf_corr_cit->second, quiet_flag);
         corr_comp = true;
       }
@@ -1116,17 +1272,19 @@ void HierarchSurrModel::compute_apply_delta(IntResponseMap& lf_resp_map)
 
 
 void HierarchSurrModel::
-single_apply(const Variables& vars, Response& resp, const UShortArrayPair& keys)
+single_apply(const Variables& vars, Response& resp,
+	     const Pecos::ActiveKey& paired_key)
 {
   bool quiet_flag = (outputLevel < NORMAL_OUTPUT);
   bool apply_corr = true;
-  DiscrepancyCorrection& delta_corr = deltaCorr[keys];
+  DiscrepancyCorrection& delta_corr = deltaCorr[paired_key];
   if (!delta_corr.computed()) {
-    std::map<UShortArray, Response>::iterator it
-      = truthResponseRef.find(keys.second);
+    Pecos::ActiveKey truth_key, surr_key;
+    extract_model_keys(paired_key, truth_key, surr_key);
+    std::map<Pecos::ActiveKey, Response>::iterator it
+      = truthResponseRef.find(truth_key);
     if (it == truthResponseRef.end()) apply_corr = false; // not found
-    else
-      delta_corr.compute(vars, truthResponseRef[keys.second], resp, quiet_flag);
+    else delta_corr.compute(vars, it->second, resp, quiet_flag);
   }
   if (apply_corr)
     delta_corr.apply(vars, resp, quiet_flag);
@@ -1136,40 +1294,51 @@ single_apply(const Variables& vars, Response& resp, const UShortArrayPair& keys)
 void HierarchSurrModel::recursive_apply(const Variables& vars, Response& resp)
 {
   switch (correctionMode) {
-  case SINGLE_CORRECTION: case DEFAULT_CORRECTION: {
-    UShortArrayPair corr_index(surrModelKey, truthModelKey);
-    single_apply(vars, resp, corr_index);
+  case SINGLE_CORRECTION: case DEFAULT_CORRECTION:
+    single_apply(vars, resp, activeKey);
     break;
-  }
   case FULL_MODEL_FORM_CORRECTION: {
-    // assume a consistent level index from surrModelKey
-    size_t i, num_models = orderedModels.size();
-    UShortArrayPair corr_index(surrModelKey, surrModelKey);
-    for (i = surrModelKey.front(); i < num_models - 1; ++i) {
-      corr_index.first[0] = i; corr_index.second[0] = i+1;
-      single_apply(vars, resp, corr_index);
+    size_t num_models = orderedModels.size();
+    unsigned short i, lf_form = surrModelKey.retrieve_model_form();
+    // perform a 1D sweep starting from current surrModelKey; this could be
+    // part of a multidimensional sweep, so don't target truthModelKey at end
+    Pecos::ActiveKey paired_key;// = activeKey.copy();
+    paired_key.aggregate_keys(surrModelKey.copy(), surrModelKey.copy(),
+			      Pecos::SINGLE_REDUCTION);
+    for (i = lf_form; i < num_models - 1; ++i) {
+      paired_key.id(i); // consistent with current pair sequences
+      paired_key.assign_model_form(i+1, 0); // HF model form in KeyData[0]
+      paired_key.assign_model_form(i,   1); // LF model form in KeyData[1]
+      single_apply(vars, resp, paired_key);
     }
     break;
   }
   case FULL_SOLUTION_LEVEL_CORRECTION: {
-    // assume a consistent model index from surrModelKey[0]
-    if (surrModelKey.size() < 2) {
+    // assume a consistent model index from surrModelKey
+    size_t lf_lev = surrModelKey.retrieve_resolution_level();
+    if (lf_lev == SZ_MAX) {
       Cerr << "Error: FULL_SOLUTION_LEVEL_CORRECTION requires solution level "
 	   << "within model key." << std::endl;
       abort_handler(MODEL_ERROR);
     }
     size_t i, num_levels = surrogate_model().solution_levels();
-    UShortArrayPair corr_index(surrModelKey, surrModelKey);
-    for (i = surrModelKey[1]; i < num_levels - 1; ++i) {
-      corr_index.first[1] = i; corr_index.second[1] = i+1;
-      single_apply(vars, resp, corr_index);
+    // perform a 1D sweep starting from current surrModelKey; this could be
+    // part of a multidimensional sweep, so don't target truthModelKey at end
+    Pecos::ActiveKey paired_key;// = activeKey.copy();
+    paired_key.aggregate_keys(surrModelKey.copy(), surrModelKey.copy(),
+			      Pecos::SINGLE_REDUCTION);
+    for (i = lf_lev; i < num_levels - 1; ++i) {
+      paired_key.id(i); // consistent with current pair sequences
+      paired_key.assign_resolution_level(i+1, 0); //   fine res in KeyData[0]
+      paired_key.assign_resolution_level(i,   1); // coarse res in KeyData[1]
+      single_apply(vars, resp, paired_key);
     }
     break;
   }
-  case SEQUENCE_CORRECTION: // Apply sequence of discrepancy corrections
-    for (size_t i = 0; i < corrSequence.size(); ++i)
-      single_apply(vars, resp, corrSequence[i]);
-    break;
+  //case SEQUENCE_CORRECTION: // apply sequence of discrepancy corrections
+  //  for (size_t i = 0; i < corrSequence.size(); ++i)
+  //    single_apply(vars, resp, corrSequence[i]);
+  //  break;
   }
 }
 
@@ -1223,52 +1392,60 @@ void HierarchSurrModel::resize_response(bool use_virtual_counts)
 }
 
 
-void HierarchSurrModel::component_parallel_mode(short mode)
+void HierarchSurrModel::component_parallel_mode(short par_mode)
 {
   // mode may be correct, but can't guarantee active parallel config is in sync
   //if (componentParallelMode == mode)
   //  return; // already in correct parallel mode
 
+  // -----------------------------
   // terminate previous serve mode (if active)
-  UShortArray new_key;
-  switch (mode) {
-  case SURROGATE_MODEL: new_key =  surrModelKey; break;
-  case TRUTH_MODEL:     new_key = truthModelKey; break;
-  //default: // leave new_key empty
-  }
+  // -----------------------------
   // TO DO: restarting servers for a change in soln control index w/o change
   // in model may be overkill (send of state vars in vars buffer sufficient?)
   bool restart = false;
-  if (componentParallelMode != mode || componentParallelKey != new_key) {
-    if (componentParallelMode) stop_model(componentParallelKey.front());
+  if (componentParallelMode != par_mode || componentParallelKey != activeKey) {
+    Pecos::ActiveKey old_hf_key, old_lf_key;
+    extract_model_keys(componentParallelKey, old_hf_key, old_lf_key,
+		       componentParallelMode);
+    switch (componentParallelMode) {
+    case SURROGATE_MODEL_MODE:
+      stop_model(old_lf_key.retrieve_model_form());  break;
+    case     TRUTH_MODEL_MODE:
+      stop_model(old_hf_key.retrieve_model_form());  break;
+    }
     restart = true;
   }
 
+  // ------------------------------------------------------------
   // set ParallelConfiguration for new mode and retrieve new data
-  if (mode == TRUTH_MODEL) { // new mode
+  // ------------------------------------------------------------
+  if (par_mode == TRUTH_MODEL_MODE) { // new mode
     // activation delegated to HF model
   }
-  else if (mode == SURROGATE_MODEL) { // new mode
+  else if (par_mode == SURROGATE_MODEL_MODE) { // new mode
     // activation delegated to LF model
   }
 
+  // -----------------------
   // activate new serve mode (matches HierarchSurrModel::serve_run(pl_iter)).
+  // -----------------------
   // These bcasts match the outer parallel context (pl_iter).
   if (restart && modelPCIter->mi_parallel_level_defined(miPLIndex)) {
     const ParallelLevel& mi_pl = modelPCIter->mi_parallel_level(miPLIndex);
     if (mi_pl.server_communicator_size() > 1) {
-      parallelLib.bcast(mode, mi_pl);
-      if (mode) { // send model index state corresponding to active mode
+      parallelLib.bcast(par_mode, mi_pl);
+      if (par_mode) { // send model index state corresponding to active mode
 	MPIPackBuffer send_buff;
-	if      (mode == SURROGATE_MODEL) send_buff << surrModelKey;
-	else if (mode == TRUTH_MODEL)     send_buff << truthModelKey;
-	send_buff << responseMode;
+	send_buff << responseMode << activeKey;
+	//int buffer_len = send_buff.size();
+	//parallelLib.bcast(buffer_len, mi_pl); // avoid this overhead
  	parallelLib.bcast(send_buff, mi_pl);
       }
     }
   }
 
-  componentParallelMode = mode;  componentParallelKey = new_key;
+  componentParallelMode = par_mode;  componentParallelKey = activeKey;
 }
 
 
@@ -1279,38 +1456,37 @@ void HierarchSurrModel::serve_run(ParLevLIter pl_iter, int max_eval_concurrency)
   // manage LF model and HF model servers, matching communication from
   // HierarchSurrModel::component_parallel_mode()
   // Note: could consolidate logic by bcasting componentParallelKey,
-  //       except for special handling of responseMode for TRUTH_MODEL.
-  componentParallelMode = 1;
+  //       except for special handling of responseMode for TRUTH_MODEL_MODE.
+  componentParallelMode = 1; // dummy value to enter loop
   while (componentParallelMode) {
     parallelLib.bcast(componentParallelMode, *pl_iter); // outer context
     if (componentParallelMode) {
-      // use a quick size estimation for recv buffer i/o size bcast
-      MPIPackBuffer send_buff;
-       // Note: LF approxDataKeys get appended but not model keys
-      UShortArray model_key(2,0);
-      send_buff << model_key << responseMode;
-      int buffer_len = send_buff.size();
-      // receive model state from HierarchSurrModel::component_parallel_mode()
-      MPIUnpackBuffer recv_buffer(buffer_len);
-      parallelLib.bcast(recv_buffer, *pl_iter);
-      recv_buffer >> model_key >> responseMode;
+      // Local size estimation for recv buffer can't simply use activeKey
+      // since previous key may be a singleton from bypass_surrogate_mode():
+      //MPIPackBuffer send_buff;  send_buff << responseMode << activeKey;
+      //int buffer_len = send_buff.size();
+      //
+      // This approach works, but avoid the additional bcast overhead:
+      //parallelLib.bcast(buffer_len, *pl_iter);
 
-      if (componentParallelMode == SURROGATE_MODEL) {
-	// update model key
-	surrogate_model_key(model_key); // set LF model + soln index
-	// serve active LF model
+      // receive model state from HierarchSurrModel::component_parallel_mode()
+      MPIUnpackBuffer recv_buffer(modeKeyBufferSize);
+      parallelLib.bcast(recv_buffer, *pl_iter);
+      recv_buffer >> responseMode >> activeKey; // replace previous/initial key
+
+      active_model_key(activeKey); // updates {truth,surr}ModelKey
+      if (componentParallelMode == SURROGATE_MODEL_MODE) {
+	// serve active LF model:
 	surrogate_model().serve_run(pl_iter, max_eval_concurrency);
 	// Note: ignores erroneous BYPASS_SURROGATE
       }
-      else if (componentParallelMode == TRUTH_MODEL) {
-	// update model key
-	truth_model_key(model_key); // set HF model + soln index
-	// serve active HF model, employing correct iterator concurrency
+      else if (componentParallelMode == TRUTH_MODEL_MODE) {
+	// serve active HF model, employing correct iterator concurrency:
 	Model& hf_model = truth_model();
 	switch (responseMode) {
 	case UNCORRECTED_SURROGATE:
-	  Cerr << "Error: setting parallel mode to TRUTH_MODEL is erroneous "
-	       << "for a response mode of UNCORRECTED_SURROGATE." << std::endl;
+	  Cerr << "Error: cannot set parallel mode to TRUTH_MODEL_MODE for a "
+	       << "response mode of UNCORRECTED_SURROGATE." << std::endl;
 	  abort_handler(-1);                                              break;
 	case AUTO_CORRECTED_SURROGATE:
 	  hf_model.serve_run(pl_iter, hf_model.derivative_concurrency()); break;
@@ -1318,274 +1494,6 @@ void HierarchSurrModel::serve_run(ParLevLIter pl_iter, int max_eval_concurrency)
 	  hf_model.serve_run(pl_iter, max_eval_concurrency);              break;
 	}
       }
-    }
-  }
-}
-
-
-void HierarchSurrModel::init_model(Model& model)
-{
-  // Set the low/high fidelity model variable descriptors with the variable
-  // descriptors from currentVariables (eliminates the need to replicate
-  // variable descriptors in the input file).  This only needs to be performed
-  // once (as opposed to the other updates above).  However, performing this set
-  // in the constructor does not propagate properly for multiple surrogates/
-  // nestings since the sub-model construction (and therefore any sub-sub-model
-  // constructions) must finish before calling any set functions on it.  That
-  // is, after-the-fact updating in constructors only propagates one level,
-  // whereas before-the-fact updating in compute/build functions propagates
-  // multiple levels.
-  if (!approxBuilds) {
-    size_t num_cv  = currentVariables.cv(),  num_div = currentVariables.div(),
-           num_drv = currentVariables.drv(), num_dsv = currentVariables.dsv();
-    if (num_cv && num_cv == model.cv())
-      model.continuous_variable_labels(
-	currentVariables.continuous_variable_labels());
-    if (num_div && num_div == model.div())
-      model.discrete_int_variable_labels(
-        currentVariables.discrete_int_variable_labels());
-    if (num_drv && num_drv == model.drv())
-      model.discrete_real_variable_labels(
-        currentVariables.discrete_real_variable_labels());
-    if (num_dsv && num_dsv == model.dsv())
-      model.discrete_string_variable_labels(
-        currentVariables.discrete_string_variable_labels());
-  }
-
-  // linear constraints
-  if ( ( userDefinedConstraints.num_linear_ineq_constraints() || 
-	 userDefinedConstraints.num_linear_eq_constraints() ) &&
-       currentVariables.cv()  == model.cv()  &&
-       currentVariables.div() == model.div() &&
-       currentVariables.drv() == model.drv() ) {
-    model.linear_ineq_constraint_coeffs(
-      userDefinedConstraints.linear_ineq_constraint_coeffs());
-    model.linear_ineq_constraint_lower_bounds(
-      userDefinedConstraints.linear_ineq_constraint_lower_bounds());
-    model.linear_ineq_constraint_upper_bounds(
-      userDefinedConstraints.linear_ineq_constraint_upper_bounds());
-
-    model.linear_eq_constraint_coeffs(
-      userDefinedConstraints.linear_eq_constraint_coeffs());
-    model.linear_eq_constraint_targets(
-      userDefinedConstraints.linear_eq_constraint_targets());
-  }
-
-  // nonlinear constraints
-  if (userDefinedConstraints.num_nonlinear_ineq_constraints()) {
-    model.nonlinear_ineq_constraint_lower_bounds(
-      userDefinedConstraints.nonlinear_ineq_constraint_lower_bounds());
-    model.nonlinear_ineq_constraint_upper_bounds(
-      userDefinedConstraints.nonlinear_ineq_constraint_upper_bounds());
-  }
-  if (userDefinedConstraints.num_nonlinear_eq_constraints())
-    model.nonlinear_eq_constraint_targets(
-      userDefinedConstraints.nonlinear_eq_constraint_targets());
-
-  short active_view = currentVariables.view().first;
-  if (active_view == RELAXED_ALL || active_view == MIXED_ALL)
-    return;
-
-  // update model with inactive currentVariables/userDefinedConstraints data.
-  // For efficiency, we avoid doing this on every evaluation, instead calling
-  // it from a pre-execution initialization context (initialize_mapping()).
-  size_t num_icv  = currentVariables.icv(),  num_idiv = currentVariables.idiv(),
-         num_idrv = currentVariables.idrv(), num_idsv = currentVariables.idsv();
-  if (num_icv && num_icv == model.icv()) {
-    model.inactive_continuous_variables(
-      currentVariables.inactive_continuous_variables());
-    model.inactive_continuous_lower_bounds(
-      userDefinedConstraints.inactive_continuous_lower_bounds());
-    model.inactive_continuous_upper_bounds(
-      userDefinedConstraints.inactive_continuous_upper_bounds());
-    if (!approxBuilds)
-      model.inactive_continuous_variable_labels(
-        currentVariables.inactive_continuous_variable_labels());
-  }
-  if (num_idiv && num_idiv == model.idiv()) {
-    model.inactive_discrete_int_variables(
-      currentVariables.inactive_discrete_int_variables());
-    model.inactive_discrete_int_lower_bounds(
-      userDefinedConstraints.inactive_discrete_int_lower_bounds());
-    model.inactive_discrete_int_upper_bounds(
-      userDefinedConstraints.inactive_discrete_int_upper_bounds());
-    if (!approxBuilds)
-      model.inactive_discrete_int_variable_labels(
-        currentVariables.inactive_discrete_int_variable_labels());
-  }
-  if (num_idrv && num_idrv == model.idrv()) {
-    model.inactive_discrete_real_variables(
-      currentVariables.inactive_discrete_real_variables());
-    model.inactive_discrete_real_lower_bounds(
-      userDefinedConstraints.inactive_discrete_real_lower_bounds());
-    model.inactive_discrete_real_upper_bounds(
-      userDefinedConstraints.inactive_discrete_real_upper_bounds());
-    if (!approxBuilds)
-      model.inactive_discrete_real_variable_labels(
-        currentVariables.inactive_discrete_real_variable_labels());
-  }
-  if (num_idsv && num_idsv == model.idsv()) {
-    model.inactive_discrete_string_variables(
-      currentVariables.inactive_discrete_string_variables());
-    if (!approxBuilds)
-      model.inactive_discrete_string_variable_labels(
-        currentVariables.inactive_discrete_string_variable_labels());
-  }
-}
-
-
-void HierarchSurrModel::update_model(Model& model)
-{
-  // update model with currentVariables/userDefinedConstraints data.  In the
-  // hierarchical case, the variables view in LF/HF models correspond to the
-  // currentVariables view.  Note: updating the bounds is not strictly necessary
-  // in common usage for the HF model (when a single model evaluated only at the
-  // TR center), but is needed for the LF model and could be relevant in cases
-  // where the HF model involves additional surrogates/nestings.
-
-  // active variable vals/bnds (active labels, inactive vals/bnds/labels, and
-  // linear/nonlinear constraint coeffs/bnds updated in init_model())
-  if (currentVariables.cv()) {
-    model.continuous_variables(currentVariables.continuous_variables());
-    model.continuous_lower_bounds(
-      userDefinedConstraints.continuous_lower_bounds());
-    model.continuous_upper_bounds(
-      userDefinedConstraints.continuous_upper_bounds());
-  }
-  if (currentVariables.div()) {
-    model.discrete_int_variables(currentVariables.discrete_int_variables());
-    model.discrete_int_lower_bounds(
-      userDefinedConstraints.discrete_int_lower_bounds());
-    model.discrete_int_upper_bounds(
-      userDefinedConstraints.discrete_int_upper_bounds());
-  }
-  if (currentVariables.drv()) {
-    model.discrete_real_variables(currentVariables.discrete_real_variables());
-    model.discrete_real_lower_bounds(
-      userDefinedConstraints.discrete_real_lower_bounds());
-    model.discrete_real_upper_bounds(
-      userDefinedConstraints.discrete_real_upper_bounds());
-  }
-  if (currentVariables.dsv())
-    model.discrete_string_variables(
-      currentVariables.discrete_string_variables());
-}
-
-
-void HierarchSurrModel::update_from_model(Model& model)
-{
-  // update complement of active currentVariables using model data.
-
-  // Note: this approach makes a strong assumption about non-active variable
-  // consistency, which is limiting.  Better to perform an individual variable
-  // mapping (e.g., solution control) when needed and allow for a different
-  // ADV position.
-
-  // active variable vals/bnds (active labels, inactive vals/bnds/labels, and
-  // linear/nonlinear constraint coeffs/bnds updated in init_model())
-
-  // *** TO DO: make this robust to differing inactive parameterizations using 
-  // tag lookups.  Omit mappings for failed lookups.
-
-  const Variables&   vars = model.current_variables();
-  const Constraints& cons = model.user_defined_constraints();
-
-  const RealVector& acv = vars.all_continuous_variables();
-  StringMultiArrayConstView acv_labels = vars.all_continuous_variable_labels();
-  const RealVector& acv_l_bnds = cons.all_continuous_lower_bounds();
-  const RealVector& acv_u_bnds = cons.all_continuous_upper_bounds();
-  StringMultiArrayConstView cv_acv_labels
-    = currentVariables.all_continuous_variable_labels();
-  size_t i, index, cv_begin = vars.cv_start(), num_cv = vars.cv(),
-    cv_end = cv_begin + num_cv, num_acv = vars.acv();
-  for (i=0; i<cv_begin; ++i) {
-    index = find_index(cv_acv_labels, acv_labels[i]);
-    if (index != _NPOS) {
-      currentVariables.all_continuous_variable(acv[i], index);
-      userDefinedConstraints.all_continuous_lower_bound(acv_l_bnds[i], index);
-      userDefinedConstraints.all_continuous_upper_bound(acv_u_bnds[i], index);
-    }
-  }
-  for (i=cv_end; i<num_acv; ++i) {
-    index = find_index(cv_acv_labels, acv_labels[i]);
-    if (index != _NPOS) {
-      currentVariables.all_continuous_variable(acv[i], index);
-      userDefinedConstraints.all_continuous_lower_bound(acv_l_bnds[i], index);
-      userDefinedConstraints.all_continuous_upper_bound(acv_u_bnds[i], index);
-    }
-  }
-
-  const IntVector& adiv = vars.all_discrete_int_variables();
-  StringMultiArrayConstView adiv_labels
-    = vars.all_discrete_int_variable_labels();
-  const IntVector& adiv_l_bnds = cons.all_discrete_int_lower_bounds();
-  const IntVector& adiv_u_bnds = cons.all_discrete_int_upper_bounds();
-  StringMultiArrayConstView cv_adiv_labels
-    = currentVariables.all_discrete_int_variable_labels();
-  size_t div_begin = vars.div_start(), num_div = vars.div(),
-    div_end = div_begin + num_div, num_adiv = vars.adiv();
-  for (i=0; i<div_begin; ++i) {
-    index = find_index(cv_adiv_labels, adiv_labels[i]);
-    if (index != _NPOS) {
-      currentVariables.all_discrete_int_variable(adiv[i], index);
-      userDefinedConstraints.all_discrete_int_lower_bound(adiv_l_bnds[i],index);
-      userDefinedConstraints.all_discrete_int_upper_bound(adiv_u_bnds[i],index);
-    }
-  }
-  for (i=div_end; i<num_adiv; ++i) {
-    index = find_index(cv_adiv_labels, adiv_labels[i]);
-    if (index != _NPOS) {
-      currentVariables.all_discrete_int_variable(adiv[i], index);
-      userDefinedConstraints.all_discrete_int_lower_bound(adiv_l_bnds[i],index);
-      userDefinedConstraints.all_discrete_int_upper_bound(adiv_u_bnds[i],index);
-    }
-  }
-
-  size_t dsv_begin = vars.dsv_start(), num_dsv = vars.dsv(),
-    dsv_end = dsv_begin + num_dsv, num_adsv = vars.adsv();
-  StringMultiArrayConstView adsv = vars.all_discrete_string_variables();
-  StringMultiArrayConstView adsv_labels
-    = vars.all_discrete_string_variable_labels();
-  StringMultiArrayConstView cv_adsv_labels
-    = currentVariables.all_discrete_string_variable_labels();
-  for (i=0; i<dsv_begin; ++i) {
-    index = find_index(cv_adsv_labels, adsv_labels[i]);
-    if (index != _NPOS)
-      currentVariables.all_discrete_string_variable(adsv[i], index);
-  }
-  for (i=dsv_end; i<num_adsv; ++i) {
-    index = find_index(cv_adsv_labels, adsv_labels[i]);
-    if (index != _NPOS)
-      currentVariables.all_discrete_string_variable(adsv[i], index);
-  }
-
-  const RealVector& adrv = vars.all_discrete_real_variables();
-  StringMultiArrayConstView adrv_labels
-    = vars.all_discrete_real_variable_labels();
-  const RealVector& adrv_l_bnds = cons.all_discrete_real_lower_bounds();
-  const RealVector& adrv_u_bnds = cons.all_discrete_real_upper_bounds();
-  StringMultiArrayConstView cv_adrv_labels
-    = currentVariables.all_discrete_real_variable_labels();
-  size_t drv_begin = vars.drv_start(), num_drv = vars.drv(),
-    drv_end = drv_begin + num_drv, num_adrv = vars.adrv();
-  for (i=0; i<drv_begin; ++i) {
-    index = find_index(cv_adrv_labels, adrv_labels[i]);
-    if (index != _NPOS) {
-      currentVariables.all_discrete_real_variable(adrv[i], index);
-      userDefinedConstraints.all_discrete_real_lower_bound(adrv_l_bnds[i],
-							   index);
-      userDefinedConstraints.all_discrete_real_upper_bound(adrv_u_bnds[i],
-							   index);
-    }
-  }
-  for (i=drv_end; i<num_adrv; ++i) {
-    index = find_index(cv_adrv_labels, adrv_labels[i]);
-    if (index != _NPOS) {
-      currentVariables.all_discrete_real_variable(adrv[i], index);
-      userDefinedConstraints.all_discrete_real_lower_bound(adrv_l_bnds[i],
-							   index);
-      userDefinedConstraints.all_discrete_real_upper_bound(adrv_u_bnds[i],
-							   index);
     }
   }
 }

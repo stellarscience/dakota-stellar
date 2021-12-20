@@ -124,10 +124,8 @@ push_parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) { // first pass
     switch (dist_param) {
     case     GA_ALPHA: alphaPoly = param - 1.; break;// alpha stat to alpha poly
     case GENLAG_ALPHA: alphaPoly = param;      break;
@@ -137,13 +135,13 @@ push_parameter(short dist_param, Real param)
     switch (dist_param) {
     case GA_ALPHA: {
       Real ap = param - 1.; // alpha stat to beta poly
-      if (real_compare(alphaPoly, ap)) parametricUpdate = false;
-      else { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+      if (!real_compare(alphaPoly, ap))
+	{ alphaPoly = ap;  reset_gauss(); }
       break;
     }
     case GENLAG_ALPHA:
-      if (real_compare(alphaPoly, param)) parametricUpdate = false;
-      else { alphaPoly = param; parametricUpdate = true; reset_gauss(); }
+      if (!real_compare(alphaPoly, param))
+	{ alphaPoly = param;  reset_gauss(); }
       break;
     }
 }

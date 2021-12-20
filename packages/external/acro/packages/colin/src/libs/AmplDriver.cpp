@@ -161,6 +161,8 @@ namespace colin
 
 int AMPL_driver(int argc, char* argv[], const char* codename)
 {
+  using utilib::operator<<;
+
    InitializeTiming();
 
    if ((argc != 3) || (argv == NULL))

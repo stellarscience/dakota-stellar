@@ -20,43 +20,23 @@ namespace Pecos {
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_data_trans() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~DataTransformation). */
-DataTransformation::DataTransformation(BaseConstructor):
-  dataTransRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "DataTransformation::DataTransformation(BaseConstructor) called to "
-        << "build base class for letter." << std::endl;
-#endif
-}
+    letter IS the representation, its rep pointer is set to NULL. */
+DataTransformation::DataTransformation(BaseConstructor)
+{ /* empty ctor */ }
 
 
-/** The default constructor: dataTransRep is NULL in this case.  This
-    makes it necessary to check for NULL in the copy constructor,
-    assignment operator, and destructor. */
-DataTransformation::DataTransformation(): dataTransRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "DataTransformation::DataTransformation() called to build empty "
-        << "envelope." << std::endl;
-#endif
-}
+/** The default constructor: dataTransRep is NULL in this case. */
+DataTransformation::DataTransformation()
+{ /* empty ctor */ }
 
 
 /** Envelope constructor only needs to extract enough data to properly
     execute get_data_trans, since DataTransformation(BaseConstructor)
     builds the actual base class data for the derived transformations. */
 DataTransformation::DataTransformation(const String& data_trans_type):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "DataTransformation::DataTransformation(string&) called to "
-        << "instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  dataTransRep = get_data_trans(data_trans_type);
+  dataTransRep(get_data_trans(data_trans_type))
+{
   if ( !dataTransRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -64,97 +44,40 @@ DataTransformation::DataTransformation(const String& data_trans_type):
 
 /** Used only by the envelope constructor to initialize dataTransRep to the 
     appropriate derived type. */
-DataTransformation* DataTransformation::
-get_data_trans(const String& data_trans_type)
+std::shared_ptr<DataTransformation>
+DataTransformation::get_data_trans(const String& data_trans_type)
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_data_trans(string&)."
-        << std::endl;
-#endif
-
   if (data_trans_type == "inverse_fourier_shinozuka_deodatis" ||
       data_trans_type == "inverse_fourier_grigoriu")
-    return new FourierInverseTransformation(data_trans_type);
+    return std::make_shared<FourierInverseTransformation>(data_trans_type);
   else if (data_trans_type == "inverse_kl")
-    return new KarhunenLoeveInverseTransformation();
+    return std::make_shared<KarhunenLoeveInverseTransformation>();
   else if (data_trans_type == "inverse_sampling")
-    return new SamplingInverseTransformation();
+    return std::make_shared<SamplingInverseTransformation>();
   else {
     PCerr << "Error: DataTransformation type " << data_trans_type
 	  << " not available." << std::endl;
-    return NULL;
+    return std::shared_ptr<DataTransformation>();
   }
 }
 
 
-/** Copy constructor manages sharing of dataTransRep and incrementing
-    of referenceCount. */
-DataTransformation::DataTransformation(const DataTransformation& data_trans)
-{
-  // Increment new (no old to decrement)
-  dataTransRep = data_trans.dataTransRep;
-  if (dataTransRep) // Check for an assignment of NULL
-    dataTransRep->referenceCount++;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "DataTransformation::DataTransformation(DataTransformation&)"
-        << std::endl;
-  if (dataTransRep)
-    PCout << "dataTransRep referenceCount = " << dataTransRep->referenceCount
-	  << std::endl;
-#endif
-}
+/** Copy constructor manages sharing of dataTransRep. */
+DataTransformation::DataTransformation(const DataTransformation& data_trans):
+  dataTransRep(data_trans.dataTransRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old dataTransRep,
-    assigns new dataTransRep, and increments referenceCount for new
-    dataTransRep. */
 DataTransformation DataTransformation::
 operator=(const DataTransformation& data_trans)
 {
-  if (dataTransRep != data_trans.dataTransRep) { // normal case: old != new
-    // Decrement old
-    if (dataTransRep) // Check for null pointer
-      if (--dataTransRep->referenceCount == 0) 
-	delete dataTransRep;
-    // Assign and increment new
-    dataTransRep = data_trans.dataTransRep;
-    if (dataTransRep) // Check for an assignment of NULL
-      dataTransRep->referenceCount++;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "DataTransformation::operator=(DataTransformation&)" << std::endl;
-  if (dataTransRep)
-    PCout << "dataTransRep referenceCount = " << dataTransRep->referenceCount
-	  << std::endl;
-#endif
-
+  dataTransRep = data_trans.dataTransRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes dataTransRep
-    when referenceCount reaches zero. */
 DataTransformation::~DataTransformation()
-{ 
-  // Check for NULL pointer 
-  if (dataTransRep) {
-    --dataTransRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "dataTransRep referenceCount decremented to " 
-	  << dataTransRep->referenceCount << std::endl;
-#endif
-    if (dataTransRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting dataTransRep" << std::endl;
-#endif
-      delete dataTransRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 void DataTransformation::

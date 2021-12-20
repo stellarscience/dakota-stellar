@@ -15,11 +15,11 @@ add_executable(complete_doe exec/doe/complete_doe.cpp)
 add_executable(xu           exec/doe/xu.c)
 add_executable(xu_doe       exec/doe/xu_doe.cpp)
 
-target_link_libraries(complete_doe utilib ${Boost_LIBRARIES})
-target_link_libraries(xu utilib ${Boost_LIBRARIES})
+target_link_libraries(complete_doe utilib)
+target_link_libraries(xu utilib)
 # Force CXX linker since depends on libutilib, but is a C source
 set_target_properties(xu PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(xu_doe utilib ${Boost_LIBRARIES})
+target_link_libraries(xu_doe utilib)
 
 if(NOT MSVC)# This will need a huge port to work on win32 native
   install(TARGETS timer  DESTINATION bin)

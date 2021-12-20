@@ -233,8 +233,6 @@ private:
    static bool register_aux_functions();
 };
 
-} // namespace utilib
-
 
 /// Copy doubles from a MixedIntVars object into a STL vector
 inline std::vector<double>& operator<< (std::vector<double>& buff, 
@@ -386,8 +384,8 @@ vars << buff.Real();
 return vars;
 }
 
-namespace utilib {
 DEFINE_FULL_ANY_EXTENSIONS(utilib::MixedIntVars);
+
 } // namespace utilib
 
 #endif

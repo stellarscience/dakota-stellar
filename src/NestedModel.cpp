@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -21,10 +22,6 @@
 static const char rcsId[]="@(#) $Id: NestedModel.cpp 7024 2010-10-16 01:24:42Z mseldre $";
 
 //#define DEBUG
-
-// define special values for componentParallelMode
-#define OPTIONAL_INTERFACE 1
-#define SUB_MODEL          2
 
 
 namespace Dakota {
@@ -830,6 +827,7 @@ void NestedModel::init_sub_iterator()
     copy_data(secondary_resp_coeffs, secondaryRespCoeffs, 0,(int)numSubIterFns);
     subIterMappedSec = secondaryRespCoeffs.numRows();
   }
+  subIterator.nested_response_mappings(primaryRespCoeffs, secondaryRespCoeffs);
 }
 
 
@@ -1326,10 +1324,10 @@ void NestedModel::derived_evaluate(const ActiveSet& set)
 	 << "--\nNestedModel Evaluation " << std::setw(4) << nestedModelEvalCntr
 	 << ": performing optional interface mapping\n-------------------------"
 	 << "-----------------------------------------\n";
-    component_parallel_mode(OPTIONAL_INTERFACE);
+    component_parallel_mode(INTERFACE_MODE);
     if (hierarchicalTagging) {
-      String eval_tag = evalTagPrefix + '.' + 
-	boost::lexical_cast<String>(nestedModelEvalCntr);
+      String eval_tag = evalTagPrefix + '.' +
+	std::to_string(nestedModelEvalCntr);
       // don't apply a redundant interface eval id
       bool append_iface_tag = false;
       optionalInterface.eval_tag_prefix(eval_tag, append_iface_tag);
@@ -1364,12 +1362,12 @@ void NestedModel::derived_evaluate(const ActiveSet& set)
     Cout << "\n-------------------------------------------------\nNestedModel "
 	 << "Evaluation " << std::setw(4) << nestedModelEvalCntr << ": running "
 	 << "sub_iterator\n-------------------------------------------------\n";
-    component_parallel_mode(SUB_MODEL);
+    component_parallel_mode(SUB_MODEL_MODE);
     update_sub_model(currentVariables, userDefinedConstraints);
     subIterator.response_results_active_set(sub_iterator_set);
     if (hierarchicalTagging) {
-      String eval_tag = evalTagPrefix + '.' + 
-	boost::lexical_cast<String>(nestedModelEvalCntr);
+      String eval_tag = evalTagPrefix + '.' +
+	std::to_string(nestedModelEvalCntr);
       subIterator.eval_tag_prefix(eval_tag);
     }
 
@@ -1504,7 +1502,7 @@ const IntResponseMap& NestedModel::derived_synchronize()
 
   IntIntMIter id_it; IntRespMCIter r_cit;
   if (!optInterfacePointer.empty()) {
-    component_parallel_mode(OPTIONAL_INTERFACE);
+    component_parallel_mode(INTERFACE_MODE);
 
     ParConfigLIter pc_iter = parallelLib.parallel_configuration_iterator();
     parallelLib.parallel_configuration_iterator(modelPCIter);
@@ -1531,7 +1529,7 @@ const IntResponseMap& NestedModel::derived_synchronize()
 
   if (!subIteratorPRPQueue.empty()) {
     // schedule subIteratorPRPQueue jobs
-    component_parallel_mode(SUB_MODEL);
+    component_parallel_mode(SUB_MODEL_MODE);
     subIteratorSched.numIteratorJobs = subIteratorPRPQueue.size();
     subIteratorSched.schedule_iterators(*this, subIterator);
     // overlay response sets (no rekey or cache necessary)
@@ -1896,7 +1894,7 @@ iterator_response_overlay(const Response& sub_iterator_response,
 
 void NestedModel::
 iterator_error_estimation(const RealVector& sub_iterator_errors,
-			  RealVector& mapped_errors)
+        RealVector& mapped_errors)
 {
   // In the future, could be overlaid with optional interface error estimates,
   // but for now, assume these are zero (e.g., deterministic mappings have no
@@ -1904,12 +1902,12 @@ iterator_error_estimation(const RealVector& sub_iterator_errors,
 
   if (sub_iterator_errors.empty()) {
     Cerr << "Error: sub_iterator_errors are undefined in NestedModel::"
-	 << "iterator_error_estimation().\n       Check error estimation "
-	 << "support in sub-method." << std::endl;
+   << "iterator_error_estimation().\n       Check error estimation "
+   << "support in sub-method." << std::endl;
     abort_handler(MODEL_ERROR);
   }
 
-  size_t i, j, m_index, num_mapped_fns = currentResponse.num_functions();
+  size_t i, j, k, m_index, num_mapped_fns = currentResponse.num_functions();
   if (static_cast<unsigned>(mapped_errors.length()) != num_mapped_fns)
     mapped_errors.size(num_mapped_fns); // init to 0 
   else
@@ -1921,18 +1919,29 @@ iterator_error_estimation(const RealVector& sub_iterator_errors,
   //       always standard (sqrt of estimator variance of central/std moment)
 
   // [W]{S}:
-  Real sum, term, coeff;
+  Real sum, term, coeff, coeff2;
   for (i=0; i<subIterMappedPri; ++i) {
     if (identityRespMap)
       mapped_errors[i] = sub_iterator_errors[i];
     else {
       sum = 0.;
       for (j=0; j<numSubIterFns; ++j) {
-	coeff = primaryRespCoeffs(i,j);
-	if (coeff != 0.) { // avoid propagation of nan/inf for no mapping
-	  term = coeff * sub_iterator_errors[j]; // [W]{S}
-	  sum += term * term;
-	}
+        coeff = primaryRespCoeffs(i,j);
+        if (coeff != 0.) { // avoid propagation of nan/inf for no mapping
+          term = coeff * sub_iterator_errors[j]; // [W]{S}
+          sum += term * term;
+        }
+      }
+      //FM: Covariance part for primary response 2*Cov(a X1, b X2) <= 2*|a|*|b|*sqrt{V[X1]*V[X2]}
+      for (j=0; j<numSubIterFns-1; ++j) {
+        coeff = primaryRespCoeffs(i,j);
+        for (k=j+1; k<numSubIterFns; ++k) {
+          coeff2 = primaryRespCoeffs(i,k);
+          if (coeff != 0. && coeff2 != 0.) { // avoid propagation of nan/inf for no mapping
+            term = 2. * std::abs(coeff) * std::abs(coeff2) * std::sqrt(sub_iterator_errors[j]*sub_iterator_errors[j] * sub_iterator_errors[k]*sub_iterator_errors[k]); // 2*Cov(a X1, b X2) <= 2*|a|*|b|*sqrt{V[X1]*V[X2]}
+            sum += term;
+          }
+        }
       }
       mapped_errors[i] = std::sqrt(sum);
     }
@@ -1949,11 +1958,22 @@ iterator_error_estimation(const RealVector& sub_iterator_errors,
     else {
       sum = 0.;
       for (j=0; j<numSubIterFns; ++j) {
-	coeff = secondaryRespCoeffs(i,j);
-	if (coeff != 0.) { // avoid propagation of nan/inf for no mapping
-	  term = coeff * sub_iterator_errors[j]; // [W]{S}
-	  sum += term * term;
-	}
+        coeff = secondaryRespCoeffs(i,j);
+        if (coeff != 0.) { // avoid propagation of nan/inf for no mapping
+          term = coeff * sub_iterator_errors[j]; // [W]{S}
+          sum += term * term;
+        }
+      }
+      //FM: Covariance bound for secondary response 2*Cov(a X1, b X2) <= 2*|a|*|b|*sqrt{V[X1]*V[X2]}
+      for (j=0; j<numSubIterFns-1; ++j) {
+        coeff = secondaryRespCoeffs(i,j);
+        for (k=j+1; k<numSubIterFns; ++k) {
+          coeff2 = secondaryRespCoeffs(i,k);
+          if (coeff != 0. && coeff2 != 0.) { // avoid propagation of nan/inf for no mapping
+            term = 2. * std::abs(coeff) * std::abs(coeff2) * std::sqrt(sub_iterator_errors[j]*sub_iterator_errors[j] * sub_iterator_errors[k]*sub_iterator_errors[k]); // 2*Cov(a X1, b X2) <= 2*a|*|b|*sqrt{V[X1]*V[X2]}
+            sum += term;
+          }
+        }
       }
       mapped_errors[m_index] = std::sqrt(sum);
     }
@@ -1987,7 +2007,7 @@ void NestedModel::component_parallel_mode(short mode)
 
   // terminate previous serve mode (if active)
   if (componentParallelMode != mode) {
-    if (componentParallelMode == OPTIONAL_INTERFACE) {
+    if (componentParallelMode == INTERFACE_MODE) {
       size_t index = subIteratorSched.miPLIndex;
       if (modelPCIter->mi_parallel_level_defined(index) && 
 	  modelPCIter->mi_parallel_level(index).server_communicator_size() > 1){
@@ -1999,7 +2019,7 @@ void NestedModel::component_parallel_mode(short mode)
     }
     // concurrent subIterator scheduling exits on its own (see IteratorScheduler
     // ::schedule_iterators(), but subModel eval scheduling is terminated here.
-    else if (componentParallelMode == SUB_MODEL &&
+    else if (componentParallelMode == SUB_MODEL_MODE &&
 	     !subIteratorSched.messagePass) {
       ParConfigLIter pc_it = subModel.parallel_configuration_iterator();
       size_t index = subModel.mi_parallel_level_index();
@@ -2011,20 +2031,21 @@ void NestedModel::component_parallel_mode(short mode)
 
   /* Moved up a level so that config can be restored after optInterface usage
   // set ParallelConfiguration for new mode
-  if (mode == OPTIONAL_INTERFACE)
+  if (mode == INTERFACE_MODE)
     parallelLib.parallel_configuration_iterator(modelPCIter);
-  else if (mode == SUB_MODEL) {
+  else if (mode == SUB_MODEL_MODE) {
     // ParallelLibrary::currPCIter activation delegated to subModel
   }
   */
 
   // activate new serve mode (matches NestedModel::serve_run(pl_iter)).  This
   // bcast matches the outer parallel context prior to subIterator partitioning.
-  // > OPTIONAL_INTERFACE & subModel eval scheduling only bcast if mode change
+  // > INTERFACE_MODE & subModel eval scheduling only broadcasts
+  //   for mode change
   // > concurrent subIterator scheduling rebroadcasts every time since this
   //   scheduling exits on its own (see IteratorScheduler::schedule_iterators())
   if ( ( componentParallelMode != mode ||
-	 ( mode == SUB_MODEL && subIteratorSched.messagePass ) ) &&
+	 ( mode == SUB_MODEL_MODE && subIteratorSched.messagePass ) ) &&
        modelPCIter->mi_parallel_level_defined(outerMIPLIndex) ) {
     const ParallelLevel& mi_pl = modelPCIter->mi_parallel_level(outerMIPLIndex);
     if (mi_pl.server_communicator_size() > 1)
@@ -2045,7 +2066,7 @@ void NestedModel::serve_run(ParLevLIter pl_iter, int max_eval_concurrency)
   while (componentParallelMode) {
     // outer context: matches bcast at bottom of component_parallel_mode()
     parallelLib.bcast(componentParallelMode, *pl_iter);
-    if (componentParallelMode == OPTIONAL_INTERFACE &&
+    if (componentParallelMode == INTERFACE_MODE &&
 	!optInterfacePointer.empty()) {
       // store/set/restore the ParallelLibrary::currPCIter
       ParConfigLIter pc_iter = parallelLib.parallel_configuration_iterator();
@@ -2053,7 +2074,7 @@ void NestedModel::serve_run(ParLevLIter pl_iter, int max_eval_concurrency)
       optionalInterface.serve_evaluations();
       parallelLib.parallel_configuration_iterator(pc_iter); // restore
     }
-    else if (componentParallelMode == SUB_MODEL) {
+    else if (componentParallelMode == SUB_MODEL_MODE) {
       if (subIteratorSched.messagePass) // serve concurrent subIterator execs
 	subIteratorSched.schedule_iterators(*this, subIterator);
       else { // service the subModel for a single subIterator execution
@@ -2200,9 +2221,9 @@ update_sub_model(const Variables& vars, const Constraints& cons)
   const SharedVariablesData& svd = vars.shared_data();
   const SharedVariablesData& sm_svd
     = subModel.current_variables().shared_data();
-  Pecos::MarginalsCorrDistribution* sm_mvd_rep
-    = (Pecos::MarginalsCorrDistribution*)
-    subModel.multivariate_distribution().multivar_dist_rep();
+  std::shared_ptr<Pecos::MarginalsCorrDistribution> sm_mvd_rep =
+    std::static_pointer_cast<Pecos::MarginalsCorrDistribution>
+    (subModel.multivariate_distribution().multivar_dist_rep());
 
   // Map ACTIVE CONTINUOUS VARIABLES from currentVariables
   if (num_curr_cv) {
@@ -2517,8 +2538,9 @@ real_variable_mapping(Real r_var, size_t av_index, short svm_target)
 {
   Pecos::MultivariateDistribution& sm_mvd
     = subModel.multivariate_distribution();
-  Pecos::MarginalsCorrDistribution* sm_mvd_rep
-    = (Pecos::MarginalsCorrDistribution*)sm_mvd.multivar_dist_rep();
+  std::shared_ptr<Pecos::MarginalsCorrDistribution> sm_mvd_rep =
+    std::static_pointer_cast<Pecos::MarginalsCorrDistribution>
+    (sm_mvd.multivar_dist_rep());
 
   const SharedVariablesData& sm_svd
     = subModel.current_variables().shared_data();
@@ -2690,8 +2712,9 @@ integer_variable_mapping(int i_var, size_t av_index, short svm_target)
 {
   Pecos::MultivariateDistribution& sm_mvd
     = subModel.multivariate_distribution();
-  Pecos::MarginalsCorrDistribution* sm_mvd_rep
-    = (Pecos::MarginalsCorrDistribution*)sm_mvd.multivar_dist_rep();
+  std::shared_ptr<Pecos::MarginalsCorrDistribution> sm_mvd_rep =
+    std::static_pointer_cast<Pecos::MarginalsCorrDistribution>
+    (sm_mvd.multivar_dist_rep());
 
   const SharedVariablesData& sm_svd
     = subModel.current_variables().shared_data();
@@ -2728,8 +2751,9 @@ string_variable_mapping(const String& s_var, size_t av_index,
 {
   Pecos::MultivariateDistribution& sm_mvd
     = subModel.multivariate_distribution();
-  Pecos::MarginalsCorrDistribution* sm_mvd_rep
-    = (Pecos::MarginalsCorrDistribution*)sm_mvd.multivar_dist_rep();
+  std::shared_ptr<Pecos::MarginalsCorrDistribution> sm_mvd_rep =
+    std::static_pointer_cast<Pecos::MarginalsCorrDistribution>
+    (sm_mvd.multivar_dist_rep());
 
   const SharedVariablesData& sm_svd
     = subModel.current_variables().shared_data();

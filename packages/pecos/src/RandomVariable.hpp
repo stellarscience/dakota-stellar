@@ -230,7 +230,7 @@ public:
 
   /// returns ranVarRep for access to derived class member functions
   /// that are not mapped to the base level
-  RandomVariable* random_variable_rep() const;
+  std::shared_ptr<RandomVariable> random_variable_rep() const;
   /// function to check modelRep (does this envelope contain a letter)
   bool is_null() const;
 
@@ -264,7 +264,7 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// ranVarRep to the appropriate derived type.
-  RandomVariable* get_random_variable(short ran_var_type);
+  std::shared_ptr<RandomVariable> get_random_variable(short ran_var_type);
 
   //
   //- Heading: Data members
@@ -274,9 +274,7 @@ private:
   boost::uniform_real<Real> uniformSampler;
   
   /// pointer to the letter (initialized only for the envelope)
-  RandomVariable* ranVarRep;
-  /// number of objects sharing ranVarRep
-  int referenceCount;
+  std::shared_ptr<RandomVariable> ranVarRep;
 };
 
 
@@ -328,7 +326,8 @@ inline short RandomVariable::type() const
 { return (ranVarRep) ? ranVarRep->ranVarType : ranVarType; }
 
 
-inline RandomVariable* RandomVariable::random_variable_rep() const
+inline std::shared_ptr<RandomVariable>
+RandomVariable::random_variable_rep() const
 { return ranVarRep; }
 
 

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -18,8 +19,8 @@
 
 namespace Dakota {
 
-/// Base class for polynomial chaos expansions (PCE) and stochastic
-/// collocation (SC)
+/// Base class for polynomial chaos expansions (PCE), stochastic
+/// collocation (SC) and functional tensor train (FT)
 
 /** The NonDExpansion class provides a base class for methods that use
     polynomial expansions to approximate the effect of parameter
@@ -37,10 +38,10 @@ public:
   NonDExpansion(ProblemDescDB& problem_db, Model& model);
   /// alternate constructor
   NonDExpansion(unsigned short method_name, Model& model,
-		short exp_coeffs_approach, short refine_type,
-		short refine_control, short covar_control, short ml_discrep,
-		short rule_nest, short rule_growth, bool piecewise_basis,
-		bool use_derivs);
+		short exp_coeffs_approach, const RealVector& dim_pref, int seed,
+		short refine_type, short refine_control, short covar_control,
+		Real colloc_ratio, short rule_nest, short rule_growth,
+		bool piecewise_basis, bool use_derivs);
   /// destructor
   ~NonDExpansion();
 
@@ -73,24 +74,46 @@ public:
   //- Heading: Virtual functions
   //
 
+  /// return specification for number of collocation points (may be
+  /// part of a sequence specification)
+  virtual size_t collocation_points() const;
+  /// return specification for random seed (may be part of a sequence
+  /// specification)
+  virtual int random_seed() const;
+  /// return first seed in sequence specification (defaults to random_seed())
+  virtual int first_seed() const;
+
   /// evaluate allSamples for inclusion in the (PCE regression) approximation
   /// and retain the best set (well spaced) of size batch_size
   virtual void select_refinement_points(
     const RealVectorArray& candidate_samples, unsigned short batch_size,
     RealMatrix& best_samples);
 
-  /// append new data to uSpaceModel and update expansion order (PCE only)
+  /// generate numSamplesOnModel, append to approximation data, and update
+  /// QoI expansions
+  virtual void append_expansion();
+  /// append new data to uSpaceModel and, when appropriate,
+  /// update expansion order
   virtual void append_expansion(const RealMatrix& samples,
 				const IntResponseMap& resp_map);
+
+  /// verify supported and define default discrepancy emulation mode
+  virtual void assign_discrepancy_mode();
+  /// define the surrogate response mode for a hierarchical model in 
+  /// multilevel/multifidelity expansions
+  virtual void assign_hierarchical_response_mode();
+
+  virtual void infer_pilot_sample(/*Real ratio, */size_t num_steps,
+				  SizetArray& delta_N_l);
 
   //
   //- Heading: Member functions
   //
 
   /// return maxRefineIterations
-  int maximum_refinement_iterations() const;
+  size_t maximum_refinement_iterations() const;
   /// set maxRefineIterations
-  void maximum_refinement_iterations(int max_refine_iter);
+  void maximum_refinement_iterations(size_t max_refine_iter);
 
 protected:
 
@@ -108,25 +131,21 @@ protected:
   virtual void compute_expansion();
   /// finalize mappings for the uSpaceModel
   virtual void finalize_expansion();
-  /// uniformly increment the expansion order and structured/unstructured
-  /// grid (PCE only)
-  virtual void increment_order_and_grid();
-  /// uniformly decrement the expansion order and structured/unstructured
-  /// grid (PCE only)
-  virtual void decrement_order_and_grid();
   /// assign the current values from the input specification sequence
   virtual void assign_specification_sequence();
   /// increment the input specification sequence and assign values
   virtual void increment_specification_sequence();
   /// update an expansion; avoids overhead in compute_expansion()
   virtual void update_expansion();
-  /// combine coefficients, promote to active, and update statsType
+  /// combine coefficients, promote to active, and update statsMetricMode
   virtual void combined_to_active();
   /// archive expansion coefficients, as supported by derived instance
   virtual void archive_coefficients();
 
-  /// perform any required expansion roll-ups prior to metric computation
-  virtual void metric_roll_up();
+  /// helper function to manage different push increment cases
+  virtual void push_increment();
+  /// helper function to manage different pop increment cases
+  virtual void pop_increment();
 
   /// compute 2-norm of change in response covariance
   virtual Real compute_covariance_metric(bool revert, bool print_metric);
@@ -142,6 +161,25 @@ protected:
   virtual void pull_candidate(RealVector& stats_star);
   /// restore statistics into native stats arrays for a selected candidate
   virtual void push_candidate(const RealVector& stats_star);
+
+  /// initializations for multilevel_regression()
+  virtual void initialize_ml_regression(size_t num_lev, bool& import_pilot);
+  /// increment sequence in numSamplesOnModel for multilevel_regression()
+  virtual void increment_sample_sequence(size_t new_samp, size_t total_samp,
+					 size_t step);
+  /// accumulate one of the level metrics for {RIP,RANK}_SAMPLING cases
+  virtual void sample_allocation_metric(Real& metric, Real power);
+  /// compute delta_N_l for {RIP,RANK}_SAMPLING cases
+  virtual void compute_sample_increment(const RealVector& lev_metrics,
+					const SizetArray& N_l,
+					SizetArray& delta_N_l);
+  /// finalizations for multilevel_regression()
+  virtual void finalize_ml_regression();
+
+  /// update numSamplesOnModel after an order increment
+  virtual void update_samples_from_order_increment();  
+  /// update (restore previous) numSamplesOnModel after an order decrement
+  virtual void update_samples_from_order_decrement();  
 
   /// print global sensitivity indices
   virtual void print_sobol_indices(std::ostream& s);
@@ -163,9 +201,6 @@ protected:
 
   /// helper for initializing a numerical integration grid
   void initialize_u_space_grid();
-
-  // common constructor code for initialization of natafTransform
-  //void initialize_random(short u_space_type);
 
   /// check length and content of dimension preference vector
   void check_dimension_preference(const RealVector& dim_pref) const;
@@ -197,39 +232,50 @@ protected:
   //void construct_incremental_lhs(Iterator& u_space_sampler, Model& u_model,
   //				 int num_samples, int seed, const String& rng);
 
+  /// configure exp_orders from inputs
+  void configure_expansion_orders(unsigned short exp_order,
+				  const RealVector& dim_pref,
+				  UShortArray& exp_orders);
+
+  /// configure expansion and basis configuration options for Pecos
+  /// polynomial approximations
+  void configure_pecos_options();
+
   /// construct the expansionSampler for evaluating samples on uSpaceModel
-  void construct_expansion_sampler(const String& import_approx_file,
+  void construct_expansion_sampler(unsigned short sample_type,
+    const String& rng, unsigned short integration_refine = NO_INT_REFINE,
+    const IntVector& refine_samples = IntVector(),
+    const String& import_approx_file = String(),
     unsigned short import_approx_format = TABULAR_ANNOTATED,
     bool import_approx_active_only = false);
 
   /// construct a multifidelity expansion, across model forms or
   /// discretization levels
-  void multifidelity_expansion(short refine_type, bool to_active = true);
-  /// construct a multifidelity expansion, across model forms or
-  /// discretization levels
-  void greedy_multifidelity_expansion();
+  void multifidelity_expansion();
+  /// allocate a multilevel expansion based on some approximation to an
+  /// optimal resource allocation across model forms/discretization levels
+  void multilevel_regression();
 
-  /// configure fidelity/level counts from model hierarchy
-  void configure_levels(size_t& num_lev, unsigned short& model_form,
-			bool& multilevel, bool mf_precedence);
-  /// configure fidelity/level counts from model hierarchy
-  void configure_cost(size_t num_lev, bool multilevel, RealVector& cost);
-  /// configure response mode and truth/surrogate model indices within
-  /// hierarchical iteratedModel
-  void configure_indices(unsigned short lev, unsigned short form,
-			 bool multilevel);
+  /// configure response mode and active/truth/surrogate model keys within a
+  /// hierarchical model.  seq_type is the type of sequence that defines the
+  /// active dimension for traversing a model sequence.
+  void configure_indices(size_t group, size_t form, size_t lev, short seq_type);
   /// return aggregate cost (one or more models) for a level sample
-  Real level_cost(unsigned short lev, const RealVector& cost);
+  Real sequence_cost(size_t step, const RealVector& cost);
   /// compute equivHFEvals from samples per level and cost per evaluation
   void compute_equivalent_cost(const SizetArray& N_l, const RealVector& cost);
 
-  /// creat a model key from level index, form index, and multilevel flag
-  void form_key(unsigned short lev, unsigned short form, bool multilevel,
-		UShortArray& model_key);
-  /// activate model key within uSpaceModel
-  void activate_key(const UShortArray& model_key);
-  /// activate model key within uSpaceModel
-  void activate_key(unsigned short lev, unsigned short form, bool multilevel);
+  /// compute increment in samples for multilevel_regression() based
+  /// on ESTIMATOR_VARIANCE
+  void compute_sample_increment(const RealVector& agg_var,
+				const RealVector& cost, Real sum_root_var_cost,
+				Real eps_sq_div_2, const SizetArray& N_l,
+				SizetArray& delta_N_l);
+
+  /// return number of collocation points for index within model sequence
+  size_t collocation_points(size_t index) const;
+  /// return random seed for index within model sequence
+  int random_seed(size_t index) const;
 
   /// refine the reference expansion found by compute_expansion() using
   /// uniform/adaptive p-/h-refinement strategies
@@ -249,16 +295,32 @@ protected:
   /// helper function to manage different grid merge cases
   void merge_grid();
 
-  /// helper function to manage different push increment cases
-  void push_increment();
-  /// helper function to manage different pop increment cases
-  void pop_increment();
+  /// uniformly increment the expansion order and structured/unstructured grid
+  /// (PCE and FT)
+  void increment_order_and_grid();
+  /// uniformly decrement the expansion order and structured/unstructured grid
+  /// (PCE and FT)
+  void decrement_order_and_grid();
 
-  /// update statsType, here and in Pecos::ExpansionConfigOptions
-  void statistics_type(short stats_type, bool clear_bits = true);
+  /// publish numSamplesOnModel update to the DataFitSurrModel instance
+  void update_model_from_samples();
+
+  /// perform sampler updates after a change to numSamplesOnModel
+  /// (shared code from ML/MF updaters)
+  void update_u_space_sampler(size_t sequence_index,
+			      const UShortArray& approx_orders);
+
+  /// update statsMetricMode, here and in Pecos::ExpansionConfigOptions
+  void refinement_statistics_mode(short stats_mode);//, bool clear_bits = true);
+
+  /// perform any required expansion roll-ups prior to metric computation
+  void metric_roll_up(short results_state = FINAL_RESULTS);
+
+  /// Aggregate variance across the set of QoI for a particular model level
+  void aggregate_variance(Real& agg_var_l);
 
   /// calculate the response covariance (diagonal or full matrix) for
-  /// the expansion indicated by statsType
+  /// the expansion indicated by statsMetricMode
   void compute_covariance();
   /// calculate the response covariance of the active expansion
   void compute_active_covariance();
@@ -271,7 +333,7 @@ protected:
   void compute_combined_diagonal_variance();
 
   /// calculate off diagonal terms in respCovariance(i,j) for j<i for
-  /// the expansion indicated by statsType
+  /// the expansion indicated by statsMetricMode
   void compute_off_diagonal_covariance();
   /// calculate off diagonal terms in respCovariance(i,j) for j<i
   /// using the active expansion coefficients
@@ -319,6 +381,13 @@ protected:
   void push_lower_triangle(const RealVector& vec, RealSymMatrix& mat,
 			   size_t offset = 0);
 
+  /// convert number of regression terms and collocation ratio to a
+  /// number of collocation samples
+  int  terms_ratio_to_samples(size_t num_exp_terms, Real colloc_ratio);
+  /// convert number of regression terms and number of collocation samples
+  /// to a collocation ratio
+  Real terms_samples_to_ratio(size_t num_exp_terms, int samples);
+
   //
   //- Heading: Data
   //
@@ -327,6 +396,14 @@ protected:
   /// after u-space recasting and polynomial data fit recursions
   Model uSpaceModel;
 
+  /// Iterator used for sampling on the uSpaceModel to generate approximate
+  /// probability/reliability/response level statistics.  Currently this is
+  /// an LHS sampling instance, but AIS could also be used.
+  Iterator expansionSampler;
+  /// Iterator used to refine the approximate probability estimates
+  /// generated by the expansionSampler using importance sampling
+  Iterator importanceSampler;
+
   /// method for collocation point generation and subsequent
   /// calculation of the expansion coefficients
   short expansionCoeffsApproach;
@@ -334,34 +411,70 @@ protected:
   /// Pecos::{NODAL,HIERARCHICAL}_INTERPOLANT for SC or
   /// Pecos::{TENSOR_PRODUCT,TOTAL_ORDER,ADAPTED}_BASIS for PCE regression
   short expansionBasisType;
-  /// type of statistical metric: NO_EXPANSION_STATS,
-  /// ACTIVE_EXPANSION_STATS, or COMBINED_EXPANSION_STATS
-  short statsType;
+
+  /// type of statistical metric roll-up: {NO,ACTIVE,COMBINED}_EXPANSION_STATS
+  short statsMetricMode;
+  /// flag indicating the use of relative scaling in refinement metrics
+  bool relativeMetric;
+
+  /// user specification for dimension_preference
+  RealVector dimPrefSpec;
+
+  /// user specification of number of initial samples per model instance,
+  /// including adaptive cases where an optimal sample profile is the
+  /// target of iteration (e.g., multilevel_regression())
+  SizetArray collocPtsSeqSpec;
+  /// factor applied to terms^termsOrder in computing number of regression
+  /// points, either user-specified or inferred
+  Real collocRatio;
+  /// exponent applied to number of expansion terms for computing
+  /// number of regression points (usually 1)
+  Real termsOrder;
+
+  /// seed for random number generator (used for regression with LHS
+  /// and sub-sampled tensor grids, as well as for expansionSampler)
+  int randomSeed;
+  /// user specification for seed_sequence
+  SizetArray randomSeedSeqSpec;
+  /// don't continue an existing random number sequence, rather reset
+  /// seed each time within some sampling-based iteration
+  bool fixedSeed;
+  /// top level iteration counter in adaptive NonDExpansion ML/MF algorithms,
+  /// allowing special updating logic for some sequence handlers
+  size_t mlmfIter;
 
   /// flag for combined variable expansions which include a
   /// non-probabilistic subset (design, epistemic, state)
   bool allVars;
+  /// option for regression FT using a filtered set of tensor-product
+  /// quadrature points
+  bool tensorRegression;
 
-  /// emulation approach for multilevel discrepancy: distinct or recursive
+  /// type of sample allocation scheme for discretization levels / model forms
+  /// within multilevel / multifidelity methods
+  short multilevAllocControl;
+  /// emulation approach for multilevel / multifidelity discrepancy:
+  /// distinct or recursive
   short multilevDiscrepEmulation;
+
   /// number of samples allocated to each level of a discretization/model
   /// hierarchy within multilevel/multifidelity methods
   SizetArray NLev;
   /// equivalent number of high fidelity evaluations accumulated using samples
   /// across multiple model forms and/or discretization levels
   Real equivHFEvals;
-
-  /// number of invocations of core_run()
-  size_t numUncertainQuant;
+  /// rate parameter for allocation by ESTIMATOR_VARIANCE in
+  /// multilevel_regression()
+  Real kappaEstimatorRate;
+  /// scale parameter for allocation by ESTIMATOR_VARIANCE in
+  /// multilevel_regression()
+  Real gammaEstimatorScale;
 
   /// number of truth samples performed on g_u_model to form the expansion
   int numSamplesOnModel;
   /// number of approximation samples performed on the polynomial
   /// expansion in order to estimate probabilities
   int numSamplesOnExpansion;
-
-  /// flag indicating the use of relative scaling in refinement metrics
-  bool relativeMetric;
 
   /// flag for indicating state of \c nested and \c non_nested overrides of
   /// default rule nesting, which depends on the type of integration driver;
@@ -416,10 +529,11 @@ protected:
   /// vector of response variances (diagonal response covariance option)
   RealVector respVariance;
 
-  /// stats of the best candidate for the current level
-  RealVector levelStatsStar;
-  /// stats of the best candidate across all levels
+  /// stats of the best refinement candidate for the current model indices
   RealVector statsStar;
+
+  /// number of invocations of core_run()
+  size_t numUncertainQuant;
 
 private:
 
@@ -435,12 +549,23 @@ private:
   /// set response mode to BYPASS_SURROGATE and recur response size updates
   void bypass_surrogate_mode();
 
+  /// generate a set of reference expansions across a model hierarchy
+  void multifidelity_reference_expansion();
+  /// separately refine each of the multifidelity reference expansions
+  void multifidelity_individual_refinement();
+  /// refine each of the multifidelity reference expansions within an
+  /// integrated competition
+  void multifidelity_integrated_refinement();
+
   /// compute average of total Sobol' indices (from VBD) across the
   /// response set for use as an anisotropy indicator
   void reduce_total_sobol_sets(RealVector& avg_sobol);
   /// compute minimum of spectral coefficient decay rates across the
   /// response set for use as an anisotropy indicator
   void reduce_decay_rate_sets(RealVector& min_decay);
+
+  /// print additional refinement diagnostics not covered by compute_*_metric()
+  void print_refinement_diagnostics(std::ostream& s);
 
   /// perform an adaptive refinement increment using generalized sparse grids
   size_t increment_sets(Real& delta_star, bool revert, bool print_metric);
@@ -486,24 +611,16 @@ private:
   //- Heading: Data
   //
 
-  /// Iterator used for sampling on the uSpaceModel to generate approximate
-  /// probability/reliability/response level statistics.  Currently this is
-  /// an LHS sampling instance, but AIS could also be used.
-  Iterator expansionSampler;
-  /// Iterator used to refine the approximate probability estimates 
-  /// generated by the expansionSampler using importance sampling
-  Iterator importanceSampler;
-  
   /// derivative of the expansion with respect to the x-space variables
   /// evaluated at the means (used as uncertainty importance metrics)
   RealMatrix expGradsMeanX;
 
   /// maximum number of uniform/adaptive refinement iterations
   /// (specialization of maxIterations)
-  int maxRefineIterations;
+  size_t maxRefineIterations;
   /// maximum number of regression solver iterations (specialization
   /// of maxIterations)
-  int maxSolverIterations;
+  size_t maxSolverIterations;
   
   /// flag indicating the activation of variance-bsaed decomposition
   /// for computing Sobol' indices
@@ -513,16 +630,9 @@ private:
   /// tolerance for omitting output of small VBD indices
   Real vbdDropTol;
 
-  /// integration refinement for expansion sampler
-  unsigned short integrationRefine;
-  /// random number generator for expansion sampler
-  String expansionRng;
-  /// seed for expansion sampler random number generator
-  int origSeed;
-  /// sample type for expansion sampler
-  unsigned short expansionSampleType;
-  /// refinement samples for expansion sampler
-  IntVector refinementSamples;
+  // sample type for \c expansion_samples approach to estimating PCE
+  // coefficients (supports construct_incremental_lhs())
+  //String expansionSampleType;
 };
 
 
@@ -542,16 +652,53 @@ nested_variable_mappings(const SizetArray& c_index1,
 }
 
 
-inline int NonDExpansion::maximum_refinement_iterations() const
+inline size_t NonDExpansion::collocation_points(size_t index) const
+{
+  if (collocPtsSeqSpec.empty()) return SZ_MAX;
+  else
+    return (index < collocPtsSeqSpec.size()) ?
+      collocPtsSeqSpec[index] : collocPtsSeqSpec.back();
+}
+
+
+inline int NonDExpansion::random_seed() const
+{ return randomSeed; } // default (overridden in case of seed_sequence)
+
+
+inline int NonDExpansion::first_seed() const
+{ return random_seed(); } // default (overridden for multilevel)
+
+
+/** extract an active seed from a seed sequence */
+inline int NonDExpansion::random_seed(size_t index) const
+{
+  // return 0 for cases where seed is undefined or will not be updated
+
+  if (randomSeedSeqSpec.empty()) return 0; // no spec -> non-repeatable samples
+  else if (fixedSeed) // continually reset seed to specified value
+    return (index < randomSeedSeqSpec.size()) ?
+      randomSeedSeqSpec[index] : randomSeedSeqSpec.back();
+  // only set sequence of seeds for first pass, then let RNG state continue
+  else if (mlmfIter == 0 && index < randomSeedSeqSpec.size()) // pilot iter only
+    return randomSeedSeqSpec[index];
+  else return 0; // seed sequence exhausted, do not update
+}
+
+
+inline size_t NonDExpansion::maximum_refinement_iterations() const
 { return maxRefineIterations; }
 
 
-inline void NonDExpansion::maximum_refinement_iterations(int max_refine_iter)
+inline void NonDExpansion::maximum_refinement_iterations(size_t max_refine_iter)
 { maxRefineIterations = max_refine_iter; }
 
 
 inline const Model& NonDExpansion::algorithm_space_model() const
 { return uSpaceModel; }
+
+
+inline size_t NonDExpansion::collocation_points() const
+{ return 0; }
 
 
 inline void NonDExpansion::aggregated_models_mode()
@@ -578,52 +725,40 @@ inline void NonDExpansion::bypass_surrogate_mode()
 }
 
 
-inline void NonDExpansion::
-form_key(unsigned short lev, unsigned short form, bool multilevel,
-	 UShortArray& model_key)
-{
-  if (multilevel) // model form is fixed @ HF; lev enumerates the levels
-    { model_key.resize(2); model_key[0] = form; model_key[1] = lev; }
-  else            // lev enumerates the model forms; levels are ignored
-    { model_key.resize(1); model_key[0] = lev; } // mi_key[1] = _NPOS;
-}
-
-
-inline void NonDExpansion::
-activate_key(const UShortArray& model_key)
-{ uSpaceModel.active_model_key(model_key); }
-
-
-inline void NonDExpansion::
-activate_key(unsigned short lev, unsigned short form, bool multilevel)
-{
-  UShortArray model_key;
-  form_key(lev, form, multilevel, model_key);
-  activate_key(model_key); // assign key to uSpaceModel
-}
-
-
-inline Real NonDExpansion::
-level_cost(unsigned short lev, const RealVector& cost)
+inline Real NonDExpansion::sequence_cost(size_t step, const RealVector& cost)
 {
   if (cost.empty())
     return 0.;
   else {
-    Real lev_cost = cost[lev];
-    if (lev && multilevDiscrepEmulation == DISTINCT_EMULATION)
-      lev_cost += cost[lev-1]; // discrepancies incur 2 level costs
-    return lev_cost;
+    Real cost_l = cost[step];
+    if (step && multilevDiscrepEmulation == DISTINCT_EMULATION)
+      cost_l += cost[step-1]; // discrepancies incur 2 level costs
+    return cost_l;
   }
 }
 
 
-inline void NonDExpansion::metric_roll_up()
+inline void NonDExpansion::metric_roll_up(short results_state)
 {
-  // greedy_multifidelity_expansion() assesses level candidates using combined
+  // if COMBINED_EXPANSIONS_STATS, assess refinement candidates using combined
   // stat metrics, which by default require expansion combination (overridden
   // for hierarchical SC)
-  if (statsType == Pecos::COMBINED_EXPANSION_STATS)
-    uSpaceModel.combine_approximation();
+  if (statsMetricMode == Pecos::COMBINED_EXPANSION_STATS)
+    switch (results_state) {
+    case REFINEMENT_RESULTS:
+      // PCE and Nodal SC require combined expansion coefficients for computing
+      // combined stat metrics, but Hierarchical SC can efficiently compute
+      // deltas based only on active expansions (no combination required)
+      if (expansionBasisType != Pecos::HIERARCHICAL_INTERPOLANT)
+	uSpaceModel.combine_approximation();
+      break;
+    case INTERMEDIATE_RESULTS:
+      uSpaceModel.combine_approximation(); break;
+    // FINAL_RESULTS should not occur: no roll up after combined_to_active()
+    }
+
+  // TO DO: case of level mappings for numerical stats --> sampling on
+  //        combined expansion
 }
 
 
@@ -658,7 +793,7 @@ inline void NonDExpansion::compute_off_diagonal_covariance()
 
   // See also full_covar_stats logic in compute_analytic_statistics() ...
 
-  switch (statsType) {
+  switch (statsMetricMode) {
   case Pecos::ACTIVE_EXPANSION_STATS:
     compute_active_off_diagonal_covariance();   break;
   case Pecos::COMBINED_EXPANSION_STATS:
@@ -669,14 +804,14 @@ inline void NonDExpansion::compute_off_diagonal_covariance()
 
 inline void NonDExpansion::compute_covariance()
 {
-  switch (statsType) {
+  switch (statsMetricMode) {
   // multifidelity_expansion() is outer loop:
   // > use of refine_expansion(): refine individually based on level covariance
   // > after combine_approx(), combined_to_active() enables use of active covar
   case Pecos::ACTIVE_EXPANSION_STATS:
     compute_active_covariance();   break;
-  // greedy_multifidelity_expansion() (multifidelity_expansion() on inner loop):
-  // > roll up effect of level candidate on combined multilevel covariance,
+  // if COMBINED_EXPANSIONS_STATS:
+  // > roll up effect of refinement candidate on combined multilevel covariance,
   //   avoiding combined_to_active() promotion until end
   // > limited stats support for combinedExpCoeffs: only compute_covariance()
   case Pecos::COMBINED_EXPANSION_STATS:
@@ -689,8 +824,8 @@ inline void NonDExpansion::
 pull_lower_triangle(const RealSymMatrix& mat, RealVector& vec, size_t offset)
 {
   size_t i, j, cntr = offset, nr = mat.numRows(),
-    sm_len = (nr*nr + nr)/2, vec_len = offset + sm_len;
-  if (vec.length() != vec_len) vec.resize(vec_len);
+    min_vec_len = offset + (nr*nr + nr)/2;
+  if (vec.length() < min_vec_len) vec.resize(min_vec_len);
   for (i=0; i<nr; ++i)
     for (j=0; j<=i; ++j, ++cntr)
       vec[cntr] = mat(i,j); // pull from lower triangle
@@ -700,9 +835,10 @@ pull_lower_triangle(const RealSymMatrix& mat, RealVector& vec, size_t offset)
 inline void NonDExpansion::
 push_lower_triangle(const RealVector& vec, RealSymMatrix& mat, size_t offset)
 {
-  size_t i, j, cntr = offset, nr = mat.numRows();
-  if (vec.length() != offset + (nr*nr + nr)/2) {
-    Cerr << "Error: inconsistent vector length in NonDExpansion::"
+  size_t i, j, cntr = offset, nr = mat.numRows(),
+    min_vec_len = offset + (nr*nr + nr)/2;
+  if (vec.length() < min_vec_len) {
+    Cerr << "Error: insufficient vector length in NonDExpansion::"
 	 << "push_lower_triangle()" << std::endl;
     abort_handler(METHOD_ERROR);
   }
@@ -757,6 +893,39 @@ check_dimension_preference(const RealVector& dim_pref) const
 	  abort_handler(METHOD_ERROR);
 	}
   }
+}
+
+
+inline int NonDExpansion::
+terms_ratio_to_samples(size_t num_exp_terms, Real colloc_ratio)
+{
+  // for under-determined solves (compressed sensing), colloc_ratio can be < 1
+  size_t data_per_pt = (useDerivs) ? numContinuousVars + 1 : 1;
+  Real min_pts = std::pow((Real)num_exp_terms, termsOrder) / (Real)data_per_pt;
+  int tgt_samples = (int)std::floor(colloc_ratio*min_pts + .5); // rounded
+  if (colloc_ratio >= 1.) {
+    // logic is to round to the nearest integral sample count for the given
+    // colloc_ratio, but with a lower bound determined by rounding up with a
+    // unit colloc_ratio.  The lower bound prevents creating an under-determined
+    // system due to rounding down when the intent is over- or uniquely
+    // determined (can only happen with non-integral min_pts due to use of
+    // derivative enhancement).
+    int min_samples = (int)std::ceil(min_pts); // lower bound
+    return std::max(min_samples, tgt_samples);
+  }
+  else
+    // for under-determined systems, data starvation is not a problem and we
+    // just need at least one sample.
+    return std::max(tgt_samples, 1);
+}
+
+
+inline Real NonDExpansion::
+terms_samples_to_ratio(size_t num_exp_terms, int samples)
+{
+  size_t data_per_pt = (useDerivs) ? numContinuousVars + 1 : 1;
+  return (Real)(samples * data_per_pt) /
+    std::pow((Real)num_exp_terms, termsOrder);
 }
 
 } // namespace Dakota

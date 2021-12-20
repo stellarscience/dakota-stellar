@@ -107,10 +107,8 @@ push_parameter(short dist_param, unsigned int param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) { // first pass
     switch (dist_param) {
     case HGE_TOT_POP:  totalPop = param; break;
     case HGE_SEL_POP: selectPop = param; break;
@@ -118,19 +116,15 @@ push_parameter(short dist_param, unsigned int param)
     }
   }
   else {
-    parametricUpdate = false;
     switch (dist_param) {
     case HGE_TOT_POP:
-      if (totalPop != param)
-	{ totalPop  = param;  parametricUpdate = true; reset_gauss(); }
+      if (totalPop  != param)  {  totalPop = param;  reset_gauss(); }
       break;
     case HGE_SEL_POP:
-      if (selectPop != param)
-	{ selectPop  = param; parametricUpdate = true; reset_gauss(); }
+      if (selectPop != param)  { selectPop = param;  reset_gauss(); }
       break;
     case HGE_DRAWN:
-      if (numDrawn != param)
-	{ numDrawn  = param;  parametricUpdate = true; reset_gauss(); }
+      if (numDrawn  != param)  {  numDrawn = param;  reset_gauss(); }
       break;
     }
   }

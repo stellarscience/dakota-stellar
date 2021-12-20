@@ -91,7 +91,7 @@ protected:
   //
 
   /// return driverRep
-  IntegrationDriver* driver();
+  std::shared_ptr<IntegrationDriver> driver();
 
 private:
 
@@ -100,16 +100,16 @@ private:
   //
 
   /// initialize multi_index using a sparse grid expansion
-  void sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+  void sparse_grid_multi_index(CombinedSparseGridDriver& csg_driver,
 			       UShort2DArray& multi_index);
   /// increment multi_index after a grid refinement
   void increment_sparse_grid_multi_index(
-    IncrementalSparseGridDriver* isg_driver, UShort2DArray& multi_index);
+    IncrementalSparseGridDriver& isg_driver, UShort2DArray& multi_index);
   /// decrement multi_index after a grid contraction
   void decrement_sparse_grid_multi_index(
-    IncrementalSparseGridDriver* isg_driver, UShort2DArray& multi_index);
+    IncrementalSparseGridDriver& isg_driver, UShort2DArray& multi_index);
   /// return multi_index to a previously incremented state
-  void push_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
+  void push_sparse_grid_multi_index(IncrementalSparseGridDriver& isg_driver,
 				    UShort2DArray& multi_index);
 
   // initialize tp_multi_index from tpMultiIndexMap
@@ -127,7 +127,7 @@ private:
   //
 
   /// popped instances of approxOrder that were computed but not selected
-  std::map<UShortArray, UShortArrayDeque> poppedApproxOrder;
+  std::map<ActiveKey, UShortArrayDeque> poppedApproxOrder;
 };
 
 
@@ -166,7 +166,8 @@ construct_basis(const MultivariateDistribution& u_dist)
 */
 
 
-inline IntegrationDriver* SharedProjectOrthogPolyApproxData::driver()
+inline std::shared_ptr<IntegrationDriver>
+SharedProjectOrthogPolyApproxData::driver()
 { return driverRep; }
 
 } // namespace Pecos

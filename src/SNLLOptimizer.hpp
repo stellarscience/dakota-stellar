@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -39,41 +40,10 @@ class OptFDNIPS;
 
 namespace Dakota {
 
-/// Wrapper class for the OPT++ optimization library.
-
-/** The SNLLOptimizer class provides a wrapper for OPT++, a C++
-    optimization library of nonlinear programming and pattern search
-    techniques from the Computational Sciences and Mathematics
-    Research (CSMR) department at Sandia's Livermore CA site.  It uses
-    a function pointer approach for which passed functions must be
-    either global functions or static member functions.  Any attribute
-    used within static member functions must be either local to that
-    function, a static member, or accessed by static pointer.
-
-    The user input mappings are as follows: \c max_iterations, \c
-    max_function_evaluations, \c convergence_tolerance, \c max_step,
-    \c gradient_tolerance, \c search_method, and \c search_scheme_size
-    are set using OPT++'s setMaxIter(), setMaxFeval(), setFcnTol(),
-    setMaxStep(), setGradTol(), setSearchStrategy(), and setSSS()
-    member functions, respectively; \c output verbosity is used to
-    toggle OPT++'s debug mode using the setDebug() member function.
-    Internal to OPT++, there are 3 search strategies, while the DAKOTA
-    \c search_method specification supports 4 (\c
-    value_based_line_search, \c gradient_based_line_search, \c
-    trust_region, or \c tr_pds).  The difference stems from the
-    "is_expensive" flag in OPT++.  If the search strategy is
-    LineSearch and "is_expensive" is turned on, then the \c
-    value_based_line_search is used.  Otherwise (the "is_expensive"
-    default is off), the algorithm will use the \c
-    gradient_based_line_search.  Refer to [Meza, J.C., 1994] and to
-    the OPT++ source in the Dakota/packages/OPTPP directory for
-    information on OPT++ class member functions. */
-
 /**
  * \brief A version of TraitsBase specialized for SNLL optimizers
  *
  */
-
 class SNLLTraits: public TraitsBase
 {
   public:
@@ -111,6 +81,35 @@ class SNLLTraits: public TraitsBase
 };
 
 
+/// Wrapper class for the OPT++ optimization library.
+
+/** The SNLLOptimizer class provides a wrapper for OPT++, a C++
+    optimization library of nonlinear programming and pattern search
+    techniques from the Computational Sciences and Mathematics
+    Research (CSMR) department at Sandia's Livermore CA site.  It uses
+    a function pointer approach for which passed functions must be
+    either global functions or static member functions.  Any attribute
+    used within static member functions must be either local to that
+    function, a static member, or accessed by static pointer.
+
+    The user input mappings are as follows: \c max_iterations, \c
+    max_function_evaluations, \c convergence_tolerance, \c max_step,
+    \c gradient_tolerance, \c search_method, and \c search_scheme_size
+    are set using OPT++'s setMaxIter(), setMaxFeval(), setFcnTol(),
+    setMaxStep(), setGradTol(), setSearchStrategy(), and setSSS()
+    member functions, respectively; \c output verbosity is used to
+    toggle OPT++'s debug mode using the setDebug() member function.
+    Internal to OPT++, there are 3 search strategies, while the DAKOTA
+    \c search_method specification supports 4 (\c
+    value_based_line_search, \c gradient_based_line_search, \c
+    trust_region, or \c tr_pds).  The difference stems from the
+    "is_expensive" flag in OPT++.  If the search strategy is
+    LineSearch and "is_expensive" is turned on, then the \c
+    value_based_line_search is used.  Otherwise (the "is_expensive"
+    default is off), the algorithm will use the \c
+    gradient_based_line_search.  Refer to [Meza, J.C., 1994] and to
+    the OPT++ source in the Dakota/packages/OPTPP directory for
+    information on OPT++ class member functions. */
 class SNLLOptimizer: public Optimizer, public SNLLBase
 {
 public:
@@ -125,17 +124,62 @@ public:
   /// alternate constructor for instantiations "on the fly"
   SNLLOptimizer(const String& method_string, Model& model);
 
-  /// alternate constructor for instantiations "on the fly"
+  /// alternate constructor for objective/constraint call-backs;
+  /// analytic gradient case
   SNLLOptimizer(const RealVector& initial_pt,
     const RealVector& var_l_bnds,      const RealVector& var_u_bnds,
     const RealMatrix& lin_ineq_coeffs, const RealVector& lin_ineq_l_bnds,
     const RealVector& lin_ineq_u_bnds, const RealMatrix& lin_eq_coeffs,
     const RealVector& lin_eq_tgts,     const RealVector& nln_ineq_l_bnds,
-    const RealVector& nln_ineq_u_bnds, const RealVector& nln_eq_tgts, 
-    void (*user_obj_eval) (int mode, int n, const RealVector& x, double& f,
+    const RealVector& nln_ineq_u_bnds, const RealVector& nln_eq_tgts,
+    void (*nlf1_obj_eval) (int mode, int n, const RealVector& x, double& f,
 			   RealVector& grad_f, int& result_mode),
-    void (*user_con_eval) (int mode, int n, const RealVector& x, RealVector& g,
-			   RealMatrix& grad_g, int& result_mode));
+    void (*nlf1_con_eval) (int mode, int n, const RealVector& x, RealVector& g,
+			   RealMatrix& grad_g, int& result_mode),
+    size_t max_iter = 100, size_t max_eval = 1000, Real conv_tol = 1.e-4,
+    Real grad_tol = 1.e-4, Real   max_step = 1000.);
+  /// alternate constructor for objective/constraint call-backs;
+  /// mixed gradient case: numerical objective, analytic constraints
+  SNLLOptimizer(const RealVector& initial_pt,
+    const RealVector& var_l_bnds,      const RealVector& var_u_bnds,
+    const RealMatrix& lin_ineq_coeffs, const RealVector& lin_ineq_l_bnds,
+    const RealVector& lin_ineq_u_bnds, const RealMatrix& lin_eq_coeffs,
+    const RealVector& lin_eq_tgts,     const RealVector& nln_ineq_l_bnds,
+    const RealVector& nln_ineq_u_bnds, const RealVector& nln_eq_tgts,
+    void (*nlf0_obj_eval) (int n, const RealVector& x, double& f,
+			   int& result_mode),
+    void (*nlf1_con_eval) (int mode, int n, const RealVector& x, RealVector& g,
+			   RealMatrix& grad_g, int& result_mode),
+    size_t max_iter = 100, size_t max_eval = 1000, Real conv_tol = 1.e-4,
+    Real grad_tol = 1.e-4, Real   max_step = 1000.);
+  /// alternate constructor for objective/constraint call-backs;
+  /// mixed gradient case: analytic objective, numerical constraints
+  SNLLOptimizer(const RealVector& initial_pt,
+    const RealVector& var_l_bnds,      const RealVector& var_u_bnds,
+    const RealMatrix& lin_ineq_coeffs, const RealVector& lin_ineq_l_bnds,
+    const RealVector& lin_ineq_u_bnds, const RealMatrix& lin_eq_coeffs,
+    const RealVector& lin_eq_tgts,     const RealVector& nln_ineq_l_bnds,
+    const RealVector& nln_ineq_u_bnds, const RealVector& nln_eq_tgts,
+    void (*nlf1_obj_eval) (int mode, int n, const RealVector& x, double& f,
+			   RealVector& grad_f, int& result_mode),
+    void (*nlf0_con_eval) (int n, const RealVector& x, RealVector& g,
+			   int& result_mode),
+    size_t max_iter = 100, size_t max_eval = 1000, Real conv_tol = 1.e-4,
+    Real grad_tol = 1.e-4, Real   max_step = 1000.);
+  /// alternate constructor for objective/constraint call-backs;
+  /// numerical gradient case
+  SNLLOptimizer(const RealVector& initial_pt,
+    const RealVector& var_l_bnds,      const RealVector& var_u_bnds,
+    const RealMatrix& lin_ineq_coeffs, const RealVector& lin_ineq_l_bnds,
+    const RealVector& lin_ineq_u_bnds, const RealMatrix& lin_eq_coeffs,
+    const RealVector& lin_eq_tgts,     const RealVector& nln_ineq_l_bnds,
+    const RealVector& nln_ineq_u_bnds, const RealVector& nln_eq_tgts,
+    void (*nlf0_obj_eval) (int n, const RealVector& x, double& f,
+			   int& result_mode),
+    void (*nlf0_con_eval) (int n, const RealVector& x, RealVector& g,
+			   int& result_mode),
+    size_t max_iter = 100, size_t max_eval = 1000, Real conv_tol = 1.e-4,
+    Real grad_tol = 1.e-4, Real   max_step = 1000.);
 
   ~SNLLOptimizer(); ///< destructor
     
@@ -149,6 +193,18 @@ public:
   void reset();
 
   void declare_sources();
+
+  void initial_point(const RealVector& pt);
+  void variable_bounds(const RealVector& cv_lower_bnds,
+		       const RealVector& cv_upper_bnds);
+  void linear_constraints(const RealMatrix& lin_ineq_coeffs,
+			  const RealVector& lin_ineq_l_bnds,
+			  const RealVector& lin_ineq_u_bnds,
+			  const RealMatrix& lin_eq_coeffs,
+			  const RealVector& lin_eq_targets);
+  void nonlinear_constraints(const RealVector& nln_ineq_l_bnds,
+			     const RealVector& nln_ineq_u_bnds,
+			     const RealVector& nln_eq_targets);
 
 protected:
 
@@ -175,9 +231,18 @@ private:
   /// instantiate an OPTPP_Q_NEWTON solver using standard settings
   void default_instantiate_q_newton(
     void (*obj_eval) (int mode, int n, const RealVector& x, double& f,
-		      RealVector& grad_f, int& result_mode),
+		      RealVector& grad_f, int& result_mode) );
+  /// instantiate an OPTPP_Q_NEWTON solver using standard settings
+  void default_instantiate_q_newton(
+    void (*obj_eval) (int n, const RealVector& x, double& f, int& result_mode));
+  /// instantiate constraint objectives using standard settings
+  void default_instantiate_constraint(
     void (*con_eval) (int mode, int n, const RealVector& x, RealVector& g,
 		      RealMatrix& grad_g, int& result_mode) );
+  /// instantiate constraint objectives using standard settings
+  void default_instantiate_constraint(
+    void (*con_eval) (int n, const RealVector& x, RealVector& g,
+		      int& result_mode) );
   /// instantiate an OPTPP_NEWTON solver using standard settings
   void default_instantiate_newton(
     void (*obj_eval) (int mode, int n, const RealVector& x, double& f,
@@ -282,13 +347,66 @@ private:
   /// (user-supplied functions mode for "on the fly" instantiations).
   /// NonDReliability currently uses the user_functions mode.
   String setUpType;
-  /// holds initial point passed in for "user_functions" mode.
+  /// initial point used in "user_functions" mode
   RealVector initialPoint;
-  /// holds variable lower bounds passed in for "user_functions" mode.
+  /// variable lower bounds used in "user_functions" mode
   RealVector lowerBounds;
-  /// holds variable upper bounds passed in for "user_functions" mode.
+  /// variable upper bounds used in "user_functions" mode
   RealVector upperBounds;
+  /// linear inequality constraint coefficients used in "user_functions" mode
+  RealMatrix linIneqCoeffs;
+  /// linear inequality constraint lower bounds used in "user_functions" mode
+  RealVector linIneqLowerBnds;
+  /// linear inequality constraint upper bounds used in "user_functions" mode
+  RealVector linIneqUpperBnds;
+  /// linear equality constraint coefficients used in "user_functions" mode
+  RealMatrix linEqCoeffs;
+  /// linear equality constraint targets used in "user_functions" mode
+  RealVector linEqTargets;
+  /// nonlinear inequality constraint lower bounds used in "user_functions" mode
+  RealVector nlnIneqLowerBnds;
+  /// nonlinear inequality constraint upper bounds used in "user_functions" mode
+  RealVector nlnIneqUpperBnds;
+  /// nonlinear equality constraint targets used in "user_functions" mode
+  RealVector nlnEqTargets;
 };
+
+
+inline void SNLLOptimizer::initial_point(const RealVector& pt)
+{ copy_data(pt, initialPoint); } // protect from incoming view
+
+
+inline void SNLLOptimizer::
+variable_bounds(const RealVector& cv_lower_bnds,
+		const RealVector& cv_upper_bnds)
+{
+  copy_data(cv_lower_bnds, lowerBounds); // protect from incoming view
+  copy_data(cv_upper_bnds, upperBounds); // protect from incoming view
+}
+
+
+inline void SNLLOptimizer::
+linear_constraints(const RealMatrix& lin_ineq_coeffs,
+		   const RealVector& lin_ineq_l_bnds,
+		   const RealVector& lin_ineq_u_bnds,
+		   const RealMatrix& lin_eq_coeffs,
+		   const RealVector& lin_eq_targets)
+{
+  linIneqCoeffs    = lin_ineq_coeffs;  linEqCoeffs      = lin_eq_coeffs;
+  linIneqLowerBnds = lin_ineq_l_bnds;  linIneqUpperBnds = lin_ineq_u_bnds;
+  linEqTargets     = lin_eq_targets;
+}
+
+
+inline void SNLLOptimizer::
+nonlinear_constraints(const RealVector& nln_ineq_l_bnds,
+		      const RealVector& nln_ineq_u_bnds,
+		      const RealVector& nln_eq_targets)
+{
+  nlnIneqLowerBnds = nln_ineq_l_bnds;
+  nlnIneqUpperBnds = nln_ineq_u_bnds;
+  nlnEqTargets     = nln_eq_targets;
+}
 
 } // namespace Dakota
 

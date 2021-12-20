@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -54,53 +55,29 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
   NonDReliability(problem_db, model), 
   initialPtUserSpec(
     probDescDB.get_bool("variables.uncertain.initial_point_flag")),
-  warmStartFlag(true), nipModeOverrideFlag(true),
+  npsolFlag(false), warmStartFlag(true), nipModeOverrideFlag(true),
   curvatureDataAvailable(false), kappaUpdated(false),
   secondOrderIntType(HOHENRACK), curvatureThresh(1.e-10), warningBits(0)
 {
+  bool err_flag = false;
+
   // check for suitable gradient and variables specifications
   if (iteratedModel.gradient_type() == "none") {
     Cerr << "\nError: local_reliability requires a gradient specification."
 	 << std::endl;
-    abort_handler(-1);
+    err_flag = true;
   }
 
   if (mppSearchType) { // default is MV = 0
 
-    // Map MPP search NIP/SQP algorithm specification into an NPSOL/OPT++
-    // selection based on configuration availability.
-    unsigned short mpp_optimizer = probDescDB.get_ushort("method.sub_method");
-    if (mpp_optimizer == SUBMETHOD_SQP) {
-#ifdef HAVE_NPSOL
-      npsolFlag = true;
-#else
-      Cerr << "\nError: this executable not configured with NPSOL SQP.\n"
-	   << "         Please select OPT++ NIP within local_reliability."
+    switch (sub_optimizer_select(
+	    probDescDB.get_ushort("method.nond.opt_subproblem_solver"))) {
+    case SUBMETHOD_SQP: npsolFlag =  true; break;
+    case SUBMETHOD_NIP: npsolFlag = false; break;
+    default:
+      Cerr << "\nError: invalid MPP optimizer selection in NonDLocalReliability"
 	   << std::endl;
-      abort_handler(-1);
-#endif
-    }
-    else if (mpp_optimizer == SUBMETHOD_NIP) {
-#ifdef HAVE_OPTPP
-      npsolFlag = false;
-#else
-      Cerr << "\nError: this executable not configured with OPT++ NIP.\n"
-	   << "         please select NPSOL SQP within local_reliability."
-	   << std::endl;
-      abort_handler(-1);
-#endif
-    }
-    else if (mpp_optimizer == SUBMETHOD_DEFAULT) {
-#ifdef HAVE_NPSOL
-      npsolFlag = true;
-#elif HAVE_OPTPP
-      npsolFlag = false;
-#else
-      Cerr << "\nError: this executable not configured with NPSOL or OPT++.\n"
-	   << "       NonDLocalReliability cannot perform MPP search."
-	   << std::endl;
-      abort_handler(-1);
-#endif
+      err_flag = true; break; //npsolFlag = false;
     }
 
     // Error check for a specification of at least 1 level for MPP methods
@@ -108,8 +85,14 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
       Cerr << "\nError: An MPP search method requires the specification of at "
 	   << "least one response, probability, or reliability level."
 	   << std::endl;
-      abort_handler(-1);
+      err_flag = true;
     }
+  }
+  else if (integrationRefinement) {
+    // integration refinement requires an MPP, but it may be unconverged (AMV)
+    Cerr << "\nError: integration refinement only supported for MPP methods."
+	 << std::endl;
+    err_flag = true;
   }
 
   // Prevent nesting of an instance of a Fortran iterator within another
@@ -123,7 +106,7 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
   //         NonDLocalReliability on the outer loop with NPSOL/NLSSOL on an
   //         inner loop is only a problem for the no_approx MPP search (since
   //         iteratedModel is not invoked w/i an approx-based MPP search).
-  if (mppSearchType == NO_APPROX && npsolFlag) {
+  if (mppSearchType == SUBMETHOD_NO_APPROX && npsolFlag) {
     Iterator sub_iterator = iteratedModel.subordinate_iterator();
     if (!sub_iterator.is_null() && 
 	( sub_iterator.method_name() ==  NPSOL_SQP ||
@@ -144,17 +127,39 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
     }
   }
 
+  const Variables& curr_vars = iteratedModel.current_variables();
+  const SizetArray& ac_totals
+    = curr_vars.shared_data().active_components_totals();
+  // For now, restrict active variables to continuous aleatory uncertain.
+  // Easy enough to activate other variables if use cases arise for
+  // non-probabilistic MPPs (promoting non-probabilistic to uniform).
+  // > TO operate on CAUV subset and IGNORE the rest, simply introduce a
+  //   start index and a count (subset of numContinuousVars)
+  //startCV = ac_totals[TOTAL_CDV]; numContAleatUncVars = ac_totals[TOTAL_CAUV];
+  if (ac_totals[TOTAL_CDV] || ac_totals[TOTAL_CEUV] || ac_totals[TOTAL_CSV]) {
+    Cerr << "Error: design, epistemic, and state variables are not supported "
+         << "as active within local reliability methods." << std::endl;
+    err_flag = true;
+  }
+  if (curr_vars.div() || curr_vars.dsv() || curr_vars.drv()) {
+    Cerr << "Error: discrete {int,string,real} variables are not supported "
+         << "as active within local reliability methods." << std::endl;
+    err_flag = true;
+  }
+
   // Map response Hessian specification into taylorOrder for use by MV/AMV/AMV+
   // variants.  Note that taylorOrder and integrationOrder are independent
   // (although the Hessian specification required for 2nd-order integration
   // means that taylorOrder = 2 will be used for MV/AMV/AMV+; taylorOrder = 2
   // may however be used with 1st-order integration).
   const String& hess_type = iteratedModel.hessian_type();
-  taylorOrder = (hess_type != "none" && mppSearchType <= AMV_PLUS_U) ? 2 : 1;
+  taylorOrder
+    = (hess_type != "none" && mppSearchType <= SUBMETHOD_AMV_PLUS_U) ? 2 : 1;
 
   // assign iterator-specific defaults for approximation-based MPP searches
-  if (maxIterations <  0          && // DataMethod default = -1
-      mppSearchType >= AMV_PLUS_X && mppSearchType < NO_APPROX) // approx-based
+  if (maxIterations == SZ_MAX               && // DataMethod default
+      mppSearchType >= SUBMETHOD_AMV_PLUS_X &&
+      mppSearchType <  SUBMETHOD_NO_APPROX) // approx-based
     maxIterations = 25;
 
   // Map integration specification into integrationOrder.  Second-order
@@ -170,12 +175,12 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
     if (hess_type == "none") {
       Cerr << "\nError: second-order integration requires Hessian "
 	   << "specification." << std::endl;
-      abort_handler(-1);
+      err_flag = true;
     }
-    else if (mppSearchType <= AMV_U) {
+    else if (mppSearchType <= SUBMETHOD_AMV_U) {
       Cerr << "\nError: second-order integration only supported for fully "
 	   << "converged MPP methods." << std::endl;
-      abort_handler(-1);
+      err_flag = true;
     }
     else
       integrationOrder = 2;
@@ -183,8 +188,11 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
   else {
     Cerr << "Error: bad integration selection in NonDLocalReliability."
 	 << std::endl;
-    abort_handler(-1);
+    err_flag = true;
   }
+
+  if (err_flag)
+    abort_handler(METHOD_ERROR);
 
   // The model of the limit state in u-space (uSpaceModel) is constructed here
   // one time.  The RecastModel for the RIA/PMA formulations varies with the
@@ -199,15 +207,16 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
   // performance since far-field info is introduced into the BFGS Hessian.
   short recast_resp_order = 3; // grad-based quasi-Newton opt on mppModel
   switch (mppSearchType) {
-  case AMV_X: case AMV_PLUS_X: case TANA_X: case QMEA_X: {
+  case SUBMETHOD_AMV_X:  case SUBMETHOD_AMV_PLUS_X:
+  case SUBMETHOD_TANA_X: case SUBMETHOD_QMEA_X: {
     // Recast( DataFit( iteratedModel ) )
 
     // Construct g-hat(x) using a local/multipoint approximation over the
     // uncertain variables (using the same view as iteratedModel).
     String sample_reuse, approx_type;
-    if (mppSearchType == TANA_X)      approx_type = "multipoint_tana";
-    else if (mppSearchType == QMEA_X) approx_type = "multipoint_qmea";
-    else                              approx_type = "local_taylor";
+    if      (mppSearchType == SUBMETHOD_TANA_X) approx_type = "multipoint_tana";
+    else if (mppSearchType == SUBMETHOD_QMEA_X) approx_type = "multipoint_qmea";
+    else                                        approx_type = "local_taylor";
     UShortArray approx_order(1, taylorOrder);
     short corr_order = -1, corr_type = NO_CORRECTION,
       ai_data_order = (taylorOrder == 2)                          ? 7 : 3,
@@ -216,29 +225,31 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
     Model g_hat_x_model;  Iterator dace_iterator;
     ActiveSet dfs_set = iteratedModel.current_response().active_set(); // copy
     dfs_set.request_values(dfs_set_order);
-    g_hat_x_model.assign_rep(new DataFitSurrModel(dace_iterator, iteratedModel,
-      dfs_set, approx_type, approx_order, corr_type, corr_order, ai_data_order,
-      outputLevel, sample_reuse), false);
+    g_hat_x_model.assign_rep(std::make_shared<DataFitSurrModel>
+			     (dace_iterator, iteratedModel, dfs_set,
+			      approx_type, approx_order, corr_type, corr_order,
+			      ai_data_order, outputLevel, sample_reuse));
 
     // transform g_hat_x_model from x-space to u-space; truncate distrib bnds
-    uSpaceModel.assign_rep(new
-      ProbabilityTransformModel(g_hat_x_model, STD_NORMAL_U, true), false);
+    uSpaceModel.assign_rep(std::make_shared<ProbabilityTransformModel>
+			   (g_hat_x_model, STD_NORMAL_U, true));
     break;
   }
-  case AMV_U: case AMV_PLUS_U: case TANA_U: case QMEA_U: {
+  case SUBMETHOD_AMV_U:  case SUBMETHOD_AMV_PLUS_U:
+  case SUBMETHOD_TANA_U: case SUBMETHOD_QMEA_U: {
     // DataFit( Recast( iteratedModel ) )
 
     // Recast g(x) to G(u); truncate distribution bounds
     Model g_u_model;
-    g_u_model.assign_rep(new
-      ProbabilityTransformModel(iteratedModel, STD_NORMAL_U, true), false);
+    g_u_model.assign_rep(std::make_shared<ProbabilityTransformModel>
+			 (iteratedModel, STD_NORMAL_U, true));
 
     // Construct G-hat(u) using a local/multipoint approximation over the
     // uncertain variables (using the same view as iteratedModel/g_u_model).
     String sample_reuse, approx_type;
-    if (mppSearchType == TANA_U)      approx_type = "multipoint_tana";
-    else if (mppSearchType == QMEA_U) approx_type = "multipoint_qmea";
-    else                              approx_type = "local_taylor";
+    if      (mppSearchType == SUBMETHOD_TANA_U) approx_type = "multipoint_tana";
+    else if (mppSearchType == SUBMETHOD_QMEA_U) approx_type = "multipoint_qmea";
+    else                                        approx_type = "local_taylor";
     UShortArray approx_order(1, taylorOrder);
     short corr_order = -1, corr_type = NO_CORRECTION,
       ai_data_order = (taylorOrder == 2)                          ? 7 : 3,
@@ -247,15 +258,16 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
     Iterator dace_iterator;
     ActiveSet dfs_set = g_u_model.current_response().active_set(); // copy
     dfs_set.request_values(dfs_set_order);
-    uSpaceModel.assign_rep(new DataFitSurrModel(dace_iterator, g_u_model,
-      dfs_set, approx_type, approx_order, corr_type, corr_order, ai_data_order,
-      outputLevel, sample_reuse), false);
+    uSpaceModel.assign_rep(std::make_shared<DataFitSurrModel>
+			   (dace_iterator, g_u_model, dfs_set, approx_type,
+			    approx_order, corr_type, corr_order, ai_data_order,
+			    outputLevel, sample_reuse));
     break;
   }
-  case NO_APPROX: { // Recast( iteratedModel )
+  case SUBMETHOD_NO_APPROX: { // Recast( iteratedModel )
     // Recast g(x) to G(u); truncate distribution bounds
-    uSpaceModel.assign_rep(new
-      ProbabilityTransformModel(iteratedModel, STD_NORMAL_U, true), false);
+    uSpaceModel.assign_rep(std::make_shared<ProbabilityTransformModel>
+			   (iteratedModel, STD_NORMAL_U, true));
     // detect PMA2 condition and augment mppModel data requirements
     bool pma2_flag = false;
     if (integrationOrder == 2)
@@ -279,9 +291,9 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
   if (mppSearchType) {
     SizetArray recast_vars_comps_total;  // default: empty; no change in size
     BitArray all_relax_di, all_relax_dr; // default: empty; no discrete relax
-    mppModel.assign_rep(
-      new RecastModel(uSpaceModel, recast_vars_comps_total, all_relax_di,
-		      all_relax_dr, 1, 1, 0, recast_resp_order), false);
+    mppModel.assign_rep(std::make_shared<RecastModel>
+			(uSpaceModel, recast_vars_comps_total, all_relax_di,
+			 all_relax_dr, 1, 1, 0, recast_resp_order));
     RealVector nln_eq_targets(1, false); nln_eq_targets = 0.;
     mppModel.nonlinear_eq_constraint_targets(nln_eq_targets);
 
@@ -295,8 +307,8 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
       // which could be too expensive for FORM with numerical grads unless
       // seeking parallel load balance.
       //int npsol_deriv_level;
-      //if ( mppSearchType == NO_APPROX && !iteratedModel.asynch_flag()
-      //     && iteratedModel.gradient_type() != "analytic" )
+      //if (mppSearchType == SUBMETHOD_NO_APPROX && !iteratedModel.asynch_flag()
+      //    && iteratedModel.gradient_type() != "analytic")
       //  npsol_deriv_level = (ria_flag) ? 1 : 2;
       //else
       //  npsol_deriv_level = 3;
@@ -310,18 +322,18 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
       int npsol_deriv_level = 3;
 
       // run a tighter tolerance on approximation-based MPP searches
-      //Real conv_tol = (mppSearchType == NO_APPROX) ? 1.e-4 : 1.e-6;
+      //Real conv_tol = (mppSearchType == SUBMETHOD_NO_APPROX) ? 1.e-4 : 1.e-6;
       Real conv_tol = -1.; // use NPSOL default
 
 #ifdef HAVE_NPSOL
-      mppOptimizer.assign_rep(new NPSOLOptimizer(mppModel, npsol_deriv_level,
-	conv_tol), false);
+      mppOptimizer.assign_rep(std::make_shared<NPSOLOptimizer>
+			      (mppModel, npsol_deriv_level, conv_tol));
 #endif
     }
 #ifdef HAVE_OPTPP
     else
-      mppOptimizer.assign_rep(new SNLLOptimizer("optpp_q_newton", mppModel),
-	false);
+      mppOptimizer.assign_rep(std::make_shared<SNLLOptimizer>
+			      ("optpp_q_newton", mppModel));
 #endif
   }
 
@@ -340,12 +352,6 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
   }
 
   if (integrationRefinement) {
-    // integration refinement requires an MPP, but it may be unconverged (AMV)
-    if (!mppSearchType) {
-      Cerr << "\nError: integration refinement only supported for MPP methods."
-	   << std::endl;
-      abort_handler(-1);
-    }
 
     // For NonDLocal, integration refinement is applied to the original model
     int refine_samples = 1000; // context-specific default
@@ -372,30 +378,35 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
 
     // AIS is performed in u-space WITHOUT a surrogate: pass a truth u-space
     // model when available, construct one when not.
-    NonDAdaptImpSampling* import_sampler_rep = NULL;
+    std::shared_ptr<NonDAdaptImpSampling> import_sampler_rep;
     switch (mppSearchType) {
-    case AMV_X: case AMV_PLUS_X: case TANA_X: case QMEA_X: {
+    case SUBMETHOD_AMV_X:  case SUBMETHOD_AMV_PLUS_X:
+    case SUBMETHOD_TANA_X: case SUBMETHOD_QMEA_X: {
       Model g_u_model;
-      g_u_model.assign_rep(new ProbabilityTransformModel(iteratedModel,
-	STD_NORMAL_U), false); // original distribution bnds
-      import_sampler_rep = new NonDAdaptImpSampling(g_u_model, sample_type,
-	refine_samples, refine_seed, rng, vary_pattern, integrationRefinement,
-	cdfFlag, x_model_flag, use_model_bounds, track_extreme);
+      g_u_model.assign_rep(std::make_shared<ProbabilityTransformModel>
+			   (iteratedModel, STD_NORMAL_U)); // original dist bnds
+      import_sampler_rep = std::make_shared<NonDAdaptImpSampling>
+	(g_u_model, sample_type,
+	 refine_samples, refine_seed, rng, vary_pattern, integrationRefinement,
+	 cdfFlag, x_model_flag, use_model_bounds, track_extreme);
       break;
     }
-    case AMV_U: case AMV_PLUS_U: case TANA_U: case QMEA_U:
-      import_sampler_rep = new NonDAdaptImpSampling(uSpaceModel.truth_model(),
-	sample_type, refine_samples, refine_seed, rng, vary_pattern,
-	integrationRefinement, cdfFlag, x_model_flag, use_model_bounds,
-	track_extreme);
+    case SUBMETHOD_AMV_U:  case SUBMETHOD_AMV_PLUS_U:
+    case SUBMETHOD_TANA_U: case SUBMETHOD_QMEA_U:
+      import_sampler_rep = std::make_shared<NonDAdaptImpSampling>
+	(uSpaceModel.truth_model(),
+	 sample_type, refine_samples, refine_seed, rng, vary_pattern,
+	 integrationRefinement, cdfFlag, x_model_flag, use_model_bounds,
+	 track_extreme);
       break;
-    case NO_APPROX:
-      import_sampler_rep = new NonDAdaptImpSampling(uSpaceModel, sample_type,
-	refine_samples, refine_seed, rng, vary_pattern, integrationRefinement,
-	cdfFlag, x_model_flag, use_model_bounds, track_extreme);
+    case SUBMETHOD_NO_APPROX:
+      import_sampler_rep = std::make_shared<NonDAdaptImpSampling>
+	(uSpaceModel, sample_type,
+	 refine_samples, refine_seed, rng, vary_pattern, integrationRefinement,
+	 cdfFlag, x_model_flag, use_model_bounds, track_extreme);
       break;
     }
-    importanceSampler.assign_rep(import_sampler_rep, false);
+    importanceSampler.assign_rep(import_sampler_rep);
   }
 
   // Size the output arrays, augmenting sizing in NonDReliability.  Relative to
@@ -414,29 +425,6 @@ NonDLocalReliability(ProblemDescDB& problem_db, Model& model):
     computedRelLevels[i].resize(num_levels);
     computedGenRelLevels[i].resize(num_levels);
   }
-
-  const Variables& curr_vars = iteratedModel.current_variables();
-  const SizetArray& ac_totals
-    = curr_vars.shared_data().active_components_totals();
-  // For now, restrict active variables to continuous aleatory uncertain.
-  // Easy enough to activate other variables if use cases arise for
-  // non-probabilistic MPPs (promoting non-probabilistic to uniform).
-  // > TO operate on CAUV subset and IGNORE the rest, simply introduce a
-  //   start index and a count (subset of numContinuousVars)
-  //startCV = ac_totals[TOTAL_CDV]; numContAleatUncVars = ac_totals[TOTAL_CAUV];
-  bool err_flag = false;
-  if (ac_totals[TOTAL_CDV] || ac_totals[TOTAL_CEUV] || ac_totals[TOTAL_CSV]) {
-    Cerr << "Error: design, epistemic, and state variables are not supported "
-         << "as active within local reliability methods." << std::endl;
-    err_flag = true;
-  }
-  if (curr_vars.div() || curr_vars.dsv() || curr_vars.drv()) {
-    Cerr << "Error: discrete {int,string,real} variables are not supported "
-         << "as active within local reliability methods." << std::endl;
-    err_flag = true;
-  }
-  if (err_flag)
-    abort_handler(METHOD_ERROR);
 
   // Size class-scope arrays.
   mostProbPointX.sizeUninitialized(numContinuousVars);
@@ -510,6 +498,65 @@ void NonDLocalReliability::derived_free_communicators(ParLevLIter pl_iter)
 }
 
 
+void NonDLocalReliability::initialize_graphics(int iterator_server_id)
+{
+  // Set up special graphics for CDF/CCDF visualization
+  if (totalLevelRequests) {
+
+    OutputManager& mgr = parallelLib.output_manager();
+    Graphics& dakota_graphics = mgr.graphics();
+
+    // For graphics, limit (currently) to server id 1, for both ded master
+    // (parent partition rank 1) and peer partitions (parent partition rank 0)
+    if (mgr.graph2DFlag && iterator_server_id == 1) { // initialize the 2D plots
+      iteratedModel.create_2d_plots();
+      // Visualize mostProbPointX in the vars windows and CDF/CCDF
+      // probability/reliability-response level pairs in the response windows.
+      dakota_graphics.set_x_labels2d("Response Level");
+      size_t i;
+      for (i=0; i<numFunctions; i++)
+	dakota_graphics.set_y_label2d(i, "Probability");
+      for (i=0; i<numContinuousVars; i++)
+	dakota_graphics.set_y_label2d(i+numFunctions, "Most Prob Point");
+    }
+
+    /*
+    // For output/restart/tabular data, all Iterator masters stream output
+    if (mgr.tabularDataFlag) { // initialize the tabular data file
+      dakota_graphics.tabular_counter_label("z");
+      iteratedModel.create_tabular_datastream();
+    }
+    */
+  }
+}
+
+
+void NonDLocalReliability::pre_run()
+{
+  NonDReliability::pre_run();
+
+  // IteratorScheduler::run_iterator() + Analyzer::initialize_run() ensure
+  // initialization of Model mappings for iteratedModel, but local recursions
+  // are not visible -> recur DataFitSurr +  ProbabilityTransform if needed.
+  // > Note: part of this occurs at DataFit build time. Therefore, take
+  //         care to avoid redundancy using mappingInitialized flag.
+  if (mppSearchType) {
+    if (!mppModel.mapping_initialized()) {
+      ParLevLIter pl_iter = methodPCIter->mi_parallel_level_iterator(miPLIndex);
+      /*bool var_size_changed =*/ mppModel.initialize_mapping(pl_iter);
+      //if (var_size_changed) resize();
+    }
+
+    // now that vars/labels/bounds/targets have flowed down at run-time from
+    // any higher level recursions, propagate them up local Model recursions
+    // so that they are correct when they propagate back down.  There is no
+    // need to recur below iteratedModel.
+    size_t layers = (mppSearchType == SUBMETHOD_NO_APPROX) ? 2 : 3;
+    mppModel.update_from_subordinate_model(layers-1);
+  }
+}
+
+
 void NonDLocalReliability::core_run()
 {
   resize_final_statistics_gradients(); // finalStats ASV available at run time
@@ -520,8 +567,9 @@ void NonDLocalReliability::core_run()
   // post-process level mappings to define PDFs (using prob_refined and
   // all_levels_computed modes)
   if (pdfOutput && integrationRefinement) {
-    NonDAdaptImpSampling* import_sampler_rep
-      = (NonDAdaptImpSampling*)importanceSampler.iterator_rep();
+    std::shared_ptr<NonDAdaptImpSampling> import_sampler_rep =
+      std::static_pointer_cast<NonDAdaptImpSampling>
+      (importanceSampler.iterator_rep());
     compute_densities(import_sampler_rep->extreme_values(), true, true);
   } // else no extreme values to define outer PDF bins
 }
@@ -561,7 +609,7 @@ void NonDLocalReliability::mean_value()
         total_lev = rl_len + pl_len + bl_len + gl_len;
 
     mean = momentStats(0,respFnCount); mom2 = momentStats(1,respFnCount);
-    if (finalMomentsType == CENTRAL_MOMENTS)
+    if (finalMomentsType == Pecos::CENTRAL_MOMENTS)
       { var = mom2; std_dev = std::sqrt(mom2); }
     else
       { std_dev = mom2; var = mom2 * mom2; }
@@ -803,7 +851,7 @@ void NonDLocalReliability::mpp_search()
 	// (nonstandard DVV containing active and inactive vars)
 	Cerr << "Error: response std deviation sensitivity not yet supported."
 	     << std::endl;
-	abort_handler(-1);
+	abort_handler(METHOD_ERROR);
 	// TO DO: back out from RIA/PMA equations (use closest level to mean?):
 	// RIA: dsigma/ds = (dmean/ds - sigma dbeta_cdf/ds) / beta_cdf
 	// PMA: dsigma/ds = (dmean/ds - dz/ds) / beta_cdf
@@ -883,7 +931,7 @@ void NonDLocalReliability::mpp_search()
 
 #ifdef DERIV_DEBUG
       // numerical verification of analytic Jacobian/Hessian routines
-      if (mppSearchType == NO_APPROX && levelCount == 0)
+      if (mppSearchType == SUBMETHOD_NO_APPROX && levelCount == 0)
         mostProbPointU = ranVarMeansU;//mostProbPointX = ranVarMeansX;
       //nataf.verify_trans_jacobian_hessian(mostProbPointU);
       //nataf.verify_trans_jacobian_hessian(mostProbPointX);
@@ -898,7 +946,8 @@ void NonDLocalReliability::mpp_search()
 
 	Sizet2DArray vars_map, primary_resp_map, secondary_resp_map;
 	BoolDequeArray nonlinear_resp_map(2);
-	RecastModel* mpp_model_rep = (RecastModel*)mppModel.model_rep();
+	std::shared_ptr<RecastModel> mpp_model_rep =
+	  std::static_pointer_cast<RecastModel>(mppModel.model_rep());
 	if (ria_flag) { // RIA: g is in constraint
 	  primary_resp_map.resize(1);   // one objective, no contributors
 	  secondary_resp_map.resize(1); // one constraint, one contributor
@@ -987,7 +1036,7 @@ void NonDLocalReliability::mpp_search()
     of NonDLocalReliability. */
 void NonDLocalReliability::initial_taylor_series()
 {
-  bool init_ts_flag = (mppSearchType < NO_APPROX); // updated below
+  bool init_ts_flag = (mppSearchType < SUBMETHOD_NO_APPROX); // updated below
   const String& hess_type = iteratedModel.hessian_type();
   size_t i, j, k;
   ShortArray asrv(numFunctions, 0);
@@ -997,17 +1046,18 @@ void NonDLocalReliability::initial_taylor_series()
 
   const ShortArray& final_asv = finalStatistics.active_set_request_vector();
   switch (mppSearchType) {
-  case MV:
-    asrv.assign(numFunctions, mode);
-    break;
-  case AMV_X:   case AMV_U:   case AMV_PLUS_X:  case AMV_PLUS_U:
-  case TANA_X:  case TANA_U:  case QMEA_X:      case QMEA_U:
+  case SUBMETHOD_DEFAULT: // MV
+    asrv.assign(numFunctions, mode);  break;
+  case SUBMETHOD_AMV_X:       case SUBMETHOD_AMV_U:
+  case SUBMETHOD_AMV_PLUS_X:  case SUBMETHOD_AMV_PLUS_U:
+  case SUBMETHOD_TANA_X:      case SUBMETHOD_TANA_U:
+  case SUBMETHOD_QMEA_X:      case SUBMETHOD_QMEA_U:
     for (i=0; i<numFunctions; ++i)
       if (!requestedRespLevels[i].empty() || !requestedProbLevels[i].empty() ||
 	  !requestedRelLevels[i].empty()  || !requestedGenRelLevels[i].empty() )
 	asrv[i] = mode;
     // no break: fall through
-  case NO_APPROX:
+  case SUBMETHOD_NO_APPROX:
     if (subIteratorFlag && finalMomentsType) {
       // check final_asv for active mean and std deviation stats
       size_t cntr = 0;
@@ -1037,8 +1087,8 @@ void NonDLocalReliability::initial_taylor_series()
     // Evaluate response values/gradients at the mean values of the uncertain
     // vars for the (initial) Taylor series expansion in MV/AMV/AMV+.
     Cout << "\n>>>>> Evaluating response at mean values\n";
-    if (mppSearchType && mppSearchType < NO_APPROX)
-      uSpaceModel.component_parallel_mode(TRUTH_MODEL);
+    if (mppSearchType && mppSearchType < SUBMETHOD_NO_APPROX)
+      uSpaceModel.component_parallel_mode(TRUTH_MODEL_MODE);
     iteratedModel.continuous_variables(ranVarMeansX);
     activeSet.request_vector(asrv);
     iteratedModel.evaluate(activeSet);
@@ -1100,7 +1150,8 @@ void NonDLocalReliability::initial_taylor_series()
 	  }
 	}
 	if (t2nq) mean += v1/2.;
-	mom2 = (finalMomentsType == CENTRAL_MOMENTS) ? v2 : std::sqrt(v2);
+	mom2 = (finalMomentsType == Pecos::CENTRAL_MOMENTS) ?
+	  v2 : std::sqrt(v2);
       }
     }
 
@@ -1110,7 +1161,7 @@ void NonDLocalReliability::initial_taylor_series()
     //RealSymMatrix variance(numFunctions, false);
     //Teuchos::symMatTripleProduct(Teuchos::NO_TRANS, 1., covariance,
     //                             fnGradsMeanX, variance);
-    //if (finalMomentsType == CENTRAL_MOMENTS)
+    //if (finalMomentsType == Pecos::CENTRAL_MOMENTS)
     //  for (i=0; i<numFunctions; i++)
     //    momentStats(1,i) = variance(i,i);
     //else
@@ -1141,7 +1192,7 @@ void NonDLocalReliability::initialize_class_data()
     = uSpaceModel.probability_transformation();
   // define ranVarMeansU for use in the transformed AMV option
   // (must follow transform_correlations())
-  //if (mppSearchType == AMV_U)
+  //if (mppSearchType == SUBMETHOD_AMV_U)
   nataf.trans_X_to_U(ranVarMeansX, ranVarMeansU);
   // or ranVarMeansU = u_dist.means();
 
@@ -1149,8 +1200,8 @@ void NonDLocalReliability::initialize_class_data()
   // Determine median limit state values for AMV/AMV+/FORM/SORM by evaluating
   // response fns at u = 0 (used for determining signs of reliability indices).
   Cout << "\n>>>>> Evaluating response at median values\n";
-  if (mppSearchType && mppSearchType < NO_APPROX)
-    uSpaceModel.component_parallel_mode(TRUTH_MODEL);
+  if (mppSearchType && mppSearchType < SUBMETHOD_NO_APPROX)
+    uSpaceModel.component_parallel_mode(TRUTH_MODEL_MODE);
   RealVector ep_median_u(numContinuousVars), // inits vals to 0
              ep_median_x(numContinuousVars, false);
   nataf.trans_U_to_X(ep_median_u, ep_median_x);
@@ -1234,14 +1285,17 @@ void NonDLocalReliability::initialize_level_data()
 	initialPtU[i] -= factor * fn_grad_u[i];
     }
 
-    if (mppSearchType == AMV_X || mppSearchType == AMV_U) {
+    if (mppSearchType == SUBMETHOD_AMV_X || mppSearchType == SUBMETHOD_AMV_U) {
       // Reevaluation for new des vars already performed at uncertain var means
       // in initial_taylor_series()
       assign_mean_data();
     }
-    else if (mppSearchType == AMV_PLUS_X || mppSearchType == AMV_PLUS_U ||
-	     mppSearchType == TANA_X     || mppSearchType == TANA_U ||
-	     mppSearchType == QMEA_X     || mppSearchType == QMEA_U) {
+    else if (mppSearchType == SUBMETHOD_AMV_PLUS_X ||
+	     mppSearchType == SUBMETHOD_AMV_PLUS_U ||
+	     mppSearchType == SUBMETHOD_TANA_X     ||
+	     mppSearchType == SUBMETHOD_TANA_U     ||
+	     mppSearchType == SUBMETHOD_QMEA_X     ||
+	     mppSearchType == SUBMETHOD_QMEA_U) {
       mostProbPointU = initialPtU;
       if (inactive_grads)
 	Cout << "\n>>>>> Evaluating new response at projected MPP\n";
@@ -1255,11 +1309,11 @@ void NonDLocalReliability::initialize_level_data()
 
     // initial fnGradX/U for AMV/AMV+ = grads at mean x values, initial
     // expansion point for AMV+ = mean x values.
-    if (mppSearchType < NO_APPROX) { // AMV/AMV+/TANA
+    if (mppSearchType < SUBMETHOD_NO_APPROX) { // AMV/AMV+/TANA
       // update mostProbPointX/U, computedRespLevel, fnGradX/U, fnHessX/U
       assign_mean_data();
 #ifdef MPP_CONVERGE_RATE
-      if (mppSearchType >= AMV_PLUS_X)
+      if (mppSearchType >= SUBMETHOD_AMV_PLUS_X)
 	Cout << "u'u = "  << mostProbPointU.dot(mostProbPointU)
 	     << " G(u) = " << computedRespLevel << '\n';
 #endif // MPP_CONVERGE_RATE
@@ -1319,9 +1373,9 @@ void NonDLocalReliability::initialize_level_data()
   }
 
   // Create the initial Taylor series approximation used by AMV/AMV+/TANA
-  if (mppSearchType < NO_APPROX) {
+  if (mppSearchType < SUBMETHOD_NO_APPROX) {
     // restrict the approximation index set
-    IntSet surr_fn_indices;
+    SizetSet surr_fn_indices;
     surr_fn_indices.insert(respFnCount);
     uSpaceModel.surrogate_function_indices(surr_fn_indices);
     // construct the approximation
@@ -1421,7 +1475,7 @@ void NonDLocalReliability::initialize_mpp_search_data()
   else { // cold start: reset to mean inputs/outputs
     // initial fnGradX/U for AMV/AMV+ = grads at mean x values, initial
     // expansion point for AMV+ = mean x values.
-    if (mppSearchType < NO_APPROX) // AMV/AMV+/TANA
+    if (mppSearchType < SUBMETHOD_NO_APPROX) // AMV/AMV+/TANA
       assign_mean_data();
     // initial optimizer guess in u-space (initialPtU)
     initialPtU = initialPtUSpec; // initialPtUSpec set in ctor
@@ -1444,8 +1498,8 @@ update_mpp_search_data(const Variables& vars_star, const Response& resp_star)
   // Update MPP arrays from optimization results
   Real conv_metric;
   switch (mppSearchType) {
-  case AMV_PLUS_X:  case TANA_X:  case QMEA_X:
-  case AMV_PLUS_U:  case TANA_U:  case QMEA_U: {
+  case SUBMETHOD_AMV_PLUS_X:  case SUBMETHOD_TANA_X:  case SUBMETHOD_QMEA_X:
+  case SUBMETHOD_AMV_PLUS_U:  case SUBMETHOD_TANA_U:  case SUBMETHOD_QMEA_U: {
     RealVector del_u(numContinuousVars, false);
     for (size_t i=0; i<numContinuousVars; i++)
       del_u[i] = mpp_u[i] - mostProbPointU[i];
@@ -1459,13 +1513,13 @@ update_mpp_search_data(const Variables& vars_star, const Response& resp_star)
   // a validation function evaluation (AMV/AMV+) or retrieving data from
   // resp_star (FORM).  Also update approximations and convergence tols.
   switch (mppSearchType) {
-  case AMV_X: case AMV_U: {
+  case SUBMETHOD_AMV_X: case SUBMETHOD_AMV_U: {
     approxConverged = true; // break out of while loop
     truth_evaluation(1); // only update truth function value
     break;
   }
-  case AMV_PLUS_X:  case TANA_X:  case QMEA_X:
-  case AMV_PLUS_U:  case TANA_U:  case QMEA_U: {
+  case SUBMETHOD_AMV_PLUS_X:  case SUBMETHOD_TANA_X:  case SUBMETHOD_QMEA_X:
+  case SUBMETHOD_AMV_PLUS_U:  case SUBMETHOD_TANA_U:  case SUBMETHOD_QMEA_U: {
     // Assess AMV+/TANA iteration convergence.  ||del_u|| is not a perfect
     // metric since cycling between MPP estimates can occur.  Therefore,
     // a maximum number of iterations is also enforced.
@@ -1518,7 +1572,7 @@ update_mpp_search_data(const Variables& vars_star, const Response& resp_star)
 
     break;
   }
-  case NO_APPROX: { // FORM/SORM
+  case SUBMETHOD_NO_APPROX: { // FORM/SORM
 
     // direct optimization converges to MPP: no new approximation to compute
     approxConverged = true; // break out of while loop
@@ -1545,7 +1599,8 @@ update_mpp_search_data(const Variables& vars_star, const Response& resp_star)
       mode |= 4;
       // RecastModel::transform_set() normally handles this, but we are
       // bypassing the Recast and pulling iteratedModel data from data_pairs
-      RecastModel* pt_model_rep = (RecastModel*)uSpaceModel.model_rep();
+      std::shared_ptr<RecastModel> pt_model_rep =
+	std::static_pointer_cast<RecastModel>(uSpaceModel.model_rep());
       if (pt_model_rep->nonlinear_variables_mapping())
 	mode |= 2; // fnGradX needed to transform fnHessX to fnHessU
     }
@@ -1719,8 +1774,10 @@ void NonDLocalReliability::update_level_data()
 
 void NonDLocalReliability::update_limit_state_surrogate()
 {
-  bool x_space = (mppSearchType ==  AMV_X || mppSearchType == AMV_PLUS_X ||
-		  mppSearchType == TANA_X || mppSearchType == QMEA_X);
+  bool x_space = (mppSearchType == SUBMETHOD_AMV_X ||
+		  mppSearchType == SUBMETHOD_AMV_PLUS_X ||
+		  mppSearchType == SUBMETHOD_TANA_X ||
+		  mppSearchType == SUBMETHOD_QMEA_X);
 
   // construct local Variables object
   Variables mpp_vars(iteratedModel.current_variables().shared_data());
@@ -1802,7 +1859,7 @@ void NonDLocalReliability::assign_mean_data()
 void NonDLocalReliability::truth_evaluation(short mode)
 {
   // the following are no-ops for ReastModel -> SimulationModel (NO_APPROX):
-  uSpaceModel.component_parallel_mode(TRUTH_MODEL);      // Recast forwards
+  uSpaceModel.component_parallel_mode(TRUTH_MODEL_MODE);      // Recast forwards
   uSpaceModel.surrogate_response_mode(BYPASS_SURROGATE); // Recast forwards
 
   uSpaceModel.continuous_variables(mostProbPointU);
@@ -1831,7 +1888,7 @@ void NonDLocalReliability::truth_evaluation(short mode)
   // the following are no-ops for ReastModel -> SimulationModel (NO_APPROX):
   uSpaceModel.surrogate_response_mode(UNCORRECTED_SURROGATE); // restore
   // Not currently necessary as surrogate mode does not employ parallelism:
-  //uSpaceModel.component_parallel_mode(SURROGATE_MODEL); // restore
+  //uSpaceModel.component_parallel_mode(SURROGATE_MODEL_MODE); // restore
 }
 
 
@@ -1927,7 +1984,7 @@ PMA_objective_eval(const Variables& sub_model_vars,
 
   // Due to RecastModel, objective_eval always called before constraint_eval,
   // so perform NO_APPROX updates here.
-  if (nondLocRelInstance->mppSearchType == NO_APPROX &&
+  if (nondLocRelInstance->mppSearchType == SUBMETHOD_NO_APPROX &&
       nondLocRelInstance->integrationOrder == 2) {
     nondLocRelInstance->curvatureDataAvailable = true;
     nondLocRelInstance->kappaUpdated = false; // new fn_{grad,hess}_u data
@@ -2044,7 +2101,8 @@ PMA2_constraint_eval(const Variables& sub_model_vars,
   // induces additional curvature on top of a low-order approximation.
   // Note: if linear transformation or u-space AMV^2+, then Hessian is
   // consistent with the previous truth and is constant over the surrogate.
-  Real computed_prob_level = (nondLocRelInstance->mppSearchType == NO_APPROX) ?
+  Real computed_prob_level
+    = (nondLocRelInstance->mppSearchType == SUBMETHOD_NO_APPROX) ?
     nondLocRelInstance->probability(comp_rel, cdf, u, fn_grad_u,
       sub_model_response.function_hessian(resp_fn)) :
     nondLocRelInstance->probability(comp_rel, cdf,
@@ -2083,7 +2141,7 @@ PMA2_constraint_eval(const Variables& sub_model_vars,
   if (asv_val & 4) {
     Cerr << "Error: Hessian data not supported in NonDLocalReliability::"
 	 << "PMA2_constraint_eval()" << std::endl;
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
     /*
     RealSymMatrix hess_f = recast_response.function_hessian_view(1);
     hess_f = 0.;
@@ -2108,7 +2166,7 @@ PMA2_set_mapping(const Variables& recast_vars, const ActiveSet& recast_set,
     // all cases require latest fn_grad_u (either truth-based or approx-based)
     sub_model_request |= 2;
     // PMA SORM requires latest fn_hess_u (truth-based)
-    if (nondLocRelInstance->mppSearchType == NO_APPROX)
+    if (nondLocRelInstance->mppSearchType == SUBMETHOD_NO_APPROX)
       sub_model_request |= 4;
     // else value/grad request utilizes most recent truth fnGradU/fnHessU
 
@@ -2145,8 +2203,8 @@ dg_ds_eval(const RealVector& x_vars, const RealVector& fn_grad_x,
   if (dist_param_derivs == NO_DERIVS || dist_param_derivs == MIXED_DERIVS) {
     Cout << "\n>>>>> Evaluating sensitivity with respect to augmented inactive "
 	 << "variables\n";
-    if (mppSearchType && mppSearchType < NO_APPROX)
-      uSpaceModel.component_parallel_mode(TRUTH_MODEL);
+    if (mppSearchType && mppSearchType < SUBMETHOD_NO_APPROX)
+      uSpaceModel.component_parallel_mode(TRUTH_MODEL_MODE);
     iteratedModel.continuous_variables(x_vars);
     ActiveSet inactive_grad_set = activeSet;
     inactive_grad_set.request_values(0);
@@ -2305,8 +2363,9 @@ probability(Real beta, bool cdf_flag, const RealVector& mpp_u,
   if (integrationRefinement &&                                  // IS/AIS/MMAIS
       levelCount < requestedRespLevels[respFnCount].length()) { // RIA only
     // rep needed for access to functions not mapped to Iterator level
-    NonDAdaptImpSampling* import_sampler_rep
-      = (NonDAdaptImpSampling*)importanceSampler.iterator_rep();
+    std::shared_ptr<NonDAdaptImpSampling> import_sampler_rep =
+      std::static_pointer_cast<NonDAdaptImpSampling>
+      (importanceSampler.iterator_rep());
     bool x_data_flag = false;
     import_sampler_rep->
       initialize(mpp_u, x_data_flag, respFnCount, p, requestedTargetLevel);
@@ -2359,7 +2418,7 @@ Real NonDLocalReliability::dp2_dbeta_factor(Real beta, bool cdf_flag)
     case HONG: // addtnl complexity not warranted
       Cerr << "\nError: final statistic gradients not implemented for Hong."
 	   << std::endl;
-      abort_handler(-1); break;
+      abort_handler(METHOD_ERROR); break;
     case BREITUNG:
       kterm = beta_corr; break;
     case HOHENRACK:
@@ -2593,7 +2652,7 @@ reliability_residual_derivative(const Real& p, const Real& beta,
   if (secondOrderIntType == HONG) { // addtnl complexity may not be warranted
     Cerr << "\nError: reliability residual derivative not implemented for Hong."
 	 << std::endl;
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
     //dres_dbeta = p * sum + C1 * phi(-beta) - Phi(-beta) * dC1_dbeta;
   }
   else
@@ -2638,7 +2697,7 @@ principal_curvatures(const RealVector& mpp_u, const RealVector& fn_grad_u,
       // Note: for Breitung, kappa_i do not matter if beta = 0.
       Cerr << "\nError: unable to initialize R0 in principal_curvatures() "
 	   << "calculation." << std::endl;
-      abort_handler(-1);
+      abort_handler(METHOD_ERROR);
     }
   }
   //Cout << "\nR0:" << R0;
@@ -2685,9 +2744,8 @@ principal_curvatures(const RealVector& mpp_u, const RealVector& fn_grad_u,
 	  work, lwork, &info);
   delete [] work;
   if (info) {
-    Cerr << "\nError: internal error in LAPACK eigenvalue routine."
-         << std::endl;
-    abort_handler(-1);
+    Cerr << "\nError: internal error in LAPACK eigenvalue routine."<< std::endl;
+    abort_handler(METHOD_ERROR);
   }
   //Cout << "\nkappa_u:" << kappa_u;
 }
@@ -2724,7 +2782,7 @@ void NonDLocalReliability::print_results(std::ostream& s, short results_state)
     for (i=0; i<numFunctions; i++) {
       s << "MV Statistics for " << fn_labels[i] << ":\n";
       // approximate response means and std deviations and importance factors
-      std_dev = (finalMomentsType == CENTRAL_MOMENTS) ?
+      std_dev = (finalMomentsType == Pecos::CENTRAL_MOMENTS) ?
 	std::sqrt(momentStats(1,i)) : momentStats(1,i);
       s << "  Approximate Mean Response                  = "
 	<< std::setw(width) << momentStats(0,i)
@@ -2760,7 +2818,7 @@ void NonDLocalReliability::print_results(std::ostream& s, short results_state)
 
     size_t num_levels = computedRespLevels[i].length();
     if (num_levels) {
-      Real std_dev = (finalMomentsType == CENTRAL_MOMENTS) ?
+      Real std_dev = (finalMomentsType == Pecos::CENTRAL_MOMENTS) ?
 	std::sqrt(momentStats(1,i)) : momentStats(1,i);
       if (!mppSearchType && std_dev < Pecos::SMALL_NUMBER)
         s << "\nWarning: negligible standard deviation renders CDF results "
@@ -2792,12 +2850,12 @@ void NonDLocalReliability::method_recourse()
        << "detected method conflict.\n\n";
   if (mppSearchType && npsolFlag) {
 #ifdef HAVE_OPTPP
-    mppOptimizer.assign_rep(
-      new SNLLOptimizer("optpp_q_newton", mppModel), false);
+    mppOptimizer.assign_rep(std::make_shared<SNLLOptimizer>
+			    ("optpp_q_newton", mppModel));
 #else
     Cerr << "\nError: method recourse not possible in NonDLocalReliability "
 	 << "(OPT++ NIP unavailable).\n";
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
 #endif
     npsolFlag = false;
   }

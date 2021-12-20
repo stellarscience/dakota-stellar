@@ -430,8 +430,6 @@ Privileged_Property::onChangeLoopData::~onChangeLoopData()
 }
 
 
-} // namespace utilib
-
 
 /** Printing the ReadOnlyProperty prints the contained Any
  *
@@ -456,3 +454,6 @@ std::istream& operator>>( std::istream& is, utilib::Property& property )
    property = tmp;
    return is;
 }
+
+
+} // namespace utilib

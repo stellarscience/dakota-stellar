@@ -10,8 +10,6 @@
 message("${DakotaSurrogates_SOURCE_DIR}")
 
 include_directories(${DakotaSurrogates_SOURCE_DIR}/models/src
-                    ${Boost_INCLUDE_DIR}
-                    ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
 
 remove_definitions("-DHAVE_CONFIG_H")

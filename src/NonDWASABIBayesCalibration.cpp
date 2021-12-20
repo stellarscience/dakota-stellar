@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -71,7 +72,6 @@ void NonDWASABIBayesCalibration::calibrate()
   // Step 1 of 10: Build the response surface approximation (RSA)
   ////////////////////////////////////////////////////////
   
-  initialize_model();
   if (emulatorType == NO_EMULATOR) {
     Cerr << "\nError: WASABI requires an emulator!"<<std::endl;
     abort_handler(METHOD_ERROR);
@@ -405,7 +405,7 @@ print_results(std::ostream& s, short results_state)
   // WASABI-specific output
   StringArray resp_labels = mcmcModel.current_response().function_labels();
   NonDSampling::print_moments(s, momentStatistics, RealMatrix(),
-      "response function", STANDARD_MOMENTS, resp_labels, false);
+      "response function", Pecos::STANDARD_MOMENTS, resp_labels, false);
 }
 
 

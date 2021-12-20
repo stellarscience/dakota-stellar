@@ -246,8 +246,10 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
   // DSTEQR docs for 3rd field: (input/output)
   //   On entry, the diagonal elements of the tridiagonal matrix.
   //   On exit, if INFO = 0, the eigenvalues in ascending order.
-  copy_data(alpha3TR, collocPoints); // eigenvalues are Gauss points
-  la.STEQR('I', m, &collocPoints[0], off_diag.values(), z_eigvec.values(), ldz,
+  RealArray& colloc_pts = collocPointsMap[m];
+  RealArray& colloc_wts = collocWeightsMap[m];
+  copy_data(alpha3TR, colloc_pts); // eigenvalues are Gauss points
+  la.STEQR('I', m, &colloc_pts[0], off_diag.values(), z_eigvec.values(), ldz,
 	   work, &info);
   if (info) {
     PCerr << "Error: nonzero return code (" << info << ") from LAPACK STEQR "
@@ -259,17 +261,17 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
 
   // Gauss points are the eigenvalues which are updated in place by STEQR.
   // compute the Gauss weights from the eigenvectors:
-  collocWeights.resize(m);
+  colloc_wts.resize(m);
   //Real norm_sq_0 = orthogPolyNormsSq[0];
   for (i=0; i<m; ++i)
-    collocWeights[i] = std::pow(z_eigvec(0, i), 2.);// * norm_sq_0;
+    colloc_wts[i] = std::pow(z_eigvec(0, i), 2.);// * norm_sq_0;
 
   // orthogPolyNormsSq up to order m-1 are available using the just
   // computed Gauss points/weights
   if (post_process_native_norm_sq)
     for (i=0; i<m; ++i)
-      orthogPolyNormsSq[i]
-	= native_quadrature_integral(polyCoeffs[i], polyCoeffs[i]);
+      orthogPolyNormsSq[i] = native_quadrature_integral(polyCoeffs[i],
+	polyCoeffs[i], colloc_pts, colloc_wts);
   // orthogPolyNormsSq of order m computed with (expensive) discrete integral
   if (post_process_last_norm_sq) // 2m integral exceeds native 2m-1 resolution
     orthogPolyNormsSq[m] = inner_product(polyCoeffs[m], polyCoeffs[m]);
@@ -279,8 +281,7 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     for (i=0; i<=m; ++i)
       PCout << "orthogPolyNormsSq[" << i << "] = " << orthogPolyNormsSq[i]
 	    <<'\n';
-  PCout << "collocPoints:\n"  << collocPoints
-	<< "collocWeights:\n" << collocWeights;
+  PCout << "collocPoints:\n" << colloc_pts << "collocWeights:\n" << colloc_wts;
 #endif
 }
 
@@ -655,7 +656,8 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
     sum += colloc_wts[i] * v1 * type1_value(unscaled_gp_i, poly_coeffs2)
         *  weight_fn(unscaled_gp_i, distParams);
   }
-  return sum / UniformRandomVariable::std_pdf() * half_range;
+  return sum * half_range /
+    UniformRandomVariable::std_pdf(0.); // default z: constant density w/i bnds
 }
 
 
@@ -755,14 +757,16 @@ riemann_bounded_integral(const RealVector& poly_coeffs1,
 
 Real NumericGenOrthogPolynomial::
 native_quadrature_integral(const RealVector& poly_coeffs1,
-			   const RealVector& poly_coeffs2)
+			   const RealVector& poly_coeffs2,
+			   const RealArray& colloc_pts,
+			   const RealArray& colloc_wts)
 {
   Real i_sum = 0., v1, gp_i;
-  size_t i, num_colloc_pts = collocPoints.size();
+  size_t i, num_colloc_pts = colloc_pts.size();
   for (i=0; i<num_colloc_pts; ++i) {
-    gp_i = collocPoints[i];
+    gp_i = colloc_pts[i];
     v1 = type1_value(gp_i, poly_coeffs1); // cached due to update of const ref
-    i_sum += v1 * type1_value(gp_i, poly_coeffs2) * collocWeights[i];
+    i_sum += v1 * type1_value(gp_i, poly_coeffs2) * colloc_wts[i];
   }
   return i_sum;
 }
@@ -861,9 +865,13 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  if (collocPoints.size() != order) // if not already computed
+  UShortRealArrayMap::iterator it = collocPointsMap.find(order);
+  if (it == collocPointsMap.end()) { // not yet computed
     solve_eigenproblem(order);
-  return collocPoints;
+    return collocPointsMap[order];
+  }
+  else
+    return it->second;
 }
 
 
@@ -877,9 +885,13 @@ type1_collocation_weights(unsigned short order)
     abort_handler(-1);
   }
 
-  if (collocWeights.size() != order) // if not already computed
+  UShortRealArrayMap::iterator it = collocWeightsMap.find(order);
+  if (it == collocWeightsMap.end()) { // not yet computed
     solve_eigenproblem(order);
-  return collocWeights;
+    return collocWeightsMap[order];
+  }
+  else
+    return it->second;
 }
 
 } // namespace Pecos

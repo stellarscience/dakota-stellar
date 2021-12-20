@@ -865,21 +865,21 @@ void orthogonal_matching_pursuit( RealMatrix &A,
     {
       int active_index;
       Real max_correlation;
-      if ( num_active_indices >= ordering.length() )
+      if ( num_active_indices < ordering.length() )
 	{
-	  // Find the column that has the largest inner product with
-	  // the residual
+	  // start from user-specified inclusions (e.g., always recover coeff 0)
+	  active_index = ordering[num_active_indices];
+	  RealVector active_col( Teuchos::View, A[active_index], A.numRows() );
+	  max_correlation = std::abs( active_col.dot( residual ) );
+	}
+      else
+	{
+	  // Find column that has the largest inner product with the residual
 	  // Warning IAMX returns the index of the element with the 
 	  // largest magnitude but IAMAX assumes indexing 1,..,N not 0,...,N-1
 	  active_index = blas.IAMAX( correlation.numRows(), 
 				     correlation[0], 1 ) - 1;
 	  max_correlation = std::abs( correlation[0][active_index] );
-	}
-      else
-	{
-	  active_index = ordering[num_active_indices];
-	  RealVector active_col( Teuchos::View, A[active_index], A.numRows() );
-	  max_correlation = std::abs( active_col.dot( residual ) );
 	}
 
       // todo define active_index_set as std::set and use find function
@@ -1406,7 +1406,7 @@ void least_angle_regression( RealMatrix &A,
 			     int solver,
 			     Real delta,
 			     int max_num_iterations,
-			     int verbosity )
+			     int verbosity )//, IntVector &ordering )
 {
   Teuchos::BLAS<int, Real> blas;
 
@@ -1497,21 +1497,32 @@ void least_angle_regression( RealMatrix &A,
       // will be 0 and a segfault will occur.
       Real max_abs_correlation( -1.0 );
       int prev_iter( std::max( 0, homotopy_iter -1 ) );
-      for ( inactive_index_iter = inactive_indices.begin(); 
-	    inactive_index_iter != inactive_indices.end(); 
-	    inactive_index_iter++ )
-	{
-	  int n = *inactive_index_iter;
-	  Real correlation_n = correlation(n,0);
-	  Real x_n = result_0(n,prev_iter);
-	  Real abs_correlation_n = std::abs( correlation_n-delta*x_n );
-	  if ( abs_correlation_n > max_abs_correlation )
-	    {
-	      max_abs_correlation = abs_correlation_n;
-	      index_to_add = n;
-	    }
-	}
 
+      //if ( num_covariates < ordering.length() ) {
+      //  // start from user-specified inclusions (e.g., always recover coeff 0)
+      //  index_to_add = ordering[num_covariates];
+      //  Real correlation_n = correlation(index_to_add,0);
+      //  Real x_n = result_0(index_to_add,prev_iter);
+      //  max_abs_correlation = std::abs( correlation_n-delta*x_n ); // *** IMPACTS gamma_hat step size below (this iter), plus there is some history through prev_iter ***
+      //}
+      //else {
+	for ( inactive_index_iter = inactive_indices.begin();
+	      inactive_index_iter != inactive_indices.end();
+	      inactive_index_iter++ )
+	  {
+	    int n = *inactive_index_iter;
+	    Real correlation_n = correlation(n,0);
+	    Real x_n = result_0(n,prev_iter);
+	    Real abs_correlation_n = std::abs( correlation_n-delta*x_n );
+	    if ( abs_correlation_n > max_abs_correlation )
+	      {
+		max_abs_correlation = abs_correlation_n;
+		index_to_add = n;
+		//std::cout << "max update: " << max_abs_correlation << " for "
+		//	    << n << std::endl;
+	      }
+	  }
+      //}
 
       if ( U.numRows() <= num_covariates )
 	{
@@ -1794,7 +1805,12 @@ void least_angle_regression( RealMatrix &A,
 	  {
 	    result_0(n,iter) *= ( 1.0 + delta );
 	  }
-      }  
+      }
+
+  //std::cout << "LARS: A norm = " << A.normFrobenius()
+  // 	      << " b norm = " << b.normFrobenius()
+  // 	      << " result_0 norm = " << result_0.normFrobenius()
+  // 	      << " result_1 norm = " << result_1.normFrobenius() << std::endl;
 };
 //Check out for elastic nets
 //http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=3897

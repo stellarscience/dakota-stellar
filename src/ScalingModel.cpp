@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -16,6 +17,24 @@
 static const char rcsId[]="@(#) $Id$";
 
 namespace Dakota {
+
+// ---------
+// Scaling-related constants
+// ---------
+
+/// minimum value allowed for a characteristic value when scaling; ten
+/// orders of magnitude greater than DBL_MIN
+const double SCALING_MIN_SCALE = 1.0e10*DBL_MIN;
+/// lower bound on domain of logarithm function when scaling
+const double SCALING_MIN_LOG = SCALING_MIN_SCALE;
+/// logarithm base to be used when scaling
+const double SCALING_LOGBASE = 10.0;
+/// ln(SCALING_LOGBASE); needed in transforming variables in several places
+const double SCALING_LN_LOGBASE = std::log(SCALING_LOGBASE);
+
+/// to restrict type of auto scaling allowed
+enum { DISALLOW, TARGET, BOUNDS };
+
 
 /// initialization of static needed by RecastModel
 ScalingModel* ScalingModel::scaleModelInstance(NULL);
@@ -42,10 +61,16 @@ ScalingModel(Model& sub_model):
   // the nonlinearity of the mapping is determined by the scales
   // themselves.
 
-  // initialize_scaling function needs to modify the iteratedModel
-  // compute needed class data...
-  initialize_scaling(sub_model);
+  // ScalingModel may update bounds on Model and mvDist; copy when
+  // needed to avoid changing bounds in subModel::mvDist
+  //
+  // TODO: review whether disconnecting the mvDist can cause problems
+  // for clients of Model.
+  varsScaleFlag = scaling_active(scalingOpts.cvScaleTypes);
+  mvDist = varsScaleFlag ? subModel.multivariate_distribution().copy() :
+    subModel.multivariate_distribution();
 
+  initialize_scaling(sub_model);
 
   // No change in sizes for scaling
   size_t num_primary = sub_model.num_primary_fns(),
@@ -105,7 +130,8 @@ ScalingModel(Model& sub_model):
   }
 
   // callbacks for RecastModel transformations: default maps when not needed
-  void (*variables_map) (const Variables&, Variables&) = variables_scaler;
+  void (*variables_map) (const Variables&, Variables&) =
+    varsScaleFlag ? variables_scaler : NULL;
   void (*set_map)  (const Variables&, const ActiveSet&, ActiveSet&) = NULL;
   // register primary response scaler if requested, or variables scaled
   void (*primary_resp_map) 
@@ -122,7 +148,9 @@ ScalingModel(Model& sub_model):
 	      nonlinear_resp_mapping, primary_resp_map, secondary_resp_map);
 
   // need inverse vars mapping for use with late updates from sub-model
-  inverse_mappings(variables_unscaler, NULL, NULL, NULL);
+  // TODO: for some reason, this is needed for ROL scaling tests even when vars not scaled...
+  //  if (varsScaleFlag)
+    inverse_mappings(variables_unscaler, NULL, NULL, NULL);
 
   // Preserve weights through scaling transformation
   primary_response_fn_weights(sub_model.primary_response_fn_weights());
@@ -186,10 +214,19 @@ void ScalingModel::resp_scaled2native(const Variables& native_vars,
 
 /** Since this convenience function is public, it must have a
     fall-through to return a copy for when this scaling type isn't
-    active. */
+    active.
+
+    scaled_nln_cons contains num_primary_fns(), followed by the
+    nonlinear constraints to conditionally scale.
+
+    num_native_primary is the number of primary functions on the
+    original user-provided Model, for example before data
+    transformation, and is the starting index for populating nonlinear
+    constraints in the native_fns vector.
+*/
 void ScalingModel::
 secondary_resp_scaled2native(const RealVector& scaled_nln_cons,
-                             const ShortArray& asv,
+                             const ShortArray& asv, size_t num_native_primary,
                              RealVector& native_fns) const
 {
   size_t num_nln_cons = 
@@ -200,12 +237,43 @@ secondary_resp_scaled2native(const RealVector& scaled_nln_cons,
     copy_data_partial
       (modify_s2n(scaled_nln_cons, responseScaleTypes, responseScaleMultipliers,
                   responseScaleOffsets),
-       num_primary_fns(), num_nln_cons, native_fns, num_primary_fns());
+       num_primary_fns(), num_nln_cons, native_fns, num_native_primary);
   }
   else 
     copy_data_partial(scaled_nln_cons, num_primary_fns(), num_nln_cons, 
-                      native_fns, num_primary_fns());
+                      native_fns, num_native_primary);
 }
+
+
+bool ScalingModel::update_variables_from_model(Model& model)
+{
+  // ScalingModel doesn't change the size of any of the variable arrays
+  if (varsScaleFlag) {
+
+    // RATIONALE: This is a runtime update and will now update
+    // computed scaling at runtime.  ScalingModel doesn't change the
+    // number of variables, so pull up all updates, then override
+    // select values/bounds.
+
+    update_variable_values(model);
+    update_variable_bounds(model);
+    update_variable_labels(model);
+
+    // the mvDist is already copied (has it's own rep) if needed in ctor
+    //mvDist = subModel.multivariate_distribution();
+
+    update_linear_constraints(model);
+
+    // Now update any scaling, values, and bounds on *this by
+    // re-initializing scaling from the start...
+    initialize_scaling(model);
+
+    return false;  // no need to update active complement as all updated above
+
+  }
+  return RecastModel::update_variables_from_model(model);
+}
+
 
 
 /** Initialize scaling types, multipliers, and offsets.  Update the
@@ -227,13 +295,13 @@ void ScalingModel::initialize_scaling(Model& sub_model)
     num_nln_ineq = num_nonlinear_ineq_constraints(),
     num_nln_eq = num_nonlinear_eq_constraints(),
     num_lin_ineq = num_linear_ineq_constraints(),
-    num_lin_eq = num_linear_eq_constraints();
+    num_lin_eq = num_linear_eq_constraints(),
+    num_lin_cons = num_lin_ineq + num_lin_eq;
 
   // temporary arrays
-  IntArray    tmp_types;
-  RealVector  tmp_multipliers, tmp_offsets;
+  UShortArray tmp_types;
+  RealVector tmp_multipliers, tmp_offsets;
   RealVector lbs, ubs, targets;
-  //RealMatrix linear_constraint_coeffs;
 
   // NOTE: When retrieving scaling vectors from database, excepting linear 
   //       constraints, they've already been checked at input to have length 0, 
@@ -242,16 +310,22 @@ void ScalingModel::initialize_scaling(Model& sub_model)
   // -----------------
   // CONTINUOUS DESIGN
   // -----------------
-  const StringArray& cdv_scale_strings = scalingOpts.cvScaleTypes;
+  const UShortArray& cdv_spec_types = scalingOpts.cvScaleTypes;
   const RealVector& cdv_scales = scalingOpts.cvScales;
-  varsScaleFlag = scaling_active(cdv_scale_strings);
+  varsScaleFlag = scaling_active(cdv_spec_types);
 
   copy_data(sub_model.continuous_lower_bounds(), lbs); // view->copy
   copy_data(sub_model.continuous_upper_bounds(), ubs); // view->copy
 
   
-  compute_scaling(CDV, BOUNDS, num_cv, lbs, ubs, targets,
-                  cdv_scale_strings, cdv_scales, cvScaleTypes,
+  if (contains(cdv_spec_types, SCALE_LOG) && num_lin_cons > 0) {
+    Cerr << "Error: Continuous design variables cannot be logarithmically "
+	 << "scaled when linear\nconstraints are present.\n";
+    abort_handler(-1);
+  }
+
+  compute_scaling(BOUNDS, num_cv, lbs, ubs, targets,
+                  cdv_spec_types, cdv_scales, cvScaleTypes,
                   cvScaleMultipliers, cvScaleOffsets);
 
   continuous_lower_bounds(lbs);
@@ -277,13 +351,13 @@ void ScalingModel::initialize_scaling(Model& sub_model)
   // -------------------------
   // OBJECTIVE FNS / LSQ TERMS
   // -------------------------
-  const StringArray& primary_scale_strings = scalingOpts.priScaleTypes;
+  const UShortArray& primary_spec_types = scalingOpts.priScaleTypes;
   const RealVector& primary_scales = scalingOpts.priScales;
-  primaryRespScaleFlag = scaling_active(primary_scale_strings);
+  primaryRespScaleFlag = scaling_active(primary_spec_types);
 
   lbs.size(0); ubs.size(0);
-  compute_scaling(FN_LSQ, DISALLOW, num_primary, lbs, ubs, targets,
-                  primary_scale_strings, primary_scales, tmp_types,
+  compute_scaling(DISALLOW, num_primary, lbs, ubs, targets,
+                  primary_spec_types, primary_scales, tmp_types,
                   tmp_multipliers, tmp_offsets);
 
   for (int i=0; i<num_primary; ++i) {
@@ -295,15 +369,15 @@ void ScalingModel::initialize_scaling(Model& sub_model)
   // --------------------
   // NONLINEAR INEQUALITY
   // --------------------
-  const StringArray& nln_ineq_scale_strings = scalingOpts.nlnIneqScaleTypes;
+  const UShortArray& nln_ineq_spec_types = scalingOpts.nlnIneqScaleTypes;
   const RealVector& nln_ineq_scales = scalingOpts.nlnIneqScales;
-  secondaryRespScaleFlag = scaling_active(nln_ineq_scale_strings);
+  secondaryRespScaleFlag = scaling_active(nln_ineq_spec_types);
 
   lbs = sub_model.nonlinear_ineq_constraint_lower_bounds();
   ubs = sub_model.nonlinear_ineq_constraint_upper_bounds();
 
-  compute_scaling(NONLIN, BOUNDS, num_nln_ineq, lbs, ubs,
-                  targets, nln_ineq_scale_strings, nln_ineq_scales, tmp_types,
+  compute_scaling(BOUNDS, num_nln_ineq, lbs, ubs,
+                  targets, nln_ineq_spec_types, nln_ineq_scales, tmp_types,
                   tmp_multipliers, tmp_offsets);
 
   for (int i=0; i<num_nln_ineq; ++i) {
@@ -318,15 +392,15 @@ void ScalingModel::initialize_scaling(Model& sub_model)
   // --------------------
   // NONLINEAR EQUALITY
   // --------------------
-  const StringArray& nln_eq_scale_strings = scalingOpts.nlnEqScaleTypes;
+  const UShortArray& nln_eq_spec_types = scalingOpts.nlnEqScaleTypes;
   const RealVector& nln_eq_scales = scalingOpts.nlnEqScales;
   secondaryRespScaleFlag
-    = (secondaryRespScaleFlag || scaling_active(nln_eq_scale_strings));
+    = (secondaryRespScaleFlag || scaling_active(nln_eq_spec_types));
 
   lbs.size(0); ubs.size(0);
   targets = sub_model.nonlinear_eq_constraint_targets();
-  compute_scaling(NONLIN, TARGET, num_nln_eq,
-                  lbs, ubs, targets, nln_eq_scale_strings, nln_eq_scales,
+  compute_scaling(TARGET, num_nln_eq,
+                  lbs, ubs, targets, nln_eq_spec_types, nln_eq_scales,
                   tmp_types, tmp_multipliers, tmp_offsets);
 
   // BMA TODO: use copy_data?
@@ -356,12 +430,12 @@ void ScalingModel::initialize_scaling(Model& sub_model)
   // -----------------
   // LINEAR INEQUALITY
   // -----------------
-  const StringArray& lin_ineq_scale_strings = scalingOpts.linIneqScaleTypes;
+  const UShortArray& lin_ineq_spec_types = scalingOpts.linIneqScaleTypes;
   const RealVector& lin_ineq_scales = scalingOpts.linIneqScales;
 
-  if ( ( lin_ineq_scale_strings.size() != 0 &&
-         lin_ineq_scale_strings.size() != 1 && 
-         lin_ineq_scale_strings.size() != num_lin_ineq  ) ||
+  if ( ( lin_ineq_spec_types.size() != 0 &&
+         lin_ineq_spec_types.size() != 1 &&
+         lin_ineq_spec_types.size() != num_lin_ineq  ) ||
        ( lin_ineq_scales.length() != 0 && lin_ineq_scales.length() != 1 && 
          lin_ineq_scales.length() != num_lin_ineq ) ) {
     Cerr << "Error: linear_inequality_scale specifications must have length 0, "
@@ -389,8 +463,8 @@ void ScalingModel::initialize_scaling(Model& sub_model)
     ubs[i] -= linearIneqScaleOffsets[i];
 
   }
-  compute_scaling(LINEAR, BOUNDS, num_lin_ineq,
-                  lbs, ubs, targets, lin_ineq_scale_strings, lin_ineq_scales,
+  compute_scaling(BOUNDS, num_lin_ineq,
+                  lbs, ubs, targets, lin_ineq_spec_types, lin_ineq_scales,
                   linearIneqScaleTypes, linearIneqScaleMultipliers, 
                   tmp_offsets);
 
@@ -408,11 +482,11 @@ void ScalingModel::initialize_scaling(Model& sub_model)
   // ---------------
   // LINEAR EQUALITY
   // ---------------
-  const StringArray& lin_eq_scale_strings = scalingOpts.linEqScaleTypes;
+  const UShortArray& lin_eq_spec_types = scalingOpts.linEqScaleTypes;
   const RealVector& lin_eq_scales = scalingOpts.linEqScales;
 
-  if ( ( lin_eq_scale_strings.size() != 0 && lin_eq_scale_strings.size() != 1 &&
-         lin_eq_scale_strings.size() != num_lin_eq ) ||
+  if ( ( lin_eq_spec_types.size() != 0 && lin_eq_spec_types.size() != 1 &&
+         lin_eq_spec_types.size() != num_lin_eq ) ||
        ( lin_eq_scales.length() != 0 && lin_eq_scales.length() != 1 && 
          lin_eq_scales.length() != num_lin_eq ) ) {
     Cerr << "Error: linear_equality_scale specifications must have length 0, "
@@ -435,8 +509,8 @@ void ScalingModel::initialize_scaling(Model& sub_model)
    
     targets[i] -= linearEqScaleOffsets[i];
   }
-  compute_scaling(LINEAR, TARGET, num_lin_eq,
-                  lbs, ubs, targets, lin_eq_scale_strings, lin_eq_scales,
+  compute_scaling(TARGET, num_lin_eq,
+                  lbs, ubs, targets, lin_eq_spec_types, lin_eq_scales,
                   linearEqScaleTypes, linearEqScaleMultipliers, 
                   tmp_offsets);
 
@@ -455,34 +529,32 @@ void ScalingModel::initialize_scaling(Model& sub_model)
 }
 
 
-bool ScalingModel::scaling_active(const StringArray& scale_types)
+bool ScalingModel::scaling_active(const UShortArray& scale_types)
 {
-  BOOST_FOREACH(const String& sc_type, scale_types) {
-    if (sc_type != "none")
+  for (const auto& sc_type : scale_types) {
+    if (sc_type > SCALE_NONE)
       return true;
   }
-  return false;  // false if array empty or all types == "none"
+  return false;  // false if array empty or all types == SCALE_NONE
 }
 
 
 // compute_scaling will potentially modify lbs, ubs, and targets; will resize
 // and set class data referenced by scale_types, scale_mults, and scale_offsets
 void ScalingModel::
-compute_scaling(int object_type, // type of object being scaled 
-                int auto_type,   // option for auto scaling type
+compute_scaling(int auto_type,   // option for auto scaling type
                 int num_vars,    // length of object being scaled
                 RealVector& lbs,     RealVector& ubs,
-                RealVector& targets, const StringArray& scale_strings,
-                const RealVector& scales, IntArray& scale_types,
+                RealVector& targets, const UShortArray& spec_types,
+                const RealVector& scales, UShortArray& scale_types,
                 RealVector& scale_mults,  RealVector& scale_offsets)
 {
   // temporary arrays
-  String tmp_scl_str; 
+  unsigned short tmp_scl_type;
   Real tmp_bound, tmp_mult, tmp_offset;
-  //RealMatrix linear_constraint_coeffs;
 
-  const int num_scale_strings = scale_strings.size();
-  const int num_scales        = scales.length();
+  const int num_scale_types = spec_types.size();
+  const int num_scales      = scales.length();
   
   scale_types.resize(num_vars);
   scale_mults.resize(num_vars);
@@ -497,23 +569,14 @@ compute_scaling(int object_type, // type of object being scaled
 
     // set the string for scale_type, depending on whether user sent
     // 0, 1, or N scale_strings
-    tmp_scl_str = "none";
-    if (num_scale_strings == 1)
-      tmp_scl_str = scale_strings[0];
-    else if (num_scale_strings > 1)
-      tmp_scl_str = scale_strings[i];
+    tmp_scl_type = SCALE_NONE;
+    if (num_scale_types == 1)
+      tmp_scl_type = spec_types[0];
+    else if (num_scale_types > 1)
+      tmp_scl_type = spec_types[i];
 
-    if (tmp_scl_str != "none") {
-      size_t num_lin_cons =
-        num_linear_ineq_constraints() + num_linear_eq_constraints();
-      if (  object_type == CDV && num_lin_cons > 0 && tmp_scl_str == "log" ) {
-        Cerr << "Error: Continuous design variables cannot be logarithmically "
-             << "scaled when linear\nconstraints are present.\n";
-        abort_handler(-1);
-      } 
-      else if ( num_scales > 0 ) {
-	
-        // process scale_values for all types of scaling 
+    // first apply any characteristic value scaling (for all types of scaling)
+    if (tmp_scl_type > SCALE_NONE && num_scales > 0) {
         // indicate that scale values are active, update bounds, poss. negating
         scale_types[i] |= SCALE_VALUE;
         scale_mults[i] = (num_scales == 1) ? scales[0] : scales[i];
@@ -535,14 +598,12 @@ compute_scaling(int object_type, // type of object being scaled
         } 
         else if (!targets.empty())
           targets[i] /= scale_mults[i];
-      }
+    } // endif for characteristic value scaling
 
-    } // endif for generic scaling preprocessing
-
-      // At this point bounds/targets are scaled with user-provided values and
-      // scale_mults are set to user-provided values.
-      // Now auto or log scale as relevant and allowed:
-    if ( tmp_scl_str == "auto" && auto_type > DISALLOW ) {
+    // At this point bounds/targets are scaled with user-provided values and
+    // scale_mults are set to user-provided values.
+    // Now auto or log scale as relevant and allowed:
+    if ( tmp_scl_type == SCALE_AUTO && auto_type > DISALLOW ) {
       bool scale_flag = false; // will be true for valid auto-scaling
       if ( auto_type == TARGET ) {
         scale_flag = compute_scale_factor(targets[i], &tmp_mult);
@@ -574,7 +635,7 @@ compute_scaling(int object_type, // type of object being scaled
 
       }
     }
-    else if ( tmp_scl_str == "log" ) {
+    else if ( tmp_scl_type == SCALE_LOG ) {
 
       scale_types[i] |= SCALE_LOG;
       if (auto_type == BOUNDS) {
@@ -704,7 +765,7 @@ lin_coeffs_modify_n2s(const RealMatrix& src_coeffs,
 }
 
 
-void ScalingModel::print_scaling(const String& info, const IntArray& scale_types,
+void ScalingModel::print_scaling(const String& info, const UShortArray& scale_types,
                                  const RealVector& scale_mults,
                                  const RealVector& scale_offsets,
                                  const StringArray& labels)
@@ -753,21 +814,39 @@ variables_scaler(const Variables& scaled_vars, Variables& native_vars)
                scaled_vars.continuous_variable_labels());
     Cout << std::endl;
   }
-  native_vars.continuous_variables
-    (scaleModelInstance->modify_s2n(scaled_vars.continuous_variables(), 
-                                    scaleModelInstance->cvScaleTypes,
-                                    scaleModelInstance->cvScaleMultipliers, 
-                                    scaleModelInstance->cvScaleOffsets));
+  if (scaleModelInstance->varsScaleFlag) {
+    native_vars.continuous_variables
+      (scaleModelInstance->modify_s2n(scaled_vars.continuous_variables(), 
+				      scaleModelInstance->cvScaleTypes,
+				      scaleModelInstance->cvScaleMultipliers, 
+				      scaleModelInstance->cvScaleOffsets));
+  }
+  else {
+    native_vars.continuous_variables(scaled_vars.continuous_variables());
+  }
+  // scaling only supports continuous variables, but rest need to come along
+  native_vars.discrete_int_variables(scaled_vars.discrete_int_variables());
+  native_vars.discrete_string_variables(scaled_vars.discrete_string_variables());
+  native_vars.discrete_real_variables(scaled_vars.discrete_real_variables());
 }
 
 void ScalingModel::
 variables_unscaler(const Variables& native_vars, Variables& scaled_vars)
 {
-  scaled_vars.continuous_variables
-    (scaleModelInstance->modify_n2s(native_vars.continuous_variables(),
-                                    scaleModelInstance->cvScaleTypes,
-                                    scaleModelInstance->cvScaleMultipliers,
-                                    scaleModelInstance->cvScaleOffsets));
+  if (scaleModelInstance->varsScaleFlag) {
+    scaled_vars.continuous_variables
+      (scaleModelInstance->modify_n2s(native_vars.continuous_variables(),
+				      scaleModelInstance->cvScaleTypes,
+				      scaleModelInstance->cvScaleMultipliers,
+				      scaleModelInstance->cvScaleOffsets));
+  }
+  else {
+    scaled_vars.continuous_variables(native_vars.continuous_variables());
+  }
+  // scaling only supports continuous variables, but rest need to come along
+  scaled_vars.discrete_int_variables(native_vars.discrete_int_variables());
+  scaled_vars.discrete_string_variables(native_vars.discrete_string_variables());
+  scaled_vars.discrete_real_variables(native_vars.discrete_real_variables());
 }
 
 
@@ -861,7 +940,7 @@ need_resp_trans_byvars(const ShortArray& asv, int start_index,
     in greatest generality:
     scaled_var = log( (native_var - offset) / multiplier ) */
 RealVector ScalingModel::
-modify_n2s(const RealVector& native_vars, const IntArray& scale_types,
+modify_n2s(const RealVector& native_vars, const UShortArray& scale_types,
            const RealVector& multipliers, const RealVector& offsets) const
 {
   RealVector scaled_vars(native_vars.length(), false);
@@ -884,7 +963,7 @@ modify_n2s(const RealVector& native_vars, const IntArray& scale_types,
     loosely, in greatest generality:
     scaled_var = (LOG_BASE^scaled_var) * multiplier + offset */
 RealVector ScalingModel::
-modify_s2n(const RealVector& scaled_vars, const IntArray& scale_types,
+modify_s2n(const RealVector& scaled_vars, const UShortArray& scale_types,
            const RealVector& multipliers, const RealVector& offsets) const
 {
   RealVector native_vars(scaled_vars.length(), false);
@@ -940,11 +1019,12 @@ void ScalingModel::response_modify_n2s(const Variables& native_vars,
     cdv = native_vars.all_continuous_variables(); // view OK
   }
 
-  if (outputLevel > NORMAL_OUTPUT)
+  if (outputLevel > NORMAL_OUTPUT) {
     if (start_offset < num_primary_fns())
       Cout << "Primary response after scaling transformation:\n";
     else
       Cout << "Secondary response after scaling transformation:\n";
+  }
 
   // scale functions and constraints
   // assumes Multipliers and Offsets are 1 and 0 when not in use
@@ -1051,7 +1131,7 @@ void ScalingModel::response_modify_n2s(const Variables& native_vars,
             recast_hess(xj_index,xk_index) *= cvScaleMultipliers[xk_index];
 
           // need gradient term only for diagonal entries
-          if (xj_index == xk_index && cvScaleTypes[xj_index] & SCALE_LOG)
+          if (xj_index == xk_index && cvScaleTypes[xj_index] & SCALE_LOG) {
             if (responseScaleTypes[i] & SCALE_LOG)
               recast_hess(xj_index,xk_index) += native_grads(xj_index,i)*
                 (cdv[xj_index] - cvScaleOffsets[xj_index]) *
@@ -1060,6 +1140,7 @@ void ScalingModel::response_modify_n2s(const Variables& native_vars,
               recast_hess(xj_index,xk_index) += native_grads(xj_index,i)*
                 (cdv[xj_index] - cvScaleOffsets[xj_index]) * SCALING_LN_LOGBASE
                 * SCALING_LN_LOGBASE / responseScaleMultipliers[i];
+	  }
 
         }
       }
@@ -1113,11 +1194,12 @@ void ScalingModel::response_modify_s2n(const Variables& native_vars,
     cdv = native_vars.all_continuous_variables(); // view OK
   }
 
-  if (outputLevel > NORMAL_OUTPUT)
+  if (outputLevel > NORMAL_OUTPUT) {
     if (start_offset < num_primary_fns())
       Cout << "Primary response after unscaling transformation:\n";
     else
       Cout << "Secondary response after unscaling transformation:\n";
+  }
 
   // scale functions and constraints
   // assumes Multipliers and Offsets are 1 and 0 when not in use

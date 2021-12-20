@@ -20,7 +20,7 @@
 #include <scolib/MultiStatePS.h>
 
 //#include <utilib/_math.h>
-//#include <utilib/stl_auxiliary.h>
+#include <utilib/stl_auxiliary.h>
 #include <colin/cache/Factory.h>
 #include <colin/SolverMngr.h>
 
@@ -573,6 +573,7 @@ private:
 
 MultiStatePS::MultiStatePS()
 { 
+  using utilib::operator<<;
    //utilib::OptionParser& opt = this->option;
 
    config.delta_init = 1.0;
@@ -641,6 +642,8 @@ MultiStatePS::MultiStatePS()
 
 void MultiStatePS::reset_MultiStatePS()
 {
+  using utilib::operator<<;
+
    if ( problem.empty() ) 
       return; 
 
@@ -658,6 +661,9 @@ void MultiStatePS::reset_MultiStatePS()
 
 void MultiStatePS::optimize()
 {
+  using utilib::operator<<;
+  using colin::operator<<;
+
    if ( DEBUG_MULTISTATE_PS > 1 )
       cerr << "entering optimize(); " << endl; 
 
@@ -824,6 +830,8 @@ void MultiStatePS::optimize()
 
 void MultiStatePS::write(std::ostream& os) const
 {
+  using utilib::operator<<;
+
    ConcreteOptSolver_t::write(os);
 
    os << "##\n## MultiState Pattern Search Controls\n##\n";
@@ -878,6 +886,8 @@ MultiStatePS::expand_pattern_cartesian( response_t  newCenter,
                                         double step,
                                         std::list<request_t> & new_pts )
 {
+  using utilib::operator<<;
+
    if ( DEBUG_MULTISTATE_PS > 1 )
    {
       indent += indent_chars;

@@ -16,7 +16,7 @@
 #include "newmat.h"
 #include "newmatrc.h"
 
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 using namespace std;
 

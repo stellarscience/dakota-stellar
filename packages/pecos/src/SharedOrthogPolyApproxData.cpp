@@ -48,7 +48,7 @@ void SharedOrthogPolyApproxData::allocate_data()
     allocate_component_sobol(multi_index);
     // Note: defer this if update_exp_form is needed downstream
     prevApproxOrder = approx_order;
-    prevActiveKey   = activeKey;
+    prevActiveKey   = activeKey.copy();
   }
 
   // output (candidate) expansion form
@@ -66,7 +66,7 @@ void SharedOrthogPolyApproxData::allocate_data()
 }
 
 
-void SharedOrthogPolyApproxData::active_key(const UShortArray& key)
+void SharedOrthogPolyApproxData::active_key(const ActiveKey& key)
 {
   if (activeKey != key) {
     activeKey = key; // SharedPolyApproxData::active_key(key);
@@ -144,15 +144,19 @@ bool SharedOrthogPolyApproxData::push_available()
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
     return isg_driver->push_trial_available();
     break;
   }
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
   //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
-  default:
-    return !poppedMultiIndex[activeKey].empty(); break;
+  default: {
+    std::map<ActiveKey, UShort2DArrayDeque>::iterator it
+      = poppedMultiIndex.find(activeKey);
+    return (it != poppedMultiIndex.end() && !it->second.empty());
+    break;
+  }
   }
 }
 
@@ -199,7 +203,7 @@ precompute_maximal_rules(const UShortArray& approx_order)
 
 
 void SharedOrthogPolyApproxData::
-increment_trial_set(CombinedSparseGridDriver* csg_driver,
+increment_trial_set(CombinedSparseGridDriver& csg_driver,
 		    UShort2DArray& aggregated_mi)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
@@ -212,7 +216,7 @@ increment_trial_set(CombinedSparseGridDriver* csg_driver,
   tp_mi_map.push_back(new_sa); tp_mi_map_ref.push_back(0);
   // update tpMultiIndex
   UShortArray exp_order(numVars);
-  sparse_grid_level_to_expansion_order(csg_driver, csg_driver->trial_set(),
+  sparse_grid_level_to_expansion_order(csg_driver, csg_driver.trial_set(),
 				       exp_order);
   tensor_product_multi_index(exp_order, tp_mi[last_index]);
   // update multiIndex and append bookkeeping
@@ -315,15 +319,15 @@ update_component_sobol(const UShort2DArray& multi_index)
 }
 
 
-const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
+const ActiveKey& SharedOrthogPolyApproxData::maximal_expansion()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     return driverRep->maximal_grid(); break;
   //case : Not supported: different expansionSamples with same exp order
   default: {
-    std::map<UShortArray, UShortArray>::iterator
-      ao_it = approxOrder.begin(), max_it = ao_it;
+    std::map<ActiveKey, UShortArray>::iterator ao_it = approxOrder.begin(),
+      max_it = ao_it;
     size_t j, len = ao_it->second.size();
     ++ao_it;
     for (; ao_it!=approxOrder.end(); ++ao_it) {
@@ -361,7 +365,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     // roll up approxOrders to define combinedMultiIndex
     size_t cntr, j, num_seq = approxOrder.size() - 2; // bridge from 1st to last
     if (num_seq) combinedMultiIndexSeq.resize(num_seq);
-    std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
+    std::map<ActiveKey, UShortArray>::iterator ao_it = approxOrder.begin();
     UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
     for (cntr=0; ao_it!=approxOrder.end(); ++ao_it, ++cntr) {
       const UShortArray& ao = ao_it->second;
@@ -382,7 +386,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     // combine all multiIndex keys into combinedMultiIndex{,Map}
     size_t i, num_combine = multiIndex.size(), combine_mi_map_ref;
     combinedMultiIndex.clear();  combinedMultiIndexMap.resize(num_combine);
-    std::map<UShortArray, UShort2DArray>::iterator mi_it;
+    std::map<ActiveKey, UShort2DArray>::iterator mi_it;
     for (mi_it=multiIndex.begin(), i=0; mi_it!=multiIndex.end(); ++mi_it, ++i)
       append_multi_index(mi_it->second, combinedMultiIndex,
 			 combinedMultiIndexMap[i], combine_mi_map_ref);
@@ -391,7 +395,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     // terms not yet included.  An update in place is sufficient.
     size_t i, num_combine = multiIndex.size() - 1, cntr = 0, combine_mi_map_ref;
     combinedMultiIndexMap.resize(num_combine);
-    std::map<UShortArray, UShort2DArray>::iterator mi_it;
+    std::map<ActiveKey, UShort2DArray>::iterator mi_it;
     combinedMultiIndex = multiIndexIter->second; // copy
     for (mi_it = multiIndex.begin(); mi_it != multiIndex.end(); ++mi_it)
       if (mi_it->first != activeKey) {
@@ -456,13 +460,11 @@ void SharedOrthogPolyApproxData::clear_inactive_data()
     break;
   }
 
-  std::map<UShortArray, UShort2DArray>::iterator  mi_it = multiIndex.begin();
-  std::map<UShortArray, UShortArray>::iterator    ao_it = approxOrder.begin();
-  std::map<UShortArray, UShort3DArray>::iterator tp1_it = tpMultiIndex.begin();
-  std::map<UShortArray, Sizet2DArray>::iterator  tp2_it
-    = tpMultiIndexMap.begin();
-  std::map<UShortArray, SizetArray>::iterator    tp3_it
-    = tpMultiIndexMapRef.begin();
+  std::map<ActiveKey, UShort2DArray>::iterator  mi_it = multiIndex.begin();
+  std::map<ActiveKey, UShortArray>::iterator    ao_it = approxOrder.begin();
+  std::map<ActiveKey, UShort3DArray>::iterator tp1_it = tpMultiIndex.begin();
+  std::map<ActiveKey, Sizet2DArray>::iterator  tp2_it = tpMultiIndexMap.begin();
+  std::map<ActiveKey, SizetArray>::iterator tp3_it = tpMultiIndexMapRef.begin();
   while (mi_it != multiIndex.end())
     if (mi_it == multiIndexIter) { // preserve active
       ++mi_it;
@@ -527,7 +529,7 @@ product_multi_index(const UShort2DArray& multi_index_a,
     selects the minimal quadrature order (from nonlinear growth or lookup) that
     meets a linear target. */
 void SharedOrthogPolyApproxData::
-sparse_grid_level_to_expansion_order(CombinedSparseGridDriver* csg_driver,
+sparse_grid_level_to_expansion_order(CombinedSparseGridDriver& csg_driver,
 				     const UShortArray& level,
 				     UShortArray& exp_order)
                                      //,short growth_rate)
@@ -540,7 +542,7 @@ sparse_grid_level_to_expansion_order(CombinedSparseGridDriver* csg_driver,
     // is generally too aggressive for nested rules and exponential growth
     // (SPARSE_INT_RESTR_TENSOR_SUM_EXP is preferred).
     UShortArray quad_order(n);
-    csg_driver->level_to_order(level, quad_order);
+    csg_driver.level_to_order(level, quad_order);
     quadrature_order_to_integrand_order(csg_driver, quad_order, int_order);
     //break;
   //}
@@ -562,7 +564,7 @@ sparse_grid_level_to_expansion_order(CombinedSparseGridDriver* csg_driver,
 
 
 void SharedOrthogPolyApproxData::
-quadrature_order_to_integrand_order(IntegrationDriver* int_driver,
+quadrature_order_to_integrand_order(IntegrationDriver& int_driver,
 				    const UShortArray& quad_order,
 				    UShortArray& int_order)
 {
@@ -583,7 +585,7 @@ quadrature_order_to_integrand_order(IntegrationDriver* int_driver,
   size_t i, n = quad_order.size();
   if (int_order.size() != n)
     int_order.resize(n);
-  const ShortArray& colloc_rules = int_driver->collocation_rules();
+  const ShortArray& colloc_rules = int_driver.collocation_rules();
   if (colloc_rules.empty()) // use orthogPolyTypes with default modes
     for (i=0; i<n; ++i)
       switch (orthogPolyTypes[i]) {
@@ -595,8 +597,8 @@ quadrature_order_to_integrand_order(IntegrationDriver* int_driver,
 	break;
       }
   else {
-    const UShortArray& gk_order = int_driver->genz_keister_order();
-    const UShortArray& gk_prec  = int_driver->genz_keister_precision();
+    const UShortArray& gk_order = int_driver.genz_keister_order();
+    const UShortArray& gk_prec  = int_driver.genz_keister_precision();
     for (i=0; i<n; ++i)
       switch (colloc_rules[i]) {
       case CLENSHAW_CURTIS: case FEJER2:

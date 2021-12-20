@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -123,30 +124,18 @@ inline QMEApproximation::~QMEApproximation()
 /** Redefine default implementation to support history mechanism. */
 inline void QMEApproximation::clear_current_active_data()
 {
-  /*
-  size_t ndv = sharedDataRep->numVars, target = ndv+1,
-    d, num_d = approxData.size();
-  const UShort3DArray& keys = sharedDataRep->approxDataKeys;
-  for (d=0; d<num_d; ++d) {
-    Pecos::SurrogateData& approx_data = approxData[d];
-    approx_data.clear_anchor_index();
-    approx_data.history_target(target, keys[d]);
-  }
-  */
-
   // This function is called from DataFitSurrModel::build_approximation(),
   // immediately prior to generation of new build data (with full derivative
-  // orders: value+gradient in this case).  The state of approx_data may be
+  // orders: value+gradient in this case).  The state of approxData may be
   // mixed, containing zero or more points with derivatives (the last of which
   // is the expansion/anchor point) and zero or more points without derivatives
   // (rejected iterates for which gradients were never computed).
 
-  Pecos::SurrogateData& approx_data = surrogate_data();
-  size_t ndv = sharedDataRep->numVars, num_pts = approx_data.points(), num_pop;
-  currGradIndex = approx_data.anchor_index();
+  size_t ndv = sharedDataRep->numVars, num_pts = approxData.points(), num_pop;
+  currGradIndex = approxData.anchor_index();
 
-  // demote anchor within approx_data bookkeeping
-  approx_data.clear_anchor_index();
+  // demote anchor within approxData bookkeeping
+  approxData.clear_anchor_index();
 
   // prune history of more than ndv points, while ensuring retention
   // of current expansion point
@@ -163,9 +152,8 @@ inline void QMEApproximation::clear_current_active_data()
     currGradIndex = _NPOS;
   }
 
-  // pop points from approx_data
-  for (size_t i=0; i<num_pop; ++i)
-    approx_data.pop_front(); // remove oldest
+  // pop points from approxData
+  approxData.pop_front(num_pop); // remove oldest
 }
 
 } // namespace Dakota

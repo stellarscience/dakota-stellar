@@ -16,13 +16,13 @@ set_source_files_properties(swig_example.i PROPERTIES CPLUSPLUS ON)
 set_source_files_properties(swig_example.i PROPERTIES SWIG_FLAGS "-includeall")
 swig_add_module(swig_example python swig_example.i swig_example.cpp)
 # PYTHON_LIBRARIES?!?
-swig_link_libraries(swig_example ${PYTHON_LIBRARY})
+swig_link_libraries(swig_example ${Python_LIBRARIES})
 
 # TODO: make a build time copy with a dependency
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_swig_example.py
   ${CMAKE_CURRENT_BINARY_DIR}/test_swig_example.py COPY_ONLY)
 add_test(NAME test_swig_example
-  COMMAND "${PYTHON_EXECUTABLE}" "test_swig_example.py"
+  COMMAND "${Python_EXECUTABLE}" "test_swig_example.py"
           "$<TARGET_FILE_DIR:_swig_example>"
   )
 

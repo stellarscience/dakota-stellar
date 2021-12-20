@@ -24,6 +24,7 @@ static const char rcsId[]="@(#) $Id: CombinedSparseGridDriver.C,v 1.57 2004/06/2
 
 //#define DEBUG
 
+
 namespace Pecos {
 
 /// initialize static member pointer to active driver instance
@@ -64,8 +65,12 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 void CombinedSparseGridDriver::
 initialize_grid_parameters(const MultivariateDistribution& mv_dist)
 {
-  SharedPolyApproxData::
-    update_basis_distribution_parameters(mv_dist, polynomialBasis);
+  if (trackCollocDetails) // use default 1D updating
+    SparseGridDriver::initialize_grid_parameters(mv_dist);
+  else {                  // no 1D updating required
+    IntegrationDriver::initialize_grid_parameters(mv_dist);
+    if (basisParamUpdates.any()) clear_size(); // clear number of colloc points
+  }
 
   // set a rule-dependent duplicateTol
   initialize_duplicate_tolerance(); // depends on length scale from dist params
@@ -76,13 +81,13 @@ void CombinedSparseGridDriver::clear_inactive()
 {
   SparseGridDriver::clear_inactive();
 
-  std::map<UShortArray, UShort2DArray>::iterator sm_it
+  std::map<ActiveKey, UShort2DArray>::iterator sm_it
     = smolyakMultiIndex.begin();
-  std::map<UShortArray, IntArray>::iterator  sc_it = smolyakCoeffs.begin();
-  std::map<UShortArray, UShort3DArray>::iterator ck_it = collocKey.begin();
-  std::map<UShortArray, Sizet2DArray>::iterator  ci_it = collocIndices.begin();
-  std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
-  std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  std::map<ActiveKey, IntArray>::iterator  sc_it = smolyakCoeffs.begin();
+  std::map<ActiveKey, UShort3DArray>::iterator ck_it = collocKey.begin();
+  std::map<ActiveKey, Sizet2DArray>::iterator  ci_it = collocIndices.begin();
+  std::map<ActiveKey, RealVector>::iterator t1_it = type1WeightSets.begin();
+  std::map<ActiveKey, RealMatrix>::iterator t2_it = type2WeightSets.begin();
 
   while (sm_it != smolyakMultiIndex.end())
     if (sm_it == smolMIIter) { // preserve active
@@ -236,7 +241,10 @@ assign_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 	* (int)std::floor(BasisPolynomial::n_choose_k(numVars - 1, wpNmi)+.5);
     }
   }
-  else { // utilize webbur::sgmga_vcn_{ordered,coef}
+  else {
+    // utilize webbur::sgmga_vcn_{ordered,coef} (Note: anisotropic version
+    // of SharedPolyApproxData::total_order_multi_index() does not support
+    // lower_bound_offset, but could be updated to employ/collect logic below)
     sm_mi.clear();
     sm_coeffs.clear();
     // Utilize webbur::sandia_sgmga_vcn_{ordered,coef} for 0-based index sets
@@ -436,9 +444,9 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
 }
 
 
-const UShortArray& CombinedSparseGridDriver::maximal_grid()
+const ActiveKey& CombinedSparseGridDriver::maximal_grid()
 {
-  std::map<UShortArray, RealVector>::const_iterator
+  std::map<ActiveKey, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;
   size_t num_wts, max_wts = w_cit->second.length(); ++w_cit;
   for (; w_cit!=type1WeightSets.end(); ++w_cit) {
@@ -456,26 +464,31 @@ void CombinedSparseGridDriver::compute_grid()
 {
   assign_smolyak_arrays();
 
-  // For efficiency reasons, incremental sparse grid definition uses
-  // different point orderings than sgmg/sgmga.  Therefore, the
-  // reference grid computations are kept completely separate.
+  // ensure active numCollocPts is up to date
+  grid_size();
 
-  // ------------------------------------
-  // Compute collocation points
-  // ------------------------------------
-  grid_size(); // ensure active numCollocPts is up to date
+  // ---------------------------------
+  // Compute unique sparse grid points
+  // ---------------------------------
+  // Note: incremental sparse grid definition uses different point orderings
+  // than sgmg/sgmga (approach below).  Therefore, the Combined implementation
+  // below is overridden for Incremental (reference grids are kept separate).
   IntArray& unique_index_map = uniqIndMapIter->second;
   compute_unique_points_weights(ssgLevIter->second, anisoWtsIter->second,
 				numPtsIter->second, unique_index_map,
 				varSetsIter->second, t1WtIter->second,
 				t2WtIter->second);
 
+  // update sparse grid collocation data, if tracking is active
+  // > this is for Pecos; sgmg/sgmga does not use any of this data
+  // > ordering: collocIndices requires unique_index_map from above
   if (trackCollocDetails) {
     UShort3DArray& colloc_key = collocKeyIter->second;
     assign_collocation_key(smolMIIter->second, colloc_key); // define collocKey
     assign_collocation_indices(colloc_key, unique_index_map,
 			       collocIndIter->second);  // define collocIndices
-    assign_1d_collocation_points_weights(); // define 1-D point/weight sets
+    // 1D pt/wt assignments are now managed in initialize_grid_parameters()
+    //assign_1d_collocation_points_weights();
   }
 
 #ifdef DEBUG
@@ -502,7 +515,7 @@ void CombinedSparseGridDriver::combine_grid()
   // and then prune terms for which these coefficients are zero.
 
   // start from first grid (often maximal)
-  std::map<UShortArray, UShort2DArray>::const_iterator sm_cit
+  std::map<ActiveKey, UShort2DArray>::const_iterator sm_cit
     = smolyakMultiIndex.begin();
   combinedSmolyakMultiIndex = sm_cit->second;  ++sm_cit;
   UShort2DArray combined_pareto;
@@ -595,7 +608,7 @@ void CombinedSparseGridDriver::combined_to_active(bool clear_combined)
   // collocation indices are invalidated by expansion combination since the
   // corresponding combined grids involve overlays of data that no longer
   // reflect individual evaluations (to match restoration of collocIndices,
-  // new modSurrData must be defined in {NodalInterp,Orthog}PolyApproximation)
+  // {Nodal,Hierarch,Project}Approx invoke synthetic_surrogate_data())
   assign_collocation_indices(collocKeyIter->second, uniqIndMapIter->second,
 			     collocIndIter->second);
 }
@@ -770,7 +783,7 @@ compute_tensor_points_weights(const UShort2DArray& sm_mi,
     if (update_1d_pts_wts) { // update collocPts1D, {type1,type2}CollocWts1D
       UShortArray quad_order(numVars);
       level_to_order(sm_index, quad_order);
-      update_1d_collocation_points_weights(quad_order, sm_index);
+      assign_1d_collocation_points_weights(quad_order, sm_index);
     }
     num_tp_pts = colloc_key[i].size();
     for (j=0; j<num_tp_pts; ++j, ++cntr) {

@@ -114,7 +114,7 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 }
 
 
-void SharedInterpPolyApproxData::active_key(const UShortArray& key)
+void SharedInterpPolyApproxData::active_key(const ActiveKey& key)
 {
   if (activeKey != key) {
     activeKey = key;
@@ -140,24 +140,20 @@ void SharedInterpPolyApproxData::allocate_data()
     ( basisType == GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL ||
       basisType == GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ) );
 
-  bool param_update = false;
-  const std::vector<BasisPolynomial>& num_int_poly_basis
-    = driverRep->polynomial_basis();
-  size_t i;
-  for (i=0; i<numVars; ++i)
-    if (num_int_poly_basis[i].parametric_update())
-      { param_update = true; break; }
+  const BitArray& param_updates
+    = driverRep->polynomial_basis_parameter_updates();
+  if (param_updates.any())
+    update_interpolation_basis(param_updates); // replace existing as needed
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(driverRep);
+    const UShortArray& quad_order = tpq_driver->quadrature_order();
 
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
-    bool change_order = (quad_order != quadOrderPrev);
-    if (change_order || param_update)
+    if (quad_order != quadOrderPrev) { // any change in order
       update_tensor_interpolation_basis(tpq_driver->level_index());
-    if (change_order) {
       allocate_component_sobol();
       quadOrderPrev = quad_order; //anisoWtsPrev = aniso_wts;
     }
@@ -165,7 +161,8 @@ void SharedInterpPolyApproxData::allocate_data()
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
   case HIERARCHICAL_SPARSE_GRID: {
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> ssg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     unsigned short    ssg_level  = ssg_driver->level();
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
 
@@ -173,11 +170,11 @@ void SharedInterpPolyApproxData::allocate_data()
     // level and the basis update uses a coarse increment based on level.  This
     // matches isotropic sparse grids, but forces fewer and larger updates in
     // the case of anisotropic or generalized grids.
-    bool change_lev = (ssg_level != ssgLevelPrev), 
-       increase_lev = (ssgLevelPrev == USHRT_MAX || ssg_level > ssgLevelPrev);
-    if (increase_lev || param_update)
-      update_sparse_interpolation_basis(ssg_level);
-    if (change_lev) {
+    if (ssgLevelPrev == USHRT_MAX)     //   no previous level
+      update_sparse_interpolation_basis(0,            ssg_level);
+    else if (ssg_level > ssgLevelPrev) //   increase in level
+      update_sparse_interpolation_basis(ssgLevelPrev, ssg_level);
+    if (ssg_level != ssgLevelPrev) {   // any change in level
       allocate_component_sobol();
       ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
     }
@@ -191,20 +188,22 @@ void SharedInterpPolyApproxData::increment_data()
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     const UShortArray& trial_set = sg_driver->trial_set();
     unsigned short max_set_index = 0;
     for (size_t i=0; i<numVars; ++i)
       if (trial_set[i] > max_set_index)
 	max_set_index = trial_set[i];
-    update_sparse_interpolation_basis(max_set_index);
+    update_sparse_interpolation_basis(ssgLevelPrev, max_set_index);
     increment_component_sobol();
     break;
   }
   default: // uniform/anisotropic refinement
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: {
-      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      std::shared_ptr<TensorProductDriver> tpq_driver =
+	std::static_pointer_cast<TensorProductDriver>(driverRep);
       update_tensor_interpolation_basis(tpq_driver->level_index());
       allocate_component_sobol();
       // For subsequent allocate_data():
@@ -216,8 +215,8 @@ void SharedInterpPolyApproxData::increment_data()
       // As for allocate_arrays(), increments are performed in coarser steps
       // than may be strictly necessary: all increments are filled in for all
       // vars for a step in level (ignoring anisotropy or generalized indices).
-      IncrementalSparseGridDriver* isg_driver
-	= (IncrementalSparseGridDriver*)driverRep;
+      std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+	std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
       const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
       size_t i, v, num_sm_mi = sm_mi.size(),
 	start_index = isg_driver->smolyak_coefficients_reference().size();
@@ -229,13 +228,13 @@ void SharedInterpPolyApproxData::increment_data()
 	    max_set_index = sm_mi_i[v];
       }
       //ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
-      update_sparse_interpolation_basis(max_set_index);
+      update_sparse_interpolation_basis(ssgLevelPrev, max_set_index);
       increment_component_sobol();
       break;
     }
     case HIERARCHICAL_SPARSE_GRID: {
-      HierarchSparseGridDriver* hsg_driver
-	= (HierarchSparseGridDriver*)driverRep;
+      std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+	std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
       const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
       const UShortArray& incr_sets = hsg_driver->increment_sets();
       size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets, v;
@@ -251,7 +250,7 @@ void SharedInterpPolyApproxData::increment_data()
       }
       // For subsequent allocate_data():
       //ssgLevelPrev = ssg_level; //anisoWtsPrev = aniso_wts;
-      update_sparse_interpolation_basis(max_set_index);
+      update_sparse_interpolation_basis(ssgLevelPrev, max_set_index);
       increment_component_sobol();
       break;
     }
@@ -296,7 +295,8 @@ bool SharedInterpPolyApproxData::push_available()
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     return sg_driver->push_trial_available();
     break;
   }
@@ -396,15 +396,14 @@ update_tensor_interpolation_basis(const UShortArray& lev_index,
 
 
 void SharedInterpPolyApproxData::
-update_sparse_interpolation_basis(unsigned short max_level)
+update_sparse_interpolation_basis(unsigned short start_level,
+				  unsigned short   max_level)
 {
   // resize if needed (leaving previous levels unmodified)
   // j range is 0:w inclusive; i range is 1:w+1 inclusive
   size_t l, v;//, orig_size = polynomialBasis.size();
   resize_polynomial_basis(max_level);
 
-  const std::vector<BasisPolynomial>& num_int_poly_basis
-    = driverRep->polynomial_basis();
   // We must currently process all levels, even if not parameterized, since
   // update_interpolation_basis() can only update the polynomial basis if the
   // collocation points are available and the collocation points are only 
@@ -412,14 +411,22 @@ update_sparse_interpolation_basis(unsigned short max_level)
   // IntegrationDriver::compute_tensor_grid() (which calls IntegrationDriver::
   // update_1d_collocation_points_weights()).  That is, there may be gaps that
   // need to be filled in levels that were previously allocated.
-  for (v=0; v<numVars; ++v) {
-    //if (num_int_poly_basis[v].parameterized()) // check all levels for updates
-      for (l=0; l<=max_level; ++l)
-	update_interpolation_basis(l, v);
-    //else                                       // update only the new levels
-    //  for (l=orig_size; l<=max_level; ++l)
-    //    update_interpolation_basis(l, v);
-  }
+  for (v=0; v<numVars; ++v)
+    for (l=start_level; l<=max_level; ++l) // update only the new levels
+      update_interpolation_basis(l, v);
+}
+
+
+void SharedInterpPolyApproxData::
+update_interpolation_basis(const BitArray& param_updates)
+{
+  // replace existing entries as needed within polynomialBasis
+  size_t l, v, num_l = polynomialBasis.size();
+  for (v=0; v<numVars; ++v)
+    if (param_updates[v])
+      for (l=0; l<num_l; ++l)
+	if (!polynomialBasis[l][v].is_null())
+	  update_interpolation_basis(l, v);
 }
 
 
@@ -429,32 +436,32 @@ update_interpolation_basis(unsigned short lev_index, size_t var_index)
   // fill gaps that may exist within any level
   const RealArray& colloc_pts_1d_lv
     = driverRep->collocation_points_1d()[lev_index][var_index];
-  if (!colloc_pts_1d_lv.empty()) {
-    const BasisPolynomial& num_int_poly_basis_v
-      = driverRep->polynomial_basis()[var_index];
-    std::vector<BasisPolynomial>& poly_basis_l  = polynomialBasis[lev_index];
-    BasisPolynomial&              poly_basis_lv = poly_basis_l[var_index];
-    short poly_type_1d, rule;
-    // don't share reps in case of parameterized basis or barycentric interp,
-    // due to need for individual updates to parameters or interpolated x value.
-    if (barycentricFlag || num_int_poly_basis_v.parameterized()) {
-      if (poly_basis_lv.is_null()) {
-	initialize_polynomial_basis_type(poly_type_1d, rule);
-	poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
-	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
-      }
-      else if (num_int_poly_basis_v.parametric_update())
-	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
+  if (colloc_pts_1d_lv.empty())
+    return;
+
+  std::vector<BasisPolynomial>& poly_basis_l  = polynomialBasis[lev_index];
+  BasisPolynomial&              poly_basis_lv = poly_basis_l[var_index];
+  short poly_type_1d, rule;
+  // don't share reps in case of parameterized basis or barycentric interp,
+  // due to need for individual updates to parameters or interpolated x value.
+  if (barycentricFlag ||
+      driverRep->polynomial_basis()[var_index].parameterized()) {
+    if (poly_basis_lv.is_null()) {
+      initialize_polynomial_basis_type(poly_type_1d, rule);
+      poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
+      poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
     }
-    else if (poly_basis_lv.is_null()) { // can share reps for efficiency
-      size_t var_index2;
-      if (find_basis(lev_index, var_index, var_index2))
-	poly_basis_lv = poly_basis_l[var_index2]; // reuse prev via shared rep
-      else { // instantiate and initialize a new unique instance
-	initialize_polynomial_basis_type(poly_type_1d, rule);
-	poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
-	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
-      }
+    else if (driverRep->polynomial_basis_parameter_updates()[var_index])
+      poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
+  }
+  else if (poly_basis_lv.is_null()) { // can share reps for efficiency
+    size_t var_index2;
+    if (find_basis(lev_index, var_index, var_index2))
+      poly_basis_lv = poly_basis_l[var_index2]; // reuse prev via shared rep
+    else { // instantiate and initialize a new unique instance
+      initialize_polynomial_basis_type(poly_type_1d, rule);
+      poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
+      poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
     }
   }
 }

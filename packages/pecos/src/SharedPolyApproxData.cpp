@@ -16,6 +16,8 @@
 #include "NumericGenOrthogPolynomial.hpp"
 #include "MarginalsCorrDistribution.hpp"
 #include "pecos_stat_util.hpp"
+#include "pecos_math_util.hpp"
+#include "sandia_sgmga.hpp"
 
 //#define DEBUG
 
@@ -157,31 +159,36 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
   bool no_mask = active_vars.empty();
   size_t i, av_cntr, num_v = u_types.size();
     //num_av = (no_mask) ? num_v : active_vars.count();
-  MarginalsCorrDistribution* mvd_rep
-    = (MarginalsCorrDistribution*)u_dist.multivar_dist_rep();
+  std::shared_ptr<MarginalsCorrDistribution> mvd_rep =
+    std::static_pointer_cast<MarginalsCorrDistribution>
+    (u_dist.multivar_dist_rep());
   for (i=0, av_cntr=0; i<num_v; ++i)
     if (no_mask || active_vars[i]) {
       switch (u_types[i]) {
       // CONTINUOUS RANGE vars are always mapped to STD_UNIFORM
       // DISCRETE RANGE, SET
       case DISCRETE_RANGE:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_range_distribution(
 	    mvd_rep->pull_parameter<int>(i, DR_LWR_BND),
 	    mvd_rep->pull_parameter<int>(i, DR_UPR_BND));
 	break;
       case DISCRETE_SET_INT:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_set_distribution(
 	    mvd_rep->pull_parameter<IntSet>(i, DSI_VALUES));
 	break;
       case DISCRETE_SET_STRING:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_set_distribution(
 	    mvd_rep->pull_parameter<StringSet>(i, DSS_VALUES));
 	break;
       case DISCRETE_SET_REAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_set_distribution(
 	    mvd_rep->pull_parameter<RealSet>(i, DSR_VALUES));
 	break;
@@ -199,19 +206,22 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
           mvd_rep->pull_parameter<Real>(i, GA_ALPHA));
 	break;
       case BOUNDED_NORMAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  bounded_normal_distribution(mvd_rep->pull_parameter<Real>(i, N_MEAN),
 	    mvd_rep->pull_parameter<Real>(i, N_STD_DEV),
 	    mvd_rep->pull_parameter<Real>(i, N_LWR_BND),
 	    mvd_rep->pull_parameter<Real>(i, N_UPR_BND));
 	break;
       case LOGNORMAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  lognormal_distribution(mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
 	    mvd_rep->pull_parameter<Real>(i, LN_ZETA));
 	break;
       case BOUNDED_LOGNORMAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  bounded_lognormal_distribution(
 	    mvd_rep->pull_parameter<Real>(i, LN_LAMBDA),
 	    mvd_rep->pull_parameter<Real>(i, LN_ZETA),
@@ -219,33 +229,39 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	    mvd_rep->pull_parameter<Real>(i, LN_UPR_BND));
 	break;
       case LOGUNIFORM:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  loguniform_distribution(mvd_rep->pull_parameter<Real>(i, LU_LWR_BND),
 	    mvd_rep->pull_parameter<Real>(i, LU_UPR_BND));
 	break;
       case TRIANGULAR:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  triangular_distribution(mvd_rep->pull_parameter<Real>(i, T_LWR_BND),
 	    mvd_rep->pull_parameter<Real>(i, T_MODE),
 	    mvd_rep->pull_parameter<Real>(i, T_UPR_BND));
 	break;
       case GUMBEL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  gumbel_distribution(mvd_rep->pull_parameter<Real>(i, GU_ALPHA),
 	    mvd_rep->pull_parameter<Real>(i, GU_BETA));
 	break;
       case FRECHET:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  frechet_distribution(mvd_rep->pull_parameter<Real>(i, F_ALPHA),
 	    mvd_rep->pull_parameter<Real>(i, F_BETA));
 	break;
       case WEIBULL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  weibull_distribution(mvd_rep->pull_parameter<Real>(i, W_ALPHA),
 	    mvd_rep->pull_parameter<Real>(i, W_BETA));
 	break;
       case HISTOGRAM_BIN:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_bin_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, H_BIN_PAIRS));
 	break;
@@ -282,23 +298,27 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	  mvd_rep->pull_parameter<unsigned int>(i, HGE_DRAWN));
 	break;
       case HISTOGRAM_PT_INT:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_pt_distribution(
 	    mvd_rep->pull_parameter<IntRealMap>(i, H_PT_INT_PAIRS));
 	break;
       case HISTOGRAM_PT_STRING:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_pt_distribution(
 	    mvd_rep->pull_parameter<StringRealMap>(i,H_PT_STR_PAIRS));
 	break;
       case HISTOGRAM_PT_REAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  histogram_pt_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, H_PT_REAL_PAIRS));
 	break;
       // CONTINUOUS EPISTEMIC
       case CONTINUOUS_INTERVAL_UNCERTAIN:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  continuous_interval_distribution(
 	    mvd_rep->pull_parameter<RealRealPairRealMap>(i, CIU_BPA));
 	//((IntervalRandomVariable<Real>*)u_rv[i].random_variable_rep())->
@@ -306,24 +326,28 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 	break;
       // DISCRETE EPISTEMIC
       case DISCRETE_INTERVAL_UNCERTAIN:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_interval_distribution(
 	    mvd_rep->pull_parameter<IntIntPairRealMap>(i, DIU_BPA));
 	//((IntervalRandomVariable<int>*)u_rv[i].random_variable_rep())->
 	//  activate_vpp();
 	break;
       case DISCRETE_UNCERTAIN_SET_INT:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_map_distribution(
 	    mvd_rep->pull_parameter<IntRealMap>(i, DUSI_VALUES_PROBS));
 	break;
       case DISCRETE_UNCERTAIN_SET_STRING:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_map_distribution(
 	    mvd_rep->pull_parameter<StringRealMap>(i, DUSS_VALUES_PROBS));
 	break;
       case DISCRETE_UNCERTAIN_SET_REAL:
-	((NumericGenOrthogPolynomial*)poly_basis[av_cntr].polynomial_rep())->
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	  (poly_basis[av_cntr].polynomial_rep())->
 	  discrete_map_distribution(
 	    mvd_rep->pull_parameter<RealRealMap>(i, DUSR_VALUES_PROBS));
 	break;
@@ -339,7 +363,7 @@ update_basis_distribution_parameters(const MultivariateDistribution& u_dist,
 }
 
 
-void SharedPolyApproxData::active_key(const UShortArray& key)
+void SharedPolyApproxData::active_key(const ActiveKey& key)
 {
   activeKey = key;
   //update_active_iterators(); // make virtual if used more broadly w/i Shared*
@@ -391,6 +415,10 @@ void SharedPolyApproxData::pre_finalize_data()
 
 void SharedPolyApproxData::post_finalize_data()
 { } // default implementation is no op
+
+
+bool SharedPolyApproxData::advancement_available()
+{ return true; } // default is no saturation in refinement candidates
 
 
 void SharedPolyApproxData::pre_combine_data()
@@ -560,7 +588,8 @@ tensor_product_terms(const UShortArray& order, bool include_upper_bound)
 
 
 void SharedPolyApproxData::
-tensor_product_multi_index(const UShortArray& order, UShort2DArray& multi_index,
+tensor_product_multi_index(const UShortArray& orders,
+			   UShort2DArray& multi_index,
 			   bool include_upper_bound)
 {
   // This function may be used for defining collocation indices for quadrature
@@ -570,14 +599,14 @@ tensor_product_multi_index(const UShortArray& order, UShort2DArray& multi_index,
 
   // rather than inserting into multi_index, go ahead and estimate its length
   // (since its inexpensive) and use term-by-term assignment.
-  size_t i, n = order.size(),
-    mi_len = tensor_product_terms(order, include_upper_bound);
+  size_t i, n = orders.size(),
+    mi_len = tensor_product_terms(orders, include_upper_bound);
   if (mi_len != multi_index.size())
     multi_index.resize(mi_len);
   UShortArray indices(n, 0); multi_index[0] = indices;
   for (i=1; i<mi_len; ++i) {
     // increment the n-dimensional index set
-    increment_indices(indices, order, include_upper_bound);
+    increment_indices(indices, orders, include_upper_bound);
     multi_index[i] = indices;
   }
 }
@@ -606,90 +635,282 @@ hierarchical_tensor_product_multi_index(const UShort2DArray& delta_quad,
 }
 
 
+size_t SharedPolyApproxData::
+total_order_terms(const UShortArray& orders, short lower_bound_offset)
+{
+  RealVector dim_pref;  unsigned short max_order;
+  anisotropic_order_to_dimension_preference(orders, max_order, dim_pref);
+  return (dim_pref.empty()) ?
+    total_order_terms(max_order, orders.size(), lower_bound_offset) :
+    total_order_terms(max_order, dim_pref,      lower_bound_offset);
+}
+
+
+size_t SharedPolyApproxData::
+total_order_terms(unsigned short order, size_t num_vars,
+		  short lower_bound_offset)
+{
+  // isotropic
+  size_t num_terms;
+  Real real_nt = BasisPolynomial::n_choose_k(order+num_vars, order);
+  if (lower_bound_offset >= 0) { // default is -1
+    int omit_order = order - lower_bound_offset - 1;
+    if (omit_order >= 0)
+      real_nt -= BasisPolynomial::n_choose_k(omit_order+num_vars, omit_order);
+  }
+  // round (real result should be integral excepting round-off)
+  return (size_t)std::floor(real_nt + .5);
+}
+
+
 /** Return the number of terms in a total-order expansion.  For anisotropic
     expansion order, no simple expression is currently available and the
     number of expansion terms is computed using the multiIndex recursion. */
 size_t SharedPolyApproxData::
-total_order_terms(const UShortArray& upper_bound, short lower_bound_offset)
+total_order_terms(unsigned short max_order, const RealVector& dim_pref,
+		  short lower_bound_offset)
 {
-  size_t i, n = upper_bound.size();
-  if (!n) {
-    PCerr << "Error: empty upper_bound in SharedPolyApproxData::"
-	  << "total_order_terms()." << std::endl;
+  // TO DO: see CombinedSparseGridDriver::assign_smolyak_arrays() for
+  // webbur implementation that could be adapted/migrated
+  if (lower_bound_offset >= 0) { // default is -1
+    PCerr << "Error: anisotropic orders not currently supported with "
+          << "multi-index lower bound\n       in SharedPolyApproxData::"
+          << "total_order_terms()." << std::endl;
     abort_handler(-1);
   }
 
-  bool isotropic = true;
-  unsigned short order = upper_bound[0];
-  for (i=1; i<n; ++i)
-    if (upper_bound[i] != order)
-      { isotropic = false; break; }
+  size_t i, num_vars = dim_pref.length(), num_terms;
+  if (!num_vars) {
+    PCerr << "Error: anisotropic version of SharedPolyApproxData::total_order_"
+	  << "terms() requires valid dimension preference." << std::endl;
+    abort_handler(-1);
+  }
+  RealVector aniso_wts(num_vars, false);
+  // convert dim_pref to aniso_wts:
+  webbur::sandia_sgmga_importance_to_aniso(num_vars, dim_pref.values(),
+					   aniso_wts.values());
+  // option 1: scaled so that minimum nonzero entry is 1
+  webbur::sandia_sgmga_aniso_normalize(1, num_vars, aniso_wts.values());
 
-  size_t num_terms;
-  if (isotropic) {
-    num_terms = (size_t)std::floor(
-      BasisPolynomial::n_choose_k(order+n, order)+.5); // round non-integral
-    if (lower_bound_offset >= 0) { // default is -1
-      int omit_order = order - lower_bound_offset - 1;
-      if (omit_order >= 0)
-	num_terms -= (size_t)std::floor(
-	  BasisPolynomial::n_choose_k(omit_order+n, omit_order)+.5); // round
-    }
-  }
-  else { // anisotropic: use multiIndex recursion to compute
-    bool mi_lower_bound = (lower_bound_offset >= 0); // default is -1
-    if (mi_lower_bound) {
-      // Smolyak combinatorial form is invalid for anisotropic levels
-      PCerr << "Error: anisotropic orders not currently supported with "
-	    << "multi-index lower bound\n       in SharedPolyApproxData::"
-	    << "total_order_terms()." << std::endl;
-      abort_handler(-1);
-    }
-    unsigned short max_order = order, order_nd;
-    for (i=1; i<n; ++i)
-      max_order = std::max(max_order, upper_bound[i]);
-    num_terms = 1; // order 0
-    if (max_order >= 1)   // order 1
-      for (i=0; i<n; ++i)
-	if (upper_bound[i] >= 1) // only upper bound may be anisotropic
+  // Note: ordering of terms is not important here (as it is in
+  // total_order_multi_index()) -- only need to count them, so
+  // looping can be more compact
+  num_terms = 1; // order 0
+  if (max_order >= 1)   // order 1
+    for (i=0; i<num_vars; ++i)
+      if (aniso_wts[i] <= (Real)max_order)
+	++num_terms;
+  unsigned short order;  size_t last_index, prev_index;  Real inner_prod;
+  for (order=2; order<=max_order; ++order) { // order 2 through max
+    UShortArray terms(order, 1); // # of terms = current order
+    bool order_complete = false;
+    while (!order_complete) {
+      last_index = order - 1; prev_index = order - 2;
+      for (terms[last_index]=1; terms[last_index]<=terms[prev_index]; 
+	   ++terms[last_index]) {
+	inner_prod = 0.;
+	for (i=0; i<num_vars; ++i)
+	  inner_prod += aniso_wts[i] *
+	    std::count(terms.begin(), terms.end(), i+1);
+	if (inner_prod <= (Real)max_order)
 	  ++num_terms;
-    for (order_nd=2; order_nd<=max_order; ++order_nd) { // order 2 through max
-      UShortArray terms(order_nd, 1); // # of terms = current order
-      bool order_complete = false;
-      while (!order_complete) {
-	size_t last_index = order_nd - 1, prev_index = order_nd - 2;
-	for (terms[last_index]=1; terms[last_index]<=terms[prev_index]; 
-	     ++terms[last_index]) {
-	  bool include = true;
-	  for (i=0; i<n; ++i) {
-	    if (std::count(terms.begin(), terms.end(), i+1) > upper_bound[i]) {
-	      // only upper bound may be anisotropic
-	      include = false;
-	      break;
-	    }
-	  }
-	  if (include)
-	    ++num_terms;
-	}
-	// increment term hierarchy
-	increment_terms(terms, last_index, prev_index, n, order_complete);
       }
+      // increment term hierarchy
+      increment_terms(terms, last_index, prev_index, num_vars, order_complete);
     }
   }
+#ifdef DEBUG
+  PCout << "SharedPolyApproxData total_order_terms = " << num_terms <<std::endl;
+#endif // DEBUG
   return num_terms;
 }
 
 
-/** Overloaded version for defining the multi-indices for a single
-    scalar level.  Anisotropy is not supported, so this version is not
-    usable as a kernel within other overloaded versions. */
 void SharedPolyApproxData::
-total_order_multi_index(unsigned short level, size_t num_vars, 
-			UShort2DArray& multi_index)
+total_order_multi_index(const UShortArray& orders, UShort2DArray& multi_index,
+			short lower_bound_offset,  size_t max_terms)
+{
+  RealVector dim_pref;  unsigned short max_order;
+  anisotropic_order_to_dimension_preference(orders, max_order, dim_pref);
+  if (dim_pref.empty())
+    total_order_multi_index(max_order, orders.size(), multi_index,
+			    lower_bound_offset, max_terms);
+  else
+    total_order_multi_index(max_order, dim_pref, multi_index,
+			    lower_bound_offset, max_terms);
+}
+
+
+void SharedPolyApproxData::
+total_order_multi_index(unsigned short max_order, size_t num_vars,
+			UShort2DArray& multi_index, short lower_bound_offset, 
+			size_t max_terms)
+{
+  unsigned short min_order = 0, order;
+  if (lower_bound_offset >= 0)
+    min_order = (lower_bound_offset >= max_order) ? 0 :
+      max_order - lower_bound_offset; // e.g., Smolyak l.b. = w-N+1
+
+  // special logic required for order < 2 due to prev_index defn below
+  size_t i, cntr = 0, last_index, prev_index;
+  UShortArray mi(num_vars, 0);
+  multi_index.clear();
+  if (min_order == 0 && cntr<max_terms) // && max_order >= 0
+    { multi_index.push_back(mi); ++cntr; } // order 0
+
+  // order 1 has 1 potential term per dim and does not require recursion
+  if (min_order <= 1 && max_order >= 1)
+    for (i=0; i<num_vars && cntr<max_terms; ++i) {
+      mi[i] = 1; // ith entry is nonzero
+      multi_index.push_back(mi); ++cntr;
+      mi[i] = 0; // reset
+    }
+
+  // populate multi_index: implementation follows ordering of Eq. 4.1 in
+  // [Xiu and Karniadakis, 2002]
+  for (order=std::max(min_order,(unsigned short)2); order<=max_order; ++order) {
+    UShortArray terms(order, 1);//# of terms = current order
+    bool order_complete = false;
+    while (!order_complete) {
+      // this is the inner-most loop w/i the nested looping managed by terms
+      last_index = order - 1; prev_index = order - 2;
+      for (terms[last_index]=1;
+	   terms[last_index]<=terms[prev_index] && cntr<max_terms;
+	   ++terms[last_index]) {
+	// store the orders of the univariate polynomials to be used for
+	// constructing the current multivariate basis function
+	for (i=0; i<num_vars; ++i)
+	  mi[i] = std::count(terms.begin(), terms.end(), i+1);
+	multi_index.push_back(mi); ++cntr;
+      }
+      if (cntr == max_terms)
+	order_complete = true;
+      else // increment term hierarchy
+	increment_terms(terms, last_index, prev_index, num_vars,order_complete);
+    }
+  }
+
+#ifdef DEBUG
+  PCout << "MI isotropic order = " << max_order << std::endl;
+  size_t mi_len = multi_index.size();
+  for (i=0; i<mi_len; ++i)
+    PCout << "multiIndex[" << i << "]:\n" << multi_index[i] << std::endl;
+#endif // DEBUG
+}
+
+
+void SharedPolyApproxData::
+total_order_multi_index(unsigned short max_order, const RealVector& dim_pref,
+			UShort2DArray& multi_index, short lower_bound_offset, 
+			size_t max_terms)
+{
+  // TO DO: see CombinedSparseGridDriver::assign_smolyak_arrays() for
+  // webbur implementation that could be adapted/migrated
+  if (lower_bound_offset >= 0) { // default is -1
+    PCerr << "Error: anisotropic orders not currently supported with "
+          << "multi-index lower bound\n       in SharedPolyApproxData::"
+	  << "total_order_multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, cntr = 0, num_vars = dim_pref.length();
+  if (!num_vars) {
+    PCerr << "Error: anisotropic version of SharedPolyApproxData::total_order_"
+	  << "multi_index() requires valid dimension preference." << std::endl;
+    abort_handler(-1);
+  }
+
+  // convert dim_pref to aniso_wts:
+  RealVector aniso_wts(num_vars, false);
+  webbur::sandia_sgmga_importance_to_aniso(num_vars, dim_pref.values(),
+					   aniso_wts.values());
+  // option 1: scaled so that minimum nonzero entry is 1
+  webbur::sandia_sgmga_aniso_normalize(1, num_vars, aniso_wts.values());
+
+  unsigned short min_order = 0, order;
+  multi_index.clear();
+  std::list<UShortArray> excluded_multi_index;
+
+  // order 0
+  UShortArray mi(num_vars, 0);
+  if (min_order == 0 && cntr<max_terms)
+    { multi_index.push_back(mi); ++cntr; } // order 0
+
+  // order 1 has 1 potential term per dim and does not require terms recursion
+  if (min_order <= 1 && max_order >= 1) {
+    order = 1;
+    for (i=0; i<num_vars && cntr<max_terms; ++i) {
+      mi[i] = 1; // ith entry is active
+      if (aniso_wts[i] <= (Real)order)
+	{ multi_index.push_back(mi); ++cntr; }
+      else
+	excluded_multi_index.push_back(mi);
+      mi[i] = 0; // reset ith entry
+    }
+#ifdef DEBUG
+    PCout << "MI anisotropic order = " << order << std::endl;
+    size_t mi_len = multi_index.size();
+    for (i=0; i<mi_len; ++i)
+      PCout << "multiIndex[" << i << "]:\n" << multi_index[i] << std::endl;
+#endif // DEBUG
+  }
+
+  // order 2 and higher require terms recursion
+  size_t last_index, prev_index;  bool order_complete;
+  for (order=std::max(min_order,(unsigned short)2); order<=max_order; ++order) {
+
+    // re-check excluded mi's each time for inclusion after order advancement
+    std::list<UShortArray>::iterator it = excluded_multi_index.begin();
+    while (it != excluded_multi_index.end()) {
+      UShortArray& mi = *it;
+      if (dot(mi, aniso_wts) <= (Real)order) {
+	multi_index.push_back(mi); ++cntr;
+	it = excluded_multi_index.erase(it); // safely advances to next
+      }
+      else ++it;
+    }
+
+    UShortArray terms(order, 1);//# of terms = current order
+    order_complete = false;
+    while (!order_complete) {
+      last_index = order - 1; prev_index = order - 2;
+      for (terms[last_index]=1;
+	   terms[last_index]<=terms[prev_index] && cntr<max_terms;
+	   ++terms[last_index]) {
+	// mi[i] = orders of univariate polynomials used for constructing the
+	//         i-th multivariate basis function
+	for (i=0; i<num_vars; ++i)
+	  mi[i] = std::count(terms.begin(), terms.end(), i+1);
+	// evaluate candidate mi for inclusion during this order increment
+	if (dot(mi, aniso_wts) <= (Real)order)
+	  { multi_index.push_back(mi); ++cntr; }
+	else
+	  excluded_multi_index.push_back(mi);
+      }
+      if (cntr == max_terms)
+	order_complete = true;
+      else // increment term hierarchy
+	increment_terms(terms, last_index, prev_index, num_vars,order_complete);
+    }
+#ifdef DEBUG
+    PCout << "MI anisotropic order = " << order << std::endl;
+    size_t mi_len = multi_index.size();
+    for (i=0; i<mi_len; ++i)
+      PCout << "multiIndex[" << i << "]:\n" << multi_index[i] << std::endl;
+#endif // DEBUG
+  }
+}
+
+
+/** Overloaded version for defining the multi-indices for a single
+    scalar level.  Anisotropy is not supported. */
+void SharedPolyApproxData::
+total_order_multi_index_by_level(unsigned short level, size_t num_vars, 
+				 UShort2DArray& multi_index)
 {
   UShortArray mi(num_vars, 0);
   multi_index.clear();
-  // special logic required for level < 2 due to prev_index defn below
+  // special logic required for level < 2 due to level_m2 defn below
   switch (level) {
   case 0:
     multi_index.push_back(mi); break;
@@ -702,117 +923,18 @@ total_order_multi_index(unsigned short level, size_t num_vars,
     bool order_complete = false;
     while (!order_complete) {
       // this is the inner-most loop w/i the nested looping managed by terms
-      size_t last_index = level - 1, prev_index = level - 2;
-      for (terms[last_index]=1;
-	   terms[last_index]<=terms[prev_index]; ++terms[last_index]) {
+      size_t level_m1 = level - 1, level_m2 = level - 2;
+      for (terms[level_m1]=1; terms[level_m1]<=terms[level_m2];
+	   ++terms[level_m1]) {
 	for (size_t i=0; i<num_vars; ++i)
 	  mi[i] = std::count(terms.begin(), terms.end(), i+1);
 	multi_index.push_back(mi);
       }
-      increment_terms(terms, last_index, prev_index, num_vars, order_complete);
+      increment_terms(terms, level_m1, level_m2, num_vars, order_complete);
     }
     break;
   }
   }
-}
-
-
-void SharedPolyApproxData::
-total_order_multi_index(const UShortArray& upper_bound,
-			UShort2DArray& multi_index, short lower_bound_offset, 
-			size_t max_terms)
-{
-  // populate multi_index: implementation follows ordering of Eq. 4.1 in
-  // [Xiu and Karniadakis, 2002].
-  // To handle anisotropy, we currently perform a complete total-order
-  // recursion based on max_order and reject multi-indices with components
-  // greater than those in upper_bound.
-  size_t i, cntr = 0, n = upper_bound.size();
-  if (!n) {
-    PCerr << "Error: empty upper_bound in SharedPolyApproxData::"
-	  << "total_order_multi_index()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // Since total_order_terms() is expensive, use insertions into multi_index
-  // rather than sizing with entry-by-entry assignment
-  bool isotropic = true;
-  unsigned short order = upper_bound[0];
-  for (i=1; i<n; ++i)
-    if (upper_bound[i] != order)
-      { isotropic = false; break; }
-
-  bool mi_lower_bound = (lower_bound_offset >= 0); // default is -1
-  unsigned short max_order = order, min_order = 0, order_nd;
-  if (isotropic) {
-    if (mi_lower_bound)
-      min_order = (lower_bound_offset >= order)
-	? 0 : order - lower_bound_offset; // e.g., Smolyak l.b. = w-N+1
-  }
-  else {
-    if (mi_lower_bound) {
-      // Smolyak combinatorial form is invalid for anisotropic levels
-      PCerr << "Error: anisotropic orders not currently supported with "
-	    << "multi-index lower bound\n       in SharedPolyApproxData::"
-	    << "total_order_multi_index()." << std::endl;
-      abort_handler(-1);
-    }
-    for (i=1; i<n; ++i)
-      max_order = std::max(max_order, upper_bound[i]);
-  }
-
-  // special logic required for order_nd < 2 due to prev_index defn below
-  UShortArray mi(n,0);
-  multi_index.clear();
-  if (min_order == 0) // && max_order >= 0
-    multi_index.push_back(mi); // order 0
-  if (min_order <= 1 && max_order >= 1) { // order 1
-    for (i=0; i<n && cntr<max_terms; ++i) {
-      if (upper_bound[i] >= 1) { // only upper bound may be anisotropic
-	mi[i] = 1; // ith entry is nonzero
-	multi_index.push_back(mi);
-	mi[i] = 0; // reset
-      }
-    }
-  }
-  for (order_nd=std::max(min_order,(unsigned short)2);
-       order_nd<=max_order; ++order_nd) {
-    UShortArray terms(order_nd, 1);//# of terms = current order
-    bool order_complete = false;
-    while (!order_complete) {
-      // this is the inner-most loop w/i the nested looping managed by terms
-      size_t last_index = order_nd - 1, prev_index = order_nd - 2;
-      for (terms[last_index]=1;
-	   terms[last_index]<=terms[prev_index] && cntr<max_terms;
-	   ++terms[last_index]) {
-	// store the orders of the univariate polynomials to be used for
-	// constructing the current multivariate basis function
-	bool include = true;
-	for (i=0; i<n; ++i) {
-	  mi[i] = std::count(terms.begin(), terms.end(), i+1);
-	  if (mi[i] > upper_bound[i]) { // only upper bound may be anisotropic
-	    include = false;
-	    break;
-	  }
-	}
-	if (include)
-	  multi_index.push_back(mi);
-#ifdef DEBUG
-	PCout << "terms:\n" << terms << std::endl;
-#endif // DEBUG
-      }
-      if (cntr == max_terms)
-	order_complete = true;
-      else // increment term hierarchy
-	increment_terms(terms, last_index, prev_index, n, order_complete);
-    }
-  }
-
-#ifdef DEBUG
-  size_t mi_len = multi_index.size();
-  for (i=0; i<mi_len; ++i)
-    PCout << "multiIndex[" << i << "]:\n" << multi_index[i] << std::endl;
-#endif // DEBUG
 }
 
 } // namespace Pecos

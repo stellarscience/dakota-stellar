@@ -175,7 +175,7 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
   // for decrement
   prevMultiIndex = multiIndexIter->second;
 
-  std::map<UShortArray, UShort2DArrayDeque>::iterator pop_it
+  std::map<ActiveKey, UShort2DArrayDeque>::iterator pop_it
     = poppedMultiIndex.find(activeKey);
   UShort2DArrayDeque::iterator u2a_it;
   if (pop_it == poppedMultiIndex.end() || pop_it->second.size() <= p_index) {
@@ -401,6 +401,24 @@ pack_response_data(const SurrogateDataResp& sdr,
     const RealVector& resp_grad = sdr.response_gradient();
     for (size_t j=0; j<numVars; ++j, ++pg_cntr)
       pack_grad[pg_cntr] = resp_grad[j];
+  }
+}
+
+
+void SharedRegressOrthogPolyApproxData::
+pack_response_data(const SurrogateDataResp& sdr, const RealRealPair& factors,
+		   bool add_val,  double* pack_val,  size_t& pv_cntr,
+		   bool add_grad, double* pack_grad, size_t& pg_cntr)
+{
+  if (add_val) {
+    pack_val[pv_cntr] = (sdr.response_function() - factors.first)
+                      / factors.second; // fn - min / range
+    ++pv_cntr;
+  }
+  if (add_grad) {
+    const RealVector& resp_grad = sdr.response_gradient();
+    for (size_t j=0; j<numVars; ++j, ++pg_cntr)
+      pack_grad[pg_cntr] = resp_grad[j] / factors.second;
   }
 }
 

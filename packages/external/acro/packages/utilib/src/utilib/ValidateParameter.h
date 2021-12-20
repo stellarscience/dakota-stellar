@@ -205,7 +205,6 @@ public:
 	{return (x > static_cast<Type>(0));}
 };
 
-} // namespace utilib
 
 
 //============================================================================
@@ -214,6 +213,9 @@ public:
 inline std::ostream& operator<< (std::ostream& ostr, const utilib::ParameterValidatorBase&
  item)
 { item.write(ostr); return ostr; }
+
+
+} // namespace utilib
 
 
 #endif

@@ -113,7 +113,6 @@ void Any::read(utilib::UnPackBuffer& is)
 }
 
 
-} // namespace utilib
 
 
 std::ostream& operator<<( std::ostream& os, 
@@ -143,3 +142,5 @@ utilib::UnPackBuffer& operator>>( utilib::UnPackBuffer& is,
    any.m_any.read(is);
    return is;
 }
+
+} // namespace utilib

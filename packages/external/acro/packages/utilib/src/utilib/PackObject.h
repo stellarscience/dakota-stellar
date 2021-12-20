@@ -54,8 +54,6 @@ public:
 
 };
 
-} // namespace utilib
-
 /// Out-stream operator for writing the contents of a PackObject
 inline std::ostream& operator<<(std::ostream& os, const utilib::PackObject& obj)
 { obj.write(os); return(os); }
@@ -73,6 +71,8 @@ inline std::istream& operator>>(std::istream& is, utilib::PackObject& obj)
 inline utilib::UnPackBuffer& operator>>(utilib::UnPackBuffer& is,
 					utilib::PackObject& obj)
 { obj.read(is); return(is); }
+
+} // namespace utilib
 
 
 #endif

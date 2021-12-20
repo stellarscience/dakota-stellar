@@ -59,7 +59,7 @@
 
 # To be safe, define your minimum CMake version.  This may be newer than the
 # min required by TriBITS.
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1 FATAL_ERROR)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0 FATAL_ERROR)
 
 # Must set the project name as a variable at very beginning before including anything else
 # We set the project name in a separate file so CTest scripts can use it.
@@ -69,8 +69,8 @@ INCLUDE(${CMAKE_CURRENT_SOURCE_DIR}/ProjectName.cmake)
 # not in an include file :-(
 PROJECT(${PROJECT_NAME} NONE)
 
-# Set default C++ standard to C++11
-SET(Trilinos_ENABLE_CXX11_DEFAULT ON)
+## set an env so we know we are in configure
+set(ENV{CMAKE_IS_IN_CONFIGURE_MODE} 1)
 
 #
 # B) Pull in the TriBITS system and execute
@@ -98,6 +98,7 @@ IF (${PROJECT_NAME}_INSTALL_TriBITS)
   INSTALL(
     DIRECTORY "${Trilinos_SOURCE_DIR}/cmake/tribits"
     DESTINATION "${${PROJECT_NAME}_INSTALL_LIB_DIR}/cmake"
+    PATTERN "*.pyc" EXCLUDE
     )
 ENDIF()
 

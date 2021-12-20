@@ -733,8 +733,6 @@ UNPACKBUF(long long)
 #endif 
 
 
-} // namespace utilib
-
 /// Stream operator to pack a void*
 inline utilib::PackBuffer& operator<< (utilib::PackBuffer& buff, const void*)
 	{return buff;}
@@ -908,6 +906,6 @@ utilib::UnPackBuffer& operator>>(utilib::UnPackBuffer& is, std::vector<TYPE>& ve
 }
 #endif
 
-
+} // namespace utilib
 
 #endif // __PackBuf_h

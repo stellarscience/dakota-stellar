@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -12,6 +13,8 @@
 #include "dakota_system_defs.hpp"
 #include "Teuchos_config.h"
 #include "Teuchos_SerialDenseVector.hpp"
+#include "Teuchos_SerialDenseSolver.hpp"
+#include "Teuchos_SerialSpdDenseSolver.hpp"
 #include <boost/multi_array.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <deque>
@@ -34,6 +37,9 @@ class ParallelConfiguration;
 class DiscrepancyCorrection;
 
 
+// Suppress Doxygen warnings for these known undocumented typedefs
+/// \cond
+
 // -----------------------------------
 // Aliases for fundamental data types:
 // -----------------------------------
@@ -44,16 +50,23 @@ typedef std::string String;
 // Numerical arrays (serial/parallel):
 // -----------------------------------
 
-typedef Teuchos::SerialDenseVector<int, Real>    RealVector;
-typedef Teuchos::SerialDenseMatrix<int, Real>    RealMatrix;
-typedef Teuchos::SerialSymDenseMatrix<int, Real> RealSymMatrix;
-typedef Teuchos::SerialDenseVector<int, int>     IntVector;
-typedef Teuchos::SerialDenseMatrix<int, int>     IntMatrix;
-typedef Teuchos::SerialDenseVector<int, size_t>  SizetVector;
+typedef Teuchos::SerialDenseVector<int, Real>      RealVector;
+typedef Teuchos::SerialDenseMatrix<int, Real>      RealMatrix;
+typedef Teuchos::SerialSymDenseMatrix<int, Real>   RealSymMatrix;
+typedef Teuchos::SerialDenseVector<int, int>       IntVector;
+typedef Teuchos::SerialDenseMatrix<int, int>       IntMatrix;
+typedef Teuchos::SerialDenseVector<int, size_t>    SizetVector;
+typedef Teuchos::SerialSymDenseMatrix<int, size_t> SizetSymMatrix;
 
 //typedef Tpetra::CrsMatrix<int, Real>             RealSparseMatrix
 //typedef Tpetra::Vector<int, Real>                RealParallelVector
 //typedef Tpetra::MultiVector<int, Real>           RealParallelMatrix
+
+// ---------------------------------
+// Numerical solvers (serial dense):
+// ---------------------------------
+typedef Teuchos::SerialDenseSolver<int, Real>    RealSolver;
+typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 
 // ---------------------------------------
 // Admin/bookkeeping arrays (serial only):
@@ -67,6 +80,7 @@ typedef std::vector<RealArray>      Real2DArray;
 typedef std::vector<int>            IntArray;
 typedef std::vector<IntArray>       Int2DArray;
 typedef std::vector<short>          ShortArray;
+typedef std::vector<ShortArray>     Short2DArray;
 typedef std::vector<unsigned int>   UIntArray;
 typedef std::vector<unsigned short> UShortArray;
 typedef std::vector<UShortArray>    UShort2DArray;
@@ -96,6 +110,7 @@ typedef std::vector<RealVector>        RealVectorArray;
 typedef std::vector<RealVectorArray>   RealVector2DArray;
 typedef std::vector<RealMatrix>        RealMatrixArray;
 typedef std::vector<RealSymMatrix>     RealSymMatrixArray;
+typedef std::vector<SizetSymMatrix>    SizetSymMatrixArray;
 typedef std::vector<IntVector>         IntVectorArray;
 typedef std::vector<Variables>         VariablesArray;
 typedef std::vector<Response>          ResponseArray;
@@ -106,7 +121,7 @@ typedef std::vector<Iterator>          IteratorArray;
 typedef std::vector<RealMultiArray>    BoostMAArray;
 typedef std::vector<RealMulti2DArray>  BoostMA2DArray;
 typedef std::vector<RealMulti3DArray>  BoostMA3DArray;
- 
+
 typedef std::list<bool>                BoolList;
 typedef std::list<int>                 IntList;
 typedef std::list<size_t>              SizetList;
@@ -129,7 +144,6 @@ typedef std::pair<int, String>         IntStringPair;
 typedef std::pair<Real, Real>          RealRealPair;
 typedef std::pair<String, String>      StringStringPair;
 typedef std::pair<int, Response>       IntResponsePair;
-typedef std::pair<UShortArray, UShortArray> UShortArrayPair;
 typedef std::set<Real>                 RealSet;
 typedef std::set<int>                  IntSet;
 typedef std::set<String>               StringSet;
@@ -148,14 +162,18 @@ typedef std::map<Real, Real>           RealRealMap;
 typedef std::map<String, Real>         StringRealMap;
 typedef std::multimap<Real, int>       RealIntMultiMap;
 typedef std::vector<RealRealPair>      RealRealPairArray;
+typedef std::vector<IntIntMap>         IntIntMapArray;
 typedef std::vector<IntRealMap>        IntRealMapArray;
 typedef std::vector<RealRealMap>       RealRealMapArray;
 typedef std::vector<StringRealMap>     StringRealMapArray;
 typedef std::map<int, RealVector>      IntRealVectorMap;
 typedef std::map<int, RealMatrix>      IntRealMatrixMap;
+typedef std::map<int, RealSymMatrix>   IntRealSymMatrixMap;
+typedef std::map<int, RealSymMatrixArray> IntRealSymMatrixArrayMap;
 typedef std::map<int, ActiveSet>       IntActiveSetMap;
 typedef std::map<int, Variables>       IntVariablesMap;
 typedef std::map<int, Response>        IntResponseMap;
+typedef std::vector<IntResponseMap>    IntResponseMapArray;
 typedef std::map<IntArray, size_t>     IntArraySizetMap;
 typedef std::map<IntIntPair, Real>     IntIntPairRealMap;
 typedef std::map<IntIntPair, RealMatrix> IntIntPairRealMatrixMap;
@@ -165,7 +183,6 @@ typedef std::vector<IntIntPairRealMap>   IntIntPairRealMapArray;
 typedef std::vector<RealRealPairRealMap> RealRealPairRealMapArray;
 typedef std::multimap<RealRealPair, ParamResponsePair> RealPairPRPMultiMap;
 //typedef std::multimap<Real, ParamResponsePair> RealPRPMultiMap;
-typedef std::map<UShortArrayPair, DiscrepancyCorrection> DiscrepCorrMap;
 
 // ---------
 // Iterators
@@ -192,6 +209,8 @@ typedef std::list<ParallelConfiguration>::iterator ParConfigLIter;
 
 typedef IntSet::iterator                       ISIter;
 typedef IntSet::const_iterator                 ISCIter;
+typedef SizetSet::iterator                     StSIter;
+typedef SizetSet::const_iterator               StSCIter;
 typedef StringSet::iterator                    SSIter;
 typedef StringSet::const_iterator              SSCIter;
 typedef RealSet::iterator                      RSIter;
@@ -216,11 +235,15 @@ typedef IntRealVectorMap::iterator             IntRVMIter;
 typedef IntRealVectorMap::const_iterator       IntRVMCIter;
 typedef IntRealMatrixMap::iterator             IntRMMIter;
 typedef IntRealMatrixMap::const_iterator       IntRMMCIter;
+typedef IntRealSymMatrixArrayMap::iterator     IntRSMAMIter;
 typedef IntActiveSetMap::iterator              IntASMIter;
 typedef IntVariablesMap::iterator              IntVarsMIter;
 typedef IntVariablesMap::const_iterator        IntVarsMCIter;
 typedef IntResponseMap::iterator               IntRespMIter;
 typedef IntResponseMap::const_iterator         IntRespMCIter;
+
+// Suppress Doxygen warnings for these known undocumented typedefs
+/// \endcond
 
 } // namespace Dakota
 

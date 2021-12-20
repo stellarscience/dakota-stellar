@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -12,6 +13,7 @@
 //- Checked by:
 
 #include "SurrBasedLevelData.hpp"
+#include "ActiveKey.hpp"
 
 namespace Dakota {
 
@@ -41,28 +43,6 @@ initialize_data(const Variables& vars, const Response& approx_resp,
     responseStarTruthUncorrected    = truth_resp.copy();
     responseCenterTruthUncorrected  = truth_resp.copy();
   }
-}
-
-
-void SurrBasedLevelData::
-initialize_keys(unsigned short approx_form,  unsigned short truth_form,
-		unsigned short approx_level, unsigned short truth_level)
-{
-  if (approx_level == USHRT_MAX)
-    approxModelKey.resize(1);
-  else {
-    approxModelKey.resize(2);
-    approxModelKey[1] = approx_level;
-  }    
-  approxModelKey[0] = approx_form;
-
-  if (truth_level == USHRT_MAX)
-    truthModelKey.resize(1);
-  else {
-    truthModelKey.resize(2);
-    truthModelKey[1] = truth_level;
-  }
-  truthModelKey[0] = truth_form;
 }
 
 

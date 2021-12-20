@@ -10,8 +10,6 @@
 
 include_directories(${Pecos_SOURCE_DIR}/src
                     ${Pecos_SOURCE_DIR}/util/src
-                    ${Boost_INCLUDE_DIR}
-                    ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
 
 remove_definitions("-DHAVE_CONFIG_H")
@@ -61,7 +59,7 @@ add_test(boost_test_dist boost_test_dist)
 
 # Complete these for each specific test.
 add_executable(boost_test_rng boost_test_rng.cpp)
-target_link_libraries(boost_test_rng ${pecos_test_libs})
+target_link_libraries(boost_test_rng ${pecos_test_libs} Boost::boost)
 add_test(boost_test_rng boost_test_rng)
 
 # Complete these for each specific test.

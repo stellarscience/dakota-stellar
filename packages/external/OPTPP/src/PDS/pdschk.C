@@ -17,7 +17,7 @@
 #include "OptPDS.h"
 #include "pds.h"
 #include "common.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 #include "Teuchos_SerialDenseMatrix.hpp"
 #include "Teuchos_SerialDenseVector.hpp"

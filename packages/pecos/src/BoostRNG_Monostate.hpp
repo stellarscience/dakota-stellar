@@ -16,10 +16,20 @@
 #define BOOST_RNG_MONOSTATE_HPP
 
 #include "pecos_data_types.hpp"
+
+#include <boost/version.hpp>
+#if (BOOST_VERSION < 107000) && !defined(BOOST_ALLOW_DEPRECATED_HEADERS)
+//could alternately use: #define BOOST_PENDING_INTEGER_LOG2_HPP 1
+#define BOOST_ALLOW_DEPRECATED_HEADERS 1
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
-
+#undef BOOST_ALLOW_DEPRECATED_HEADERS
+#else
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real.hpp>
+#include <boost/random/variate_generator.hpp>
+#endif
 
 // BoostRNG_Monostate helps replace the default LHS rnumlhs1/rnumlhs2
 // RNGs. In standalone LHS, these functions are provided by LHS (see 

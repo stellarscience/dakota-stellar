@@ -4,7 +4,7 @@
 #include "mpi.h"
 
 #include "pds.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "common.h"
 
 extern struct pdscon pdscon;

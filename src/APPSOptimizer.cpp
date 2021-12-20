@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -181,7 +182,8 @@ void APPSOptimizer::set_apps_parameters()
   // citizen (generalized set search, formerly APPS).
 
   mediatorParams->setParameter("Citizen Count", 1);
-  mediatorParams->setParameter("Maximum Evaluations", maxFunctionEvals);
+  if (maxFunctionEvals != SZ_MAX)
+    mediatorParams->setParameter("Maximum Evaluations", (int)maxFunctionEvals);
 
   // Set GSS variant based on presence or not of nonlinear
   // constraints.
@@ -210,10 +212,8 @@ void APPSOptimizer::set_apps_parameters()
     // A null string is the DB default and nonblocking is the HOPS default, so
     // the flag is true only for an explicit blocking user specification.
 
-    const bool blocking_synch
-      = (probDescDB.get_string("method.pattern_search.synchronization") ==
-	 "blocking");
-    if (blocking_synch) {
+    if (probDescDB.get_short("method.synchronization") ==
+	BLOCKING_SYNCHRONIZATION) {
       mediatorParams->setParameter("Synchronous Evaluations", true);
       citizenParams->setParameter("Use Random Order", false);
       evalMgr->set_blocking_synch(true);
@@ -395,10 +395,6 @@ void APPSOptimizer::initialize_variables_and_constraints()
 }
 
 AppsTraits::AppsTraits()
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "AppsTraits::AppsTraits() called to build letter object.\n";
-#endif
-}
+{ /* empty ctor */ }
 
 } // namespace Dakota

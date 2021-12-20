@@ -8,7 +8,6 @@
 
 #include "LHSDriver.hpp"
 #include "BoostRNG_Monostate.hpp"
-#include <boost/lexical_cast.hpp>
 #include "RangeVariable.hpp"
 #include "SetVariable.hpp"
 #include "DiscreteSetRandomVariable.hpp"
@@ -381,8 +380,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
     const RandomVariable& rv_i = random_vars[i];
     switch (rv_i.type()) {
     case CONTINUOUS_RANGE: {
-      RangeVariable<Real>* rv_rep
-	= (RangeVariable<Real>*)rv_i.random_variable_rep();
+      std::shared_ptr<RangeVariable<Real>> rv_rep =
+	std::static_pointer_cast<RangeVariable<Real>>(rv_i.random_variable_rep());
       Real l_bnd;  rv_rep->pull_parameter(CR_LWR_BND, l_bnd);
       Real u_bnd;  rv_rep->pull_parameter(CR_UPR_BND, u_bnd);
       check_finite(l_bnd, u_bnd);
@@ -398,8 +397,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_RANGE: {
-      RangeVariable<int>* rv_rep
-	= (RangeVariable<int>*)rv_i.random_variable_rep();
+      std::shared_ptr<RangeVariable<int>> rv_rep =
+	std::static_pointer_cast<RangeVariable<int>>(rv_i.random_variable_rep());
       int l_bnd;  rv_rep->pull_parameter(DR_LWR_BND, l_bnd);
       int u_bnd;  rv_rep->pull_parameter(DR_UPR_BND, u_bnd);
       check_finite(l_bnd, u_bnd);
@@ -416,7 +415,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_SET_INT: {
-      SetVariable<int>* rv_rep = (SetVariable<int>*)rv_i.random_variable_rep();
+      std::shared_ptr<SetVariable<int>> rv_rep =
+	std::static_pointer_cast<SetVariable<int>>(rv_i.random_variable_rep());
       IntSet int_set;  rv_rep->pull_parameter(DSI_VALUES, int_set);
       size_t set_size = int_set.size();
       if (set_size > 1) {
@@ -430,8 +430,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_SET_STRING: {
-      SetVariable<String>* rv_rep
-	= (SetVariable<String>*)rv_i.random_variable_rep();
+      std::shared_ptr<SetVariable<String>> rv_rep =
+	std::static_pointer_cast<SetVariable<String>>(rv_i.random_variable_rep());
       StringSet str_set;  rv_rep->pull_parameter(DSS_VALUES, str_set);
       int set_size = str_set.size();
       if (set_size > 1) {
@@ -445,8 +445,8 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_SET_REAL: {
-      SetVariable<Real>* rv_rep
-	= (SetVariable<Real>*)rv_i.random_variable_rep();
+      std::shared_ptr<SetVariable<Real>> rv_rep =
+	std::static_pointer_cast<SetVariable<Real>>(rv_i.random_variable_rep());
       RealSet real_set;  rv_rep->pull_parameter(DSR_VALUES, real_set);
       size_t set_size = real_set.size();
       if (set_size > 1) {
@@ -558,8 +558,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       lhs_dist_register("Weibull", "weibull", av_cntr, dist_params);
       break;
     case HISTOGRAM_BIN: {
-      HistogramBinRandomVariable* rv_rep
-	= (HistogramBinRandomVariable*)rv_i.random_variable_rep();
+      std::shared_ptr<HistogramBinRandomVariable> rv_rep =
+	std::static_pointer_cast<HistogramBinRandomVariable>
+	(rv_i.random_variable_rep());
       RealRealMap h_bin_pairs; rv_rep->pull_parameter(H_BIN_PAIRS, h_bin_pairs);
       RealArray x_val, y_val;  bins_to_xy_cdf(h_bin_pairs, x_val, y_val);
       // Note: continuous linear accumulates CDF with first y=0 and last y=1
@@ -599,8 +600,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case HISTOGRAM_PT_INT: {
-      DiscreteSetRandomVariable<int>* rv_rep
-	= (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+      std::shared_ptr<DiscreteSetRandomVariable<int>> rv_rep =
+	std::static_pointer_cast<DiscreteSetRandomVariable<int>>
+	(rv_i.random_variable_rep());
       IntRealMap ir_map;  rv_rep->pull_parameter(H_PT_INT_PAIRS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
@@ -613,8 +615,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case HISTOGRAM_PT_STRING: {
-      DiscreteSetRandomVariable<String>* rv_rep
-	= (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+      std::shared_ptr<DiscreteSetRandomVariable<String>> rv_rep =
+	std::static_pointer_cast<DiscreteSetRandomVariable<String>>
+	(rv_i.random_variable_rep());
       StringRealMap sr_map;  rv_rep->pull_parameter(H_PT_STR_PAIRS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
@@ -627,8 +630,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case HISTOGRAM_PT_REAL: {
-      DiscreteSetRandomVariable<Real>* rv_rep
-	= (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+      std::shared_ptr<DiscreteSetRandomVariable<Real>> rv_rep =
+	std::static_pointer_cast<DiscreteSetRandomVariable<Real>>
+	(rv_i.random_variable_rep());
       RealRealMap rr_map;  rv_rep->pull_parameter(H_PT_REAL_PAIRS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
@@ -641,8 +645,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case CONTINUOUS_INTERVAL_UNCERTAIN: {
-      IntervalRandomVariable<Real>* rv_rep
-	= (IntervalRandomVariable<Real>*)rv_i.random_variable_rep();
+      std::shared_ptr<IntervalRandomVariable<Real>> rv_rep =
+	std::static_pointer_cast<IntervalRandomVariable<Real>>
+	(rv_i.random_variable_rep());
       RealRealPairRealMap ci_bpa;  rv_rep->pull_parameter(CIU_BPA, ci_bpa);
       // Note: continuous linear accumulates CDF with first y=0 and last y=1
       RealArray x_val, y_val;  intervals_to_xy_cdf(ci_bpa, x_val, y_val);
@@ -651,8 +656,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_INTERVAL_UNCERTAIN: {
-      IntervalRandomVariable<int>* rv_rep
-	= (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
+      std::shared_ptr<IntervalRandomVariable<int>> rv_rep =
+	std::static_pointer_cast<IntervalRandomVariable<int>>
+	(rv_i.random_variable_rep());
       IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
       IntArray i_val;  RealArray x_val, y_val;
       intervals_to_xy_pdf(di_bpa, i_val, y_val);  cast_data(i_val, x_val);
@@ -661,8 +667,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_UNCERTAIN_SET_INT: {
-      DiscreteSetRandomVariable<int>* rv_rep
-	= (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+      std::shared_ptr<DiscreteSetRandomVariable<int>> rv_rep =
+	std::static_pointer_cast<DiscreteSetRandomVariable<int>>
+	(rv_i.random_variable_rep());
       IntRealMap ir_map;  rv_rep->pull_parameter(DUSI_VALUES_PROBS, ir_map);
       size_t map_size = ir_map.size();
       if (map_size > 1) {
@@ -675,8 +682,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_UNCERTAIN_SET_STRING: {
-      DiscreteSetRandomVariable<String>* rv_rep
-	= (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+      std::shared_ptr<DiscreteSetRandomVariable<String>> rv_rep =
+	std::static_pointer_cast<DiscreteSetRandomVariable<String>>
+	(rv_i.random_variable_rep());
       StringRealMap sr_map;  rv_rep->pull_parameter(DUSS_VALUES_PROBS, sr_map);
       int map_size = sr_map.size();
       if (map_size > 1) {
@@ -689,8 +697,9 @@ generate_samples(const std::vector<RandomVariable>& random_vars,
       break;
     }
     case DISCRETE_UNCERTAIN_SET_REAL: {
-      DiscreteSetRandomVariable<Real>* rv_rep
-	= (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+      std::shared_ptr<DiscreteSetRandomVariable<Real>> rv_rep =
+	std::static_pointer_cast<DiscreteSetRandomVariable<Real>>
+	(rv_i.random_variable_rep());
       RealRealMap rr_map;  rv_rep->pull_parameter(DUSR_VALUES_PROBS, rr_map);
       size_t map_size = rr_map.size();
       if (map_size > 1) {
@@ -866,22 +875,25 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 	  max_unique *= u_bnd - l_bnd + 1; break;
 	}
 	case DISCRETE_SET_INT: {
-	  SetVariable<int>* rv_rep
-	    = (SetVariable<int>*)rv_i.random_variable_rep();
+	  std::shared_ptr<SetVariable<int>> rv_rep =
+	    std::static_pointer_cast<SetVariable<int>>
+	    (rv_i.random_variable_rep());
 	  IntSet i_set;  rv_rep->pull_parameter(DSI_VALUES, i_set);
 	  //discrete_strata_1d.push_back(i_set.size());
 	  max_unique *= i_set.size(); break;
 	}
 	case DISCRETE_SET_STRING: {
-	  SetVariable<String>* rv_rep
-	    = (SetVariable<String>*)rv_i.random_variable_rep();
+	  std::shared_ptr<SetVariable<String>> rv_rep =
+	    std::static_pointer_cast<SetVariable<String>>
+	    (rv_i.random_variable_rep());
 	  StringSet s_set;  rv_rep->pull_parameter(DSS_VALUES, s_set);
 	  //discrete_strata_1d.push_back(s_set.size());
 	  max_unique *= s_set.size();  break;
 	}
 	case DISCRETE_SET_REAL: {
-	  SetVariable<Real>* rv_rep
-	    = (SetVariable<Real>*)rv_i.random_variable_rep();
+	  std::shared_ptr<SetVariable<Real>> rv_rep =
+	    std::static_pointer_cast<SetVariable<Real>>
+	    (rv_i.random_variable_rep());
 	  RealSet r_set;  rv_rep->pull_parameter(DSR_VALUES, r_set);
 	  //discrete_strata_1d.push_back(r_set.size());
 	  max_unique *= r_set.size();  break;
@@ -903,30 +915,34 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 	  break;
 	}
 	case HISTOGRAM_PT_INT: {
-	  DiscreteSetRandomVariable<int>* rv_rep
-	    = (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+	  std::shared_ptr<DiscreteSetRandomVariable<int>> rv_rep =
+	    std::static_pointer_cast<DiscreteSetRandomVariable<int>>
+	    (rv_i.random_variable_rep());
 	  IntRealMap ir_map;  rv_rep->pull_parameter(H_PT_INT_PAIRS, ir_map);
 	  //discrete_strata_1d.push_back(ir_map.size());
 	  max_unique *= ir_map.size();   break;
 	}
 	case HISTOGRAM_PT_STRING: {
-	  DiscreteSetRandomVariable<String>* rv_rep
-	    = (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+	  std::shared_ptr<DiscreteSetRandomVariable<String>> rv_rep =
+	    std::static_pointer_cast<DiscreteSetRandomVariable<String>>
+	    (rv_i.random_variable_rep());
 	  StringRealMap sr_map;  rv_rep->pull_parameter(H_PT_STR_PAIRS, sr_map);
 	  //discrete_strata_1d.push_back(sr_map.size());
 	  max_unique *= sr_map.size();  break;
 	}
 	case HISTOGRAM_PT_REAL: {
-	  DiscreteSetRandomVariable<Real>* rv_rep
-	    = (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+	  std::shared_ptr<DiscreteSetRandomVariable<Real>> rv_rep =
+	    std::static_pointer_cast<DiscreteSetRandomVariable<Real>>
+	    (rv_i.random_variable_rep());
 	  RealRealMap rr_map;  rv_rep->pull_parameter(H_PT_REAL_PAIRS, rr_map);
 	  //discrete_strata_1d.push_back(rr_map.size());
 	  max_unique *= rr_map.size();  break;
 	}
 	// discrete epistemic uncertain
 	case DISCRETE_INTERVAL_UNCERTAIN: {
-	  IntervalRandomVariable<int>* rv_rep
-	    = (IntervalRandomVariable<int>*)rv_i.random_variable_rep();
+	  std::shared_ptr<IntervalRandomVariable<int>> rv_rep =
+	    std::static_pointer_cast<IntervalRandomVariable<int>>
+	    (rv_i.random_variable_rep());
 	  IntIntPairRealMap di_bpa;  rv_rep->pull_parameter(DIU_BPA, di_bpa);
 	  // x_sort_unique contains ALL of the unique integer values for this
 	  // discrete interval variable in increasing order.  For example, if
@@ -943,23 +959,26 @@ generate_unique_samples(const std::vector<RandomVariable>& random_vars,
 	  max_unique *= x_sort_unique.size();  break;
 	}
 	case DISCRETE_UNCERTAIN_SET_INT: {
-	  DiscreteSetRandomVariable<int>* rv_rep
-	    = (DiscreteSetRandomVariable<int>*)rv_i.random_variable_rep();
+	  std::shared_ptr<DiscreteSetRandomVariable<int>> rv_rep =
+	    std::static_pointer_cast<DiscreteSetRandomVariable<int>>
+	    (rv_i.random_variable_rep());
 	  IntRealMap ir_map;  rv_rep->pull_parameter(DUSI_VALUES_PROBS, ir_map);
 	  //discrete_strata_1d.push_back(ir_map.size());
 	  max_unique *= ir_map.size();  break;
 	}
 	case DISCRETE_UNCERTAIN_SET_STRING: {
-	  DiscreteSetRandomVariable<String>* rv_rep
-	    = (DiscreteSetRandomVariable<String>*)rv_i.random_variable_rep();
+	  std::shared_ptr<DiscreteSetRandomVariable<String>> rv_rep =
+	    std::static_pointer_cast<DiscreteSetRandomVariable<String>>
+	    (rv_i.random_variable_rep());
 	  StringRealMap sr_map;
 	  rv_rep->pull_parameter(DUSS_VALUES_PROBS, sr_map);
 	  //discrete_strata_1d.push_back(sr_map.size());
 	  max_unique *= sr_map.size();    break;
 	}
 	case DISCRETE_UNCERTAIN_SET_REAL: {
-	  DiscreteSetRandomVariable<Real>* rv_rep
-	    = (DiscreteSetRandomVariable<Real>*)rv_i.random_variable_rep();
+	  std::shared_ptr<DiscreteSetRandomVariable<Real>> rv_rep =
+	    std::static_pointer_cast<DiscreteSetRandomVariable<Real>>
+	    (rv_i.random_variable_rep());
 	  RealRealMap rr_map; rv_rep->pull_parameter(DUSR_VALUES_PROBS, rr_map);
 	  //discrete_strata_1d.push_back(rr_map.size());
 	  max_unique *= rr_map.size();    break;

@@ -140,6 +140,7 @@ protected:
   Real length_scale() const;
 
   void precompute_rules(unsigned short order);
+  void reset_gauss();
 
 private:
 
@@ -214,9 +215,11 @@ private:
 				const RealVector& poly_coeffs2,
 				NGFPType weight_fn, Real start, Real end);
   /// compute an integral using the native Gaussian quadrature rule
-  /// (up to order 2m-1 based on collocPoints and collocWeights of order m)
+  /// (up to order 2m-1 based on Gauss points and weights of order m)
   Real native_quadrature_integral(const RealVector& poly_coeffs1,
-				  const RealVector& poly_coeffs2);
+				  const RealVector& poly_coeffs2,
+				  const RealArray& colloc_pts,
+				  const RealArray& colloc_wts);
 
   /// retrieve the value of the 1-D generated polynomial (of given
   /// coefficients) for a given parameter value
@@ -241,7 +244,7 @@ private:
   RealVector distParams;
 
   /// flag identifying the need to compute polyCoeffs and orthogPolyNormsSq
-  /// (if false, only collocPoints and collocWeights are computed)
+  /// (if false, only collocation points and weights are computed)
   bool coeffsNormsFlag;
 
   /// coefficients of the orthogonal polynomials, from order 0 to m
@@ -300,17 +303,14 @@ polynomial_recursion(RealVector& poly_coeffs_ip1, Real alpha_i,
 inline void NumericGenOrthogPolynomial::
 discrete_range_distribution(int l_bnd, int u_bnd)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == DISCRETE_RANGE) {
     if (l_bnd != (int)distParams[0] || u_bnd != (int)distParams[1])
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = DISCRETE_RANGE; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = DISCRETE_RANGE; parametric_update = true; }
+  if (parametric_update)
     { distParams[0] = (Real)l_bnd; distParams[1] = (Real)u_bnd; reset_gauss(); }
 }
 
@@ -318,14 +318,14 @@ discrete_range_distribution(int l_bnd, int u_bnd)
 inline void NumericGenOrthogPolynomial::
 discrete_set_distribution(const IntSet& set_values)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == DISCRETE_SET_INT) {
     if (!equivalent(distParams, set_values))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = DISCRETE_SET_INT; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = DISCRETE_SET_INT; parametric_update = true; }
+  if (parametric_update)
     { copy_data(set_values, distParams); reset_gauss(); }
 }
 
@@ -333,14 +333,14 @@ discrete_set_distribution(const IntSet& set_values)
 inline void NumericGenOrthogPolynomial::
 discrete_set_distribution(const StringSet& set_values)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == DISCRETE_SET_STRING) {
     if (!equivalent(distParams, set_values)) // set indices
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = DISCRETE_SET_STRING; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = DISCRETE_SET_STRING; parametric_update = true; }
+  if (parametric_update)
     { copy_data(set_values, distParams); reset_gauss(); } // set indices
 }
 
@@ -348,14 +348,14 @@ discrete_set_distribution(const StringSet& set_values)
 inline void NumericGenOrthogPolynomial::
 discrete_set_distribution(const RealSet& set_values)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == DISCRETE_SET_REAL) {
     if (!equivalent(distParams, set_values))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = DISCRETE_SET_REAL; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = DISCRETE_SET_REAL; parametric_update = true; }
+  if (parametric_update)
     { copy_data(set_values, distParams); reset_gauss(); }
 }
 
@@ -363,23 +363,20 @@ discrete_set_distribution(const RealSet& set_values)
 inline void NumericGenOrthogPolynomial::
 bounded_normal_distribution(Real mean, Real std_dev, Real l_bnd, Real u_bnd)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == BOUNDED_NORMAL) {
     if ( !real_compare(distParams[0], mean)    ||
 	 !real_compare(distParams[1], std_dev) ||
 	 !real_compare(distParams[2], l_bnd)   ||
 	 !real_compare(distParams[3], u_bnd) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = BOUNDED_NORMAL;
     distParams.sizeUninitialized(4);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate) {
+  if (parametric_update) {
     distParams[0] = mean;  distParams[1] = std_dev;
     distParams[2] = l_bnd; distParams[3] = u_bnd;
     reset_gauss();
@@ -390,20 +387,17 @@ bounded_normal_distribution(Real mean, Real std_dev, Real l_bnd, Real u_bnd)
 inline void NumericGenOrthogPolynomial::
 lognormal_distribution(Real lambda, Real zeta)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == LOGNORMAL) {
     if ( !real_compare(distParams[0], lambda) ||
 	 !real_compare(distParams[1], zeta) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = LOGNORMAL; distParams.sizeUninitialized(2);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate)
+  if (parametric_update)
     { distParams[0] = lambda; distParams[1] = zeta; reset_gauss(); }
 }
 
@@ -411,22 +405,19 @@ lognormal_distribution(Real lambda, Real zeta)
 inline void NumericGenOrthogPolynomial::
 bounded_lognormal_distribution(Real lambda, Real zeta, Real l_bnd, Real u_bnd)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == BOUNDED_LOGNORMAL) {
     if ( !real_compare(distParams[0], lambda)    ||
 	 !real_compare(distParams[1], zeta) ||
 	 !real_compare(distParams[2], l_bnd)   ||
 	 !real_compare(distParams[3], u_bnd) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = BOUNDED_LOGNORMAL; distParams.sizeUninitialized(4);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate) {
+  if (parametric_update) {
     distParams[0] = lambda; distParams[1] = zeta;
     distParams[2] = l_bnd;  distParams[3] = u_bnd;
     reset_gauss();
@@ -437,20 +428,17 @@ bounded_lognormal_distribution(Real lambda, Real zeta, Real l_bnd, Real u_bnd)
 inline void NumericGenOrthogPolynomial::
 loguniform_distribution(Real l_bnd, Real u_bnd)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == LOGUNIFORM) {
     if ( !real_compare(distParams[0], l_bnd) ||
 	 !real_compare(distParams[1], u_bnd) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = LOGUNIFORM; distParams.sizeUninitialized(2);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate)
+  if (parametric_update)
     { distParams[0] = l_bnd; distParams[1] = u_bnd; reset_gauss(); }
 }
 
@@ -458,21 +446,18 @@ loguniform_distribution(Real l_bnd, Real u_bnd)
 inline void NumericGenOrthogPolynomial::
 triangular_distribution(Real l_bnd, Real mode, Real u_bnd)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == TRIANGULAR) {
     if ( !real_compare(distParams[0], l_bnd) ||
 	 !real_compare(distParams[1], mode)  ||
 	 !real_compare(distParams[2], u_bnd) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = TRIANGULAR; distParams.sizeUninitialized(3);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate) {
+  if (parametric_update) {
     distParams[0] = l_bnd; distParams[1] = mode; distParams[2] = u_bnd;
     reset_gauss();
   }
@@ -482,20 +467,17 @@ triangular_distribution(Real l_bnd, Real mode, Real u_bnd)
 inline void NumericGenOrthogPolynomial::
 gumbel_distribution(Real alpha, Real beta)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == GUMBEL) {
     if ( !real_compare(distParams[0], alpha) ||
 	 !real_compare(distParams[1], beta) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = GUMBEL; distParams.sizeUninitialized(2);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate)
+  if (parametric_update)
     { distParams[0] = alpha; distParams[1] = beta; reset_gauss(); }
 }
 
@@ -503,20 +485,17 @@ gumbel_distribution(Real alpha, Real beta)
 inline void NumericGenOrthogPolynomial::
 frechet_distribution(Real alpha, Real beta)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == FRECHET) {
     if ( !real_compare(distParams[0], alpha) ||
 	 !real_compare(distParams[1], beta) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = FRECHET; distParams.sizeUninitialized(2);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate)
+  if (parametric_update)
     { distParams[0] = alpha; distParams[1] = beta; reset_gauss(); }
 }
 
@@ -524,20 +503,17 @@ frechet_distribution(Real alpha, Real beta)
 inline void NumericGenOrthogPolynomial::
 weibull_distribution(Real alpha, Real beta)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == WEIBULL) {
     if ( !real_compare(distParams[0], alpha) ||
 	 !real_compare(distParams[1], beta) )
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = WEIBULL; distParams.sizeUninitialized(2);
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate)
+  if (parametric_update)
     { distParams[0] = alpha; distParams[1] = beta; reset_gauss(); }
 }
 
@@ -545,17 +521,14 @@ weibull_distribution(Real alpha, Real beta)
 inline void NumericGenOrthogPolynomial::
 histogram_bin_distribution(const RealRealMap& bin_pairs)
 {
-  // *_distribution() routines are called for each approximation build
-  // from PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == HISTOGRAM_BIN) {
     if (!equivalent(distParams, bin_pairs))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = HISTOGRAM_BIN; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = HISTOGRAM_BIN; parametric_update = true; }
+  if (parametric_update)
     { copy_data(bin_pairs, distParams); reset_gauss(); }
 }
 
@@ -563,14 +536,14 @@ histogram_bin_distribution(const RealRealMap& bin_pairs)
 inline void NumericGenOrthogPolynomial::
 histogram_pt_distribution(const IntRealMap& pt_pairs)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == HISTOGRAM_PT_INT) {
     if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = HISTOGRAM_PT_INT; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = HISTOGRAM_PT_INT; parametric_update = true; }
+  if (parametric_update)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
@@ -578,14 +551,14 @@ histogram_pt_distribution(const IntRealMap& pt_pairs)
 inline void NumericGenOrthogPolynomial::
 histogram_pt_distribution(const StringRealMap& pt_pairs)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == HISTOGRAM_PT_STRING) {
     if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = HISTOGRAM_PT_STRING; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = HISTOGRAM_PT_STRING; parametric_update = true; }
+  if (parametric_update)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
@@ -593,14 +566,14 @@ histogram_pt_distribution(const StringRealMap& pt_pairs)
 inline void NumericGenOrthogPolynomial::
 histogram_pt_distribution(const RealRealMap& pt_pairs)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == HISTOGRAM_PT_REAL) {
     if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = HISTOGRAM_PT_REAL; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = HISTOGRAM_PT_REAL; parametric_update = true; }
+  if (parametric_update)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
@@ -610,19 +583,16 @@ continuous_interval_distribution(const RealRealPairRealMap& ciu_bpa)
 {
   // combine intervals to create histogram bin representation (as vector)
 
-  parametricUpdate = false;
   if (distributionType == CONTINUOUS_INTERVAL_UNCERTAIN) {
     RealVector xy_vec;  intervals_to_xy_pdf(ciu_bpa, xy_vec);
     if (!equivalent(distParams, xy_vec))
-      { parametricUpdate = true; distParams = xy_vec; }
+      { distParams = xy_vec;  reset_gauss(); }
   }
   else {
     distributionType = CONTINUOUS_INTERVAL_UNCERTAIN;
-    parametricUpdate = true;
     intervals_to_xy_pdf(ciu_bpa, distParams);
-  }
-  if (parametricUpdate)
     reset_gauss();
+  }
 }
 
 
@@ -632,33 +602,30 @@ discrete_interval_distribution(const IntIntPairRealMap& diu_bpa)
   // combine intervals to create discrete uncertain set representation
   // (as vector)
 
-  parametricUpdate = false;
   if (distributionType == DISCRETE_INTERVAL_UNCERTAIN) {
     RealVector xy_vec;  intervals_to_xy_pdf(diu_bpa, xy_vec);
     if (!equivalent(distParams, xy_vec))
-      { parametricUpdate = true; distParams = xy_vec; }
+      { distParams = xy_vec;  reset_gauss(); }
   }
   else {
     distributionType = DISCRETE_INTERVAL_UNCERTAIN;
-    parametricUpdate = true;
     intervals_to_xy_pdf(diu_bpa, distParams);
-  }
-  if (parametricUpdate)
     reset_gauss();
+  }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 discrete_map_distribution(const IntRealMap& pt_pairs)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == DISCRETE_UNCERTAIN_SET_INT) {
     if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else
-    { distributionType = DISCRETE_UNCERTAIN_SET_INT; parametricUpdate = true; }
-  if (parametricUpdate)
+    { distributionType = DISCRETE_UNCERTAIN_SET_INT; parametric_update = true; }
+  if (parametric_update)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
@@ -666,16 +633,16 @@ discrete_map_distribution(const IntRealMap& pt_pairs)
 inline void NumericGenOrthogPolynomial::
 discrete_map_distribution(const StringRealMap& pt_pairs)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == DISCRETE_UNCERTAIN_SET_STRING) {
     if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+      parametric_update = true;
   }
   else {
     distributionType = DISCRETE_UNCERTAIN_SET_STRING;
-    parametricUpdate = true;
+    parametric_update = true;
   }
-  if (parametricUpdate)
+  if (parametric_update)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
@@ -683,14 +650,16 @@ discrete_map_distribution(const StringRealMap& pt_pairs)
 inline void NumericGenOrthogPolynomial::
 discrete_map_distribution(const RealRealMap& pt_pairs)
 {
-  parametricUpdate = false;
+  bool parametric_update = false;
   if (distributionType == DISCRETE_UNCERTAIN_SET_REAL) {
     if (!equivalent(distParams, pt_pairs))
-      parametricUpdate = true;
+      parametric_update = true;
   }
-  else
-    { distributionType = DISCRETE_UNCERTAIN_SET_REAL; parametricUpdate = true; }
-  if (parametricUpdate)
+  else {
+    distributionType = DISCRETE_UNCERTAIN_SET_REAL;
+    parametric_update = true;
+  }
+  if (parametric_update)
     { copy_data(pt_pairs, distParams); reset_gauss(); }
 }
 
@@ -797,7 +766,15 @@ inline void NumericGenOrthogPolynomial::precompute_rules(unsigned short order)
 {
   if (polyCoeffs.size() <= order)
     solve_eigenproblem(order);
+  // TO DO: sweep through colloc{Points,Weights}Map
+  // > solve_eigenproblem() currently sweeps out a range of polyCoeffs
+  //   but only generates one set of Gauss pts/wts per eigensolve
+  // > alternatively, reuse available polyCoeffs in solve_eigenproblem()
 }
+
+
+inline void NumericGenOrthogPolynomial::reset_gauss()
+{ OrthogonalPolynomial::reset_gauss();  polyCoeffs.clear(); }
 
 } // namespace Pecos
 

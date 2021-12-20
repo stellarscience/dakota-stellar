@@ -83,7 +83,7 @@ std::string pscientific(const double t, int mantissa, int expwidth,
 #endif
 
   s = std::string(ss);
-  delete ss;
+  delete[] ss;
 
 //  if (os)			// restore flags
 //    os->flags(flags);

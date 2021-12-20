@@ -332,7 +332,7 @@ bool operator<(
   const inv_pair<first_type,second_type>& x,
   const inv_pair<first_type,second_type>& y)
 {
-  return x.first<y.first||x.first==y.first&&x.second<y.second;
+  return x.first<y.first||(x.first==y.first&&x.second<y.second);
 }
 
 template<typename first_type,typename second_type>
@@ -340,7 +340,7 @@ bool operator<(
   const inv_pair<first_type,second_type>& x,
   const std::pair<first_type,second_type>& y)
 {
-  return x.first<y.first||x.first==y.first&&x.second<y.second;
+  return x.first<y.first||(x.first==y.first&&x.second<y.second);
 }
 
 template<typename first_type,typename second_type>
@@ -348,7 +348,7 @@ bool operator<(
   const std::pair<first_type,second_type>& x,
   const inv_pair<first_type,second_type>& y)
 {
-  return x.first<y.first||x.first==y.first&&x.second<y.second;
+  return x.first<y.first||(x.first==y.first&&x.second<y.second);
 }
 
 /* > */

@@ -68,6 +68,11 @@ protected:
 
   /// set of 1-D interpolation points: the i_th interpolation polynomial
   /// evaluated at the j_th interpolation point produces Kronecker delta_ij
+  /** Unlike an OrthogonalPolynomial basis within SharedOrthogPolyApproxData,
+      SharedInterpPolyApproxData manages a 2D array of levels x vars in the
+      interpolant basis polynomials.  This means that the size of interpPts
+      below is more consistent than OrthogonalPolynomial::collocPoints, and
+      a map construct is not necessary to reduce re-computation. */
   RealArray interpPts;
 
 private:

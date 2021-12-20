@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -25,8 +26,6 @@
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/array.hpp>
 
-//#define REFCOUNT_DEBUG
-
 static const char rcsId[]="@(#) $Id: DakotaVariables.cpp 7037 2010-10-23 01:18:08Z mseldre $";
 
 BOOST_CLASS_EXPORT(Dakota::Variables)
@@ -39,20 +38,14 @@ namespace Dakota {
     and the derived constructor selects this base class constructor in its 
     initialization list (to avoid the recursion of the base class constructor
     calling get_variables() again).  Since the letter IS the representation, 
-    its representation pointer is set to NULL (an uninitialized pointer causes
-    problems in ~Variables). */
+    its representation pointer is set to NULL. */
 Variables::
 Variables(BaseConstructor, const ProblemDescDB& problem_db,
 	  const std::pair<short,short>& view):
-  sharedVarsData(problem_db, view), variablesRep(NULL), referenceCount(1)
+  sharedVarsData(problem_db, view)
 {
   shape(); // size all*Vars arrays
   build_views(); // construct active/inactive views of all arrays
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::Variables(BaseConstructor) called to build base class "
-       << "data for letter object." << std::endl;
-#endif
 }
 
 
@@ -61,34 +54,20 @@ Variables(BaseConstructor, const ProblemDescDB& problem_db,
     and the derived constructor selects this base class constructor in its 
     initialization list (to avoid the recursion of the base class constructor
     calling get_variables() again).  Since the letter IS the representation, 
-    its representation pointer is set to NULL (an uninitialized pointer causes
-    problems in ~Variables). */
+    its representation pointer is set to NULL. */
 Variables::
 Variables(BaseConstructor, const SharedVariablesData& svd):
-  sharedVarsData(svd), variablesRep(NULL), referenceCount(1)
+  sharedVarsData(svd)
 {
   shape(); // size all*Vars arrays
   build_views(); // construct active/inactive views of all arrays
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::Variables(BaseConstructor) called to build base class "
-       << "data for letter object." << std::endl;
-#endif
 }
 
 
 /** The default constructor: variablesRep is NULL in this case (a populated
-    problem_db is needed to build a meaningful Variables object).  This
-    makes it necessary to check for NULL in the copy constructor, assignment
-    operator, and destructor. */
-Variables::Variables():
-  variablesRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::Variables() called to build empty variables object."
-       << std::endl;
-#endif
-}
+    problem_db is needed to build a meaningful Variables object). */
+Variables::Variables()
+{ /* empty ctor */ }
 
 
 /** This is the primary envelope constructor which uses problem_db to
@@ -97,15 +76,9 @@ Variables::Variables():
     since the constructor overloaded with BaseConstructor builds the
     actual base class data inherited by the derived classes. */
 Variables::Variables(const ProblemDescDB& problem_db):
-  referenceCount(1) // not used since this is the envelope, not the letter
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::Variables(ProblemDescDB&) called to instantiate envelope."
-       << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived variables class
-  variablesRep = get_variables(problem_db);
+  variablesRep(get_variables(problem_db))
+{
   if (!variablesRep) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -114,13 +87,9 @@ Variables::Variables(const ProblemDescDB& problem_db):
 /** Initializes variablesRep to the appropriate derived type, as given
     by problem_db attributes.  The standard derived class constructors
     are invoked.  */
-Variables* Variables::get_variables(const ProblemDescDB& problem_db)
+std::shared_ptr<Variables>
+Variables::get_variables(const ProblemDescDB& problem_db)
 {
-#ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_variables(ProblemDescDB&)." 
-       << std::endl;
-#endif
-
   std::pair<short,short> view = get_view(problem_db);
 
   // This get_variables version invokes the standard constructor.
@@ -128,14 +97,14 @@ Variables* Variables::get_variables(const ProblemDescDB& problem_db)
   switch (active_view) {
   case MIXED_ALL: case MIXED_DESIGN: case MIXED_ALEATORY_UNCERTAIN:
   case MIXED_EPISTEMIC_UNCERTAIN: case MIXED_UNCERTAIN: case MIXED_STATE:
-    return new MixedVariables(problem_db, view); break;
+    return std::make_shared<MixedVariables>(problem_db, view); break;
   case RELAXED_ALL: case RELAXED_DESIGN: case RELAXED_ALEATORY_UNCERTAIN:
   case RELAXED_EPISTEMIC_UNCERTAIN: case RELAXED_UNCERTAIN: case RELAXED_STATE:
-    return new RelaxedVariables(problem_db, view); break;
+    return std::make_shared<RelaxedVariables>(problem_db, view); break;
   default:
     Cerr << "Variables active view " << active_view << " not currently "
 	 << "supported in derived Variables classes." << std::endl;
-    return NULL; break;
+    return std::shared_ptr<Variables>(); break;
   }
 }
 
@@ -145,15 +114,9 @@ Variables* Variables::get_variables(const ProblemDescDB& problem_db)
     invokes the default derived/base constructors, followed by a
     resize() based on vars_comps. */
 Variables::Variables(const SharedVariablesData& svd):
-  referenceCount(1) // not used since this is the envelope, not the letter
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::Variables(SharedVariablesData&) called to instantiate "
-       << "envelope." << std::endl;
-#endif
-
   // for variablesRep, instantiate the appropriate derived variables class
-  variablesRep = get_variables(svd);
+  variablesRep(get_variables(svd))
+{
   if (!variablesRep) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -161,24 +124,21 @@ Variables::Variables(const SharedVariablesData& svd):
 
 /** Initializes variablesRep to the appropriate derived type, as given
     by view.  The default derived class constructors are invoked. */
-Variables* Variables::get_variables(const SharedVariablesData& svd) const
+std::shared_ptr<Variables>
+Variables::get_variables(const SharedVariablesData& svd) const
 {
-#ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_variables()." << std::endl;
-#endif
-
   short active_view = svd.view().first;
   switch (active_view) {
   case MIXED_ALL: case MIXED_DESIGN: case MIXED_ALEATORY_UNCERTAIN:
   case MIXED_EPISTEMIC_UNCERTAIN: case MIXED_UNCERTAIN: case MIXED_STATE:
-    return new MixedVariables(svd); break;
+    return std::make_shared<MixedVariables>(svd); break;
   case RELAXED_ALL: case RELAXED_DESIGN: case RELAXED_ALEATORY_UNCERTAIN:
   case RELAXED_EPISTEMIC_UNCERTAIN: case RELAXED_UNCERTAIN: case RELAXED_STATE:
-    return new RelaxedVariables(svd); break;
+    return std::make_shared<RelaxedVariables>(svd); break;
   default:
     Cerr << "Variables active view " << active_view << " not currently "
 	 << "supported in derived Variables classes." << std::endl;
-    return NULL; break;
+    return std::shared_ptr<Variables>(); break;
   }
 }
 
@@ -232,71 +192,21 @@ Variables::get_view(const ProblemDescDB& problem_db) const
 }
 
 
-/** Copy constructor manages sharing of variablesRep and incrementing
-    of referenceCount. */
-Variables::Variables(const Variables& vars)
-{
-  variablesRep = vars.variablesRep;
-  // Increment new (no old to decrement)
-  if (variablesRep) // Check for assignment of NULL
-    ++variablesRep->referenceCount;
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::Variables(Variables&)" << std::endl;
-  if (variablesRep)
-    Cout << "variablesRep referenceCount = " << variablesRep->referenceCount
-	 << std::endl;
-#endif
-}
+/** Copy constructor manages sharing of variablesRep. */
+Variables::Variables(const Variables& vars):
+  variablesRep(vars.variablesRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old variablesRep, assigns
-    new variablesRep, and increments referenceCount for new variablesRep. */
 Variables Variables::operator=(const Variables& vars)
 {
-  if (variablesRep != vars.variablesRep) { // normal case: old != new
-    // Decrement old
-    if (variablesRep) // Check for NULL
-      if (--variablesRep->referenceCount == 0) 
-	delete variablesRep;
-    // Assign and increment new
-    variablesRep = vars.variablesRep;
-    if (variablesRep) // Check for NULL
-      ++variablesRep->referenceCount;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::operator=(Variables&)" << std::endl;
-  if (variablesRep)
-    Cout << "variablesRep referenceCount = " << variablesRep->referenceCount
-	 << std::endl;
-#endif
-
+  variablesRep = vars.variablesRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes variablesRep
-    when referenceCount reaches zero. */
 Variables::~Variables()
-{ 
-  if (variablesRep) { // Check for NULL pointer
-    // envelope only: decrement letter reference count and delete if 0
-    --variablesRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    Cout << "variablesRep referenceCount decremented to " 
-         << variablesRep->referenceCount << std::endl;
-#endif
-    if (variablesRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      Cout << "deleting variablesRep" << std::endl;
-#endif
-      delete variablesRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 void Variables::inactive_view(short view2)
@@ -539,12 +449,10 @@ void Variables::load(Archive& ar, const unsigned int version)
   ar & svd;
 
   if (variablesRep) { // should not occur in current usage
+    // BMA: Leaving this conditional due to related problems in Response
     if (sharedVarsData.view() != svd.view()) {
-      // decrement old reference count and replace with new letter
       Cerr << "Warning: variables type mismatch in Variables::load(Archive&)."
 	   << std::endl;
-      if (--variablesRep->referenceCount == 0) 
-	delete variablesRep;
       variablesRep = get_variables(svd);
     }
   }
@@ -667,12 +575,10 @@ void Variables::read_annotated(std::istream& s)
   SharedVariablesData svd(view, vars_comps_totals, all_relax_di, all_relax_dr);
 
   if (variablesRep) { // should not occur in current usage
+    // BMA: Leaving this conditional due to related problems in Response
     if (sharedVarsData.view() != view) {
-      // decrement old reference count and replace with new letter
       Cerr << "Warning: variables type mismatch in Variables::read(istream&)."
 	   << std::endl;
-      if (--variablesRep->referenceCount == 0) 
-        delete variablesRep;
       variablesRep = get_variables(svd);
     }
   }
@@ -738,28 +644,56 @@ void Variables::read_tabular(std::istream& s, unsigned short vars_part)
   }
 }
 
+
 void Variables::write_tabular(std::ostream& s, unsigned short vars_part) const
 {
   if (variablesRep)
     variablesRep->write_tabular(s, vars_part); // envelope fwd to letter
   else { // letter lacking redefinition of virtual fn.!
     Cerr << "Error: Letter lacking redefinition of virtual write_tabular "
-          << "function.\nNo default defined at base class." << std::endl;
+	 << "function.\nNo default defined at base class." << std::endl;
     abort_handler(-1);
   }
 }
 
 
-/** Tabular output is always in input specification order, so can
-    write labels independent of Mixed vs. Relaxed */
+void Variables::
+write_tabular_partial(std::ostream& s, size_t start_index,
+		      size_t num_items) const
+{
+  if (variablesRep)
+    variablesRep->write_tabular_partial(s, start_index, num_items);
+  else { // letter lacking redefinition of virtual fn.!
+    Cerr << "Error: Letter lacking redefinition of virtual write_tabular_"
+	 << "partial function.\nNo default defined at base class." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void Variables::
 write_tabular_labels(std::ostream& s, unsigned short vars_part) const
 {
   if (variablesRep)
     variablesRep->write_tabular_labels(s, vars_part); // envelope fwd to letter
   else { // letter lacking redefinition of virtual fn.!
-    Cerr << "Error: Letter lacking redefinition of virtual write_tabular_labels "
-          << "function.\nNo default defined at base class." << std::endl;
+    Cerr << "Error: Letter lacking redefinition of virtual write_tabular_labels"
+	 << " function.\nNo default defined at base class." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Variables::
+write_tabular_partial_labels(std::ostream& s, size_t start_index,
+			     size_t num_items) const
+{
+  if (variablesRep)
+    variablesRep->write_tabular_partial_labels(s, start_index, num_items);
+  else { // letter lacking redefinition of virtual fn.!
+    Cerr << "Error: Letter lacking redefinition of virtual write_tabular_"
+	 << "partial_labels function.\nNo default defined at base class."
+	 << std::endl;
     abort_handler(-1);
   }
 }
@@ -786,11 +720,8 @@ void Variables::read(MPIUnpackBuffer& s)
 
     if (variablesRep) { // should not occur in current usage
       if (sharedVarsData.view() != view) {
-	// decrement old reference count and replace with new letter
 	Cerr << "Warning: variables type mismatch in "
 	     << "Variables::read(MPIUnpackBuffer&)." << std::endl;
-	if (--variablesRep->referenceCount == 0) 
-	  delete variablesRep;
 	variablesRep = get_variables(svd);
       }
     }
@@ -812,9 +743,7 @@ void Variables::read(MPIUnpackBuffer& s)
   }
   else if (variablesRep) {
     // empty variables envelope sent across buffer; make this one match
-    if (--variablesRep->referenceCount == 0)
-      delete variablesRep;
-    variablesRep = NULL;
+    variablesRep.reset();
   }
 }
 
@@ -873,20 +802,14 @@ Variables Variables::copy(bool deep_svd) const
 {
   // the envelope class instantiates a new envelope and a new letter and copies
   // current attributes into the new objects.
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "Variables::copy() called to generate a deep copy with no "
-       << "representation sharing." << std::endl;
-#endif
-
-  Variables vars; // new envelope: referenceCount=1, variablesRep=NULL
+  Variables vars; // new envelope, variablesRep=NULL
 
   // shallow copy of SharedVariablesData
   if (variablesRep) {
     // deep copy of Variables
-    vars.variablesRep = (deep_svd) ?
+    vars.variablesRep =  deep_svd ?
       get_variables(variablesRep->sharedVarsData.copy()) : // deep SVD copy
-      get_variables(variablesRep->sharedVarsData);      // shallow SVD copy
+      get_variables(variablesRep->sharedVarsData);         // shallow SVD copy
 
     vars.variablesRep->allContinuousVars   = variablesRep->allContinuousVars;
     vars.variablesRep->allDiscreteIntVars  = variablesRep->allDiscreteIntVars;
@@ -942,7 +865,7 @@ bool nearby(const Variables& vars1, const Variables& vars2, Real tol)
 {
   // this operator is a friend of Variables
 
-  Variables *v1_rep = vars1.variablesRep, *v2_rep = vars2.variablesRep;
+  std::shared_ptr<Variables> v1_rep = vars1.variablesRep, v2_rep = vars2.variablesRep;
 
   // Require different rep pointers
   if (v1_rep == v2_rep)
@@ -967,7 +890,7 @@ bool operator==(const Variables& vars1, const Variables& vars2)
 {
   // this function is a friend of Variables
 
-  Variables *v1_rep = vars1.variablesRep, *v2_rep = vars2.variablesRep;
+  std::shared_ptr<Variables> v1_rep = vars1.variablesRep, v2_rep = vars2.variablesRep;
 
   if (v1_rep == v2_rep)
     return true;
@@ -993,7 +916,7 @@ std::size_t hash_value(const Variables& vars)
 
   std::size_t seed = 0;
   // require identical views and variables data
-  Variables *v_rep = vars.variablesRep;
+  std::shared_ptr<Variables> v_rep = vars.variablesRep;
   boost::hash_combine(seed, v_rep->sharedVarsData.view());
   // hash_value() for SerialDenseVectors and StringMultiArrays defined
   // in dakota_data_util.hpp

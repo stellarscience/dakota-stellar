@@ -45,8 +45,8 @@ public:
 			 short output_level, bool vbd_flag,
 			 unsigned short vbd_order, //short refine_type,
 			 short refine_cntl, short refine_metric,
-			 short refine_stats, int max_refine_iter,
-			 int max_solver_iter, Real conv_tol,
+			 short refine_stats, size_t max_refine_iter,
+			 size_t max_solver_iter, Real conv_tol,
 			 unsigned short sc_limit);
   /// copy constructor
   ExpansionConfigOptions(const ExpansionConfigOptions& ec_options);
@@ -66,8 +66,8 @@ public:
 
   /// type of expansion combination: additive, multiplicative, or both
   short combineType;
-  /// type of multilevel discrepancy emulation: distinct or recursive
-  short discrepancyType;
+  /// type of multilevel discrepancy emulation: none, distinct, recursive
+  short discrepReduction;
 
   /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   short outputLevel;
@@ -92,10 +92,10 @@ public:
 
   /// control for limiting the maximum number of refinement iterations
   /// in adapted approximation algorithms
-  int maxRefineIterations;
+  size_t maxRefineIterations;
   /// control for limiting the maximum number of solver iterations in iterative
   /// solver-based approximation algorithms (e.g., regularized regression)
-  int maxSolverIterations;
+  size_t maxSolverIterations;
   /// convergence tolerance for adapted or iterated approximation algorithms
   Real convergenceTol;
   /// number of consecutive cycles for which convergence criterion
@@ -106,7 +106,7 @@ public:
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
-  combineType(NO_COMBINE), discrepancyType(NO_DISCREP),
+  combineType(NO_COMBINE), discrepReduction(NO_DISCREPANCY),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
   /*refineType(NO_REFINEMENT),*/ refineControl(NO_CONTROL),
   refineMetric(NO_METRIC), refineStatsType(NO_EXPANSION_STATS),
@@ -121,11 +121,11 @@ ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 		       short output_level, bool vbd_flag,
 		       unsigned short vbd_order, //short refine_type,
 		       short refine_cntl, short refine_metric,
-		       short refine_stats, int max_refine_iter,
-		       int max_solver_iter, Real conv_tol,
+		       short refine_stats, size_t max_refine_iter,
+		       size_t max_solver_iter, Real conv_tol,
 		       unsigned short sc_limit):
   expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
-  combineType(combine_type), discrepancyType(discrep_type),
+  combineType(combine_type), discrepReduction(discrep_type),
   outputLevel(output_level), vbdFlag(vbd_flag), vbdOrderLimit(vbd_order),
   /*refineType(refine_type),*/ refineControl(refine_cntl),
   refineMetric(refine_metric), refineStatsType(refine_stats),
@@ -138,7 +138,7 @@ inline ExpansionConfigOptions::
 ExpansionConfigOptions(const ExpansionConfigOptions& ec_options):
   expCoeffsSolnApproach(ec_options.expCoeffsSolnApproach),
   expBasisType(ec_options.expBasisType), combineType(ec_options.combineType),
-  discrepancyType(ec_options.discrepancyType),
+  discrepReduction(ec_options.discrepReduction),
   outputLevel(ec_options.outputLevel), vbdFlag(ec_options.vbdFlag),
   vbdOrderLimit(ec_options.vbdOrderLimit),
   //refineType(ec_options.refineType),
@@ -277,7 +277,7 @@ public:
   //
 
   /// set activeKey
-  virtual void active_key(const UShortArray& key);
+  virtual void active_key(const ActiveKey& key);
   /// remove all keys
   virtual void clear_keys();
 
@@ -303,6 +303,10 @@ public:
   virtual void pre_finalize_data();
   /// finalizes the shared approximation data following a set of increments
   virtual void post_finalize_data();
+
+  /// tests for whether further advancement in refinement candidates is
+  /// available or if refinement opportunities have "saturated"
+  virtual bool advancement_available();
 
   /// clear inactive approximation data
   virtual void clear_inactive_data();
@@ -335,7 +339,7 @@ public:
   //
 
   /// return activeKey
-  const UShortArray& active_key() const;
+  const ActiveKey& active_key() const;
 
   /// allocate orthogonal polynomial basis types and integration rules
   /// based on u_types and rule options
@@ -358,23 +362,23 @@ public:
 
   // returns index of the data set to be restored from within popped
   // bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  //size_t push_index(const UShortArray& key, const UShortArray& tr_set);
+  //size_t push_index(const ActiveKey& key, const UShortArray& tr_set);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
-  size_t push_index(const UShortArray& key);
+  size_t push_index(const ActiveKey& key);
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   size_t push_index();
   /// maps from push_index (flattened or hierarchical index for internal use)
   /// to a consistent (flattened) index for external use
-  size_t restore_index(const UShortArray& key);
+  size_t restore_index(const ActiveKey& key);
   /// maps from push_index (flattened or hierarchical index for internal use)
   /// to a consistent (flattened) index for external use
   size_t restore_index();
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to key)
   /// during finalization
-  size_t finalize_index(size_t i, const UShortArray& key);
+  size_t finalize_index(size_t i, const ActiveKey& key);
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (entry in poppedLevMultiIndex corresponding to activeKey)
   /// during finalization
@@ -411,17 +415,17 @@ public:
   short refinement_control() const;
 
   /// set ExpansionConfigOptions::maxIterations
-  void maximum_iterations(int max_iter);
+  void maximum_iterations(size_t max_iter);
   /// get ExpansionConfigOptions::maxIterations
-  int maximum_iterations() const;
+  size_t maximum_iterations() const;
 
   /// set ExpansionConfigOptions::convergenceTol
   void convergence_tolerance(Real conv_tol);
   /// get ExpansionConfigOptions::convergenceTol
   Real convergence_tolerance() const;
   */
-  /// get ExpansionConfigOptions::discrepancyType
-  short discrepancy_type() const;
+  /// get ExpansionConfigOptions::discrepReduction
+  short discrepancy_reduction() const;
   /// set ExpansionConfigOptions::refineStatsType
   void refinement_statistics_type(short stats_type);
 
@@ -429,36 +433,57 @@ public:
   const BitArrayULongMap& sobol_index_map() const;
 
   /// set driverRep
-  void integration_driver_rep(IntegrationDriver* driver_rep);
+  void integration_driver_rep(std::shared_ptr<IntegrationDriver> driver_rep);
 
   /// set randomVarsKey
   void random_variables_key(const BitArray& random_vars_key);
 
-  /// return the number of expansion terms for a total order expansion
-  /// with the provided (anisotropic) upper_bound array specification
-  static size_t total_order_terms(const UShortArray& upper_bound,
-				  short lower_bound_offset = -1);
   /// return the number of expansion terms for a tensor-product
   /// expansion with the provided (anisotropic) quadrature orders
   /// (include_upper_bound = false) or expansion orders (default)
-  static size_t tensor_product_terms(const UShortArray& order,
+  static size_t tensor_product_terms(const UShortArray& orders,
 				     bool include_upper_bound = true);
+  /// return the number of expansion terms for a total order expansion of
+  /// given (isotropic/anisotropic) expansion orders
+  static size_t total_order_terms(const UShortArray& orders,
+				  short lower_bound_offset = -1);
+  /// return the number of expansion terms for an isotropic total
+  /// order expansion of given order
+  static size_t total_order_terms(unsigned short order, size_t num_vars,
+				  short lower_bound_offset = -1);
+  /// return the number of expansion terms for an anisotropic total
+  /// order expansion of given max_order and dimension preference
+  static size_t total_order_terms(unsigned short max_order,
+				  const RealVector& dim_pref,
+				  short lower_bound_offset = -1);
 
   /// initialize expansion multi_index using a tensor-product expansion
-  static void tensor_product_multi_index(const UShortArray& order,
+  static void tensor_product_multi_index(const UShortArray& orders,
 					 UShort2DArray& multi_index,
 					 bool include_upper_bound = true);
   /// initialize multi_index using a hierarchical tensor-product expansion
   static void hierarchical_tensor_product_multi_index(
     const UShort2DArray& delta_quad, UShort2DArray& multi_index);
-  /// initialize multi_index using a total-order expansion from a scalar level
-  static void total_order_multi_index(unsigned short level, size_t num_vars, 
-				      UShort2DArray& multi_index);
-  /// initialize expansion multi_index using a total-order expansion from an
-  /// upper_bound array specification
-  static void total_order_multi_index(const UShortArray& upper_bound,
+  /// initialize expansion multi_index using an (isotropic/anisotropic)
+  /// total-order expansion of given orders 
+  static void total_order_multi_index(const UShortArray& orders,
     UShort2DArray& multi_index, short lower_bound_offset = -1,
-    size_t max_terms = _NPOS); // SIZE_MAX is a non-portable extension
+    size_t max_terms = _NPOS);
+  /// initialize expansion multi_index using an isotropic total-order
+  /// expansion of given order
+  static void total_order_multi_index(unsigned short max_order,
+    size_t num_vars, UShort2DArray& multi_index,
+    short lower_bound_offset = -1, size_t max_terms = _NPOS);
+  /// initialize expansion multi_index using an anisotropic total-order
+  /// expansion of given order and dimension preference
+  static void total_order_multi_index(unsigned short max_order,
+    const RealVector& dim_pref, UShort2DArray& multi_index,
+    short lower_bound_offset = -1, size_t max_terms = _NPOS);
+  /// define a portion of the multi_index for a total-order expansion
+  /// corresponding to a single scalar level
+  static void total_order_multi_index_by_level(unsigned short level,
+					       size_t num_vars, 
+					       UShort2DArray& multi_index);
 
   /// utility function for incrementing a set of multidimensional indices
   static void increment_indices(UShortArray& indices, const UShortArray& limits,
@@ -503,7 +528,7 @@ protected:
   //
 
   /// pointer to integration driver instance
-  IntegrationDriver* driverRep;
+  std::shared_ptr<IntegrationDriver> driverRep;
 
   /// an encapsulation of expansion configuration options
   ExpansionConfigOptions expConfigOptions;
@@ -533,13 +558,21 @@ protected:
   /// database key indicating the currently active polynomial expansion;
   /// the key is a multi-index managing multiple modeling dimensions such
   /// as model form, discretization level, etc.
-  UShortArray activeKey;
+  ActiveKey activeKey;
 
   /// mapping to manage different global sensitivity index options
   /// (e.g. univariate/main effects only vs all effects)
   BitArrayULongMap sobolIndexMap;
 
 private:
+
+  //
+  //- Heading: Member functions
+  //
+
+  static Real dot(const UShortArray& mi, const RealVector& wts);
+
+  static size_t sum(const UShortArray& mi);
 
   //
   //- Heading: Data
@@ -549,14 +582,14 @@ private:
 
 
 inline SharedPolyApproxData::SharedPolyApproxData():
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
 inline SharedPolyApproxData::
 SharedPolyApproxData(short basis_type, size_t num_vars):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -565,7 +598,7 @@ SharedPolyApproxData(short basis_type, size_t num_vars,
 		     const ExpansionConfigOptions& ec_options,
 		     const BasisConfigOptions& bc_options):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  driverRep(NULL), expConfigOptions(ec_options), basisConfigOptions(bc_options),
+  expConfigOptions(ec_options), basisConfigOptions(bc_options),
   ssgLevelPrev(USHRT_MAX)
 { }
 
@@ -574,7 +607,7 @@ inline SharedPolyApproxData::~SharedPolyApproxData()
 { }
 
 
-inline const UShortArray& SharedPolyApproxData::active_key() const
+inline const ActiveKey& SharedPolyApproxData::active_key() const
 { return activeKey; }
 
 
@@ -641,11 +674,11 @@ inline short SharedPolyApproxData::refinement_control() const
 { return expConfigOptions.refineControl; }
 
 
-inline void SharedPolyApproxData::maximum_iterations(int max_iter)
+inline void SharedPolyApproxData::maximum_iterations(size_t max_iter)
 { expConfigOptions.maxIterations = max_iter; }
 
 
-inline int SharedPolyApproxData::maximum_iterations() const
+inline size_t SharedPolyApproxData::maximum_iterations() const
 { return expConfigOptions.maxIterations; }
 
 
@@ -658,8 +691,8 @@ inline Real SharedPolyApproxData::convergence_tolerance() const
 */
 
 
-inline short SharedPolyApproxData::discrepancy_type() const
-{ return expConfigOptions.discrepancyType; }
+inline short SharedPolyApproxData::discrepancy_reduction() const
+{ return expConfigOptions.discrepReduction; }
 
 
 inline void SharedPolyApproxData::refinement_statistics_type(short stats_type)
@@ -671,7 +704,7 @@ inline const BitArrayULongMap& SharedPolyApproxData::sobol_index_map() const
 
 
 inline void SharedPolyApproxData::
-integration_driver_rep(IntegrationDriver* driver_rep)
+integration_driver_rep(std::shared_ptr<IntegrationDriver> driver_rep)
 { driverRep = driver_rep; }
 
 
@@ -736,7 +769,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 
 /*
 inline size_t SharedPolyApproxData::
-push_index(const UShortArray& key, const UShortArray& tr_set)
+push_index(const ActiveKey& key, const UShortArray& tr_set)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
@@ -754,11 +787,12 @@ push_index(const UShortArray& key, const UShortArray& tr_set)
 */
 
 
-inline size_t SharedPolyApproxData::push_index(const UShortArray& key)
+inline size_t SharedPolyApproxData::push_index(const ActiveKey& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     size_t p_index = sg_driver->push_index(key); // retrieve value (no lookup)
     return (p_index == _NPOS) ?
       sg_driver->push_trial_index(key) : // not pre-computed -> perform lookup
@@ -777,7 +811,8 @@ inline size_t SharedPolyApproxData::push_index()
 
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     size_t p_index = sg_driver->push_index(); // retrieve pushIndex (no lookup)
     return (p_index == _NPOS) ?
       sg_driver->push_trial_index() : // not pre-computed -> perform lookup
@@ -790,11 +825,12 @@ inline size_t SharedPolyApproxData::push_index()
 }
 
 
-inline size_t SharedPolyApproxData::restore_index(const UShortArray& key)
+inline size_t SharedPolyApproxData::restore_index(const ActiveKey& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     // Option 1: default to be overridden by SharedHierarchPAD:
     //return sg_driver->push_index(key);
     // Option 2: add/use virtual sg_driver->restore_index(key) [more consistent with finalize_index()]
@@ -812,11 +848,12 @@ inline size_t SharedPolyApproxData::restore_index()
 
 
 inline size_t SharedPolyApproxData::
-finalize_index(size_t i, const UShortArray& key)
+finalize_index(size_t i, const ActiveKey& key)
 {
   switch (expConfigOptions.refineControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    std::shared_ptr<SparseGridDriver> sg_driver =
+      std::static_pointer_cast<SparseGridDriver>(driverRep);
     return sg_driver->finalize_index(i, key);  break;
 
     /*
@@ -878,6 +915,30 @@ match_nonrandom_vars(const RealVector& vars_1, const RealVector& vars_2) const
     if (vars_1[*cit] != vars_2[*cit]) // double match w/o tolerance
       return false;
   return true;
+}
+
+
+inline size_t SharedPolyApproxData::sum(const UShortArray& mi)
+{
+  size_t i, num_v = mi.size(), sum = 0;
+  for (i=0; i<num_v; ++i)
+    sum += mi[i];
+  return sum;
+}
+
+
+inline Real SharedPolyApproxData::
+dot(const UShortArray& mi, const RealVector& wts)
+{
+  size_t i, num_v = mi.size();
+  Real inner_prod = 0.;
+  if (wts.empty())
+    for (i=0; i<num_v; ++i)
+      inner_prod += mi[i];
+  else
+    for (i=0; i<num_v; ++i)
+      inner_prod += mi[i] * wts[i];
+  return inner_prod;
 }
 
 } // namespace Pecos

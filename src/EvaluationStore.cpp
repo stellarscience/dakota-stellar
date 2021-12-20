@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -112,44 +113,58 @@ declare_source(const String &owner_id, const String &owner_type,
 #ifdef DAKOTA_HAVE_HDF5
   if(!active())
     return;
-  // Location of source model or interface evals or method results
-  String source_location;
-  // Location of the link to the source
-  String link_location;
-  // TODO: Report/raise some kind of error for invalid owner or source strings
 
   if(owner_type == "iterator") {
-    link_location = String("/methods/") + owner_id + "/sources/" + source_id;
-    if(source_type == "iterator") { // always link iterator sources
-      source_location = String("/methods/") + source_id;
-      hdf5Stream->create_softlink(link_location, source_location);
-    } else { // source is a model
-      if( (modelSelection == MODEL_EVAL_STORE_TOP_METHOD && owner_id == topLevelMethodId) || 
-           modelSelection == MODEL_EVAL_STORE_ALL_METHODS )
-        sourceModels.emplace(source_id);
-      if(model_active(source_id)) { // Only link if evals for this model will be stored
-        source_location = String("/models/") + source_type + "/" + source_id; 
-        hdf5Stream->create_softlink(link_location, source_location);
-      }
-    } 
-  } else { // owner is a model. Assume it should be stored.
-    link_location = String("/models/") + owner_type + "/" + owner_id + "/sources/" + source_id;
-    if(source_type == "iterator") {
-      source_location = String("/methods/") + source_id;
-      hdf5Stream->create_softlink(link_location, source_location);
-    } else if(source_type == "interface" && interface_active(source_type)) {
-      source_location = String("/interfaces/") + source_id + "/" + owner_id;
-      hdf5Stream->create_softlink(link_location, source_location);
-    }
-    else if(model_active(source_id)) { // source is a model
-      source_location = String("/models/") + source_type + "/" + source_id;
-      hdf5Stream->create_softlink(link_location, source_location);
-    }
+    declare_iterator_source(owner_id, source_id, source_type);
+  } else { // owner is one of the model types.
+    declare_model_source(owner_id, owner_type, source_id, source_type);
   }
 #else
   return;
 #endif
 }
+
+#ifdef DAKOTA_HAVE_HDF5
+void EvaluationStore::declare_iterator_source(const String owner_id, const String source_id, const String source_type) {
+  
+  String link_location = String("/methods/") + owner_id + "/sources/" + source_id;
+  if(source_type == "iterator") {
+     String source_location = String("/methods/") + source_id;
+     hdf5Stream->create_softlink(link_location, source_location);
+  } else { // source is a model
+    update_source_models(owner_id, source_id);
+    if(model_active(source_id)) {
+      String source_location = String("/models/") + source_type + "/" + source_id; 
+      hdf5Stream->create_softlink(link_location, source_location);
+    }
+  } 
+}
+
+
+void EvaluationStore::declare_model_source(const String owner_id, const String owner_type, 
+                                     const String source_id, const String source_type) {
+  String link_location = String("/models/") + owner_type + "/" + owner_id + "/sources/" + source_id;
+  if(source_type == "iterator") {
+    String source_location = String("/methods/") + source_id;
+    hdf5Stream->create_softlink(link_location, source_location);
+  } else if(source_type == "interface" && interface_active(source_type)) {
+    String source_location = String("/interfaces/") + source_id + "/" + owner_id;
+    hdf5Stream->create_softlink(link_location, source_location);
+  }
+  else if(model_active(source_id)) { // source is a model
+    String source_location = String("/models/") + source_type + "/" + source_id;
+    hdf5Stream->create_softlink(link_location, source_location);
+  }
+}
+#endif
+
+
+void EvaluationStore::update_source_models(const String owner_id, const String source_id) {
+    if( (modelSelection == MODEL_EVAL_STORE_TOP_METHOD && owner_id == topLevelMethodId) || 
+         modelSelection == MODEL_EVAL_STORE_ALL_METHODS )
+      sourceModels.emplace(source_id);
+}
+
 
 EvaluationsDBState EvaluationStore::iterator_allocate(const String &iterator_id,
     const bool &top_level) {
@@ -183,9 +198,11 @@ EvaluationsDBState EvaluationStore::model_allocate(const String &model_id, const
   hdf5Stream->create_empty_dataset(eval_ids_scale, {0}, 
       ResultsOutputType::INTEGER, HDF5_CHUNK_SIZE);
   
-  Pecos::MarginalsCorrDistribution* mvd_rep
-        = (Pecos::MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
-  allocate_variables(root_group, variables, mvd_rep);
+  std::shared_ptr<Pecos::MarginalsCorrDistribution> mvd_rep =
+    std::static_pointer_cast<Pecos::MarginalsCorrDistribution>
+    (mv_dist.multivar_dist_rep());
+  // BMA: Left this a raw get() due to default of NULL
+  allocate_variables(root_group, variables, mvd_rep.get());
   allocate_response(root_group, response, default_set);
   allocate_metadata(root_group, variables, response, default_set);
   return EvaluationsDBState::ACTIVE;
@@ -1572,8 +1589,8 @@ store_parameters_for_discrete_state_set_real(const size_t start_rv,
     const String &location,
     Pecos::MarginalsCorrDistribution *mvd_rep) {
 #ifdef DAKOTA_HAVE_HDF5
-  // pecos rv type: Pecos::DISCRETE_SET_INT
-  // parameters: Pecos::DSI_VALUES
+  // pecos rv type: Pecos::DISCRETE_SET_REAL
+  // parameters: Pecos::DSR_VALUES
   RealSetArray rsa;
   mvd_rep->pull_parameters(start_rv, num_rv, Pecos::DSR_VALUES, rsa);
   // Because h5py barfs on vlen datasets of vlen strings, we have to
@@ -1608,22 +1625,24 @@ void EvaluationStore::store_parameters_for_domain(const String &root_group,
     const UShortMultiArrayConstView &types,  const SizetMultiArrayConstView &ids,
     const StringMultiArrayView &labels, Pecos::MarginalsCorrDistribution *mvd_rep) {
 #ifdef DAKOTA_HAVE_HDF5
-
   String scale_root = create_scale_root(root_group); // root_group already has
                                                      // variable_parameters
   // The loop below chunks up the set of variables by Dakota type (e.g. normal_uncertain)
-  UShortArray to_find = {types[0]};
   auto first_it = types.begin(); // iterator to first variable of this type
-  // Find iterator to last variable of this type
-  auto last_it = std::find_end(first_it, types.end(), to_find.begin(), to_find.end());
-  size_t first_idx = 0, last_idx = 0; // Indexes to first and last variable of this type
-  while(last_it != types.end()) { // iterate until all variables have been processed
+  size_t first_idx, last_idx; // Indexes to first and last variable of this type.
+  while(first_it != types.end()) { // iterate until all variables have been processed
+    // Find iterator to last variable of this type
+    UShortArray to_find = {*first_it};
+    auto last_it = std::find_end(first_it, types.end(), to_find.begin(), to_find.end());
+    first_idx = std::distance(types.begin(), first_it);
     last_idx = std::distance(first_it, last_it) + first_idx;
     const unsigned short &this_type = *first_it;
-    size_t start_rv = ids[first_idx] - 1;
+    // parameters are obtained from the mvd_rep object by starting index and number of steps 
+    size_t start_rv = ids[first_idx] - 1; 
     size_t num_rv = last_idx - first_idx + 1;
     bool store_scales = true; // it's safe to store scales; will be set to
-                              // false if no datasets are created.
+                              // false if no datasets are created, which can happen
+                              // if there's a unhandled type of variable
     String location = root_group, scale_location = scale_root;
 #define CALL_STORE_PARAMETERS_FOR(vtype)                               \
     location += #vtype;                                                \
@@ -1720,11 +1739,8 @@ void EvaluationStore::store_parameters_for_domain(const String &root_group,
       hdf5Stream->store_vector(ids_location, these_ids);
       hdf5Stream->attach_scale(location, ids_location, "ids", 0);
     }
-    first_it = last_it;
-    first_it++;
-    to_find[0] = *first_it;
-    first_idx = last_idx + 1;
-    last_it = std::find_end(first_it, types.end(), to_find.begin(), to_find.end());
+    // Increment to the next type
+    first_it = ++last_it;
   }
 #else
   return;
@@ -1866,12 +1882,13 @@ void EvaluationStore::allocate_metadata(const String &root_group, const Variable
     hdf5Stream->attach_scale(dvv_name, metadata_scale_root + "dvv", "variable_ids", 1);
   }
   // Analysis Components
-  // TODO: these perhaps should be stored as a 2D dataset
+  // TODO: these perhaps should be stored as a 2D dataset, with shape
+  // (analysis drivers x components per driver)
   if(an_comps.size()) {
     StringArray all_comps;
     for(const auto &v : an_comps)
       all_comps.insert(all_comps.end(), v.begin(), v.end());
-    hdf5Stream->store_vector(metadata_root, all_comps);
+    hdf5Stream->store_vector(metadata_root + "analysis_components", all_comps);
   }
 #else
   return;

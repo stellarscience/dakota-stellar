@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -23,97 +24,147 @@ namespace Dakota {
 
 /** The NonDC3FunctionTrain class uses ... */
 
-  class NonDC3FunctionTrain: public NonDExpansion
-  {
-  public:
+class NonDC3FunctionTrain: public NonDExpansion
+{
+public:
 
-    //
-    //- Heading: Constructors and destructor
-    //
+  //
+  //- Heading: Constructors and destructor
+  //
 
-    /// standard constructor
-    NonDC3FunctionTrain(ProblemDescDB& problem_db, Model& model);
-    /// destructor
-    ~NonDC3FunctionTrain();
+  /// standard constructor
+  NonDC3FunctionTrain(ProblemDescDB& problem_db, Model& model);
+  /// destructor
+  ~NonDC3FunctionTrain();
 
-    //
-    //- Heading: Virtual function redefinitions
-    //
+protected:
 
-    /// TODO
-    // void compute_expansion();
-    /// perform a forward uncertainty propagation using PCE/SC methods
-    // void core_run();
-    /// TODO
+  //
+  //- Heading: Constructors
+  //
 
-  protected:
+  /// base constructor for DB construction of multilevel/multifidelity PCE
+  /// (method_name is not necessary, rather it is just a convenient overload
+  /// allowing the derived ML FT class to bypass the standard FT ctor)
+  NonDC3FunctionTrain(unsigned short method_name, ProblemDescDB& problem_db,
+		      Model& model);
 
-    //
-    //- Heading: Virtual function redefinitions
-    //
+  //
+  //- Heading: Virtual function redefinitions
+  //
 
-    void resolve_inputs(short& u_space_type, short& data_order);
+  void resolve_inputs(short& u_space_type, short& data_order);
+  void initialize_u_space_model();
 
-    //
-    //- Heading: Member function definitions
-    //
+  size_t collocation_points() const;
 
-    void initialize_data_fit_surrogate(Model& dfs_model);
+  // TODO
+  //void compute_expansion();
+  // perform a forward uncertainty propagation using PCE/SC methods
+  //void core_run();
 
-    /// Publish options from C3 input specification (not needed if model-driven
-    /// specification: already extracted by iteratedModel)
-    void push_c3_options();
+  void push_increment();
+  void update_samples_from_order_increment();
+  //void update_samples_from_order_decrement();
+  void sample_allocation_metric(Real& regress_metric, Real power);
 
-  private:
+  /// override certain print functions
+  void print_moments(std::ostream& s);
+  void print_sobol_indices(std::ostream& s);
 
-    //static int qoi_eval(size_t num_samp,        // number of evaluations
-    // 			const double* var_sets, // num_vars x num_evals
-    // 			double* qoi_sets,       // num_fns x num_evals
-    // 			void* args);            // optional arguments
+  //
+  //- Heading: Member function definitions
+  //
 
-    //
-    //- Heading: Data
-    //
+  /// check model definition (redirect function_train model to surr-based UQ)
+  void check_surrogate();
+  /// assign c3AdvancementType based on user inputs for adapt_{rank,order}
+  /// (fine-grained augmentation to refine{Type,Control} = uniform p-refinement)
+  void resolve_refinement();
 
-    /// pointer to the active object instance used within the static evaluator
-    /// functions in order to avoid the need for static data
-    static NonDC3FunctionTrain* c3Instance;
+  /// configure u_space_sampler and approx_type based on regression
+  /// specification
+  bool config_regression(size_t colloc_pts, size_t regress_size, int seed,
+			 Iterator& u_space_sampler, Model& g_u_model);
 
-    unsigned int randomSeed;
+  /// Publish options from C3 input specification (not needed if model-driven
+  /// specification: already extracted by iteratedModel)
+  void initialize_c3_db_options();
+  /// Publish configuration data for initial function train cores, prior to
+  /// any adaptation
+  void initialize_c3_start_rank(size_t start_rank);
+  /// Publish configuration data for initial function train cores, prior to
+  /// any adaptation
+  void initialize_c3_start_orders(const UShortArray& start_orders);
 
-    size_t numSamplesOnModel;
-   
-    // other data ...
-    /// The number of samples used to evaluate the emulator
-    //int numSamplesOnEmulator;
+  /// Publish configuration data for initial function train cores, prior to
+  /// any adaptation
+  void push_c3_start_rank(size_t start_rank);
+  /// Publish configuration data for initial function train cores, prior to
+  /// any adaptation
+  void push_c3_max_rank(size_t max_rank);
+  /// Publish configuration data for initial function train cores, prior to
+  /// any adaptation
+  void push_c3_start_orders(const UShortArray& start_orders);
+  /// Publish configuration data for initial function train cores, prior to
+  /// any adaptation
+  void push_c3_max_order(unsigned short max_order);
+  /// Publish random seed for internal C3 use
+  void push_c3_seed(int seed);
 
-    // user specified import build points file
-    //String importBuildPointsFile;
-    // user specified import build file format
-    //unsigned short importBuildFormat;
-    // user specified import build active only
-    //bool importBuildActiveOnly;
+  //
+  //- Heading: Data
+  //
 
-    // user specified import approx. points file
-    //String importApproxPointsFile;
-    // user specified import approx. file format
-    //unsigned short importApproxFormat;
-    // user specified import approx. active only
-    //bool importApproxActiveOnly;
-    // file name from \c export_approx_points_file specification
-    //String exportPointsFile;
+  /// user-specified file for importing build points
+  String importBuildPointsFile;
 
-    /// override certain print functions
-    // I should not have to define my own print functions -- AG
-    // This suggests there needs to be some refactoring to truly separate
-    // computing things and printing things
-    // The only thing I should have to print is FT specific results 
-    void print_results(std::ostream&);
-    void print_moments(std::ostream& s);
-    void print_sobol_indices(std::ostream& s);
+  /// scalar specification for initial rank (prior to adapt_rank)
+  size_t startRankSpec;
+  /// scalar specification for maximum rank (bounds adapt_rank)
+  size_t maxRankSpec;
+  /// scalar specification for initial basis order (prior to uniform refinement)
+  unsigned short startOrderSpec;
+  /// scalar specification for maximum basis order (bounds uniform refinement)
+  unsigned short maxOrderSpec;
 
-  };
-    
+  /// type of advancement used by (uniform) refinement: START_{RANK,ORDER} or
+  /// MAX_{RANK,ORDER,RANK_ORDER}
+  short c3AdvancementType;
+
+private:
+
+  //
+  //- Heading: Member function definitions
+  //
+
+  /// return the regression size used for different refinement options
+  size_t regression_size();
+
+  //static int qoi_eval(size_t num_samp,        // number of evaluations
+  // 			const double* var_sets, // num_vars x num_evals
+  // 			double* qoi_sets,       // num_fns x num_evals
+  // 			void* args);            // optional arguments
+
+  //
+  //- Heading: Data
+  //
+
+  /// user specification for collocation_points
+  size_t collocPtsSpec;
+
+  // for decremented order without recomputation from previous ranks
+  //int prevSamplesOnModel;
+
+  // pointer to the active object instance used within the static evaluator
+  // functions in order to avoid the need for static data
+  //static NonDC3FunctionTrain* c3Instance;
+};
+
+
+inline size_t NonDC3FunctionTrain::collocation_points() const
+{ return collocPtsSpec; }
+
 } // namespace Dakota
 
 #endif

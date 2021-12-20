@@ -100,13 +100,14 @@ protected:
   /// mode of triangular random variable
   Real triangularMode;
 
-  /// pointer to the Boost gamma_distribution instance
-  triangular_dist* triangDist;
+  /// pointer to the Boost trainagulardistribution instance
+  std::unique_ptr<triangular_dist> triangDist;
 };
 
 
 inline TriangularRandomVariable::TriangularRandomVariable():
-  UniformRandomVariable(), triangularMode(0), triangDist(NULL)
+  UniformRandomVariable(), triangularMode(0.),
+  triangDist(new triangular_dist(lowerBnd, triangularMode, upperBnd))
 { ranVarType = TRIANGULAR; }
 
 
@@ -118,7 +119,7 @@ TriangularRandomVariable(Real lwr, Real mode, Real upr):
 
 
 inline TriangularRandomVariable::~TriangularRandomVariable()
-{ if (triangDist) delete triangDist; }
+{ }
 
 
 inline Real TriangularRandomVariable::pdf(Real x, Real lwr, Real mode, Real upr)
@@ -324,8 +325,8 @@ dz_ds_factor(short u_type, Real x, Real z) const
 {
   Real pdf;
   switch (u_type) {
-  case STD_NORMAL:  pdf = NormalRandomVariable::std_pdf(z); break;
-  case STD_UNIFORM: pdf = UniformRandomVariable::std_pdf(); break;
+  case STD_NORMAL:  pdf =  NormalRandomVariable::std_pdf(z); break;
+  case STD_UNIFORM: pdf = UniformRandomVariable::std_pdf(z); break;
   //case TRIANGULAR: break;
   default:
     PCerr << "Error: unsupported u-space type " << u_type
@@ -341,18 +342,17 @@ dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void TriangularRandomVariable::update_boost()
 {
-  if (triangDist) delete triangDist;
-  triangDist = new triangular_dist(lowerBnd, triangularMode, upperBnd);
+  triangDist.reset(new triangular_dist(lowerBnd, triangularMode, upperBnd));
 }
 
 
 inline void TriangularRandomVariable::update_boost_conditionally()
 {
   // old is now invalid
-  if (triangDist) { delete triangDist; triangDist = NULL; }
+  if (triangDist) triangDist.reset();
   // new may not be valid as of yet
   if (lowerBnd <= triangularMode && triangularMode <= upperBnd)
-    triangDist = new triangular_dist(lowerBnd, triangularMode, upperBnd);
+    triangDist.reset(new triangular_dist(lowerBnd, triangularMode, upperBnd));
   // else wait for pending param updates
 }
 

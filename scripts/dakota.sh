@@ -1,12 +1,13 @@
 #!/bin/sh
 
-#    _______________________________________________________________________
+#  _______________________________________________________________________
 #
-#    DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-#    Copyright 2014 Sandia Corporation.
-#    This software is distributed under the GNU Lesser General Public License.
-#    For more information, see the README file in the top Dakota directory.
-#    _______________________________________________________________________
+#  DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
+#  Copyright 2014-2020
+#  National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Dakota directory.
+#  _______________________________________________________________________
 
 # Wrapper script dakota.sh to help manage binary and library paths
 # when running dakota.  Assume dakota is installed alongside this
@@ -17,10 +18,14 @@ script_name=`basename ${0}`
 # assume DAKOTA lives in same directory
 
 if [ $(uname) == 'Darwin' ]; then
-  execpath=`dirname ${0}`
+  if [ -L ${0} ]; then
+    execpath=$( dirname $( readlink "${0}" ) )  
+  else
+    execpath=`dirname ${0}`
+  fi
 else
   # readlink reliably takes care of the case when dakota.sh is called via a
-  # symlink, but doesn't work on Darwin.
+  # symlink, but doesn't work on Darwin with the -f option.
   execpath=$( dirname $( readlink -f "${0}" ) )  
 fi
 
@@ -53,8 +58,11 @@ if [ `uname | grep -c -i "cygwin"` -gt 0 ]; then
   export LC_ALL="C"
 fi
 
-#echo "Appending PATH with ${execpath}:${execpath}/../test:."
-PATH="$PATH:${execpath}:${execpath}/../test:."
+PYTHONPATH="${PYTHONPATH}:${execpath}/../share/dakota/Python"
+export PYTHONPATH
+
+#echo "Appending PATH with ${execpath}:${execpath}/../share/dakota/test:."
+PATH="$PATH:${execpath}:${execpath}/../share/dakota/test:."
 export PATH
 #echo "Launching ${execpath}/dakota with args: $@"
 "${execpath}/dakota" "$@"

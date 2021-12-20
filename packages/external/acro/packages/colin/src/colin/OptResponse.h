@@ -158,8 +158,6 @@ inline void OptResponse::read(UnPackBuffer& is)
    //>> termination_info >> model_status >> solver_status;
 }
 
-} // namespace colin
-
 
 /// Copy colin::AppResponse information into a colin::OptResponse object.
 inline colin::OptResponse& operator<< 
@@ -178,6 +176,9 @@ inline colin::OptResponse& operator<<
 //x.constraint_violation = info->l2_constraint_violation();
    return x;
 }
+
+
+} // namespace colin
 
 
 #endif

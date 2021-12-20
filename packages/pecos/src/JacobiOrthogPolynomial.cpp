@@ -175,41 +175,44 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  if (collocPoints.size() != order) { // if not already computed
-    collocPoints.resize(order);
-    switch (order) {
-    case 1: // zeros of Pab_1(x) for one Gauss-Jacobi point:
-      collocPoints[0] = (betaPoly - alphaPoly) / (alphaPoly + betaPoly + 2.);
-      break;
-    case 2: { // zeros of Pab_2(x) for two Gauss-Jacobi points:
-      Real apbp = alphaPoly + betaPoly, apbp3 = apbp + 3., ap2 = alphaPoly + 2.,
-	   a = apbp3*(apbp+4.), b = 4.*apbp3*ap2, c = 4.*(alphaPoly+1.)*ap2,
-	   srdiscrim = std::sqrt(b*b-4.*a*c), a2 = 2.*a;
-      collocPoints[0] = 1. - (b+srdiscrim)/a2;
-      collocPoints[1] = 1. - (b-srdiscrim)/a2;
-      break;
-    }
-    default:
-#ifdef HAVE_SPARSE_GRID
-      // sandia_rules.C calculates points/weights together
-      if (collocWeights.size() != order)
-	collocWeights.resize(order);
-      webbur::jacobi_compute(order, alphaPoly, betaPoly, &collocPoints[0],
-			     &collocWeights[0]);
-      Real wt_factor = weight_factor();
-      for (size_t i=0; i<order; i++)
-	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
-#else
-      PCerr << "Error: overflow in maximum quadrature order limit (2) in "
-	    << "JacobiOrthogPolynomial::collocation_points().  Configure with "
-	    << "VPISparseGrid to extend range." << std::endl;
-      abort_handler(-1);
-#endif
-      break;
-    }
+  UShortRealArrayMap::iterator it = collocPointsMap.find(order);
+  if (it != collocPointsMap.end())
+    return it->second;
+    
+  RealArray& colloc_pts = collocPointsMap[order]; // create new array
+  colloc_pts.resize(order);
+  switch (order) {
+  case 1: // zeros of Pab_1(x) for one Gauss-Jacobi point:
+    colloc_pts[0] = (betaPoly - alphaPoly) / (alphaPoly + betaPoly + 2.);
+    break;
+  case 2: { // zeros of Pab_2(x) for two Gauss-Jacobi points:
+    Real apbp = alphaPoly + betaPoly, apbp3 = apbp + 3., ap2 = alphaPoly + 2.,
+      a = apbp3*(apbp+4.), b = 4.*apbp3*ap2, c = 4.*(alphaPoly+1.)*ap2,
+      srdiscrim = std::sqrt(b*b-4.*a*c), a2 = 2.*a;
+    colloc_pts[0] = 1. - (b+srdiscrim)/a2;
+    colloc_pts[1] = 1. - (b-srdiscrim)/a2;
+    break;
   }
-
-  return collocPoints;
+  default:
+#ifdef HAVE_SPARSE_GRID
+    // sandia_rules.C calculates points/weights together
+    RealArray& colloc_wts = collocWeightsMap[order];
+    if (colloc_wts.size() != order)
+      colloc_wts.resize(order);
+    webbur::jacobi_compute(order, alphaPoly, betaPoly, &colloc_pts[0],
+			   &colloc_wts[0]);
+    Real wt_factor = weight_factor();
+    for (size_t i=0; i<order; i++)
+      colloc_wts[i] *= wt_factor; // polynomial weight fn -> PDF
+#else
+    PCerr << "Error: overflow in maximum quadrature order limit (2) in "
+	  << "JacobiOrthogPolynomial::collocation_points().  Configure with "
+	  << "VPISparseGrid to extend range." << std::endl;
+    abort_handler(-1);
+#endif
+    break;
+  }
+  return colloc_pts;
 }
 
 
@@ -222,38 +225,41 @@ type1_collocation_weights(unsigned short order)
   // function (1-x)^alpha (1+x)^beta / (2^(alpha+beta+1) B(alpha+1,beta+1))
   // over the support range of [-1,+1].
 
-  if (collocWeights.size() != order) { // if not already computed
-    collocWeights.resize(order);
-    switch (order) {
-    case 1: // weights for one Gauss-Jacobi point:
-      collocWeights[0] = 1.0;
-      break;
-    default:
-#ifdef HAVE_SPARSE_GRID
-      // sandia_rules.C calculates points/weights together
-      if (collocPoints.size() != order)
-	collocPoints.resize(order);
-      webbur::jacobi_compute(order, alphaPoly, betaPoly, &collocPoints[0],
-			     &collocWeights[0]);
-      Real wt_factor = weight_factor();
-      for (size_t i=0; i<order; i++)
-	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
-#else
-      // define Gauss wts from Gauss pts using formula above
-      const RealArray& colloc_pts = collocation_points(order);
-      for (size_t i=0; i<order; i++) {
-	Real x_i = colloc_pts[i], apbp = alphaPoly + betaPoly, o2 = 2.*order,
-	  o2apbp = o2+apbp, AnoAnm1 = o2apbp * (o2apbp-1.) / o2 / (order+apbp);
-	collocWeights[i]
-	  = AnoAnm1 * norm_squared(order-1) / type1_value(x_i, order-1)
-	  / type1_gradient(x_i, order);
-      }
-#endif
-      break;
-    }
-  }
+  UShortRealArrayMap::iterator it = collocWeightsMap.find(order);
+  if (it != collocWeightsMap.end())
+    return it->second;
 
-  return collocWeights;
+  RealArray& colloc_wts = collocWeightsMap[order]; // create new array
+  colloc_wts.resize(order);
+  switch (order) {
+  case 1: // weights for one Gauss-Jacobi point:
+    colloc_wts[0] = 1.0;
+    break;
+  default:
+#ifdef HAVE_SPARSE_GRID
+    // sandia_rules.C calculates points/weights together
+    RealArray& colloc_pts = collocPointsMap[order];
+    if (colloc_pts.size() != order)
+      colloc_pts.resize(order);
+    webbur::jacobi_compute(order, alphaPoly, betaPoly, &colloc_pts[0],
+			   &colloc_wts[0]);
+    Real wt_factor = weight_factor();
+    for (size_t i=0; i<order; i++)
+      colloc_wts[i] *= wt_factor; // polynomial weight fn -> PDF
+#else
+    // define Gauss wts from Gauss pts using formula above
+    const RealArray& colloc_pts = collocation_points(order);
+    for (size_t i=0; i<order; i++) {
+      Real x_i = colloc_pts[i], apbp = alphaPoly + betaPoly, o2 = 2.*order,
+	o2apbp = o2+apbp, AnoAnm1 = o2apbp * (o2apbp-1.) / o2 / (order+apbp);
+      colloc_wts[i]
+	= AnoAnm1 * norm_squared(order-1) / type1_value(x_i, order-1)
+	/ type1_gradient(x_i, order);
+    }
+#endif
+    break;
+  }
+  return colloc_wts;
 }
 
 

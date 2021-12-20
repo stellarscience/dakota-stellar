@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -116,6 +117,8 @@ public:
   /// Calls the NOMAD solver
   void core_run();
 
+  void initial_point(const RealVector& pt);
+
 private:
   
   // Forward Declaration
@@ -140,8 +143,8 @@ private:
   int numNomadNonlinearIneqConstraints;
 	       
   /// Algorithm control parameters passed to NOMAD
-  int randomSeed, maxBlackBoxEvals, maxIterations;
-  Real initMesh, minMesh, epsilon, vns;
+  int randomSeed;//, maxBlackBoxEvals, maxIterations;
+  NOMAD::Double initMesh, minMesh, epsilon, vns;
 
   /// Output control parameters passed to NOMAD
   std::string outputFormat, historyFile;
@@ -165,6 +168,16 @@ private:
   /// defines use of surrogate in NOMAD
   std::string useSurrogate;
 };
+
+
+inline void NomadOptimizer::initial_point(const RealVector& pt)
+{
+  size_t i, len = pt.length();
+  initialPoint.resize(len);
+  for (i=0; i<len; ++i)
+    initialPoint[i] = pt[i];
+}
+
 
 ///  NOMAD-based Evaluator class.
 

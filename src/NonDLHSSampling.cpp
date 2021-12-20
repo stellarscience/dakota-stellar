@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -92,7 +93,7 @@ NonDLHSSampling::NonDLHSSampling(ProblemDescDB& problem_db, Model& model):
     }
     // NOTE: Classical D-optimal works with regular LHS by generating
     // candidate designs that are Latin and picking the best.
-    if (sampleType == SUBMETHOD_LHS && outputLevel > SILENT_OUTPUT)
+    if (sampleType == SUBMETHOD_LHS && outputLevel > SILENT_OUTPUT) {
       if (refineSamples.length())
         Cout << "Warning: 'd_optimal' currently has no effect for incrementally"
              << " refined LHS \n         sampling" << std::endl;
@@ -100,6 +101,7 @@ NonDLHSSampling::NonDLHSSampling(ProblemDescDB& problem_db, Model& model):
         Cout << "Warning: 'd_optimal', 'leja_oversample_ratio' specified with "
 	     << "LHS sampling;\n         candidate design will be Latin, but "
 	     << "final design will not." << std::endl;
+    }
   }
 }
 
@@ -187,18 +189,6 @@ void NonDLHSSampling::pre_run()
   bool increm_lhs_active
     = (sampleType == SUBMETHOD_LHS && !refineSamples.empty());
 
-  /* TO DO: update for refactor...
-  if (dOptimal)
-    // initialize nataf transform for generating basis
-    initialize_random_variables(EXTENDED_U);
-  else if (increm_lhs_active) {
-    // incremental LHS needs CDF to compute ranks
-    initialize_random_variable_transformation();
-    initialize_random_variable_types(); // x_types only
-    // Capture any run-time updates for x-space distributions
-    initialize_random_variable_parameters();
-  }
-  */
   resize_final_statistics_gradients(); // finalStats ASV available at run time
 
   // BMA TODO: D-optimal incremental LHS (challenging due to set/get ranks)
@@ -701,24 +691,44 @@ void NonDLHSSampling::update_final_statistics()
     finalStatErrors.size(finalStatistics.num_functions()); // init to 0.
   size_t i, cntr = 0;
   Real sqrt2 = std::sqrt(2.), ns = (Real)numSamples, sqrtn = std::sqrt(ns),
-    sqrtnm1 = std::sqrt(ns - 1.), qoi_var, qoi_stdev;
+    sqrtnm1 = std::sqrt(ns - 1.), qoi_var, qoi_stdev, qoi_cm4, qoi_exckurt;
   for (i=0; i<numFunctions; ++i) {
     switch (finalMomentsType) {
-    case STANDARD_MOMENTS:
+    case Pecos::STANDARD_MOMENTS:
       qoi_stdev = momentStats(1,i);
       // standard error (estimator std-dev) for Monte Carlo mean
       finalStatErrors[cntr++] = qoi_stdev / sqrtn;
+      if(outputLevel >= DEBUG_OUTPUT)
+	Cout << "Estimator SE for mean = " << finalStatErrors[cntr-1] << "\n";
       // standard error (estimator std-dev) for Monte Carlo std-deviation
       // (Harding et al., 2014: assumes normally distributed population): 
-      finalStatErrors[cntr++] = qoi_stdev / (sqrt2*sqrtnm1);
+      //finalStatErrors[cntr++] = qoi_stdev / (sqrt2*sqrtnm1);
+      // [fm] using Var of Var estimator from excess kurtosis following
+      // https://stats.stackexchange.com/questions/29905/reference-for-mathrmvars2-sigma4-left-frac2n-1-frac-kappan/29945#29945
+      // and delta method
+      qoi_exckurt = momentStats(3, i);
+      finalStatErrors[cntr++] = 1. / (2. * qoi_stdev) * std::sqrt(qoi_stdev * qoi_stdev * qoi_stdev * qoi_stdev * (qoi_exckurt/ns + 2./(ns - 1.) ) );
+      if(outputLevel >= DEBUG_OUTPUT)
+	Cout << "Estimator SE for stddev = " << finalStatErrors[cntr-1] << "\n\n";
       break;
-    case CENTRAL_MOMENTS:
+    case Pecos::CENTRAL_MOMENTS:
       qoi_var = momentStats(1,i); qoi_stdev = std::sqrt(qoi_var);
+      qoi_cm4 = momentStats(3,i);
+   
       // standard error (estimator std-dev) for Monte Carlo mean
       finalStatErrors[cntr++] = qoi_stdev / sqrtn;
+      if(outputLevel >= DEBUG_OUTPUT)
+          Cout << "Estimator SE for mean = " << finalStatErrors[cntr-1] << "\n";
       // standard error (estimator std-dev) for Monte Carlo variance
       // (Harding et al., 2014: assumes normally distributed population): 
-      finalStatErrors[cntr++] = qoi_var * sqrt2 / sqrtnm1;
+      //finalStatErrors[cntr++] = qoi_var * sqrt2 / sqrtnm1;
+      //[fm] Introduction to the Theory of Statistics, Var[Var] = bias correction * 1/N (cm4 - (N-3)/(N-1) cm2^2)
+      finalStatErrors[cntr++] = std::sqrt( (ns - 1.)/(ns*ns - 2. * ns + 3.) * (qoi_cm4 - (ns - 3.)/(ns - 1.) * qoi_var * qoi_var ) );
+      if(outputLevel >= DEBUG_OUTPUT)
+	    Cout << "QoICM4 = " << qoi_cm4 << "\n";
+	    Cout << "QoICM2 = " << qoi_var << "\n";
+	    Cout << "ns = " << ns << "\n";
+	    Cout << "Estimator SE for variance = " << finalStatErrors[cntr-1] << "\n\n";
       break;
     }
     // level mapping errors not implemented at this time
@@ -834,13 +844,14 @@ void NonDLHSSampling::compute_pca(std::ostream& s)
   }           
   for (int i = 0; i < num_signif_Pcomps; ++i) {
     RealVector factor_i = Teuchos::getCol(Teuchos::View,f_scores,i);
-    gpApproximations[i].add_array(allSamples, factor_i);
+    gpApproximations[i].add_array(allSamples, false, factor_i, true);
     gpApproximations[i].build();
     std::stringstream ss;
     ss << i;
     std::string GPstring = ss.str();
     const String GPPrefix = "PCA_GP";
-    gpApproximations[i].export_model(GPstring, GPPrefix, ALGEBRAIC_FILE);
+    gpApproximations[i].export_model(StringArray(), GPstring, GPPrefix,
+				     ALGEBRAIC_FILE);
   }
 
   // Now form predictions based on new input points
@@ -932,8 +943,8 @@ void NonDLHSSampling::print_results(std::ostream& s, short results_state)
         int inc_size = samples_vec[i];
         size_t inc_id = i + 1;
         running_total += inc_size;
-        RealMatrix inc_samples(Teuchos::View, allSamples, // block of samples for
-            allSamples.numRows(), running_total);         // this increment
+        RealMatrix inc_samples(Teuchos::View, allSamples,// block of samples for
+            allSamples.numRows(), running_total);        // this increment
         IntResponseMap::iterator end_resp = allResponses.find(running_total + 
             start_id);
         // Response copy ctor just copies a pointer, so this insert should be

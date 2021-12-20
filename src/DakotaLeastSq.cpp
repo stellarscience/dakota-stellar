@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -132,7 +133,7 @@ void LeastSq::weight_model()
     }
 
   // TODO: pass sqrt to WeightingModel
-  iteratedModel.assign_rep(new WeightingModel(iteratedModel), false);
+  iteratedModel.assign_rep(std::make_shared<WeightingModel>(iteratedModel));
   ++myModelLayers;
 }
 
@@ -169,7 +170,7 @@ void LeastSq::print_results(std::ostream& s, short results_state)
   // variables unless they are used as experiment configuration
   // variables since there's no "best" configuration.
   const Variables& best_vars = bestVariablesArray.front();
-  if (expData.config_vars().size() == 0)
+  if (expData.num_config_vars() == 0)
     s << "<<<<< Best parameters          =\n" << best_vars;
   else {
     s << "<<<<< Best parameters (experiment config variables omitted) =\n";
@@ -187,8 +188,9 @@ void LeastSq::print_results(std::ostream& s, short results_state)
     // per-config) and the full set of data-transformed residuals,
     // possibly scaled by sigma^-1/2.  This should be correct in
     // interpolation cases as well.
-    DataTransformModel* dt_model_rep =
-      static_cast<DataTransformModel*>(dataTransformModel.model_rep());
+    std::shared_ptr<DataTransformModel> dt_model_rep =
+      std::static_pointer_cast<DataTransformModel>
+      (dataTransformModel.model_rep());
     dt_model_rep->print_best_responses(s, best_vars, 
                                        bestResponseArray.front(), num_best, best_ind);
   }
@@ -357,8 +359,8 @@ void LeastSq::post_run(std::ostream& s)
 
   // Transform variables back to inbound model, before any potential lookup
   if (scaleFlag) {
-    ScalingModel* scale_model_rep = 
-      static_cast<ScalingModel*>(scalingModel.model_rep());
+    std::shared_ptr<ScalingModel> scale_model_rep =
+      std::static_pointer_cast<ScalingModel>(scalingModel.model_rep());
     best_vars.continuous_variables
       (scale_model_rep->cv_scaled2native(iter_vars.continuous_variables()));
   }
@@ -530,17 +532,19 @@ void LeastSq::post_run(std::ostream& s)
 
   // All derived solvers return constraints in best_resp; unscale
   // in-place if needed
-  // BMA TODO: constrained LSQ with scaling test
   if (scaleFlag && numNonlinearConstraints > 0) {
-    ScalingModel* scale_model_rep =
-      static_cast<ScalingModel*>(scalingModel.model_rep());
+    std::shared_ptr<ScalingModel> scale_model_rep =
+      std::static_pointer_cast<ScalingModel>(scalingModel.model_rep());
     RealVector best_fns = best_resp.function_values_view();
     // only requesting scaling of constraints, so no need for variable Jacobian
     activeSet.request_values(1);
+    // the size of the Iterator's primary fns may differ from the
+    // user/best size due, e.g., to data transformations, so call with
+    // a start index for number of user primary fns.
     scale_model_rep->
-      secondary_resp_scaled2native(best_resp.function_values(),
+      secondary_resp_scaled2native(iter_resp.function_values(),
 				   activeSet.request_vector(),
-				   best_fns);
+				   numUserPrimaryFns, best_fns);
   }
 
   // confidence intervals require
@@ -620,8 +624,8 @@ void LeastSq::get_confidence_intervals(const Variables& native_vars,
   // envelope to hold the either unscaled or iterator response
   Response ultimate_resp = scaleFlag ? iter_resp.copy() : iter_resp; 
   if (scaleFlag) {
-    ScalingModel* scale_model_rep =
-      static_cast<ScalingModel*>(scalingModel.model_rep());
+    std::shared_ptr<ScalingModel> scale_model_rep =
+      std::static_pointer_cast<ScalingModel>(scalingModel.model_rep());
     bool unscale_resp = false;
     scale_model_rep->response_modify_s2n(native_vars, iter_resp,
 					 ultimate_resp, 0, numLeastSqTerms,

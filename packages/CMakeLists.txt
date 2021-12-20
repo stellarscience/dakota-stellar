@@ -1,36 +1,13 @@
-# CMakeLists.txt for DAKOTA packages
-option(HAVE_ACRO "Build the ACRO package." ON)
-option(HAVE_AMPL "Build the AMPL package." ON)
-option(HAVE_C3 "Build the Compressed Continuous Computation package." OFF)
-option(HAVE_CONMIN "Build the CONMIN package." ON)
-option(HAVE_DDACE "Build the DDACE package." ON)
-option(HAVE_DEMO_TPL "Build the Demo_TPL package." OFF)
-option(HAVE_DOT "Build the DOT package." ON)
-option(HAVE_DREAM "Build the DREAM package." ON)
-option(HAVE_FSUDACE "Build the FSUDACE package." ON)
-option(HAVE_HOPSPACK "Build the hopspack package." ON)
-option(HAVE_JEGA "Build the JEGA package." ON)
-option(HAVE_NCSUOPT "Build the NCSUOPT package." ON)
-option(HAVE_NL2SOL "Build the NL2SOL package." ON)
-option(HAVE_NLPQL "Build the NLPQL package." ON)
-option(HAVE_NOMAD "Build the NOMAD package." ON)
-option(HAVE_NOWPAC "Build the NOWPAC package (experimental)." OFF)
-option(HAVE_NPSOL "Build the NPSOL package." ON)
-option(HAVE_OPTPP "Build the OPTPP package." ON)
-option(HAVE_PECOS "Build the Pecos package." ON)
-option(HAVE_PLUGIN "Enable plugins to the dakota executable." ON)
-option(HAVE_PSUADE "Build the PSUADE package." ON)
-option(HAVE_ROL "Build the ROL package." ON)
-option(HAVE_SURFPACK "Build the Surfpack package." ON)
-# Packages formerly underneath Pecos
-option(HAVE_FFT "Use either the fftw or dfftpack packages" ON)
-option(HAVE_DFFTPACK "Build the dfftpack package.  This OPTION has no effect if
-  HAVE_FFT is OFF" ON)
-option(HAVE_FFTW "Find and use an installed fftw package. This OPTION has no
-  effect if HAVE_FFT is OFF" OFF)
+#  _______________________________________________________________________
+#
+#  DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
+#  Copyright 2014-2020
+#  National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Dakota directory.
+#  _______________________________________________________________________
 
-option(HAVE_LHS "Build the LHS package." ON)
-option(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
+# All Dakota options for packages have been moved to top-level
 
 # For managing additional packages that packages like pecos and surfpack depend on
 include(ManageRelocatablePackage)
@@ -71,81 +48,13 @@ add_subdirectory(pecos)
 include(ExternalProject)
 
 if(HAVE_QUESO)
-
   # Queso depends on GSL, so ensure GSL detection and proper lib settings
   # Require user to turn on this GPL package explicitly
   if(NOT DAKOTA_HAVE_GSL)
     message(FATAL_ERROR 
       "HAVE_QUESO requires enabling GPL package GSL via DAKOTA_HAVE_GSL.")
   endif()
-
-  if(DAKOTA_QUESO_CMAKE)
-    add_subdirectory(external/queso)
-  else()
-
-  # Prerequisites for building QUESO
-  find_program(SH sh)
-  if(${SH} MATCHES "sh-NOTFOUND")
-    message(FATAL_ERROR "Cannot build QUESO as an external project without sh")
-  endif()
-
-  # Use gsl-config to get GSL settings
-  if(DEFINED GSL_CONFIG_EXECUTABLE)
-    set(GSL_CONFIG "${GSL_CONFIG_EXECUTABLE}")
-  else()
-    find_program(GSL_CONFIG gsl-config)
-    if(${GSL_CONFIG} MATCHES "gsl-config-NOTFOUND")
-      if(DEFINED ENV{GSL_CONFIG})
-	set(GSL_CONFIG "$ENV{GSL_CONFIG}")
-      else()
-	message(FATAL_ERROR "QUESO requires gsl-config on PATH or pointed to by"
-	  " environment variable GSL_CONFIG.")
-      endif()
-    endif()
-  endif()
-
-  exec_program("${GSL_CONFIG}" ARGS --prefix OUTPUT_VARIABLE Q_GSL_PREFIX)
-  message(STATUS "QUESO support -- GSL prefix: ${Q_GSL_PREFIX}")
-  # Set GSL_PREFIX for QUESO m4
-  set($ENV{GSL_PREFIX} ${Q_GSL_PREFIX})
-  # GSL_LIBRARY_DIRS is set by find_package(GSL) at top-level
-  message(STATUS "QUESO support -- GSL libdir: ${GSL_LIBRARY_DIRS}")
-
-  # This may not be necessary for system-installed Boost, so warn only
-  if(NOT DEFINED ENV{BOOST_ROOT})
-    message(WARNING "QUESO typically requires environment variable BOOST_ROOT,"
-      " but not set.")
-  endif()
-
-  # Configure, build, and install QUESO in packages/queso_ext.  Build
-  # is in queso_ext/src; Install is to queso_ext/{bin,examples,include,lib}
-  set(queso_config_cmd
-    ${SH} ${CMAKE_CURRENT_SOURCE_DIR}/external/queso/configure
-    "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_CXX_COMPILER}"
-    "F77=${CMAKE_Fortran_COMPILER}" "FC=${CMAKE_Fortran_COMPILER}"
-    "--without-hdf5" "--without-glpk"
-    "--with-boost=${Boost_INCLUDE_DIR}/.."
-#    "--disable-shared"
-    "LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}:${Boost_LIBRARY_DIRS}:${GSL_LIBRARY_DIRS}"
-    "CXXFLAGS=${CMAKE_CXX_FLAGS}"
-    "--prefix=${CMAKE_CURRENT_BINARY_DIR}/queso_ext"
-    )
-
-  externalproject_add(queso_ext
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/queso_ext"
-    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/queso"
-    CONFIGURE_COMMAND "${queso_config_cmd}"
-    )
-
-  #add_library(queso UNKNOWN IMPORTED GLOBAL)
-  #set_target_properties(queso PROPERTIES 
-  #  IMPORTED_LOCATION ${Dakota_BINARY_DIR}/packages/queso_ext/lib)
-
-  # Install QUESO (and possibly GRVY) libs
-  install(SCRIPT "${Dakota_SOURCE_DIR}/cmake/InstallQuesoLibs.cmake")
-
-  endif()  # DAKOTA_QUESO_CMAKE
-
+  add_subdirectory(external/queso)
 endif(HAVE_QUESO)
 
 
@@ -169,7 +78,6 @@ endif()
 if(HAVE_APPROXNN)
   add_subdirectory(external/approxnn/src)
 endif()
-
 
 
 if(HAVE_SURFPACK)
@@ -204,8 +112,8 @@ if(HAVE_DDACE)
 endif(HAVE_DDACE)
 
 if(HAVE_DOT)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../local/packages/DOT/dbl_prec/dot1.f)
-    add_subdirectory(../local/packages/DOT ${CMAKE_CURRENT_BINARY_DIR}/DOT)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/local/DOT/dbl_prec/dot1.f)
+    add_subdirectory(local/DOT ${CMAKE_CURRENT_BINARY_DIR}/DOT)
   else()
     set(HAVE_DOT OFF CACHE BOOL "Build the DOT package" FORCE)
   endif()
@@ -214,7 +122,6 @@ endif(HAVE_DOT)
 if(HAVE_DREAM)
   add_subdirectory(external/dream)
 endif(HAVE_DREAM)
-
 
 if(HAVE_FSUDACE)
   add_subdirectory(external/FSUDace)
@@ -254,8 +161,8 @@ if(HAVE_NL2SOL)
 endif(HAVE_NL2SOL)
 
 if(HAVE_NLPQL)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../local/packages/NLPQL/NLPQLB.f)
-    add_subdirectory(../local/packages/NLPQL ${CMAKE_CURRENT_BINARY_DIR}/NLPQL)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/local/NLPQL/NLPQLB.f)
+    add_subdirectory(local/NLPQL ${CMAKE_CURRENT_BINARY_DIR}/NLPQL)
   else()
     set(HAVE_NLPQL OFF CACHE BOOL "Build the NLPQL package" FORCE)
   endif()
@@ -270,12 +177,17 @@ if(HAVE_NOMAD)
 endif(HAVE_NOMAD)
 
 if(HAVE_NOWPAC)
-  add_subdirectory(external/nowpac)
+  if(NOT HAVE_EXTERNAL_NOWPAC)
+    set(NOWPAC_EIGEN_INCLUDE_PATH
+      "${DAKOTA_EIGEN3_INCLUDE_DIR}")
+#      CACHE PATH "Dakota forcing NOWPAC to use Dakota's Eigen")
+    add_subdirectory(external/snowpac)
+  endif()
 endif()
 
 if(HAVE_NPSOL)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../local/packages/NPSOL/npsolsubs.f)
-    add_subdirectory(../local/packages/NPSOL ${CMAKE_CURRENT_BINARY_DIR}/NPSOL)
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/local/NPSOL/npsolsubs.f)
+    add_subdirectory(local/NPSOL ${CMAKE_CURRENT_BINARY_DIR}/NPSOL)
   else()
     set(HAVE_NPSOL OFF CACHE BOOL "Build the NPSOL package" FORCE)
   endif()
@@ -285,10 +197,44 @@ if(HAVE_PSUADE)
   add_subdirectory(external/PSUADE)
 endif(HAVE_PSUADE)
 
-#if(DAKOTA_RESULTS_DB)
-#  add_subdirectory(yaml-cpp)
-#endif()
-
 if(HAVE_X_GRAPHICS)
   add_subdirectory(external/sciplot)
 endif(HAVE_X_GRAPHICS)
+
+# BMA TODO: Merge option to top-level once cmake_transparency branch merged
+option(HAVE_MUQ "Enable MIT MUQ library for Bayesian calibration" OFF)
+if(HAVE_MUQ)
+  message(STATUS "Dakota configuring MUQ as external project")
+  # Managing MUQ as an external project until we can work with upstream
+  # to resolve in-tree build issues.
+  include(ExternalProject)
+  ExternalProject_Add(MUQ
+    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/muq2"
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/external/muq2"
+    CMAKE_CACHE_ARGS
+    -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/external/muq2
+    # MUQ TPLs
+    ##-DMUQ_BOOST_DIR:STRING=${Boost_INCLUDE_DIR}/..
+    # NOTE: By not setting MUQ_BOOST_DIR, MUQ should use the standard
+    # CMake probe to find Boost. That probe should respect
+    # Boost_INCLUDEDIR and Boost_LIBRARYDIR, so we forward it the
+    # settings found by Dakota's Boost probe.
+    # BMA TODO: Generalize this (not currently robust)
+    -DBOOST_INCLUDEDIR:PATH=${Boost_INCLUDE_DIRS}
+    -DBOOST_LIBRARYDIR:PATH=${Boost_LIBRARY_DIRS}
+    # BMA TODO: Flex this to allow external Eigen
+    -DMUQ_EIGEN3_DIR:STRING=${DAKOTA_EIGEN3_INCLUDE_DIR}
+    # BMA TODO: Generalize this (not currently robust)
+    -DMUQ_HDF5_DIR:STRING=${HDF5_INCLUDE_DIRS}/..
+    # MUQ minimal opts
+    -DMUQ_ENABLEGROUP_DEFAULT:BOOL=ON
+#    -DMUQ_ENABLEGROUP_SAMPLING_ALGORITHM:BOOL=ON
+#    -DMUQ_ENABLEGROUP_APPROXIMATION_QUADRATURE:BOOL=ON
+    # Avoid NANOFLANN internal build
+    -DMUQ_ENABLEGROUP_MODELING_FLANN:BOOL=OFF
+    # Avoid SUNDIALS internal build
+    -DMUQ_ENABLEGROUP_MODELING_SUNDIALS_MODELS:BOOL=OFF
+    # Avoid NLOPT internal build
+    -DMUQ_USE_NLOPT:BOOL=OFF
+    )
+endif()

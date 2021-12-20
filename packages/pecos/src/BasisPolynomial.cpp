@@ -35,31 +35,18 @@ namespace Pecos {
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_polynomial() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~BasisPolynomial). */
+    letter IS the representation, its rep pointer is set to NULL. */
 BasisPolynomial::BasisPolynomial(BaseConstructor):// basisPolyType(-1),
-  parametricUpdate(false), wtFactor(1.), ptFactor(1.), polyRep(NULL),
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisPolynomial::BasisPolynomial(BaseConstructor) called "
-	<< "to build base class for letter." << std::endl;
-#endif
-}
+  wtFactor(1.), ptFactor(1.)
+{ /* empty ctor */ }
 
 
 /** The default constructor is used in Array<BasisPolynomial>
     instantiations and by the alternate envelope constructor.  polyRep
     is NULL in this case (problem_db is needed to build a meaningful
-    instance).  This makes it necessary to check for NULL in the copy
-    constructor, assignment operator, and destructor. */
-BasisPolynomial::BasisPolynomial(): polyRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisPolynomial::BasisPolynomial() called to build empty "
-	<< "basis polynomial object." << std::endl;
-#endif
-}
+    instance). */
+BasisPolynomial::BasisPolynomial()
+{ /* empty ctor */ }
 
 
 /** Envelope constructor which does not require access to problem_db.
@@ -67,15 +54,9 @@ BasisPolynomial::BasisPolynomial(): polyRep(NULL), referenceCount(1)
     default constructor of the derived letter class, which in turn
     invokes the BaseConstructor of the base class. */
 BasisPolynomial::BasisPolynomial(short poly_type, short rule):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisPolynomial::BasisPolynomial(short) called to "
-	<< "instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  polyRep = get_polynomial(poly_type, rule);
+  polyRep(get_polynomial(poly_type, rule))
+{
   if (poly_type && !polyRep) // bad type, insufficient memory
     abort_handler(-1);
 }
@@ -83,144 +64,92 @@ BasisPolynomial::BasisPolynomial(short poly_type, short rule):
 
 /** Used only by the envelope constructor to initialize polyRep to the 
     appropriate derived type. */
-BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
+std::shared_ptr<BasisPolynomial>
+BasisPolynomial::get_polynomial(short poly_type, short rule)
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_polynomial(short, short)."
-	<< std::endl;
-#endif
-
-  BasisPolynomial* polynomial;
+  std::shared_ptr<BasisPolynomial> polynomial;
   // In orthogonal polynomial and global interpolation polynomial cases,
   // basisPolyType is not available at construct time, but is thereafter.
   switch (poly_type) {
   case NO_POLY:
-    polynomial = NULL;                                                    break;
+    break;
   case HERMITE_ORTHOG:  // var_type == "normal"
-    polynomial = (rule) ? new HermiteOrthogPolynomial(rule)
-                        : new HermiteOrthogPolynomial();
+    polynomial = (rule) ? std::make_shared<HermiteOrthogPolynomial>(rule) :
+      std::make_shared<HermiteOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case LEGENDRE_ORTHOG: // var_type == "uniform"
-    polynomial = (rule) ? new LegendreOrthogPolynomial(rule)
-                        : new LegendreOrthogPolynomial();
+    polynomial = (rule) ? std::make_shared<LegendreOrthogPolynomial>(rule) :
+      std::make_shared<LegendreOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case LAGUERRE_ORTHOG: // var_type == "exponential"
-    polynomial = new LaguerreOrthogPolynomial();
+    polynomial = std::make_shared<LaguerreOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case JACOBI_ORTHOG:   // var_type == "beta"
-    polynomial = new JacobiOrthogPolynomial();
+    polynomial = std::make_shared<JacobiOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case GEN_LAGUERRE_ORTHOG: // var_type == "gamma"
-    polynomial = new GenLaguerreOrthogPolynomial();
+    polynomial = std::make_shared<GenLaguerreOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case CHEBYSHEV_ORTHOG: // for Clenshaw-Curtis and Fejer
-    polynomial = (rule) ? new ChebyshevOrthogPolynomial(rule)
-                        : new ChebyshevOrthogPolynomial();
+    polynomial = (rule) ? std::make_shared<ChebyshevOrthogPolynomial>(rule) :
+      std::make_shared<ChebyshevOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case NUM_GEN_ORTHOG:
-    polynomial = new NumericGenOrthogPolynomial();
+    polynomial = std::make_shared<NumericGenOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case LAGRANGE_INTERP:
-    polynomial = new LagrangeInterpPolynomial();
+    polynomial = std::make_shared<LagrangeInterpPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case HERMITE_INTERP:
-    polynomial = (rule) ? new HermiteInterpPolynomial(rule)
-                        : new HermiteInterpPolynomial();
-    if (polynomial) polynomial->basisPolyType = poly_type;              break;
+    polynomial = (rule) ? std::make_shared<HermiteInterpPolynomial>(rule) :
+      std::make_shared<HermiteInterpPolynomial>();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   // PIECEWISE options include poly order, point type, and point data order:
   // LINEAR/QUADRATIC/CUBIC covers poly order, rule covers EQUIDISTANT/GENERAL
   // point type, and data order is inferred from poly order (grads for CUBIC).
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
   case PIECEWISE_CUBIC_INTERP:
-    polynomial = (rule) ? new PiecewiseInterpPolynomial(poly_type, rule)
-                        : new PiecewiseInterpPolynomial(poly_type);
+    polynomial = (rule) ?
+      std::make_shared<PiecewiseInterpPolynomial>(poly_type, rule) :
+      std::make_shared<PiecewiseInterpPolynomial>(poly_type);
     break;
   // Some Discrete orthogonal polynomials
   case KRAWTCHOUK_DISCRETE:   // var_type == "binomial"
-    polynomial = new KrawtchoukOrthogPolynomial();
+    polynomial = std::make_shared<KrawtchoukOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case MEIXNER_DISCRETE:   // var_type == "negative binomial"
-    polynomial = new MeixnerOrthogPolynomial();
+    polynomial = std::make_shared<MeixnerOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case CHARLIER_DISCRETE:   // var_type == "poisson"
-    polynomial = new CharlierOrthogPolynomial();
+    polynomial = std::make_shared<CharlierOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case HAHN_DISCRETE:   // var_type == "hygergeometric"
-    polynomial = new HahnOrthogPolynomial();
+    polynomial = std::make_shared<HahnOrthogPolynomial>();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
 	 << std::endl;
-    polynomial = NULL;                                                    break;
+    break;
   }
   return polynomial;
 }
 
 
-/** Copy constructor manages sharing of polyRep and incrementing of
-    referenceCount. */
-BasisPolynomial::BasisPolynomial(const BasisPolynomial& polynomial)
-{
-  // Increment new (no old to decrement)
-  polyRep = polynomial.polyRep;
-  if (polyRep) // Check for an assignment of NULL
-    polyRep->referenceCount++;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisPolynomial::BasisPolynomial(BasisPolynomial&)" << std::endl;
-  if (polyRep)
-    PCout << "polyRep referenceCount = " << polyRep->referenceCount <<std::endl;
-#endif
-}
+/** Copy constructor manages sharing of polyRep. */
+BasisPolynomial::BasisPolynomial(const BasisPolynomial& polynomial):
+  polyRep(polynomial.polyRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old polyRep,
-    assigns new polyRep, and increments referenceCount for new polyRep. */
 BasisPolynomial BasisPolynomial::operator=(const BasisPolynomial& polynomial)
 {
-  if (polyRep != polynomial.polyRep) { // normal case: old != new
-    // Decrement old
-    if (polyRep) // Check for NULL
-      if ( --polyRep->referenceCount == 0 ) 
-	delete polyRep;
-    // Assign and increment new
-    polyRep = polynomial.polyRep;
-    if (polyRep) // Check for NULL
-      polyRep->referenceCount++;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisPolynomial::operator=(BasisPolynomial&)" << std::endl;
-  if (polyRep)
-    PCout << "polyRep referenceCount = " << polyRep->referenceCount
-	  << std::endl;
-#endif
-
+  polyRep = polynomial.polyRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes polyRep when
-    referenceCount reaches zero. */
 BasisPolynomial::~BasisPolynomial()
-{ 
-  // Check for NULL pointer 
-  if (polyRep) {
-    --polyRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "polyRep referenceCount decremented to " << polyRep->referenceCount
-	  << std::endl;
-#endif
-    if (polyRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting polyRep" << std::endl;
-#endif
-      delete polyRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 Real BasisPolynomial::type1_value(unsigned short n)
@@ -466,6 +395,42 @@ void BasisPolynomial::reset_gauss()
 	  << "type." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+bool BasisPolynomial::parameter_update() const
+{
+  if (polyRep)
+    return polyRep->parameter_update();
+  else // default for non-parametric polynomials (e.g., PiecewiseInterp)
+    return false;
+}
+
+
+bool BasisPolynomial::points_defined(unsigned short order) const
+{
+  if (polyRep)
+    return polyRep->points_defined(order);
+  else // default
+    return false;
+}
+
+
+bool BasisPolynomial::type1_weights_defined(unsigned short order) const
+{
+  if (polyRep)
+    return polyRep->type1_weights_defined(order);
+  else // default
+    return false;
+}
+
+
+bool BasisPolynomial::type2_weights_defined(unsigned short order) const
+{
+  if (polyRep)
+    return polyRep->type2_weights_defined(order);
+  else // default
+    return false;
 }
 
 

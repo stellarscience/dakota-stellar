@@ -806,7 +806,6 @@ int compare(const BasicArray<T>& first, const BasicArray<T>& second)
 { return first.compare(second);}
 
 
-} // namespace utilib
 
 
 //============================================================================
@@ -954,6 +953,9 @@ for (size_type i=0; i<len; i++, tmp++)
   is >> *tmp;
 return is;
 }
+
+
+} // namespace utilib
 
 
 #ifdef CXXTEST_RUNNING

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -97,8 +98,8 @@ protected:
   /// method instantiation
   void snll_post_instantiate(int num_cv, bool vendor_num_grad_flag,
 			     const String& finite_diff_type,
-			     const RealVector& fdss, int max_iter,
-			     int max_fn_evals, Real conv_tol, Real grad_tol,
+			     const RealVector& fdss, size_t max_iter,
+			     size_t max_eval, Real conv_tol, Real grad_tol,
 			     Real max_step, bool bound_constr_flag,
 			     int num_constr, short output_lev,
 			     OPTPP::OptimizeClass* the_optimizer, 
@@ -120,10 +121,10 @@ protected:
 			   const RealVector& nln_ineq_l_bnds,
 			   const RealVector& nln_ineq_u_bnds,
 			   const RealVector& nln_eq_targets);
-  
-  /// convenience function for setting OPT++ options after the
-  /// method instantiations
+  /// convenience function for managing OPT++ results after method execution
   void snll_post_run(OPTPP::NLP0* nlf_objective);
+  /// convenience function for clearing OPT++ data after method execution
+  void snll_finalize_run(OPTPP::NLP0* nlf_objective);
 
   /// reset last{FnEvalLocn,EvalMode,EvalVars}
   void reset_base();

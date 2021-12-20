@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -44,6 +45,9 @@ public:
   /// alternate constructor for evaluating and computing statistics
   /// for the provided set of samples
   NonDSampling(Model& model, const RealMatrix& sample_matrix);
+
+  /// destructor
+  ~NonDSampling();
 
   //
   //- Heading: Public member functions
@@ -171,6 +175,11 @@ public:
 			 RealMatrix& sample_matrix, int num_samples = 0,
 			 bool x_to_u = true);
 
+  /// return sampleType
+  unsigned short sampling_scheme() const;
+  /// return rngName
+  const String& random_number_generator() const;
+
 protected:
 
   //
@@ -194,9 +203,6 @@ protected:
                const RealVector& std_devs, const RealVector& lower_bnds,
                const RealVector& upper_bnds, RealSymMatrix& correl);
   
-  /// destructor
-  ~NonDSampling();
-
   //
   //- Heading: Virtual function redefinitions
   //
@@ -212,8 +218,8 @@ protected:
   /// set reference number of samples, which is a lower bound during reset 
   void sampling_reference(int samples_ref);
 
-  /// return sampleType
-  unsigned short sampling_scheme() const;
+  /// assign randomSeed
+  void random_seed(int seed);
 
   /// set varyPattern
   void vary_pattern(bool pattern_flag);
@@ -274,24 +280,11 @@ protected:
   void mode_bits(const Variables& vars, BitArray& active_vars,
 		 BitArray& active_corr) const;
 
-  /// helper to accumulate sum of finite samples
-  static void accumulate_mean(const RealVectorArray& fn_samples, size_t q,
-			      size_t& num_samp, Real& mean);
-  /// helper to accumulate higher order sums of finite samples
-  static void accumulate_moments(const RealVectorArray& fn_samples, size_t q,
-				 short moments_type, Real* moments);
-  /// helper to accumulate gradient sums
-  static void accumulate_moment_gradients(const RealVectorArray& fn_samples,
-					  const RealMatrixArray& grad_samples,
-					  size_t q, short moments_type,
-					  Real mean, Real mom2, Real* mean_grad,
-					  Real* mom2_grad);
-
   //
   //- Heading: Data members
   //
 
-  const int seedSpec;    ///< the user seed specification (default is 0)
+  int       seedSpec;    ///< the user seed specification (default is 0)
   int       randomSeed;  ///< the current seed
   const int samplesSpec; ///< initial specification of number of samples
   int       samplesRef;  ///< reference number of samples updated for refinement
@@ -402,6 +395,10 @@ private:
 };
 
 
+inline const String& NonDSampling::random_number_generator() const
+{ return rngName; }
+
+
 inline void NonDSampling::pre_run()
 { 
   Analyzer::pre_run();
@@ -488,6 +485,10 @@ sampling_reset(int min_samples, bool all_data_flag, bool stats_flag)
   allDataFlag = all_data_flag;
   statsFlag   = stats_flag;
 }
+
+
+inline void NonDSampling::random_seed(int seed)
+{ /*seedSpec = */randomSeed = seed; } // lhsDriver assigned in initialize_lhs()
 
 
 inline unsigned short NonDSampling::sampling_scheme() const

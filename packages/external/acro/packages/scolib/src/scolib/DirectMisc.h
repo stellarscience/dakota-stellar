@@ -205,6 +205,7 @@ public:
   ///
   void write(std::ostream& os) const
 	{
+	  using utilib::operator<<;
 	os << "Val   " << Val << std::endl;
 	//os << "cVal  " << cVal << std::endl;
 	os << "x     " << x << std::endl;

@@ -82,24 +82,12 @@ if(${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel" OR
   set(LHS_Intel 1)
 endif()
 
-# hack to be fixed when CMake does it automatically
-if(LHS_Intel)
-  set(FIXED_FLAG "-fixed")
-elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
-  set(FIXED_FLAG "-ffixed-form")
-elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
-  set(FIXED_FLAG "-Mfixed")
-elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "VisualAge")
-  set(FIXED_FLAG "-qfixed")
-elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "XL")
-  set(FIXED_FLAG "-qfixed")
+if(${CMAKE_Fortran_COMPILER_ID} MATCHES "XL")
   #set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-r")
   set(CMAKE_SHARED_LIBRARY_CREATE_Fortran_FLAGS "-r")
 
   #set(CMAKE_Fortran_FLAGS "-Wl,--allow-multiple-definition")
   set(CMAKE_Fortran_FLAGS "-Wl,-zmuldefs")
-elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "SunPro")
-  set(FIXED_FLAG "-fixed")
 endif()
 
 # For Windows DLLs with Intel Fortran preprocess the source files and
@@ -146,8 +134,9 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/mods/mod)
 add_library(lhs ${LHS_UTIL_SRC} ${LHS_CORE_SRC})
 
 target_link_libraries(lhs lhs_mod lhs_mods)
+set_target_properties(lhs PROPERTIES Fortran_FORMAT FIXED)
 set_property(TARGET lhs PROPERTY COMPILE_FLAGS
-  "${FIXED_FLAG} ${FPP_FLAG} ${LEGACY_FLAG}"
+  "${FPP_FLAG} ${LEGACY_FLAG}"
 )
 if(LHS_EXPORT_DEC)
   set_property(TARGET lhs APPEND PROPERTY COMPILE_DEFINITIONS ${LHS_EXPORT_DEC})
@@ -164,7 +153,7 @@ set(LHSDRV_SRC
 
 add_executable(lhsdrv ${LHSDRV_SRC})
 target_link_libraries(lhsdrv lhs)
-set_property(TARGET lhsdrv PROPERTY COMPILE_FLAGS ${FIXED_FLAG})
+set_target_properties(lhsdrv PROPERTIES Fortran_FORMAT FIXED)
 install(TARGETS lhsdrv DESTINATION bin)
 
 set(DATAFILES InpData.txt KEYWORD.DAT SIPRA.INI)
@@ -181,7 +170,7 @@ if(BUILD_TESTING AND LHS_ENABLE_TESTS)
   ## LHS test program.
   add_executable(TestRun TestRun.f90)
   target_link_libraries(TestRun lhs)
-  set_property(TARGET TestRun PROPERTY COMPILE_FLAGS ${FIXED_FLAG})
+  set_target_properties(TestRun PROPERTIES Fortran_FORMAT FIXED)
   add_test(TestLHS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/TestRun)
 endif() # LHS Testing
 

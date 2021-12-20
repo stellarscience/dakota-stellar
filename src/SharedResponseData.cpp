@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -10,7 +11,6 @@
 //- Description:  Class implementation
 //- Owner:        Mike Eldred
 
-// #define REFCOUNT_DEBUG 1
 // #define SERIALIZE_DEBUG 1
 
 #include "SharedResponseData.hpp"
@@ -38,98 +38,108 @@ SharedResponseDataRep(const ProblemDescDB& problem_db):
   responseType(BASE_RESPONSE), // overridden in derived class ctors
   primaryFnType(GENERIC_FNS),
   responsesId(problem_db.get_string("responses.id")), 
-  functionLabels(problem_db.get_sa("responses.labels")),
   simulationVariance(problem_db.get_rv("responses.simulation_variance"))
 {
-  // scalar response data types:
-  size_t num_scalar_resp_fns
-    = problem_db.get_sizet("responses.num_scalar_responses");
-  numScalarResponses = (num_scalar_resp_fns) ? num_scalar_resp_fns :
-    problem_db.get_sizet(
-      "responses.num_scalar_nonlinear_inequality_constraints") +
-    problem_db.get_sizet(
-      "responses.num_scalar_nonlinear_equality_constraints")   +
-    std::max(problem_db.get_sizet("responses.num_scalar_objectives"),
-	     problem_db.get_sizet("responses.num_scalar_calibration_terms"));
+  // scalar-specific response counts
+  size_t num_scalar_primary = std::max
+    ( problem_db.get_sizet("responses.num_scalar_objectives"),
+      std::max ( problem_db.get_sizet("responses.num_scalar_calibration_terms"),
+		 problem_db.get_sizet("responses.num_scalar_responses") )
+      );
+  size_t num_scalar_responses = num_scalar_primary +
+    // secondary counts will always be zero as not exposed in input spec
+    problem_db.get_sizet("responses.num_scalar_nonlinear_inequality_constraints") +
+    problem_db.get_sizet("responses.num_scalar_nonlinear_equality_constraints");
 
-  // field response data types:
-  size_t num_field_resp_fns
-    = problem_db.get_sizet("responses.num_field_responses"),
-  num_field_responses = (num_field_resp_fns) ? num_field_resp_fns :
-    problem_db.get_sizet(
-      "responses.num_field_nonlinear_inequality_constraints") +
-    problem_db.get_sizet(
-      "responses.num_field_nonlinear_equality_constraints")   +
-    std::max(problem_db.get_sizet("responses.num_field_objectives"),
-	     problem_db.get_sizet("responses.num_field_calibration_terms"));
+  // field-specific response counts
+  size_t num_field_primary = std::max
+    ( problem_db.get_sizet("responses.num_field_objectives"),
+      std::max ( problem_db.get_sizet("responses.num_field_calibration_terms"),
+		 problem_db.get_sizet("responses.num_field_responses") )
+      );
+  size_t num_field_responses = num_field_primary +
+    // secondary counts will always be zero as not exposed in input spec
+    problem_db.get_sizet("responses.num_field_nonlinear_inequality_constraints") +
+    problem_db.get_sizet("responses.num_field_nonlinear_equality_constraints");
 
-  // aggregate response data types:
-  size_t num_total_resp_fns
-    = problem_db.get_sizet("responses.num_response_functions"),
-  num_total_responses = (num_total_resp_fns) ? num_total_resp_fns :
+  // parent (aggregate/total) response counts
+  size_t num_total_primary = std::max
+    ( problem_db.get_sizet("responses.num_objective_functions"),
+      std::max( problem_db.get_sizet("responses.num_calibration_terms"),
+		problem_db.get_sizet("responses.num_response_functions") )
+      );
+  size_t num_total_secondary =
     problem_db.get_sizet("responses.num_nonlinear_inequality_constraints") +
-    problem_db.get_sizet("responses.num_nonlinear_equality_constraints")   +
-    std::max(problem_db.get_sizet("responses.num_objective_functions"),
-	     problem_db.get_sizet("responses.num_calibration_terms"));
+    problem_db.get_sizet("responses.num_nonlinear_equality_constraints");
+  size_t num_total_responses = num_total_primary + num_total_secondary;
 
-  // update primary response type based on specification
+  // update primary response type based on user specified type
   if (problem_db.get_sizet("responses.num_objective_functions") > 0) 
     primaryFnType = OBJECTIVE_FNS;
   else if (problem_db.get_sizet("responses.num_calibration_terms") > 0)
     primaryFnType = CALIB_TERMS;
 
+  const StringArray& user_labels = problem_db.get_sa("responses.labels");
+
   if (num_field_responses) {
-    // require scalar spec and enforce total = scalar + field
-    if (num_field_responses + numScalarResponses != num_total_responses) {
-      Cerr << "Error: number of scalar (" << numScalarResponses
-	   << ") and field (" << num_field_responses
-	   << ") response functions must sum to total number ("
-	   << num_total_responses << ") of response functions." << std::endl;
+    // validate required apportionment of total = scalar + field
+    if (num_scalar_primary + num_field_primary != num_total_primary) {
+      Cerr << "Error: number of scalar (" << num_scalar_primary
+	   << ") and field (" << num_field_primary
+	   << ") " << primary_fn_name() << " must sum to total number ("
+	   << num_total_primary << ") of " << primary_fn_name() <<"." << std::endl;
       abort_handler(-1);
     }
+    // TODO: If/when field constraints are allowed, validate apportionment
+    numScalarPrimary = num_scalar_primary;
+    // can't use num_scalar_responses, as constraints are only specified via total
+    numScalarResponses = num_scalar_primary + num_total_secondary;
 
-    // extract the fieldLabels from the functionLabels (one per field group)
-    copy_data_partial(functionLabels, numScalarResponses, num_field_responses,
-		      fieldLabels);
-    // unroll field response groups to create individual function labels
-    fieldRespGroupLengths = problem_db.get_iv("responses.lengths");
-    if (num_field_responses != fieldRespGroupLengths.length()) {
-      Cerr << "Error: For each field response, you must specify " 
-           << "the length of that field.  The number of elements " 
-           << "in the 'lengths' vector must " 
-           << "equal the number of field responses."  << std::endl;
+    priFieldLengths = problem_db.get_iv("responses.lengths");
+    if (num_field_primary != priFieldLengths.length()) {
+      Cerr << "Error: For each field in " << primary_fn_name()
+	   << ", you must specify the length of that field."
+	   << "\n  The number of elements in the 'lengths' vector must "
+           << "equal the number (" << num_field_primary << ") of field "
+	   << primary_fn_name() << "."  << std::endl;
       abort_handler(-1);
     } 
-    build_field_labels();
+    build_field_labels(user_labels);
   } 
-  else if (numScalarResponses) {
-    // validate scalar spec versus total spec
-    if (numScalarResponses != num_total_responses) {
-      Cerr << "Error: number of scalar (" << numScalarResponses
-	   << ") and field (0) response functions must sum to total number ("
-	   << num_total_responses << ") of response functions." << std::endl;
+  else if (num_scalar_responses) {
+    // no fields present, but scalar apportionment given; must agree with total
+    if (num_scalar_primary != num_total_primary) {
+      Cerr << "Error: number of scalar (" << num_scalar_primary
+	   << ") and field (0) " << primary_fn_name()
+	   << " must sum to total number ("
+	   << num_total_primary << ") of " << primary_fn_name() << "."
+	   << std::endl;
       abort_handler(-1);
     }
+    // TODO: If/when field constraints are allowed, validate apportionment
+    numScalarPrimary = num_scalar_primary;
+    // can't use num_scalar_responses, as constraints are only specified via total
+    numScalarResponses = num_scalar_primary + num_total_secondary;
+    functionLabels = user_labels;
   }
   else if (num_total_responses) {
+    // only top-level keywords were specified
     // interpret total spec as scalar spec (backwards compatibility)
+    numScalarPrimary = num_total_primary;
     numScalarResponses = num_total_responses;
+    functionLabels = user_labels;
   }
   else
     Cerr << "Warning: total number of response functions is zero.  This is "
 	 << "admissible in rare cases (e.g., nested overlays)." << std::endl;
   
+  // BMA: In reviewing, this may be wrong for cases with fields or constraints
   if (  simulationVariance.length() != 0 && simulationVariance.length() != 1 && 
         simulationVariance.length() != num_total_responses) {
     Cerr << "Error: simulation_variance must have length equal to 1 or "
          << "the total number of calibration terms." << std::endl;
     abort_handler(-1);
   }
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedResponseDataRep::SharedResponseDataRep(problem_db) "
-       << "called to build body object." << std::endl;
-#endif
 }
 
 
@@ -137,17 +147,14 @@ SharedResponseDataRep::SharedResponseDataRep(const ActiveSet& set):
   responseType(BASE_RESPONSE), // overridden in derived class ctors
   primaryFnType(GENERIC_FNS),
   responsesId("NO_SPECIFICATION"),
-  numScalarResponses(set.request_vector().size())
+  numScalarResponses(set.request_vector().size()),
+  // should we assume they are all primary? seems we have to
+  numScalarPrimary(numScalarResponses)
 {
   // Build a default functionLabels array (currently only used for
   // bestResponse by NPSOLOptimizer's user-defined functions option).
   functionLabels.resize(numScalarResponses);
   build_labels(functionLabels, "f");
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedResponseDataRep::SharedResponseDataRep() called to build "
-       << "empty body object." << std::endl;
-#endif
 }
 
 
@@ -160,12 +167,13 @@ void SharedResponseDataRep::copy_rep(SharedResponseDataRep* srd_rep)
   responsesId           = srd_rep->responsesId;
 
   functionLabels        = srd_rep->functionLabels;
-  fieldLabels           = srd_rep->fieldLabels;
+  priFieldLabels        = srd_rep->priFieldLabels;
 
   numScalarResponses    = srd_rep->numScalarResponses;
-  fieldRespGroupLengths = srd_rep->fieldRespGroupLengths;
+  numScalarPrimary      = srd_rep->numScalarPrimary;
+  priFieldLengths       = srd_rep->priFieldLengths;
 
-  numCoordsPerField     = srd_rep->numCoordsPerField;
+  coordsPerPriField     = srd_rep->coordsPerPriField;
 
   simulationVariance 	= srd_rep->simulationVariance;
 }
@@ -179,17 +187,18 @@ void SharedResponseDataRep::serialize(Archive& ar, const unsigned int version)
   ar & responsesId;
   // TODO: archive unrolled minimal labels if possible
   ar & functionLabels;
-  ar & fieldLabels;
+  ar & priFieldLabels;
   ar & numScalarResponses;
-  ar & fieldRespGroupLengths;
-  ar & numCoordsPerField;
+  ar & numScalarPrimary;
+  ar & priFieldLengths;
+  ar & coordsPerPriField;
 #ifdef SERIALIZE_DEBUG  
   Cout << "Serializing SharedResponseDataRep:\n"
        << responseType << '\n'
        << responsesId << '\n'
        << functionLabels
        << numScalarResponses
-       << fieldRespGroupLengths
+       << priFieldLengths
        << std::endl;
 #endif
 }
@@ -201,25 +210,88 @@ bool SharedResponseDataRep::operator==(const SharedResponseDataRep& other)
 	  primaryFnType == other.primaryFnType &&
 	  responsesId == other.responsesId &&
 	  functionLabels == other.functionLabels &&
-	  fieldLabels == other.fieldLabels &&
+	  priFieldLabels == other.priFieldLabels &&
 	  numScalarResponses == other.numScalarResponses &&
-	  fieldRespGroupLengths == other.fieldRespGroupLengths &&
-	  numCoordsPerField == other.numCoordsPerField);
+	  numScalarPrimary == other.numScalarPrimary &&
+	  priFieldLengths == other.priFieldLengths &&
+	  coordsPerPriField == other.coordsPerPriField);
 }
 
 
-void SharedResponseDataRep::build_field_labels()
+void SharedResponseDataRep::
+build_field_labels(const StringArray& labels_per_group)
 {
-  size_t unroll_fns = numScalarResponses + fieldRespGroupLengths.normOne();
+  size_t num_primary_fields = priFieldLengths.length();
+  size_t num_field_functions = priFieldLengths.normOne();
+  // extract the priFieldLabels from the functionLabels (one per field group)
+  copy_data_partial(labels_per_group, numScalarPrimary, num_primary_fields,
+		    priFieldLabels);
+
+  size_t unroll_fns = numScalarResponses + num_field_functions;
   if (functionLabels.size() != unroll_fns)
     functionLabels.resize(unroll_fns);  // unique label for each QoI
 
-  // append _<field_entry_num> to the base label
-  size_t unrolled_index = numScalarResponses;
-  for (size_t i=0; i<fieldRespGroupLengths.length(); ++i)
-    for (size_t j=0; j<fieldRespGroupLengths[i]; ++j)
-      build_label(functionLabels[unrolled_index++], fieldLabels[i], j+1, "_");
+  size_t unrolled_index = 0;
+  for (size_t i=0; i < numScalarPrimary; ++i, ++unrolled_index)
+    functionLabels[unrolled_index] = labels_per_group[i];
+
+  for (size_t i=0; i<priFieldLengths.length(); ++i)
+    for (size_t j=0; j<priFieldLengths[i]; ++j)
+      build_label(functionLabels[unrolled_index++], priFieldLabels[i], j+1, "_");
+
+  size_t num_scalar_secondary = numScalarResponses - numScalarPrimary;
+  for (size_t i=0; i<num_scalar_secondary; ++i, ++unrolled_index)
+    functionLabels[unrolled_index] =
+      labels_per_group[numScalarPrimary + priFieldLengths.length() + i];
 }
+
+void SharedResponseDataRep::
+resize_field_labels(const StringArray& old_full_labels, size_t old_field_elements)
+{
+  size_t unroll_fns = numScalarResponses + priFieldLengths.normOne();
+  if (functionLabels.size() != unroll_fns)
+    functionLabels.resize(unroll_fns);  // unique label for each QoI
+
+  size_t unrolled_index = 0;
+  for (size_t i=0; i < numScalarPrimary; ++i, ++unrolled_index)
+    functionLabels[unrolled_index] = old_full_labels[i];
+
+  for (size_t i=0; i<priFieldLengths.length(); ++i)
+    for (size_t j=0; j<priFieldLengths[i]; ++j)
+      build_label(functionLabels[unrolled_index++], priFieldLabels[i], j+1, "_");
+
+  size_t num_scalar_secondary = numScalarResponses - numScalarPrimary;
+  for (size_t i=0; i<num_scalar_secondary; ++i, ++unrolled_index)
+    functionLabels[unrolled_index] =
+      old_full_labels[numScalarPrimary + old_field_elements + i];
+}
+
+void SharedResponseDataRep::update_field_labels()
+{
+  size_t unrolled_index = numScalarPrimary;
+  for (size_t i=0; i<priFieldLengths.length(); ++i)
+    for (size_t j=0; j<priFieldLengths[i]; ++j)
+      build_label(functionLabels[unrolled_index++], priFieldLabels[i], j+1, "_");
+}
+
+
+std::string SharedResponseDataRep::primary_fn_name() const
+{
+  switch(primaryFnType) {
+  case OBJECTIVE_FNS:
+    return "objective_functions";
+  case CALIB_TERMS:
+    return "calibration_terms";
+  case GENERIC_FNS:
+    return "response_functions";
+  default:
+    Cerr << "Error: unknown primary function type " << primaryFnType
+	 << " in SharedResponseData." << std::endl;
+      abort_handler(-1);
+  }
+  return "(unknown function type)";
+}
+
 
 /** Deep copies are used when recasting changes the nature of a
     Response set. */
@@ -227,24 +299,12 @@ SharedResponseData SharedResponseData::copy() const
 {
   // the handle class instantiates a new handle and a new body and copies
   // current attributes into the new body
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedResponseData::copy() called to generate a deep copy with no "
-       << "representation sharing.\n";
-  Cout << "  srdRep use_count before = " << srdRep.use_count() << std::endl;
-#endif
-
   SharedResponseData srd; // new handle: srdRep=NULL
   if (srdRep) {
     srd.srdRep.reset(new SharedResponseDataRep());
     srd.srdRep->copy_rep(srdRep.get());
   }
 
-#ifdef REFCOUNT_DEBUG
-  Cout << "  srdRep use_count after  = " << srdRep.use_count() << '\n';
-  Cout << "  new srd use_count after  = " << srd.srdRep.use_count() << std::endl;
-#endif
- 
   return srd;
 }
 
@@ -253,22 +313,15 @@ void SharedResponseData::reshape(size_t num_fns)
 {
   if (num_functions() != num_fns) {
     // separate sharing if needed
-    //if (srdRep->referenceCount > 1) { // shared rep: separate
-#ifdef REFCOUNT_DEBUG
-    Cout << "SharedResponseData::reshape() called.\n"
-	 << "  srdRep use_count before = " << srdRep.use_count() << std::endl;
-#endif
+    //if (srdRep.use_count() > 1) { // shared rep: separate
     boost::shared_ptr<SharedResponseDataRep> old_rep = srdRep;
     srdRep.reset(new SharedResponseDataRep()); // create new srdRep
     srdRep->copy_rep(old_rep.get());           // copy old data to new
-#ifdef REFCOUNT_DEBUG
-    Cout << "  srdRep use_count after  = " << srdRep.use_count() << '\n'
-	 << "  old_rep use_count after = " << old_rep.use_count() << std::endl;
-#endif
     //}
 
     // reshape function labels
     reshape_labels(srdRep->functionLabels, num_fns);
+    // BMA TODO: may need to cache more info to do this, or may not be possible
     // update scalar counts (update of field counts requires addtnl data)
     srdRep->numScalarResponses = num_fns - num_field_functions();
   }
@@ -317,20 +370,22 @@ void SharedResponseData::field_lengths(const IntVector& field_lens)
     srdRep->copy_rep(old_rep.get());            // copy old data to new
     
     // update the field lengths
-    srdRep->fieldRespGroupLengths = field_lens;
+    srdRep->priFieldLengths = field_lens;
 
     // reshape function labels, using updated num_functions()
     srdRep->functionLabels.resize(num_functions());
-    if (field_lens.length() != srdRep->fieldLabels.size()) {
+    if (field_lens.length() != srdRep->priFieldLabels.size()) {
       // can't use existing field labels (could happen in testing); use generic
       build_labels(srdRep->functionLabels, "f");
-      // update the fieldLabels
+      // update the priFieldLabels
       copy_data_partial(srdRep->functionLabels, num_scalar_responses(),
-			num_field_response_groups(), srdRep->fieldLabels);
+			num_field_response_groups(), srdRep->priFieldLabels);
     }
     else {
-      // no change in number of fields; use existing labels for build
-      srdRep->build_field_labels();
+      // no change in number of field groups; use existing labels for build
+      // need to preserve scalar labels, but update field labels
+      srdRep->resize_field_labels(old_rep->functionLabels,
+				  old_rep->priFieldLengths.normOne());
     }
   }
 }
@@ -344,9 +399,9 @@ void SharedResponseData::field_group_labels(const StringArray& field_labels)
 	 << " fields." << std::endl;
     abort_handler(-1);
   }
-  srdRep->fieldLabels = field_labels;
+  srdRep->priFieldLabels = field_labels;
   // rebuild unrolled functionLabels for field values (no size change)
-  srdRep->build_field_labels();
+  srdRep->update_field_labels();
 }
 
 
@@ -374,16 +429,8 @@ bool SharedResponseData::operator==(const SharedResponseData& other)
 template<class Archive>
 void SharedResponseData::serialize(Archive& ar, const unsigned int version)
 {
-#ifdef REFCOUNT_DEBUG
-  Cout << "SRD serializing with pointer " << srdRep.get() << '\n'
-       << "  srdRep use_count before = " << srdRep.use_count() << std::endl;
-#endif
   // load will default construct and load through the pointer
   ar & srdRep;
-#ifdef REFCOUNT_DEBUG
-  Cout << "  srdRep pointer after  = " << srdRep.get() << std::endl;
-  Cout << "  srdRep use_count after  = " << srdRep.use_count() << std::endl;
-#endif
 }
 
 

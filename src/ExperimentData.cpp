@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -9,6 +10,7 @@
 #include "ExperimentData.hpp"
 #include "DataMethod.hpp"
 #include "ProblemDescDB.hpp"
+#include "DakotaVariables.hpp"
 
 namespace Dakota {
 
@@ -55,33 +57,46 @@ ExperimentData(size_t num_experiments, size_t num_config_vars,
   initialize(variance_types, srd);
 }
 
+
+/** Used in Hi2Lo Bayesian experimental design; passed config vars are
+    active, but stored here as inactive. */
 ExperimentData::
-ExperimentData(size_t num_experiments, const SharedResponseData& srd,
-               const RealMatrix& config_vars,
+ExperimentData(size_t num_experiments, 
+	       const SharedVariablesData& svd,
+	       const SharedResponseData& srd,
+               const VariablesArray& config_vars,
                const IntResponseMap& all_responses, short output_level):
   calibrationDataFlag(false), numExperiments(num_experiments),
-  numConfigVars(config_vars.numRows()),
+  numConfigVars(config_vars[0].total_active()),
   covarianceDeterminant(1.0), logCovarianceDeterminant(0.0),
   scalarDataFormat(TABULAR_EXPER_ANNOT), scalarSigmaPerRow(0),
   readSimFieldCoords(false), interpolateFlag(false), outputLevel(output_level)
 {
   simulationSRD = srd.copy();
-  allConfigVars.resize(numExperiments);
+  // BMA TODO: Consider caching the SVD?
+  auto svd_copy = svd.copy();
+  svd_copy.inactive_view(MIXED_STATE);
+  size_and_fill(svd_copy, numExperiments, allConfigVars);
+
   for (size_t i=0; i<numExperiments; ++i) {
-    allConfigVars[i] =
-      Teuchos::getCol(Teuchos::Copy, const_cast<RealMatrix&>(config_vars),
-                      (int) i);
-    if (outputLevel >= DEBUG_OUTPUT)
-      Cout << " allConfigVars i " << allConfigVars[i] << '\n';
+    allConfigVars[i].inactive_from_active(config_vars[i]);
+    if (outputLevel >= DEBUG_OUTPUT) {
+      Cout << "allConfigVars[" << i << "] = \n";
+      allConfigVars[i].write(Cout, INACTIVE_VARS);
+    }
   }
   if (outputLevel >= DEBUG_OUTPUT)
     Cout << "Number of config vars " << numConfigVars << '\n';
 
-  // BMA TODO: This doesn't make an object of type ExperimentResponse!
-  IntRespMCIter resp_it = all_responses.begin();
-  IntRespMCIter resp_end = all_responses.end();
-  for ( ; resp_it != resp_end; ++resp_it)
-     allExperiments.push_back(resp_it->second);
+  SharedResponseData exp_srd = simulationSRD.copy();
+  exp_srd.response_type(EXPERIMENT_RESPONSE);
+  Response exp_resp(exp_srd);
+  for (const auto& int_resp : all_responses) {
+    exp_resp.update(int_resp.second);
+    allExperiments.push_back(exp_resp.copy());
+  }
+
+  update_data_properties();
 }
 
 
@@ -132,7 +147,7 @@ void ExperimentData::initialize(const StringArray& variance_types,
   else
     {
       experimentLengths.sizeUninitialized(1);
-      experimentLengths[0] = srd.num_functions();
+      experimentLengths[0] = srd.num_primary_functions();
       expOffsets.size(1); // init to 0
     }
 }
@@ -154,22 +169,23 @@ void ExperimentData::parse_sigma_types(const StringArray& sigma_types)
   sigma_map["matrix"] = MATRIX_SIGMA;
 
   // expand sigma if 0 or 1 given, without validation
-  size_t num_resp_groups = simulationSRD.num_response_groups();
-  size_t num_scalar = simulationSRD.num_scalar_responses();
-  varianceTypes.resize(num_resp_groups, NO_SIGMA);
+  size_t num_pri_resp_groups = simulationSRD.num_scalar_primary() +
+    simulationSRD.num_field_response_groups();  // omits secondary
+  size_t num_scalar = simulationSRD.num_scalar_primary();
+  varianceTypes.resize(num_pri_resp_groups, NO_SIGMA);
   if (sigma_types.size() == 1) {
     // assign all sigmas to the specified one
     if (sigma_map.find(sigma_types[0]) != sigma_map.end())
-      varianceTypes.assign(num_resp_groups, sigma_map[sigma_types[0]]);
+      varianceTypes.assign(num_pri_resp_groups, sigma_map[sigma_types[0]]);
     else {
       Cerr << "\nError: invalid sigma_type '" << sigma_types[0] 
 	   << "' specified." << std::endl;
       abort_handler(PARSE_ERROR);
     }
   }
-  else if (sigma_types.size() == num_resp_groups) {
+  else if (sigma_types.size() == num_pri_resp_groups) {
     // initialize one sigma type per 
-    for (size_t resp_ind = 0; resp_ind < num_resp_groups; ++resp_ind) {
+    for (size_t resp_ind = 0; resp_ind < num_pri_resp_groups; ++resp_ind) {
       if (sigma_map.find(sigma_types[resp_ind]) != sigma_map.end())
 	varianceTypes[resp_ind] = sigma_map[sigma_types[resp_ind]];
       else {
@@ -214,20 +230,61 @@ void ExperimentData::parse_sigma_types(const StringArray& sigma_types)
 
 }
 
-void ExperimentData::
-add_data(const RealVector& one_configvars, const Response& one_response)
+
+void ExperimentData::update_data_properties()
 {
-  // BMA TODO: This doesn't make an object of type ExperimentResponse!
+  // TODO: incrementally update for new data only
+
+  // store the lengths (number of functions) of each experiment
+  per_exp_length(experimentLengths);
+
+  size_t i, num_exp = allExperiments.size();
+  expOffsets.sizeUninitialized(num_exp);
+  expOffsets(0) = 0;
+  for (i=1; i<num_exp; i++)
+    expOffsets(i) = experimentLengths(i-1) + expOffsets(i-1);
+
+  // Precompute and cache experiment determinants
+  covarianceDeterminant = 1.0;
+  logCovarianceDeterminant = 0.0;
+  for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
+    covarianceDeterminant *= allExperiments[exp_ind].covariance_determinant();
+    logCovarianceDeterminant +=
+      allExperiments[exp_ind].log_covariance_determinant();
+  }
+}
+
+
+void ExperimentData::
+add_data(const SharedVariablesData& svd, const Variables& one_configvars,
+	 const Response& one_response)
+{
+  // The inbound vars have the config vars as active
+
   numExperiments += 1;
   if (outputLevel >= DEBUG_OUTPUT)
     Cout << "numExperiments in add_data " << numExperiments << '\n';
 
-  allConfigVars.push_back(one_configvars);
-  allExperiments.push_back(one_response);
+  // probably store the modified SVD and use throughout
+  auto svd_copy = svd.copy();
+  svd_copy.inactive_view(MIXED_STATE);
+
+  allConfigVars.push_back(Variables(svd_copy));
+  allConfigVars.back().inactive_from_active(one_configvars);
+
+  SharedResponseData exp_srd = one_response.shared_data().copy();
+  exp_srd.response_type(EXPERIMENT_RESPONSE);
+  Response exp_resp(exp_srd);
+  exp_resp.update(one_response);
+  allExperiments.push_back(exp_resp.copy());
+
+  // TODO: incrementally update for new data only
+  update_data_properties();
 }
 
 
-void ExperimentData::load_data(const std::string& context_message)
+void ExperimentData::load_data(const std::string& context_message,
+			       const Variables& vars_with_state_as_config)
 {
   // TODO: complete scalar and field cases
 
@@ -253,10 +310,16 @@ void ExperimentData::load_data(const std::string& context_message)
     exp_resp.write(Cout);
   }
 
-  if (numConfigVars > 0)
-    allConfigVars.resize(numExperiments);
+  if (numConfigVars > 0) {
+    // copy SVD to avoid changing object passed in
+    auto svd = vars_with_state_as_config.shared_data().copy();
+    svd.inactive_view(MIXED_STATE);
+    // make a distinct Variables letter for each config, don't copy
+    // the envelope; okay to share the SVD
+    size_and_fill(svd, numExperiments, allConfigVars);
+  }
 
-  size_t num_scalars = simulationSRD.num_scalar_responses();
+  size_t num_scalars = simulationSRD.num_scalar_primary();
 
   // Count how many fields have each sigma type (for sizing). For
   // field data, if "scalar" or "none" is specified, need to convert
@@ -307,15 +370,12 @@ void ExperimentData::load_data(const std::string& context_message)
       read_config_vars_multifile(config_vars_basepath.string(), numExperiments, 
           numConfigVars, allConfigVars);
     }
-    catch(std::runtime_error & e)
-    {
-      if( numConfigVars > 0 )
-        throw
-          std::runtime_error("Expected to read " +
-                             convert_to_string(numConfigVars) +
-                             " experiment config variables, but required file(s) \"" +
-                             config_vars_basepath.string() +
-                             ".*.config\" not found.");
+    catch(const std::runtime_error& e) {
+      Cerr << "\nError: Cannot read " << convert_to_string(numConfigVars)
+	   << " experiment config variables\nfrom file(s) '"
+	   << config_vars_basepath.string() << ".*.config'; details:\n"
+	   << e.what();
+      abort_handler(IO_ERROR);
     }
   }
 
@@ -333,17 +393,24 @@ void ExperimentData::load_data(const std::string& context_message)
 
     // Need to decide what to do if both scalar_data_file and "experiment.#" files exist - RWH
     if ( (numConfigVars > 0) && scalar_data_file ) {
-      allConfigVars[exp_index].sizeUninitialized(numConfigVars);
-      // TODO: try/catch
       scalar_data_stream >> std::ws;
       if ( scalar_data_stream.eof() ) {
-        Cerr << "\nError: End of file '" << scalarDataFilename
-          << "' reached before reading " 
-          << numExperiments << " sets of values."
-          << std::endl;
-        abort_handler(-1);
+	Cerr << "\nError: End of file '" << scalarDataFilename
+	     << "' reached before reading "
+	     << numExperiments << " sets of values.\n";
+	abort_handler(IO_ERROR);
       }
-      scalar_data_stream >> allConfigVars[exp_index];
+      try {
+	allConfigVars[exp_index].read_tabular(scalar_data_stream, INACTIVE_VARS);
+      }
+      catch (const std::exception& e) {
+	// could catch TabularDataTruncated, but message would be the same
+	Cerr << "\nError: Could not read configuration (state) variable values "
+	     << "for experiment " << exp_index + 1 << "\nfrom file '"
+	     << scalarDataFilename << "'; details:\n" << e.what()
+	     << std::endl;
+	abort_handler(IO_ERROR);
+      }
     }
     // TODO: else validate scalar vs. field configs?
 
@@ -377,30 +444,16 @@ void ExperimentData::load_data(const std::string& context_message)
   if (outputLevel >= DEBUG_OUTPUT) {
     Cout << "Experiment data summary:\n\n";
     for (size_t i=0; i<numExperiments; ++i) {
-      if (numConfigVars > 0)
-	Cout << "  Experiment " << i+1 << " configuration variables:"<< "\n"
-	     << allConfigVars[i];
+      if (numConfigVars > 0) {
+	Cout << "  Experiment " << i+1 << " configuration variables:"<< "\n";
+	allConfigVars[i].write(Cout, INACTIVE_VARS);
+      }
       Cout << "  Experiment " << i+1 << " data values:"<< "\n"
 	   << allExperiments[i].function_values() << '\n';
     }
   }
 
-  // store the lengths (number of functions) of each experiment
-  per_exp_length(experimentLengths);
-  size_t i, num_exp = allExperiments.size();
-  expOffsets.sizeUninitialized(num_exp);
-  expOffsets(0) = 0;
-  for (i=1; i<num_exp; i++) 
-    expOffsets(i) = experimentLengths(i-1) + expOffsets(i-1);
-
-  // Precompute and cache experiment determinants
-  covarianceDeterminant = 1.0;
-  logCovarianceDeterminant = 0.0;
-  for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
-    covarianceDeterminant *= allExperiments[exp_ind].covariance_determinant();
-    logCovarianceDeterminant += 
-      allExperiments[exp_ind].log_covariance_determinant();
-  }
+  update_data_properties();
 
   // Check and warn if extra data exists in scalar_data_stream
   if (scalar_data_file) {
@@ -423,7 +476,7 @@ load_experiment(size_t exp_index, std::ifstream& scalar_data_stream,
 		size_t num_field_sigma_none, Response& exp_resp)
 {
   bool scalar_data_file = !scalarDataFilename.empty();
-  size_t num_scalars = simulationSRD.num_scalar_responses();
+  size_t num_scalars = simulationSRD.num_scalar_primary();
   size_t num_fields = simulationSRD.num_field_response_groups();
   size_t num_resp = num_scalars + num_fields;
 
@@ -500,7 +553,7 @@ load_experiment(size_t exp_index, std::ifstream& scalar_data_stream,
       read_field_values(field_base.string(), exp_index+1, exp_values[i]);
 
       // Optionally allow covariance data
-      if (!varianceTypes.empty())
+      if (!varianceTypes.empty()) {
 	if( varianceTypes[i] ) {
 	  read_covariance(field_base.string(), exp_index+1, working_cov_values);
 	  sigma_scalars[i] = working_cov_values(0,0);
@@ -510,6 +563,7 @@ load_experiment(size_t exp_index, std::ifstream& scalar_data_stream,
 	  sigma_scalars[i] = 1.0;
 	  scalar_map_indices[i] = i;
 	}
+      }
     }
 
   }
@@ -668,12 +722,12 @@ void ExperimentData::read_scalar_sigma(std::ifstream& scalar_data_stream,
 }
 
 size_t ExperimentData::
-num_scalars() const
+num_scalar_primary() const
 {
   if( simulationSRD.is_null() )
     throw std::runtime_error("ExperimentData is incorrectly (or not) initialized.");
 
-  return simulationSRD.num_scalar_responses();
+  return simulationSRD.num_scalar_primary();
 }
 
 size_t ExperimentData::
@@ -692,7 +746,30 @@ size_t ExperimentData::num_config_vars() const
 }
 
 
-const std::vector<RealVector>& ExperimentData::config_vars() const
+/** Skips string vars rather than converting to indices */
+std::vector<RealVector> ExperimentData::config_vars_as_real() const
+{
+  std::vector<RealVector> all_config_vars_real;
+  for (const auto& config_vars : allConfigVars) {
+    size_t cv = config_vars.icv(), div = config_vars.idiv(),
+      drv = config_vars.idrv(), total_config_vars = cv + div + drv;
+
+    RealVector real_config_vars(total_config_vars);
+
+    copy_data_partial(config_vars.inactive_continuous_variables(),
+		      real_config_vars, 0);
+    merge_data_partial(config_vars.inactive_discrete_int_variables(),
+		       real_config_vars, cv);
+    copy_data_partial(config_vars.inactive_discrete_real_variables(),
+		      real_config_vars, cv + div);
+
+    all_config_vars_real.push_back(real_config_vars);
+  }
+  return all_config_vars_real;
+}
+
+
+const std::vector<Variables>& ExperimentData::configuration_variables() const
 {
   return allConfigVars;
 }
@@ -704,7 +781,7 @@ void ExperimentData::per_exp_length(IntVector& per_length) const
   //Cout << "num experiments " << num_experiments();
 
   for (size_t i=0; i<num_experiments(); i++) 
-    per_length(i)= allExperiments[i].function_values().length();
+    per_length(i) = allExperiments[i].shared_data().num_primary_functions();
   //Cout << "per length " << per_length;
 }
 
@@ -735,8 +812,10 @@ const Response& ExperimentData::response(size_t experiment)
 size_t ExperimentData::num_total_exppoints() const
 {
   size_t res_size = 0;
-  for (size_t i=0; i<num_experiments(); i++) 
-    res_size += allExperiments[i].function_values().length();
+  for (size_t i=0; i<num_experiments(); i++) {
+    // this omits constraints:
+    res_size += allExperiments[i].shared_data().num_primary_functions();
+  }
   return res_size;
 }
 
@@ -761,6 +840,42 @@ field_coords_view(size_t response, size_t experiment) const
 {
   return(allExperiments[experiment].field_coords_view(response));
 }
+
+
+void ExperimentData::
+fill_primary_function_labels(StringArray& expanded_labels) const
+{
+  const StringArray& all_sim_labels = simulationSRD.function_labels();
+
+  if (interpolateFlag) {
+    // field lengths may differ between simulation and experiment;
+    // need to renumber the residuals
+    size_t dt_ind = 0;
+    for (size_t i=0; i<num_experiments(); ++i) {
+
+      for (size_t j=0; j<num_scalar_primary(); ++j)
+	expanded_labels[dt_ind++] =
+	  all_sim_labels[j] + '_' + std::to_string(i+1);
+
+      const StringArray& field_labels = simulationSRD.field_group_labels();
+      const IntVector field_lens  = field_lengths(i);
+      for (size_t j=0; j<num_fields(); ++j)
+	for (size_t k=0; k<field_lens[j]; ++k)
+	  expanded_labels[dt_ind++] = field_labels[j] + '_' +
+	    std::to_string(k+1) + '_' + std::to_string(i+1);
+
+    }
+  }
+  else {
+    // simulation and each experiment have same length
+    size_t dt_ind = 0;
+    for (size_t i=0; i<num_experiments(); ++i)
+      for (size_t j=0; j<simulationSRD.num_primary_functions(); ++j)
+	expanded_labels[dt_ind++] =
+	  all_sim_labels[j] + '_' + std::to_string(i+1);
+  }
+}
+
 
 bool ExperimentData::variance_type_active(short variance_type) const
 {
@@ -897,7 +1012,7 @@ void ExperimentData::apply_simulation_error(const RealVector& simulation_error,
 {
   Response exp_response = allExperiments[experiment];
   const RealVector& exp_vals = exp_response.function_values();
-  for (size_t i = 0; i < allExperiments[experiment].num_functions(); i++)
+  for (size_t i = 0; i < allExperiments[experiment].shared_data().num_primary_functions(); i++)
     exp_response.function_value(exp_vals[i] + simulation_error[i], i);
 }
 
@@ -1033,7 +1148,7 @@ form_residuals(const Response& sim_resp, size_t exp_ind,
 
   } else {   
 
-    for (size_t i=0; i<num_scalars(); i++) {
+    for (size_t i=0; i<num_scalar_primary(); i++) {
       exp_residuals[i] = sim_fns[i] - allExperiments[exp_ind].function_value(i);
       // BMA: Looked like gradients and Hessians of the scalars weren't
       // populated, so added:
@@ -1074,7 +1189,7 @@ form_residuals(const Response& sim_resp, size_t exp_ind,
     if (asv & 1) {
       // compute the residuals, i.e. subtract the experiment data values
       // from the (interpolated) simulation values.
-      size_t cntr = num_scalars();
+      size_t cntr = num_scalar_primary();
       for (size_t i=0; i<num_fields(); i++){
 	size_t num_field_fns = field_data_view(i,exp_ind).length();
 	for (size_t j=0; j<num_field_fns; j++, cntr++)
@@ -1091,7 +1206,7 @@ interpolate_simulation_data(const Response &sim_resp, size_t exp_ind,
 			    const ShortArray &total_asv, size_t exp_offset,
 			    Response &interp_resp ) const
 {
-  size_t offset = exp_offset + num_scalars();
+  size_t offset = exp_offset + num_scalar_primary();
   IntVector field_lens = field_lengths(exp_ind);
   for (size_t field_num=0; field_num<num_fields(); field_num++){ 
     RealMatrix exp_coords = field_coords_view(field_num,exp_ind);
@@ -1132,7 +1247,7 @@ determine_active_request(const Response& resid_resp) const
     total_asv[exp_ind] = 0;
     if (interogate_field_data) {
 
-      size_t num_scalar = num_scalars();
+      size_t num_scalar = num_scalar_primary();
       for (size_t sc_ind = 0; sc_ind < num_scalar; ++sc_ind)
 	total_asv[exp_ind] |= asv[calib_term_ind + sc_ind];
 
@@ -1275,7 +1390,7 @@ recover_model(size_t num_pri_fns, RealVector& best_fns) const
     abort_handler(-1);
   }
   const Response& experiment0 = allExperiments[0];
-  if (num_pri_fns != experiment0.num_functions()) {
+  if (num_pri_fns != experiment0.shared_data().num_primary_functions()) {
     Cerr << "Error: incompatible sizes in recover_model()\n";
     abort_handler(-1);
   }
@@ -1690,14 +1805,14 @@ residuals_per_multiplier(unsigned short multiplier_mode) const
   case CALIBRATE_PER_EXPER: {
     resid_per_mult.resize(numExperiments, 0);
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
-      size_t fns_this_exp = allExperiments[exp_ind].num_functions();
+      size_t fns_this_exp = allExperiments[exp_ind].shared_data().num_primary_functions();
       resid_per_mult[exp_ind] = fns_this_exp;
     }
     break;
   }
 
   case CALIBRATE_PER_RESP: {
-    size_t num_scalar = simulationSRD.num_scalar_responses();
+    size_t num_scalar = simulationSRD.num_scalar_primary();
     size_t num_fields = simulationSRD.num_field_response_groups();
     resid_per_mult.resize(num_scalar + num_fields, 0);
     // iterate scalar responses, then fields
@@ -1714,7 +1829,7 @@ residuals_per_multiplier(unsigned short multiplier_mode) const
   }
 
   case CALIBRATE_BOTH: {
-    size_t num_scalar = simulationSRD.num_scalar_responses();
+    size_t num_scalar = simulationSRD.num_scalar_primary();
     size_t num_fields = simulationSRD.num_field_response_groups();
     size_t multiplier_offset = 0;
     resid_per_mult.resize(numExperiments*simulationSRD.num_response_groups(), 0);
@@ -1762,7 +1877,7 @@ void ExperimentData::generate_multipliers(const RealVector& multipliers,
     assert(multipliers.length() == numExperiments);
     size_t resid_offset = 0;
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
-      size_t fns_this_exp = allExperiments[exp_ind].num_functions();
+      size_t fns_this_exp = allExperiments[exp_ind].shared_data().num_primary_functions();
       for (size_t fn_ind = 0; fn_ind < fns_this_exp; ++fn_ind)
         expanded_multipliers[resid_offset++] = multipliers[exp_ind];
     }
@@ -1771,7 +1886,7 @@ void ExperimentData::generate_multipliers(const RealVector& multipliers,
 
   case CALIBRATE_PER_RESP: {
     assert(multipliers.length() == simulationSRD.num_response_groups());
-    size_t num_scalar = simulationSRD.num_scalar_responses();
+    size_t num_scalar = simulationSRD.num_scalar_primary();
     size_t num_fields = simulationSRD.num_field_response_groups();
     size_t resid_offset = 0;
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
@@ -1799,7 +1914,7 @@ void ExperimentData::generate_multipliers(const RealVector& multipliers,
   case CALIBRATE_BOTH: {
     assert(multipliers.length() == 
            numExperiments*simulationSRD.num_response_groups());
-    size_t num_scalar = simulationSRD.num_scalar_responses();
+    size_t num_scalar = simulationSRD.num_scalar_primary();
     size_t num_fields = simulationSRD.num_field_response_groups();
     size_t resid_offset = 0, multiplier_offset = 0;
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
@@ -1854,7 +1969,7 @@ void ExperimentData::resid2mult_map(unsigned short multiplier_mode,
   case CALIBRATE_PER_EXPER: {
     size_t resid_offset = 0;
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
-      size_t fns_this_exp = allExperiments[exp_ind].num_functions();
+      size_t fns_this_exp = allExperiments[exp_ind].shared_data().num_primary_functions();
       for (size_t fn_ind = 0; fn_ind < fns_this_exp; ++fn_ind)
         resid2mult_indices[resid_offset++] = exp_ind;
     }
@@ -1862,7 +1977,7 @@ void ExperimentData::resid2mult_map(unsigned short multiplier_mode,
   }
 
   case CALIBRATE_PER_RESP: {
-    size_t num_scalar = simulationSRD.num_scalar_responses();
+    size_t num_scalar = simulationSRD.num_scalar_primary();
     size_t num_fields = simulationSRD.num_field_response_groups();
     size_t resid_offset = 0;
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
@@ -1888,7 +2003,7 @@ void ExperimentData::resid2mult_map(unsigned short multiplier_mode,
   }
 
   case CALIBRATE_BOTH: {
-    size_t num_scalar = simulationSRD.num_scalar_responses();
+    size_t num_scalar = simulationSRD.num_scalar_primary();
     size_t num_fields = simulationSRD.num_field_response_groups();
     size_t resid_offset = 0, multiplier_offset = 0;
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) {
@@ -1940,27 +2055,27 @@ hyperparam_labels(unsigned short multiplier_mode) const
   case CALIBRATE_PER_EXPER:
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind) 
       hp_labels.
-	push_back(cm_prefix + "Exp" + boost::lexical_cast<String>(exp_ind+1));
+	push_back(cm_prefix + "Exp" + std::to_string(exp_ind+1));
     break;
 	
     // BMA TODO: Could use response labels here...
   case CALIBRATE_PER_RESP: {
-    size_t num_resp = simulationSRD.num_scalar_responses() + 
+    size_t num_resp = simulationSRD.num_scalar_primary() + 
       simulationSRD.num_field_response_groups();
     for (size_t resp_ind=0; resp_ind < num_resp; ++resp_ind)
       hp_labels.
-	push_back(cm_prefix + "Resp" + boost::lexical_cast<String>(resp_ind+1));
+	push_back(cm_prefix + "Resp" + std::to_string(resp_ind+1));
     break;
   }
 
   case CALIBRATE_BOTH: {
-    size_t num_resp = simulationSRD.num_scalar_responses() + 
+    size_t num_resp = simulationSRD.num_scalar_primary() + 
       simulationSRD.num_field_response_groups();
     for (size_t exp_ind=0; exp_ind < numExperiments; ++exp_ind)
       for (size_t resp_ind=0; resp_ind < num_resp; ++resp_ind)
 	hp_labels.
-	  push_back(cm_prefix + "Exp" + boost::lexical_cast<String>(exp_ind+1) +
-		    "Resp" + boost::lexical_cast<String>(resp_ind+1));
+	  push_back(cm_prefix + "Exp" + std::to_string(exp_ind+1) +
+		    "Resp" + std::to_string(resp_ind+1));
     break;
   }
 

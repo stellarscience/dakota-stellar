@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -74,10 +75,14 @@ public:
 
   /// return the request vector
   const ShortArray& request_vector() const;
+  /// return the request vector
+  ShortArray& request_vector();
   /// set the request vector
   void request_vector(const ShortArray& rv);
   /// set all request vector values
   void request_values(const short rv_val);
+  /// set all request vector values in a range
+  void request_values(const short rv_val, size_t start, size_t end);
   /// get the value of an entry in the request vector
   short request_value(const size_t index) const;
   /// set the value of an entry in the request vector
@@ -85,6 +90,8 @@ public:
 
   /// return the derivative variables vector
   const SizetArray& derivative_vector() const;
+  /// return the derivative variables vector
+  SizetArray& derivative_vector();
   /// set the derivative variables vector from a SizetArray
   void derivative_vector(const SizetArray& dvv);
   /// set the derivative variables vector from a SizetMultiArrayConstView
@@ -190,12 +197,24 @@ inline const ShortArray& ActiveSet::request_vector() const
 { return requestVector; }
 
 
+inline ShortArray& ActiveSet::request_vector()
+{ return requestVector; }
+
+
 inline void ActiveSet::request_vector(const ShortArray& rv)
 { requestVector = rv; }
 
 
 inline void ActiveSet::request_values(const short rv_val)
 { requestVector.assign(requestVector.size(), rv_val); }
+
+
+inline void ActiveSet::
+request_values(const short rv_val, size_t start, size_t end)
+{
+  for (size_t i=start; i<end; ++i)
+    requestVector[i] = rv_val;
+}
 
 
 inline short ActiveSet::request_value(const size_t index) const
@@ -207,6 +226,10 @@ inline void ActiveSet::request_value(const short rv_val, const size_t index)
 
 
 inline const SizetArray& ActiveSet::derivative_vector() const
+{ return derivVarsVector; }
+
+
+inline SizetArray& ActiveSet::derivative_vector()
 { return derivVarsVector; }
 
 

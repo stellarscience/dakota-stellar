@@ -442,6 +442,8 @@ set_nl_file(std::string fname)
 void
 AmplApplication_Core::write_sol_file(PointSet ps, std::stringstream &msg)
 {
+  using utilib::operator<<;
+
    amplflag = 1;
 
    size_t size = ps->size(this);

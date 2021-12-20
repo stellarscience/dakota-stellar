@@ -129,7 +129,7 @@ protected:
   Real gaussStdDev;
 
   // normal distribution instance from Boost math
-  //normal_dist* normDist;
+  //std::unique_ptr<normal_dist> normDist;
 };
 
 

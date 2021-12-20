@@ -101,6 +101,8 @@ Application_NonD_Objective::cb_print(std::ostream& os)
 void
 Application_NonD_Objective::cb_initialize(TiXmlElement* elt)
 {
+  using utilib::operator<<;
+
    //
    // Look for nondeterministic flags...
    //

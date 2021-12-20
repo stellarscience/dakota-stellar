@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -19,7 +20,6 @@
 #include "dakota_system_defs.hpp"
 #include "DakotaInterface.hpp"
 #include "DakotaApproximation.hpp"
-#include <boost/lexical_cast.hpp>
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -40,6 +40,15 @@ SurrBasedGlobalMinimizer(ProblemDescDB& problem_db, Model& model):
     Cerr << "Error: SurrBasedGlobalMinimizer::iteratedModel must be a "
 	 << "surrogate model." << std::endl;
     abort_handler(-1);
+  }
+
+  if (iteratedModel.truth_model().is_null()) {
+    Cerr << "Method surrogate_based_global requires a surrogate model that "
+            "has an underlying truth model via actual_model_pointer or indirectly "
+            "through dace_method_pointer. To optimize on build-once surrogates, "
+            "e.g., from imported training data, apply a normal global optimizer "
+            "like the moga or soga method to the surrogate model directly.\n";
+    abort_handler(METHOD_ERROR);
   }
 
   // historical default convergence tolerance
@@ -171,7 +180,7 @@ void SurrBasedGlobalMinimizer::core_run()
     // Variable/response results were generated using the current approximate
     // model.  For appending to the current approximate model, we must evaluate
     // the variable results with the truth model.
-    iteratedModel.component_parallel_mode(TRUTH_MODEL);
+    iteratedModel.component_parallel_mode(TRUTH_MODEL_MODE);
     IntResponseMap truth_resp_results;
     for (i=0; i<num_results; i++) {
       // set the current values of the active variables in the truth model
@@ -200,10 +209,9 @@ void SurrBasedGlobalMinimizer::core_run()
       // In here we want to write the truth values into a simple tab delimited
       // file so that we can easily compare them with the surrogate values of
       // the points returned by the iterator.
-      std::string ofname("finaldatatruth");
-      ofname += boost::lexical_cast<std::string>(globalIterCount);
-      ofname += ".dat";
-      std::ofstream ofile(ofname.c_str());
+      std::string ofname("finaldatatruth" + std::to_string(globalIterCount) +
+			 ".dat");
+      std::ofstream ofile(ofname);
       ofile.precision(12);
       IntRespMCIter it = truth_resp_results.begin();
       for (i=0; i<num_results; ++i, ++it) {

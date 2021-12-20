@@ -74,7 +74,7 @@ if( ${CMAKE_VERSION} VERSION_GREATER 2.8.12 )
       $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include> )
 endif()
 
-set(libs ${Boost_LIBRARIES})
+set(libs)
 if(NOT MSVC)
   list(APPEND libs m)
 endif()

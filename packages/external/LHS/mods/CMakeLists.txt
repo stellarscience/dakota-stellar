@@ -9,7 +9,8 @@ set(LHS_MODS_SRC
 )
 ## Set the convenience library name for the primary LHS modules.
 add_library(lhs_mods ${LHS_MODS_SRC})
-set_property(TARGET lhs_mods PROPERTY COMPILE_FLAGS "${FIXED_FLAG} ${FPP_FLAG}")
+set_target_properties(lhs_mods PROPERTIES Fortran_FORMAT FIXED)
+set_property(TARGET lhs_mods PROPERTY COMPILE_FLAGS "${FPP_FLAG}")
 if(LHS_EXPORT_DEC)
   set_property(TARGET lhs_mods APPEND PROPERTY COMPILE_DEFINITIONS ${LHS_EXPORT_DEC})
 endif()

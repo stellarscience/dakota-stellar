@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -201,9 +202,9 @@ derived_parse_inputs(const std::string& dakota_input_file,
 
 
 void NIDRProblemDescDB::derived_broadcast()
-{ 
-  check_variables(&dataVariablesList); 
-  check_responses(&dataResponsesList); 
+{
+  check_variables(&dataVariablesList);
+  check_responses(&dataResponsesList);
 }
 // check_variables() invokes check_variables_node(), either directly or after
 // some manip of interval/histogram/correlation data.  check_variables_node
@@ -465,12 +466,12 @@ struct Var_Info {
   VarLabel DAUIv[DAUIVar_Nkinds], DAUSv[DAUSVar_Nkinds], DAURv[DAURVar_Nkinds];
   VarLabel DEUIv[DEUIVar_Nkinds], DEUSv[DEUSVar_Nkinds], DEURv[DEURVar_Nkinds];
   IntArray   *nddsi, *nddss, *nddsr, *nCI, *nDI, *nhbp,
-             *nhpip, *nhpsp, *nhprp, 
+             *nhpip, *nhpsp, *nhprp,
              *ndusi, *nduss, *ndusr,
              *ndssi, *ndsss, *ndssr;
-             
+
   RealVector *ddsr, *CIlb, *CIub, *CIp, *DIp, *DSIp, *DSSp, *DSRp, *dusr,
-             *hba, *hbo, *hbc, 
+             *hba, *hbo, *hbc,
              *hpic, *hpsc, *hpra, *hprc,
              *ucm, *dssr;
   IntVector  *ddsi, *DIlb, *DIub, *hpia, *dusi, *dssi, *ddsia, *ddssa, *ddsra;
@@ -583,13 +584,9 @@ iface_ilit(const char *keyname, Values *val, void **g, void *v)
 }
 
 void NIDRProblemDescDB::
-iface_pint(const char *keyname, Values *val, void **g, void *v)
+iface_int(const char *keyname, Values *val, void **g, void *v)
 {
   int n = *val->i;
-#ifdef REDUNDANT_INT_CHECKS
-  if (n <= 0) /* now handled by INTEGER > 0 in the .nspec file */
-    botch("%s must be positive", keyname);
-#endif
   (*(Iface_Info**)g)->di->**(int DataInterfaceRep::**)v = n;
 }
 
@@ -608,7 +605,7 @@ iface_start(const char *keyname, Values *val, void **g, void *v)
   Botch:		botch("new failure in iface_start");
   if (!(ii->di_handle = new DataInterface))
     goto Botch;
-  ii->di = ii->di_handle->dataIfaceRep;
+  ii->di = ii->di_handle->dataIfaceRep.get();
   *g = (void*)ii;
 }
 
@@ -624,7 +621,7 @@ iface_true(const char *keyname, Values *val, void **g, void *v)
 extern const char** arg_list_adjust(const char **, void **);
 
 /*
- *  not_executable(const char *driver_name) checks whether driver_name is an 
+ *  not_executable(const char *driver_name) checks whether driver_name is an
  *  executable file appearing somewhere in $PATH and returns 0 if so,
  *  1 if not found, 2 if found but not executable.
  */
@@ -846,7 +843,7 @@ iface_stop(const char *keyname, Values *val, void **g, void *v)
   }
 
   // validate each of the analysis_drivers
-  if ( di->interfaceType == SYSTEM_INTERFACE || 
+  if ( di->interfaceType == SYSTEM_INTERFACE ||
        di->interfaceType == FORK_INTERFACE )
     for(size_t i = 0; i < nd; ++i) {
       // trim any leading whitespace from the driver, in place
@@ -1138,28 +1135,6 @@ method_order(const char *keyname, Values *val, void **g, void *v)
 }
 
 void NIDRProblemDescDB::
-method_nnint(const char *keyname, Values *val, void **g, void *v)
-{
-  int n = *val->i;
-#ifdef REDUNDANT_INT_CHECKS
-  if (n < 0) /* now handled by INTEGER >= 0 in the .nspec file */
-    botch("%s must be non-negative", keyname);
-#endif
-  (*(Meth_Info**)g)->dme->**(int DataMethodRep::**)v = n;
-}
-
-void NIDRProblemDescDB::
-method_sizet(const char *keyname, Values *val, void **g, void *v)
-{
-  int n = *val->i; // test value as int, prior to storage as size_t
-#ifdef REDUNDANT_INT_CHECKS
-  if (n < 0) /* now handled by INTEGER >= 0 in the .nspec file */
-    botch("%s must be non-negative", keyname);
-#endif
-  (*(Meth_Info**)g)->dme->**(size_t DataMethodRep::**)v = n;
-}
-
-void NIDRProblemDescDB::
 method_num_resplevs(const char *keyname, Values *val, void **g, void *v)
 {
   DataMethodRep *dm = (*(Meth_Info**)g)->dme;
@@ -1191,23 +1166,12 @@ method_num_resplevs(const char *keyname, Values *val, void **g, void *v)
 }
 
 void NIDRProblemDescDB::
-method_pint(const char *keyname, Values *val, void **g, void *v)
-{
-  int n = *val->i;
-#ifdef REDUNDANT_INT_CHECKS
-  if (n <= 0) /* now handled by INTEGER > 0 in the .nspec file */
-    botch("%s must be positive", keyname);
-#endif
-  (*(Meth_Info**)g)->dme->**(int DataMethodRep::**)v = n;
-}
-
-void NIDRProblemDescDB::
-method_pintz(const char *keyname, Values *val, void **g, void *v)
+method_sizet(const char *keyname, Values *val, void **g, void *v)
 {
   int n = *val->i; // test value as int, prior to storage as size_t
 #ifdef REDUNDANT_INT_CHECKS
-  if (n <= 0) /* now handled by INTEGER > 0 in the .nspec file */
-    botch("%s must be positive", keyname);
+  if (n < 0) /* now handled by INTEGER >= 0 in the .nspec file */
+    botch("%s must be non-negative", keyname);
 #endif
   (*(Meth_Info**)g)->dme->**(size_t DataMethodRep::**)v = n;
 }
@@ -1319,7 +1283,7 @@ method_start(const char *keyname, Values *val, void **g, void *v)
   Botch:		botch("new failure in method_start");
   if (!(mi->dme0 = new DataMethod))
     goto Botch;
-  mi->dme = mi->dme0->dataMethodRep;
+  mi->dme = mi->dme0->dataMethodRep.get();
   *g = (void*)mi;
 }
 
@@ -1351,7 +1315,8 @@ scale_chk(StringArray &ST, RealVector &S, const char *what, const char **univ)
       what, what);
 }
 
-static const char *aln_scaletypes[] = { "auto", "log", "none", 0 };
+// scale_types beyond value to allow in some contexts
+static const char *auto_log_scaletypes[] = { "auto", "log", "none", 0 };
 
 void NIDRProblemDescDB::
 method_stop(const char *keyname, Values *val, void **g, void *v)
@@ -1453,17 +1418,6 @@ model_int(const char *keyname, Values *val, void **g, void *v)
 }
 
 void NIDRProblemDescDB::
-model_intsetm1(const char *keyname, Values *val, void **g, void *v)
-{
-  IntSet *is = &((*(Mod_Info**)g)->dmo->**(IntSet DataModelRep::**)v);
-  int *z = val->i;
-  size_t i, n = val->n;
-
-  for(i = 0; i < n; i++)
-    is->insert(z[i] - 1); // model converts ids -> indices
-}
-
-void NIDRProblemDescDB::
 model_lit(const char *keyname, Values *val, void **g, void *v)
 {
   (*(Mod_Info**)g)->dmo->*((Model_mp_lit*)v)->sp = ((Model_mp_lit*)v)->lit;
@@ -1476,33 +1430,44 @@ model_order(const char *keyname, Values *val, void **g, void *v)
 }
 
 void NIDRProblemDescDB::
-model_pint(const char *keyname, Values *val, void **g, void *v)
-{
-  int n = *val->i;
-#ifdef REDUNDANT_INT_CHECKS
-  if (n <= 0) /* now handled by INTEGER > 0 in the .nspec file */
-    botch("%s must be positive", keyname);
-#endif
-  (*(Mod_Info**)g)->dmo->**(int DataModelRep::**)v = n;
-}
-
-void NIDRProblemDescDB::
 model_type(const char *keyname, Values *val, void **g, void *v)
 {
   (*(Mod_Info**)g)->dmo->*((Model_mp_type*)v)->sp = ((Model_mp_type*)v)->type;
 }
 
 void NIDRProblemDescDB::
+model_ushint(const char *keyname, Values *val, void **g, void *v)
+{
+  (*(Mod_Info**)g)->dmo->**(unsigned short DataModelRep::**)v = *val->i;
+}
+
+void NIDRProblemDescDB::
+model_usharray(const char *keyname, Values *val, void **g, void *v)
+{
+  UShortArray *usa
+    = &((*(Mod_Info**)g)->dmo->**(UShortArray DataModelRep::**)v);
+  int *z = val->i;
+  size_t i, n = val->n;
+
+  usa->resize(n);
+  for (i=0; i<n; ++i)
+    if (z[i] >= 0)
+      (*usa)[i] = z[i];
+    else
+      botch("%s must have non-negative values", keyname);
+}
+
+void NIDRProblemDescDB::
 model_utype(const char *keyname, Values *val, void **g, void *v)
 {
-  (*(Mod_Info**)g)->dmo->*((Model_mp_utype*)v)->sp = 
+  (*(Mod_Info**)g)->dmo->*((Model_mp_utype*)v)->sp =
     ((Model_mp_utype*)v)->utype;
 }
 
 void NIDRProblemDescDB::
 model_augment_utype(const char *keyname, Values *val, void **g, void *v)
 {
-  (*(Mod_Info**)g)->dmo->*((Model_mp_utype*)v)->sp |= 
+  (*(Mod_Info**)g)->dmo->*((Model_mp_utype*)v)->sp |=
     ((Model_mp_utype*)v)->utype;
 }
 
@@ -1524,7 +1489,23 @@ model_sizet(const char *keyname, Values *val, void **g, void *v)
   (*(Mod_Info**)g)->dmo->**(size_t DataModelRep::**)v = n;
 }
 
-    
+void NIDRProblemDescDB::
+model_id_to_index_set(const char *keyname, Values *val, void **g, void *v)
+{
+  SizetSet *ss = &((*(Mod_Info**)g)->dmo->**(SizetSet DataModelRep::**)v);
+  int *z = val->i; // extract as int ptr, prior to storage as SizetSet
+  size_t i, n = val->n, s;
+
+  for(i = 0; i < n; i++) {
+    if (z[i] > 0) {
+      s = z[i] - 1; // model converts ids -> indices
+      ss->insert(s);
+    }
+    else
+      botch("%s must be positive", keyname);      
+  }
+}
+
 void NIDRProblemDescDB::
 model_start(const char *keyname, Values *val, void **g, void *v)
 {
@@ -1535,7 +1516,7 @@ model_start(const char *keyname, Values *val, void **g, void *v)
   Botch:		botch("new failure in model_start");
   if (!(mi->dmo0 = new DataModel))
     goto Botch;
-  dm = mi->dmo = mi->dmo0->dataModelRep;
+  dm = mi->dmo = mi->dmo0->dataModelRep.get();
   *g = (void*)mi;
 }
 
@@ -1554,7 +1535,7 @@ model_str(const char *keyname, Values *val, void **g, void *v)
   (*(Mod_Info**)g)->dmo->**(String DataModelRep::**)v = *val->s;
 }
 
-   
+
 void NIDRProblemDescDB::
 model_strL(const char *keyname, Values *val, void **g, void *v)
 {
@@ -1657,7 +1638,7 @@ resp_start(const char *keyname, Values *val, void **g, void *v)
   Botch:		botch("new failure in resp_start");
   if (!(ri->dr0 = new DataResponses))
     goto Botch;
-  ri->dr = ri->dr0->dataRespRep;
+  ri->dr = ri->dr0->dataRespRep.get();
   *g = (void*)ri;
 }
 
@@ -1712,15 +1693,15 @@ void NIDRProblemDescDB::
 resp_stop(const char *keyname, Values *val, void **g, void *v)
 {
   size_t k, n;
-  static const char *osc[] = { "log", "none", 0 };
+  static const char *log_scaletypes[] = { "log", 0 };
   Resp_Info *ri = *(Resp_Info**)g;
   DataResponsesRep *dr = ri->dr;
   scale_chk(dr->primaryRespFnScaleTypes, dr->primaryRespFnScales,
-	    dr->numLeastSqTerms ? "least_squares_term" : "objective_function", osc);
+	    dr->numLeastSqTerms ? "least_squares_term" : "objective_function", log_scaletypes);
   scale_chk(dr->nonlinearIneqScaleTypes, dr->nonlinearIneqScales,
-	    "nonlinear_inequality", aln_scaletypes);
+	    "nonlinear_inequality", auto_log_scaletypes);
   scale_chk(dr->nonlinearEqScaleTypes, dr->nonlinearEqScales,
-	    "nonlinear_equality", aln_scaletypes);
+	    "nonlinear_equality", auto_log_scaletypes);
   // The following check was relevant prior to refactoring the way transformations
   // are applied (now in a layered manner)
   // if ( dr->primaryRespFnWeights.length() > 0 && dr->varianceType.size() > 0 ) {
@@ -1748,10 +1729,10 @@ check_descriptors_for_repeats(const StringArray& labels) {
   std::copy(labels.begin(), labels.end(), sorted.begin());
   // error if descriptors are repeated
   std::sort(sorted.begin(), sorted.end());
-  StringArray::iterator sorted_i = 
+  StringArray::iterator sorted_i =
     std::adjacent_find(sorted.begin(), sorted.end());
   if(sorted_i != sorted.end())
-    Squawk("Repeated descriptors (\"%s\") are not permitted",sorted_i->c_str()); 
+    Squawk("Repeated descriptors (\"%s\") are not permitted",sorted_i->c_str());
 }
 
 void NIDRProblemDescDB::
@@ -1793,10 +1774,10 @@ check_descriptors_for_repeats(const StringArray &cd_labels,
   std::copy(dseu_labels.begin(), dseu_labels.end(), std::back_inserter(sorted));
   std::copy(dreu_labels.begin(), dreu_labels.end(), std::back_inserter(sorted));
   std::sort(sorted.begin(), sorted.end());
-  StringArray::iterator sorted_i = 
+  StringArray::iterator sorted_i =
     std::adjacent_find(sorted.begin(), sorted.end());
   if(sorted_i != sorted.end())
-    Squawk("Repeated descriptors (\"%s\") are not permitted",sorted_i->c_str()); 
+    Squawk("Repeated descriptors (\"%s\") are not permitted",sorted_i->c_str());
 }
 
 
@@ -1809,9 +1790,9 @@ check_responses(std::list<DataResponses>* drl)
   // explicitly set descriptors.
   std::list<DataResponses>::iterator It = drl->begin(), Ite = drl->end();
   for(; It != Ite; ++It) {
-    const DataResponsesRep* drr = It->data_rep();
-    check_descriptor_format(drr->responseLabels);
-    check_descriptors_for_repeats(drr->responseLabels);
+    const DataResponsesRep& drr = *It->data_rep();
+    check_descriptor_format(drr.responseLabels);
+    check_descriptors_for_repeats(drr.responseLabels);
   }
 }
 
@@ -1847,10 +1828,11 @@ make_response_defaults(std::list<DataResponses>* drl)
     Schk(nonlinear_inequality_upper_bounds,numNonlinearIneqConstraints,nonlinearIneqUpperBnds)
   };
   static RespDVec_chk RespVec_chk_Scale[] = {// Scales:  length must be right
-    Schk(least_squares_term_scales,numLeastSqTerms,primaryRespFnScales),
+    // no longer checking LSQ or Obj scales due to fields
+    //Schk(least_squares_term_scales,numLeastSqTerms,primaryRespFnScales),
     Schk(nonlinear_equality_scales,numNonlinearEqConstraints,nonlinearEqScales),
-    Schk(nonlinear_inequality_scales,numNonlinearIneqConstraints,nonlinearIneqScales),
-    Schk(objective_function_scales,numObjectiveFunctions,primaryRespFnScales)
+    Schk(nonlinear_inequality_scales,numNonlinearIneqConstraints,nonlinearIneqScales) //,
+    //Schk(objective_function_scales,numObjectiveFunctions,primaryRespFnScales)
   };
 #undef Schk
 #define Numberof(x) sizeof(x)/sizeof(x[0])
@@ -1859,7 +1841,7 @@ make_response_defaults(std::list<DataResponses>* drl)
   std::list<DataResponses>::iterator It = drl->begin(), Ite = drl->end();
   for(; It != Ite; It++) {
 
-    DataResponsesRep *dr = It->dataRespRep;
+    DataResponsesRep *dr = It->dataRespRep.get();
 
     for(sc = Str_chk, i = 0; i < Numberof(Str_chk); ++sc, ++i)
       if ((n1 = dr->*sc->n) && (n = (dr->*sc->sa).size()) > 0
@@ -2019,7 +2001,7 @@ env_int(const char *keyname, Values *val, void **g, void *v)
 void NIDRProblemDescDB::
 env_start(const char *keyname, Values *val, void **g, void *v)
 {
-  *g = (void*)pDDBInstance->environmentSpec.dataEnvRep;
+  *g = (void*)pDDBInstance->environmentSpec.dataEnvRep.get();
 }
 
 void NIDRProblemDescDB::
@@ -2032,7 +2014,7 @@ env_str(const char *keyname, Values *val, void **g, void *v)
 void NIDRProblemDescDB::
 env_utype(const char *keyname, Values *val, void **g, void *v)
 {
-  (*(DataEnvironmentRep**)g)->*((Env_mp_utype*)v)->sp = 
+  (*(DataEnvironmentRep**)g)->*((Env_mp_utype*)v)->sp =
     ((Env_mp_utype*)v)->utype;
 }
 
@@ -2040,7 +2022,7 @@ env_utype(const char *keyname, Values *val, void **g, void *v)
 void NIDRProblemDescDB::
 env_augment_utype(const char *keyname, Values *val, void **g, void *v)
 {
-  (*(DataEnvironmentRep**)g)->*((Env_mp_utype*)v)->sp |= 
+  (*(DataEnvironmentRep**)g)->*((Env_mp_utype*)v)->sp |=
     ((Env_mp_utype*)v)->utype;
 }
 
@@ -2280,7 +2262,7 @@ var_ivec(const char *keyname, Values *val, void **g, void *v)
 // }
 
 void NIDRProblemDescDB::
-var_pintz(const char *keyname, Values *val, void **g, void *v)
+var_sizet(const char *keyname, Values *val, void **g, void *v)
 {
   int n = *val->i; // test value as int, prior to storage as size_t
 #ifdef REDUNDANT_INT_CHECKS
@@ -2306,7 +2288,7 @@ var_start(const char *keyname, Values *val, void **g, void *v)
   memset(vi, 0, sizeof(Var_Info));
   if (!(vi->dv_handle = new DataVariables))
     goto Botch;
-  vi->dv = vi->dv_handle->dataVarsRep;
+  vi->dv = vi->dv_handle->dataVarsRep.get();
   *g = (void*)vi;
 }
 
@@ -2438,8 +2420,10 @@ static void Vgen_ContinuousDes(DataVariablesRep *dv, size_t offset)
     Set_rv(U, dbl_inf, n);
   if (V->length() == 0) {
     V->sizeUninitialized(n);
-    for(i = 0; i < n; i++) { // init to 0, repairing to bounds if needed
-      if      ((*L)[i] > 0.) (*V)[i] = (*L)[i];
+    for(i = 0; i < n; i++) { // init to mean or 0, repairing to bounds if needed
+      if ( -dbl_inf < (*L)[i] && (*U)[i] < dbl_inf )
+	(*V)[i] = ( (*L)[i] + (*U)[i] ) / 2.0;
+      else if ((*L)[i] > 0.) (*V)[i] = (*L)[i];
       else if ((*U)[i] < 0.) (*V)[i] = (*U)[i];
       else                   (*V)[i] = 0;
     }
@@ -2460,8 +2444,12 @@ static void Vgen_DiscreteDesRange(DataVariablesRep *dv, size_t offset)
     Set_iv(U, INT_MAX, n);
   if (V->length() == 0) {
     V->sizeUninitialized(n);
-    for(i = 0; i < n; ++i) { // init to 0, repairing to bounds if needed
-      if      ((*L)[i] > 0) (*V)[i] = (*L)[i];
+    for(i = 0; i < n; ++i) {
+      // init to mean, truncating to left if needed; otherwise init to
+      // 0, repairing to bounds if needed
+      if ( INT_MIN < (*L)[i] && (*U)[i] < INT_MAX )
+	(*V)[i] = (*L)[i] + ((*U)[i] - (*L)[i])/2;
+      else if ((*L)[i] > 0) (*V)[i] = (*L)[i];
       else if ((*U)[i] < 0) (*V)[i] = (*U)[i];
       else                  (*V)[i] = 0;
     }
@@ -2483,8 +2471,10 @@ static void Vgen_ContinuousState(DataVariablesRep *dv, size_t offset)
     Set_rv(U, dbl_inf, n);
   if (V->length() == 0) {
     V->sizeUninitialized(n);
-    for(i = 0; i < n; i++) { // init to 0, repairing to bounds if needed
-      if      ((*L)[i] > 0.) (*V)[i] = (*L)[i];
+    for(i = 0; i < n; i++) { // init to mean or 0, repairing to bounds if needed
+      if ( -dbl_inf < (*L)[i] && (*U)[i] < dbl_inf )
+	(*V)[i] = ( (*L)[i] + (*U)[i] ) / 2.0;
+      else if ((*L)[i] > 0.) (*V)[i] = (*L)[i];
       else if ((*U)[i] < 0.) (*V)[i] = (*U)[i];
       else                   (*V)[i] = 0;
     }
@@ -2505,8 +2495,12 @@ static void Vgen_DiscreteStateRange(DataVariablesRep *dv, size_t offset)
     Set_iv(U, INT_MAX, n);
   if (V->length() == 0) {
     V->sizeUninitialized(n);
-    for(i = 0; i < n; ++i) { // init to 0, repairing to bounds if needed
-      if      ((*L)[i] > 0) (*V)[i] = (*L)[i];
+    for(i = 0; i < n; ++i) {
+      // init to mean, truncating to left if needed; otherwise init to
+      // 0, repairing to bounds if needed
+      if ( INT_MIN < (*L)[i] && (*U)[i] < INT_MAX )
+	(*V)[i] = (*L)[i] + ((*U)[i] - (*L)[i])/2;
+      else if ((*L)[i] > 0) (*V)[i] = (*L)[i];
       else if ((*U)[i] < 0) (*V)[i] = (*U)[i];
       else                  (*V)[i] = 0;
     }
@@ -2662,7 +2656,7 @@ static void Vgen_LognormalUnc(DataVariablesRep *dv, size_t offset)
   n  = dv->numLognormalUncVars;    Lam = &dv->lognormalUncLambdas;
   Z  = &dv->lognormalUncZetas;     Ef  = &dv->lognormalUncErrFacts;
   M  = &dv->lognormalUncMeans;     Sd  = &dv->lognormalUncStdDevs;
-  L  = &dv->lognormalUncLowerBnds; U   = &dv->lognormalUncUpperBnds; 
+  L  = &dv->lognormalUncLowerBnds; U   = &dv->lognormalUncUpperBnds;
   IP = &dv->lognormalUncVars;      V   = &dv->continuousAleatoryUncVars;
 
   size_t num_Sd = Sd->length(), num_Lam = Lam->length(), num_IP = IP->length(),
@@ -2761,7 +2755,7 @@ static void Vgen_UniformUnc(DataVariablesRep *dv, size_t offset)
 	moments_from_params((*L)[j], (*U)[j], (*V)[i], stdev);
 }
 
-static void 
+static void
 Vchk_LoguniformUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   size_t j, n;
@@ -2864,7 +2858,7 @@ static void Vgen_TriangularUnc(DataVariablesRep *dv, size_t offset)
   }
 }
 
-static void 
+static void
 Vchk_ExponentialUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   size_t n = dv->numExponentialUncVars;
@@ -3063,7 +3057,7 @@ static void Vgen_WeibullUnc(DataVariablesRep *dv, size_t offset)
 /// Check the histogram bin input data, normalize the counts and populate
 /// the histogramUncBinPairs map data structure; map keys are guaranteed
 /// unique since the abscissas must increase
-static void 
+static void
 Vchk_HistogramBinUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   IntArray *nhbp;
@@ -3246,7 +3240,7 @@ static void Vgen_BinomialUnc(DataVariablesRep *dv, size_t offset)
   }
 }
 
-static void 
+static void
 Vchk_NegBinomialUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   size_t n = dv->numNegBinomialUncVars;
@@ -3360,7 +3354,7 @@ static void Vgen_HyperGeomUnc(DataVariablesRep *dv, size_t offset)
 /// Check the histogram point integer input data, normalize the
 /// counts, and populate DataVariables::histogramUncPointIntPairs; map
 /// keys are guaranteed unique since the abscissas must increase
-static void 
+static void
 Vchk_HistogramPtIntUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   IntArray *nhpip;
@@ -3440,7 +3434,7 @@ Vchk_HistogramPtIntUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 /// mean if no initial point.
 static void Vgen_HistogramPtIntUnc(DataVariablesRep *dv, size_t offset)
 {
-  const IntRealMapArray& A = dv->histogramUncPointIntPairs; 
+  const IntRealMapArray& A = dv->histogramUncPointIntPairs;
 
   IntVector& L = dv->discreteIntAleatoryUncLowerBnds;
   IntVector& U = dv->discreteIntAleatoryUncUpperBnds;
@@ -3484,7 +3478,7 @@ static void Vgen_HistogramPtIntUnc(DataVariablesRep *dv, size_t offset)
 /// and populate DataVariables::histogramUncPointStrPairs; map keys
 /// are guaranteed unique since the abscissas must increase
 /// (lexicographically)
-static void 
+static void
 Vchk_HistogramPtStrUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   IntArray *nhpsp;
@@ -3563,7 +3557,7 @@ Vchk_HistogramPtStrUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 /// mean index if no initial point.
 static void Vgen_HistogramPtStrUnc(DataVariablesRep *dv, size_t offset)
 {
-  const StringRealMapArray& A = dv->histogramUncPointStrPairs; 
+  const StringRealMapArray& A = dv->histogramUncPointStrPairs;
 
   StringArray& L = dv->discreteStrAleatoryUncLowerBnds;
   StringArray& U = dv->discreteStrAleatoryUncUpperBnds;
@@ -3607,7 +3601,7 @@ static void Vgen_HistogramPtStrUnc(DataVariablesRep *dv, size_t offset)
 /// Check the histogram point integer real data, normalize the counts,
 /// and populate DataVariables::histogramUncPointRealPairs; map keys
 /// are guaranteed unique since the abscissas must increase
-static void 
+static void
 Vchk_HistogramPtRealUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   IntArray *nhprp;
@@ -3685,7 +3679,7 @@ Vchk_HistogramPtRealUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 /// mean if no initial point.
 static void Vgen_HistogramPtRealUnc(DataVariablesRep *dv, size_t offset)
 {
-  const RealRealMapArray& A = dv->histogramUncPointRealPairs; 
+  const RealRealMapArray& A = dv->histogramUncPointRealPairs;
 
   RealVector& L = dv->discreteRealAleatoryUncLowerBnds;
   RealVector& U = dv->discreteRealAleatoryUncUpperBnds;
@@ -3789,28 +3783,28 @@ Vchk_ContinuousIntervalUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
       else
 	avg_nI = num_lb / m;
     }
-    RealRealPairRealMapArray& P = dv->continuousIntervalUncBasicProbs;   
+    RealRealPairRealMapArray& P = dv->continuousIntervalUncBasicProbs;
     P.resize(m);
     for(i = k = 0; i < m; ++i) {
       nIi = (key) ? (*nI)[i] : avg_nI;
       RealRealPairRealMap& Pi = P[i];  // map from an interval to a probability
       lb = dbl_inf;
       ub = -dbl_inf;
-      if (!num_p) 
+      if (!num_p)
         default_p = 1./nIi; // default = equal probability per cell
       else {
-        double total_prob=0.0; 
+        double total_prob=0.0;
         size_t s = k;
         for(j=0; j<nIi; ++j, ++s) {  // normalize the probabilities to sum to one
           total_prob+=(*Ip)[s];
-        }         
+        }
         if (fabs(total_prob-1.0) > 1.E-10) {
           s = k;
           {for(j=0; j<nIi; ++j,++s)  // normalize the probabilities to sum to one
             (*Ip)[s]/=total_prob;
-          }       
+          }
           Warn("Renormalized probability assignments to sum to one for variable %d",i);
-        } 
+        }
       }
       for(j=0; j<nIi; ++j, ++k) {
 	lbj = (*Ilb)[k];
@@ -3852,7 +3846,7 @@ static void Vgen_ContinuousIntervalUnc(DataVariablesRep *dv, size_t offset)
     RealRealPairRealMap::const_iterator it_end = Pj.end();
     for ( ; it != it_end; ++it) {
       const RealRealPair& interval = it->first;
-      lbk = interval.first; 
+      lbk = interval.first;
       ubk = interval.second;
       if (lb > lbk) lb = lbk;
       if (ub < ubk) ub = ubk;
@@ -3873,7 +3867,7 @@ static void Vgen_ContinuousIntervalUnc(DataVariablesRep *dv, size_t offset)
 /// DataVariables::discreteIntervalUncBasicProbs; map keys (integer
 /// intervals) are checked for uniqueness because we don't have a
 /// theoretically sound way to combine duplicate intervals
-static void 
+static void
 Vchk_DiscreteIntervalUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   size_t i, j, k, m, num_p = 0, num_lb, num_ub;
@@ -3932,7 +3926,7 @@ Vchk_DiscreteIntervalUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
       else
 	avg_nI = num_lb / m;
     }
-    IntIntPairRealMapArray& P = dv->discreteIntervalUncBasicProbs;   
+    IntIntPairRealMapArray& P = dv->discreteIntervalUncBasicProbs;
     P.resize(m);
     for(i = k = 0; i < m; ++i) {
       nIi = (key) ? (*nI)[i] : avg_nI;
@@ -3940,7 +3934,7 @@ Vchk_DiscreteIntervalUnc(DataVariablesRep *dv, size_t offset, Var_Info *vi)
       lb = INT_MAX; ub = INT_MIN;
       if (!num_p) default_p = 1./nIi; // default = equal probability per cell
       for(j=0; j<nIi; ++j, ++k) {
-	lbj = (*Ilb)[k];      
+	lbj = (*Ilb)[k];
 	ubj = (*Iub)[k];
 	IntIntPair interval(lbj, ubj);
 	Real probability =  (num_p) ? (*Ip)[k] : default_p;
@@ -3975,11 +3969,11 @@ static void Vgen_DiscreteIntervalUnc(DataVariablesRep *dv, size_t offset)
     IntIntPairRealMap::const_iterator it_end = Pj.end();
     for ( ; it != it_end; ++it) {
       const IntIntPair& interval = it->first;
-      lbk = interval.first; 
+      lbk = interval.first;
       ubk = interval.second;
       if (lb > lbk) lb = lbk;
       if (ub < ubk) ub = ubk;
-    }    
+    }
     (*deuLB)[i] = lb; (*deuUB)[i] = ub;
     if (num_IP) {
       if      ((*IP)[j] < lb) (*V)[i] = lb;
@@ -3997,7 +3991,7 @@ static void Vgen_DiscreteIntervalUnc(DataVariablesRep *dv, size_t offset)
 /// variables and an optional apportionment with
 /// elements_per_variable; return the average number per variable if
 /// equally distributed
-static bool 
+static bool
 check_set_keys(size_t num_v, size_t ds_len, const char *kind,
 	       IntArray *input_nds, int& avg_num_ds)
 {
@@ -4030,7 +4024,7 @@ check_set_keys(size_t num_v, size_t ds_len, const char *kind,
 /// check discrete sets of integers (design and state variables);
 /// error if a duplicate value is specified
 /// error if not ordered to prevent user confusion
-static void 
+static void
 Vchk_DIset(size_t num_v, const char *kind, IntArray *input_ndsi,
 	   IntVector *input_dsi, IntSetArray& dsi_all, IntVector& dsi_init_pt)
 {
@@ -4081,7 +4075,7 @@ Vchk_DIset(size_t num_v, const char *kind, IntArray *input_ndsi,
 /// check discrete sets of integers (uncertain variables);
 /// error if a duplicate value is specified
 /// error if not ordered to prevent user confusion
-static void 
+static void
 Vchk_DIset(size_t num_v, const char *kind, IntArray *input_ndsi,
 	   IntVector *input_dsi, RealVector *input_dsip,
 	   IntRealMapArray& dsi_vals_probs, IntVector& dsi_init_pt)
@@ -4140,7 +4134,7 @@ Vchk_DIset(size_t num_v, const char *kind, IntArray *input_ndsi,
   //else: default initialization performed in Vgen_DIset
 }
 
-static void 
+static void
 Vchk_DSset(size_t num_v, const char *kind, IntArray *input_ndss,
 	   StringArray *input_dss, StringSetArray& dss_all, StringArray& dss_init_pt)
 {
@@ -4197,7 +4191,7 @@ Vchk_DSset(size_t num_v, const char *kind, IntArray *input_ndss,
   //else: default initialization performed in Vgen_DSset
 }
 
-static void 
+static void
 Vchk_DSset(size_t num_v, const char *kind, IntArray *input_ndss,
 	   StringArray *input_dss, RealVector *input_dssp,
 	   StringRealMapArray& dss_vals_probs, StringArray& dss_init_pt)
@@ -4258,7 +4252,7 @@ Vchk_DSset(size_t num_v, const char *kind, IntArray *input_ndss,
 }
 
 
-static void 
+static void
 Vchk_DRset(size_t num_v, const char *kind, IntArray  *input_ndsr,
 	   RealVector *input_dsr, RealSetArray& dsr_all,
 	   RealVector& dsr_init_pt)
@@ -4308,7 +4302,7 @@ Vchk_DRset(size_t num_v, const char *kind, IntArray  *input_ndsr,
   //else: default initialization performed in Vgen_DRset
 }
 
-static void 
+static void
 Vchk_DRset(size_t num_v, const char *kind, IntArray  *input_ndsr,
 	   RealVector *input_dsr, RealVector* input_dsrp,
 	   RealRealMapArray& dsr_vals_probs, RealVector& dsr_init_pt)
@@ -4367,8 +4361,8 @@ Vchk_DRset(size_t num_v, const char *kind, IntArray  *input_ndsr,
   //else: default initialization performed in Vgen_DIset
 }
 
-// Validate adjacency matrices 
-static void 
+// Validate adjacency matrices
+static void
 Vchk_Adjacency(size_t num_v, const char *kind, const IntArray &num_e,
 		const IntVector &input_ddsa, RealMatrixArray &dda_all)  {
   size_t expected_size = 0;
@@ -4380,15 +4374,15 @@ Vchk_Adjacency(size_t num_v, const char *kind, const IntArray &num_e,
       size_t e_ctr = 0;
       for(size_t i = 0; i < num_v; ++i) {
         RealMatrix a_tmp(num_e[i],num_e[i]);
-        for(size_t j = 0; j < num_e[i]; ++j)  
-          for(size_t k = 0; k < num_e[i]; ++k) 
+        for(size_t j = 0; j < num_e[i]; ++j)
+          for(size_t k = 0; k < num_e[i]; ++k)
             a_tmp[j][k] = input_ddsa[e_ctr++];
         dda_all.push_back(a_tmp);
       }
     }
 }
 
-static bool 
+static bool
 check_LUV_size(size_t num_v, IntVector& L, IntVector& U, IntVector& V,
 	       bool aggregate_LUV, size_t offset)
 {
@@ -4414,7 +4408,7 @@ check_LUV_size(size_t num_v, IntVector& L, IntVector& U, IntVector& V,
   return init_V;
 }
 
-static bool 
+static bool
 check_LUV_size(size_t num_v, StringArray& L, StringArray& U, StringArray& V,
 	       bool aggregate_LUV, size_t offset)
 {
@@ -4442,7 +4436,7 @@ check_LUV_size(size_t num_v, StringArray& L, StringArray& U, StringArray& V,
 
 
 
-static bool 
+static bool
 check_LUV_size(size_t num_v, RealVector& L, RealVector& U, RealVector& V,
 	       bool aggregate_LUV, size_t offset)
 {
@@ -4468,14 +4462,32 @@ check_LUV_size(size_t num_v, RealVector& L, RealVector& U, RealVector& V,
   return init_V;
 }
 
-static void 
+
+/// Compute the midpoint of floating-point or integer range [a, b] (a <= b),
+/// possibly indices, rounding toward a if needed. (Eventually replace
+/// with C++20 midpoint, which is more general.)
+template<typename T>
+T midpoint(T a, T b)
+{
+  // avoid overflow and possibly integer truncate the middle value
+  // (b-a)/2 toward 0:
+  return a + (b-a)/2;
+}
+
+
+/// get the middle or left-of-middle index among indices [0,num_inds-1]
+static size_t mid_or_next_lower_index(const size_t num_inds)
+{
+  return midpoint((size_t)0, num_inds-1);
+}
+
+
+static void
 Vgen_DIset(size_t num_v, IntSetArray& sets, IntVector& L, IntVector& U,
 	   IntVector& V, bool aggregate_LUV = false, size_t offset = 0)
 {
   ISCIter ie, it;
-  Real avg_val, r_val;
-  int i, i_val, i_left, i_right;
-  size_t num_set_i;
+  size_t i, num_set_i;
 
   bool init_V = check_LUV_size(num_v, L, U, V, aggregate_LUV, offset);
 
@@ -4490,28 +4502,10 @@ Vgen_DIset(size_t num_v, IntSetArray& sets, IntVector& L, IntVector& U,
       L[offset] = *it;     // lower bound is first value
       U[offset] = *(--ie); // upper bound is final value
       if (init_V) {
-	// select the initial value to be closest set value to avg_val
-	for(avg_val = 0., ++ie; it != ie; ++it)
-	  avg_val += *it;
-	avg_val /= num_set_i;
-	// bracket avg_val between [i_left,i_right]
-	i_left = L[offset]; i_right = U[offset];
-	for(it = set_i.begin(); it != ie; ++it) {
-	  r_val = i_val = *it;
-	  if (r_val > avg_val) {      // update nearest neighbor to right
-	    if (i_val < i_right)
-	      i_right = i_val;
-	  }
-	  else if (r_val < avg_val) { // update nearest neighbor to left
-	    if (i_val > i_left)
-	      i_left = i_val;
-	  }
-	  else { // r_val equals avg_val
-	    i_left = i_right = i_val;
-	    break;
-	  }
-	}
-	V[offset] = (i_right - avg_val < avg_val - i_left) ? i_right : i_left;
+	// OLD: Select the initial value to be closest set value to mean value
+	// NEW: Select value from middle or next lower index
+	std::advance(it, mid_or_next_lower_index(num_set_i));
+	V[offset] = *it;
       }
     }
   }
@@ -4519,7 +4513,7 @@ Vgen_DIset(size_t num_v, IntSetArray& sets, IntVector& L, IntVector& U,
 
 
 /// generate lower, upper, and initial point for string-valued sets
-static void 
+static void
 Vgen_DSset(size_t num_v, StringSetArray& sets, StringArray& L, StringArray& U,
 	   StringArray& V, bool aggregate_LUV = false, size_t offset = 0)
 {
@@ -4540,28 +4534,19 @@ Vgen_DSset(size_t num_v, StringSetArray& sets, StringArray& L, StringArray& U,
       L[offset] = *it;     // lower bound is first value
       U[offset] = *(--ie); // upper bound is final value
       if (init_V) {
-	size_t mid_index = 0;
-	// initial value is at middle index or the one directly below
-	if ( (num_set_i % 2 == 0) )
-	  // initial value is to the left of middle
-	  mid_index = num_set_i / 2 - 1;
-	else 
-	  mid_index = (num_set_i + 1) / 2 - 1;
-	std::advance(it, mid_index);
+	std::advance(it, mid_or_next_lower_index(num_set_i));
 	V[offset] = *it;
       }
     }
   }
 }
 
-static void 
+static void
 Vgen_DIset(size_t num_v, IntRealMapArray& vals_probs, IntVector& IP,
 	   IntVector& L, IntVector& U, IntVector& V,
 	   bool aggregate_LUV = false, size_t offset = 0)
 {
   IRMCIter ite, it;
-  Real avg_val, r_val;
-  int i_val, i_left, i_right;
   size_t i, j, num_vp_j, num_IP = IP.length();
 
   bool init_V = check_LUV_size(num_v, L, U, V, aggregate_LUV, offset);
@@ -4582,41 +4567,21 @@ Vgen_DIset(size_t num_v, IntRealMapArray& vals_probs, IntVector& IP,
       U[i] = (--ite)->first; // upper bound is final value
       if (num_IP) V[i] = IP[j]; // presence of value w/i set already checked
       else if (init_V) {
-	// select the initial value to be closest set value to avg_val
-	for(avg_val = 0., ++ite; it != ite; ++it)
-	  avg_val += it->first;
-	avg_val /= num_vp_j;
-	// bracket avg_val between [i_left,i_right]
-	i_left = L[offset]; i_right = U[offset];
-	for(it = vp_j.begin(); it != ite; ++it) {
-	  r_val = i_val = it->first;
-	  if (r_val > avg_val) {      // update nearest neighbor to right
-	    if (i_val < i_right)
-	      i_right = i_val;
-	  }
-	  else if (r_val < avg_val) { // update nearest neighbor to left
-	    if (i_val > i_left)
-	      i_left = i_val;
-	  }
-	  else { // r_val equals avg_val
-	    i_left = i_right = i_val;
-	    break;
-	  }
-	}
-	V[i] = (i_right - avg_val < avg_val - i_left) ? i_right : i_left;
+	// OLD: Select the initial value to be closest set value to mean value
+	// NEW: Select value from middle or next lower index
+	std::advance(it, mid_or_next_lower_index(num_vp_j));
+	V[i] = it->first;
       }
     }
   }
 }
 
-static void 
+static void
 Vgen_DRset(size_t num_v, RealSetArray& sets, RealVector& L, RealVector& U,
 	   RealVector& V, bool aggregate_LUV = false, size_t offset = 0)
 {
-  Real avg_val, set_val, s_left, s_right;
   RSCIter ie, it;
-  int i;
-  size_t num_set_i;
+  size_t i, num_set_i;
 
   bool init_V = check_LUV_size(num_v, L, U, V, aggregate_LUV, offset);
 
@@ -4631,39 +4596,20 @@ Vgen_DRset(size_t num_v, RealSetArray& sets, RealVector& L, RealVector& U,
       L[offset] = *it;     // lower bound is first value
       U[offset] = *(--ie); // upper bound is final value
       if (init_V) {
-	// select the initial value to be closest set value to avg_val
-	for(avg_val = 0., ++ie; it != ie; ++it)
-	  avg_val += *it;
-	avg_val /= num_set_i;
-	// bracket avg_val between [s_left,s_right]
-	s_left = L[offset]; s_right = U[offset];
-	for(it = set_i.begin(); it != ie; ++it) {
-	  set_val = *it;
-	  if (set_val > avg_val) {      // update nearest neighbor to right
-	    if (set_val < s_right)
-	      s_right = set_val;
-	  }
-	  else if (set_val < avg_val) { // update nearest neighbor to left
-	    if (set_val > s_left)
-	      s_left = set_val;
-	  }
-	  else { // set_val equals avg_val
-	    s_left = s_right = set_val;
-	    break;
-	  }
-	}
-	V[offset] = (s_right - avg_val < avg_val - s_left) ? s_right : s_left;
+	// OLD: Select the initial value to be closest set value to mean value
+	// NEW: Select value from middle or next lower index
+	std::advance(it, mid_or_next_lower_index(num_set_i));
+	V[offset] = *it;
       }
     }
   }
 }
 
-static void 
+static void
 Vgen_DRset(size_t num_v, RealRealMapArray& vals_probs, RealVector& IP,
 	   RealVector& L, RealVector& U, RealVector& V,
 	   bool aggregate_LUV = false, size_t offset = 0)
 {
-  Real avg_val, set_val, s_left, s_right;
   RRMCIter ite, it;
   size_t i, j, num_vp_j, num_IP = IP.length();
 
@@ -4685,34 +4631,16 @@ Vgen_DRset(size_t num_v, RealRealMapArray& vals_probs, RealVector& IP,
       U[i] = (--ite)->first; // upper bound is final value
       if (num_IP) V[i] = IP[j];
       else if (init_V) {
-	// select the initial value to be closest set value to avg_val
-	for(avg_val = 0., ++ite; it != ite; ++it)
-	  avg_val += it->first;
-	avg_val /= num_vp_j;
-	// bracket avg_val between [s_left,s_right]
-	s_left = L[i]; s_right = U[i];
-	for(it = vp_j.begin(); it != ite; ++it) {
-	  set_val = it->first;
-	  if (set_val > avg_val) {      // update nearest neighbor to right
-	    if (set_val < s_right)
-	      s_right = set_val;
-	  }
-	  else if (set_val < avg_val) { // update nearest neighbor to left
-	    if (set_val > s_left)
-	      s_left = set_val;
-	  }
-	  else { // set_val equals avg_val
-	    s_left = s_right = set_val;
-	    break;
-	  }
-	}
-	V[i] = (s_right - avg_val < avg_val - s_left) ? s_right : s_left;
+	// OLD: Select the initial value to be closest set value to mean value
+	// NEW: Select value from middle or next lower index
+	std::advance(it, mid_or_next_lower_index(num_vp_j));
+	V[i] = it->first;
       }
     }
   }
 }
 
-static void 
+static void
 Vgen_DSset(size_t num_v, StringRealMapArray& vals_probs, StringArray& IP,
 	   StringArray& L, StringArray& U, StringArray& V,
 	   bool aggregate_LUV = false, size_t offset = 0)
@@ -4739,21 +4667,14 @@ Vgen_DSset(size_t num_v, StringRealMapArray& vals_probs, StringArray& IP,
       U[i] = (--ite)->first; // upper bound is final value
       if (num_IP) V[i] = IP[j];
       else if (init_V) {
-	size_t mid_index = 0;
-	// initial value is at middle index or the one directly below
-	if ( (num_vp_j % 2 == 0) )
-	  // initial value is to the left of middle
-	  mid_index = num_vp_j / 2 - 1;
-	else 
-	  mid_index = (num_vp_j + 1) / 2 - 1;
-	std::advance(it, mid_index);
+	std::advance(it, mid_or_next_lower_index(num_vp_j));
 	V[i] = it->first;
       }
     }
   }
 }
 
-static void 
+static void
 Vchk_DiscreteDesSetInt(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_design_set_integer";
@@ -4776,7 +4697,7 @@ static void Vgen_DiscreteDesSetInt(DataVariablesRep *dv, size_t offset)
 	     dv->discreteDesignSetIntVars); // no offset, not aggregate L/U/V
 }
 
-static void 
+static void
 Vchk_DiscreteDesSetStr(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_design_set_string";
@@ -4799,7 +4720,7 @@ static void Vgen_DiscreteDesSetStr(DataVariablesRep *dv, size_t offset)
 	     dv->discreteDesignSetStrVars); // no offset, not aggregate L/U/V
 }
 
-static void 
+static void
 Vchk_DiscreteDesSetReal(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_design_set_real";
@@ -4822,7 +4743,7 @@ static void Vgen_DiscreteDesSetReal(DataVariablesRep *dv, size_t offset)
 	     dv->discreteDesignSetRealVars); // no offset, not aggregate L/U/V
 }
 
-static void 
+static void
 Vchk_DiscreteUncSetInt(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_uncertain_set_integer";
@@ -4839,7 +4760,7 @@ static void Vgen_DiscreteUncSetInt(DataVariablesRep *dv, size_t offset)
   if (dv->discreteUncSetIntVars.length()) dv->uncertainVarsInitPt = true;
 }
 
-static void 
+static void
 Vchk_DiscreteUncSetStr(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_uncertain_set_string";
@@ -4856,7 +4777,7 @@ static void Vgen_DiscreteUncSetStr(DataVariablesRep *dv, size_t offset)
   if (dv->discreteUncSetStrVars.size()) dv->uncertainVarsInitPt = true;
 }
 
-static void 
+static void
 Vchk_DiscreteUncSetReal(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_uncertain_set_real";
@@ -4873,11 +4794,11 @@ static void Vgen_DiscreteUncSetReal(DataVariablesRep *dv, size_t offset)
   if (dv->discreteUncSetRealVars.length()) dv->uncertainVarsInitPt = true;
 }
 
-static void 
+static void
 Vchk_DiscreteStateSetInt(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_state_set_integer";
-  Vchk_DIset(dv->numDiscreteStateSetIntVars, kind, vi->ndssi, vi->dssi, 
+  Vchk_DIset(dv->numDiscreteStateSetIntVars, kind, vi->ndssi, vi->dssi,
 	     dv->discreteStateSetInt, dv->discreteStateSetIntVars);
 }
 
@@ -4889,11 +4810,11 @@ static void Vgen_DiscreteStateSetInt(DataVariablesRep *dv, size_t offset)
 	     dv->discreteStateSetIntVars); // no offset, not aggregate L/U/V
 }
 
-static void 
+static void
 Vchk_DiscreteStateSetStr(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_state_set_string";
-  Vchk_DSset(dv->numDiscreteStateSetStrVars, kind, vi->ndsss, vi->dsss, 
+  Vchk_DSset(dv->numDiscreteStateSetStrVars, kind, vi->ndsss, vi->dsss,
 	     dv->discreteStateSetStr, dv->discreteStateSetStrVars);
 }
 
@@ -4905,7 +4826,7 @@ static void Vgen_DiscreteStateSetStr(DataVariablesRep *dv, size_t offset)
 	     dv->discreteStateSetStrVars); // no offset, not aggregate L/U/V
 }
 
-static void 
+static void
 Vchk_DiscreteStateSetReal(DataVariablesRep *dv, size_t offset, Var_Info *vi)
 {
   static char kind[] = "discrete_state_set_real";
@@ -5127,17 +5048,18 @@ static Var_uinfo DiscSetLbl[DiscSetVar_Nkinds] = {
 void NIDRProblemDescDB::
 var_stop(const char *keyname, Values *val, void **g, void *v)
 {
-  static const char *mr_scaletypes[] = { "auto", "none", 0 };
+  // scale_types beyond value to allow for linear constraints
+  static const char *lincon_scaletypes[] = { "auto", 0 };
 
   Var_Info *vi = *(Var_Info**)g;
   DataVariablesRep *dv = vi->dv;
 
   scale_chk(dv->continuousDesignScaleTypes, dv->continuousDesignScales,
-	    "cdv", aln_scaletypes);
+	    "cdv", auto_log_scaletypes);
   scale_chk(dv->linearIneqScaleTypes, dv->linearIneqScales,
-	    "linear_inequality", mr_scaletypes);
+	    "linear_inequality", lincon_scaletypes);
   scale_chk(dv->linearEqScaleTypes, dv->linearEqScales,
-	    "linear_equality", mr_scaletypes);
+	    "linear_equality", lincon_scaletypes);
 
   pDDBInstance->VIL.push_back(vi);
   pDDBInstance->dataVariablesList.push_back(*vi->dv_handle);
@@ -5218,9 +5140,9 @@ struct VLstr {
 /// number of real-valued   uncertain contiguous containers
 enum { NUM_UNC_REAL_CONT = 4 };
 /// number of int-valued    uncertain contiguous containers
-enum { NUM_UNC_INT_CONT = 2 }; 
+enum { NUM_UNC_INT_CONT = 2 };
 /// number of string-valued uncertain contiguous containers
-enum { NUM_UNC_STR_CONT = 2 }; 
+enum { NUM_UNC_STR_CONT = 2 };
 
 #define AVI (VarLabel Var_Info::*) &Var_Info::	// cast to bypass g++ bug
 #define DVR &DataVariablesRep::
@@ -5413,7 +5335,7 @@ make_variable_defaults(std::list<DataVariables>* dvl)
   VarLabelChk *vlc, *vlce;
   Var_uinfo *vui, *vuie;
   char buf[32];
-  size_t i, j, k, n, nu, nursave[NUM_UNC_REAL_CONT], nuisave[NUM_UNC_INT_CONT], 
+  size_t i, j, k, n, nu, nursave[NUM_UNC_REAL_CONT], nuisave[NUM_UNC_INT_CONT],
     nussave[NUM_UNC_STR_CONT];
   static const char Inconsistent_bounds[] =
     "Inconsistent bounds on %s uncertain variables";
@@ -5422,7 +5344,7 @@ make_variable_defaults(std::list<DataVariables>* dvl)
   /// stored separately
   std::list<DataVariables>::iterator It = dvl->begin(), Ite = dvl->end();
   for(; It != Ite; ++It) {
-    dv = It->dataVarsRep;
+    dv = It->dataVarsRep.get();
     // size the aggregate labels, bounds, values arrays for
     // real-valued uncertain
     for(k = 0; k < NUM_UNC_REAL_CONT; ++k) {
@@ -5485,7 +5407,7 @@ make_variable_defaults(std::list<DataVariables>* dvl)
     // loop over cdv/csv
     Var_check *c, *ce;
     // the offset into the aggregated aleatory or epistemic arrays
-    size_t offset = 0; 
+    size_t offset = 0;
     for(c=var_mp_check_cv, ce = c + Numberof(var_mp_check_cv); c < ce; ++c)
       if ((n = dv->*c->n) > 0)
 	(*c->vgen)(dv, offset); // offset not used
@@ -5545,7 +5467,7 @@ make_variable_defaults(std::list<DataVariables>* dvl)
     for(c=var_mp_check_deur, ce=c + Numberof(var_mp_check_deur); c<ce; ++c)
       if ((n = dv->*c->n) > 0)
 	{ (*c->vgen)(dv, offset); offset += n; }
-    
+
     // check discrete design and state set types
     // these don't use an offset passed into Vgen_Discrete*Set*
     offset = 0;
@@ -5681,14 +5603,14 @@ void NIDRProblemDescDB::check_variables_node(void *v)
 #define AVI &Var_Info::
   // Used for deallocation of Var_Info temporary data
   static IntArray   *Var_Info::* Ia_delete[]
-    = { AVI nddsi, AVI nddss, AVI nddsr, AVI nCI, AVI nDI, AVI nhbp, 
-	AVI nhpip, AVI nhpsp, AVI nhprp, AVI ndusi, AVI nduss, AVI ndusr, 
+    = { AVI nddsi, AVI nddss, AVI nddsr, AVI nCI, AVI nDI, AVI nhbp,
+	AVI nhpip, AVI nhpsp, AVI nhprp, AVI ndusi, AVI nduss, AVI ndusr,
 	AVI ndssi, AVI ndsss, AVI ndssr };
   static RealVector *Var_Info::* Rv_delete[]
     = { AVI ddsr, AVI CIlb, AVI CIub, AVI CIp, AVI DIp,
 	AVI DSIp, AVI DSSp, AVI DSRp,
-	AVI dusr, AVI hba, AVI hbo, AVI hbc, 
-	AVI hpic, AVI hpsc, AVI hpra, AVI hprc, 
+	AVI dusr, AVI hba, AVI hbo, AVI hbc,
+	AVI hpic, AVI hpsc, AVI hpra, AVI hprc,
 	AVI ucm,
 	AVI dssr };
   static IntVector *Var_Info::* Iv_delete[]
@@ -5703,7 +5625,7 @@ void NIDRProblemDescDB::check_variables_node(void *v)
 
   // check label lengths for design and state variables, if present
   nv = 0;
-  for(vlc = DesignAndStateLabelsCheck, vlce = vlc + Numberof(DesignAndStateLabelsCheck); 
+  for(vlc = DesignAndStateLabelsCheck, vlce = vlc + Numberof(DesignAndStateLabelsCheck);
       vlc < vlce; ++vlc)
     if ((n = dv->*vlc->n)) {
       if (vlc->stub)
@@ -5897,7 +5819,7 @@ void NIDRProblemDescDB::check_variables_node(void *v)
   Var_icheck *ic, *ice;
   for(ic = var_mp_drange, ice = ic + Numberof(var_mp_drange); ic < ice; ++ic)
     Var_IntBoundIPCheck(dv, ic);
-  
+
 
   // deallocate temporary Var_Info data
   n = Numberof(Ia_delete);
@@ -6139,8 +6061,8 @@ static void flatten_srma_values(StringRealMapArray *srma, RealVector **prv)
 
 /// Flatten real-valued interval uncertain variable intervals and
 /// probabilities back into separate arrays.
-static void flatten_real_intervals(const RealRealPairRealMapArray& rrprma, 
-				   RealVector **probs, 
+static void flatten_real_intervals(const RealRealPairRealMapArray& rrprma,
+				   RealVector **probs,
 				   RealVector **lb, RealVector** ub)
 {
   size_t i, j, k, m, n;
@@ -6168,8 +6090,8 @@ static void flatten_real_intervals(const RealRealPairRealMapArray& rrprma,
 
 /// Flatten integer-valued interval uncertain variable intervals and
 /// probabilities back into separate arrays.
-static void flatten_int_intervals(const IntIntPairRealMapArray& iiprma, 
-				  RealVector **probs, 
+static void flatten_int_intervals(const IntIntPairRealMapArray& iiprma,
+				  RealVector **probs,
 				  IntVector **lb, IntVector** ub)
 {
   size_t i, j, k, m, n;
@@ -6205,12 +6127,12 @@ check_descriptor_format(const StringArray& labels) {
     // error if descriptor contains whitespace
     for(si = li->begin(); si != li->end(); ++si) {
       if(isspace(*si)) {
-        Squawk("Descriptor \"%s\" is invalid: whitespace not permitted", 
+        Squawk("Descriptor \"%s\" is invalid: whitespace not permitted",
               li->c_str());
         break;
       }
     }
-    if(isfloat(*li)) 
+    if(isfloat(*li))
       Squawk("Descriptor \"%s\" is invalid: floating point numbers not permitted",
           li->c_str());
     if(li->empty())
@@ -6260,7 +6182,7 @@ check_variables(std::list<DataVariables>* dvl)
       vi = new Var_Info;
       memset(vi, 0, sizeof(Var_Info));
       vi->dv_handle = &*It;
-      vi->dv = dv = It->dataVarsRep;
+      vi->dv = dv = It->dataVarsRep.get();
 
       // flatten 2D {Real,Int}{Vector,Set}Arrays back into Var_Info 1D arrays
 
@@ -6369,14 +6291,14 @@ check_variables(std::list<DataVariables>* dvl)
       if ((n = dv->numContinuousIntervalUncVars)) {
 	flatten_num_array(dv->continuousIntervalUncBasicProbs, &vi->nCI);
 	// unroll the array of maps in to separate variables (p, lb, ub)
-	flatten_real_intervals(dv->continuousIntervalUncBasicProbs, 
+	flatten_real_intervals(dv->continuousIntervalUncBasicProbs,
 			       &vi->CIp, &vi->CIlb, &vi->CIub);
       }
       // discrete interval uncertain vars
       if ((n = dv->numDiscreteIntervalUncVars)) {
 	flatten_num_array(dv->discreteIntervalUncBasicProbs, &vi->nDI);
 	// unroll the array of maps in to separate variables (p, lb, ub)
-	flatten_int_intervals(dv->discreteIntervalUncBasicProbs, 
+	flatten_int_intervals(dv->discreteIntervalUncBasicProbs,
 			      &vi->DIp, &vi->DIlb, &vi->DIub);
       }
       // discrete uncertain set int vars
@@ -6426,44 +6348,44 @@ check_variables(std::list<DataVariables>* dvl)
   // explicitly set descriptors.
   std::list<DataVariables>::iterator It = dvl->begin(), Ite = dvl->end();
   for(; It != Ite; ++It) {
-    const DataVariablesRep* dvr = It->data_rep();
-    check_descriptor_format(dvr->continuousDesignLabels);
-    check_descriptor_format(dvr->discreteDesignRangeLabels);
-    check_descriptor_format(dvr->discreteDesignSetIntLabels);
-    check_descriptor_format(dvr->discreteDesignSetStrLabels);
-    check_descriptor_format(dvr->discreteDesignSetRealLabels);
-    check_descriptor_format(dvr->continuousStateLabels);
-    check_descriptor_format(dvr->discreteStateRangeLabels);
-    check_descriptor_format(dvr->discreteStateSetIntLabels);
-    check_descriptor_format(dvr->discreteStateSetStrLabels);
-    check_descriptor_format(dvr->discreteStateSetRealLabels);
-    check_descriptor_format(dvr->continuousAleatoryUncLabels);
-    check_descriptor_format(dvr->discreteIntAleatoryUncLabels);
-    check_descriptor_format(dvr->discreteStrAleatoryUncLabels);
-    check_descriptor_format(dvr->discreteRealAleatoryUncLabels);
-    check_descriptor_format(dvr->continuousEpistemicUncLabels);
-    check_descriptor_format(dvr->discreteIntEpistemicUncLabels);
-    check_descriptor_format(dvr->discreteStrEpistemicUncLabels);
-    check_descriptor_format(dvr->discreteRealEpistemicUncLabels);
+    const DataVariablesRep& dvr = *It->data_rep();
+    check_descriptor_format(dvr.continuousDesignLabels);
+    check_descriptor_format(dvr.discreteDesignRangeLabels);
+    check_descriptor_format(dvr.discreteDesignSetIntLabels);
+    check_descriptor_format(dvr.discreteDesignSetStrLabels);
+    check_descriptor_format(dvr.discreteDesignSetRealLabels);
+    check_descriptor_format(dvr.continuousStateLabels);
+    check_descriptor_format(dvr.discreteStateRangeLabels);
+    check_descriptor_format(dvr.discreteStateSetIntLabels);
+    check_descriptor_format(dvr.discreteStateSetStrLabels);
+    check_descriptor_format(dvr.discreteStateSetRealLabels);
+    check_descriptor_format(dvr.continuousAleatoryUncLabels);
+    check_descriptor_format(dvr.discreteIntAleatoryUncLabels);
+    check_descriptor_format(dvr.discreteStrAleatoryUncLabels);
+    check_descriptor_format(dvr.discreteRealAleatoryUncLabels);
+    check_descriptor_format(dvr.continuousEpistemicUncLabels);
+    check_descriptor_format(dvr.discreteIntEpistemicUncLabels);
+    check_descriptor_format(dvr.discreteStrEpistemicUncLabels);
+    check_descriptor_format(dvr.discreteRealEpistemicUncLabels);
 
-    check_descriptors_for_repeats(dvr->continuousDesignLabels,
-                                  dvr->discreteDesignRangeLabels,
-                                  dvr->discreteDesignSetIntLabels,
-                                  dvr->discreteDesignSetStrLabels,
-                                  dvr->discreteDesignSetRealLabels,
-                                  dvr->continuousStateLabels,
-                                  dvr->discreteStateRangeLabels,
-                                  dvr->discreteStateSetIntLabels,
-                                  dvr->discreteStateSetStrLabels,
-                                  dvr->discreteStateSetRealLabels,
-                                  dvr->continuousAleatoryUncLabels,
-                                  dvr->discreteIntAleatoryUncLabels,
-                                  dvr->discreteStrAleatoryUncLabels,
-                                  dvr->discreteRealAleatoryUncLabels,
-                                  dvr->continuousEpistemicUncLabels,
-                                  dvr->discreteIntEpistemicUncLabels,
-                                  dvr->discreteStrEpistemicUncLabels,
-                                  dvr->discreteRealEpistemicUncLabels);
+    check_descriptors_for_repeats(dvr.continuousDesignLabels,
+                                  dvr.discreteDesignRangeLabels,
+                                  dvr.discreteDesignSetIntLabels,
+                                  dvr.discreteDesignSetStrLabels,
+                                  dvr.discreteDesignSetRealLabels,
+                                  dvr.continuousStateLabels,
+                                  dvr.discreteStateRangeLabels,
+                                  dvr.discreteStateSetIntLabels,
+                                  dvr.discreteStateSetStrLabels,
+                                  dvr.discreteStateSetRealLabels,
+                                  dvr.continuousAleatoryUncLabels,
+                                  dvr.discreteIntAleatoryUncLabels,
+                                  dvr.discreteStrAleatoryUncLabels,
+                                  dvr.discreteRealAleatoryUncLabels,
+                                  dvr.continuousEpistemicUncLabels,
+                                  dvr.discreteIntEpistemicUncLabels,
+                                  dvr.discreteStrEpistemicUncLabels,
+                                  dvr.discreteRealEpistemicUncLabels);
   }
 }
 
@@ -6597,6 +6519,7 @@ static Iface_mp_utype
 	MP2s(interfaceType,GRID_INTERFACE),
 	MP2s(interfaceType,MATLAB_INTERFACE),
 	MP2s(interfaceType,PYTHON_INTERFACE),
+	MP2s(interfaceType,PYBIND11_INTERFACE),
 	MP2s(interfaceType,SCILAB_INTERFACE),
 	MP2s(interfaceType,SYSTEM_INTERFACE),
 	//MP2s(resultsFileFormat,FLEXIBLE_RESULTS), // re-enable when more formats added?
@@ -6702,9 +6625,7 @@ static Method_mp_lit
         MP2(dataDistCovInputType,matrix),
       //MP2(dataDistType,gaussian),
       //MP2(dataDistType,user),
-	MP2(evalSynchronize,blocking),
-	MP2(evalSynchronize,nonblocking),
-	MP2(expansionSampleType,incremental_lhs),
+      //MP2(expansionSampleType,incremental_lhs),
 	MP2(exploratoryMoves,adaptive),
 	MP2(exploratoryMoves,multi_step),
 	MP2(exploratoryMoves,simple),
@@ -6789,10 +6710,10 @@ static Method_mp_slit2
 static Method_mp_utype_lit
         MP3s(methodName,dlDetails,DL_SOLVER); // struct order: ip, sp, utype
 
-static Method_mp_ord
-	MP2s(approxCorrectionOrder,0),
-	MP2s(approxCorrectionOrder,1),
-	MP2s(approxCorrectionOrder,2);
+//static Method_mp_ord
+// 	MP2s(polynomialOrder,0),
+// 	MP2s(polynomialOrder,1),
+// 	MP2s(polynomialOrder,2);
 
 static Real
 	MP_(absConvTol),
@@ -6835,6 +6756,9 @@ static Real
 	MP_(singRadius),
         MP_(smoothFactor),
  	MP_(solnTarget),
+	MP_(solverRoundingTol),
+	MP_(solverTol),
+	MP_(statsRoundingTol),
 	MP_(stepLenToBoundary),
 	MP_(threshDelta),
 	MP_(threshStepLength),
@@ -6861,7 +6785,8 @@ static RealVector
 	MP_(predictionConfigList),
 	MP_(proposalCovData),
 	MP_(regressionNoiseTol),
-        MP_(stepVector),
+  MP_(scalarizationRespCoeffs),
+  MP_(stepVector),
 	MP_(trustRegionInitSize);
 
 static RealVectorArray
@@ -6875,21 +6800,28 @@ static unsigned short
       //MP_(adaptedBasisInitLevel),
 	MP_(cubIntOrder),
         MP_(expansionOrder),
+        MP_(kickOrder),
+        MP_(maxCVOrderCandidates),
+        MP_(maxOrder),
         MP_(quadratureOrder),
 	MP_(softConvLimit),
 	MP_(sparseGridLevel),
+        MP_(startOrder),
 	MP_(vbdOrder),
 	MP_(wilksOrder);
 
 static SizetArray
 	MP_(collocationPointsSeq),
         MP_(expansionSamplesSeq),
-  	MP_(pilotSamples);
+	MP_(pilotSamples),
+	MP_(randomSeedSeq),
+	MP_(startRankSeq);
 
 static UShortArray
         MP_(expansionOrderSeq),
         MP_(quadratureOrderSeq),
 	MP_(sparseGridLevelSeq),
+	MP_(startOrderSeq),
         MP_(tensorGridOrder),
 	MP_(varPartitions);
 
@@ -6919,6 +6851,7 @@ static String
 	MP_(importPredConfigs),
 	MP_(logFile),
 	MP_(lowFidModelPointer),
+	MP_(modelExportPrefix),
 	MP_(modelPointer),
         MP_(posteriorDensityExportFilename),
         MP_(posteriorSamplesExportFilename),
@@ -6927,7 +6860,7 @@ static String
 	MP_(pstudyFilename),
 	MP_(subMethodName),
         MP_(subMethodPointer),
-    MP_(subModelPointer);
+        MP_(subModelPointer);
 
 static StringArray
 	MP_(hybridMethodNames),
@@ -6937,7 +6870,9 @@ static StringArray
 
 static bool
 	MP_(adaptExpDesign),
+        MP_(adaptOrder),
 	MP_(adaptPosteriorRefine),
+        MP_(adaptRank),
 	MP_(backfillFlag),
 	MP_(calModelDiscrepancy),
 	MP_(chainDiagnostics),
@@ -6949,6 +6884,7 @@ static bool
         MP_(evaluatePosteriorDensity),
 	MP_(expansionFlag),
 	MP_(exportSampleSeqFlag),
+	MP_(exportSurrogate),
 	MP_(fixedSeedFlag),
 	MP_(fixedSequenceFlag),
         MP_(generatePosteriorSamples),
@@ -6974,25 +6910,35 @@ static bool
 	MP_(pstudyFileActive),
 	MP_(randomizeOrderFlag),
 	MP_(regressDiag),
+	MP_(relativeConvMetric),
+	MP_(respScalingFlag),
 	MP_(showAllEval),
 	MP_(showMiscOptions),
 	MP_(speculativeFlag),
 	MP_(standardizedSpace),
+	MP_(useTargetVarianceOptimizationFlag),
 	MP_(tensorGridFlag),
 	MP_(surrBasedGlobalReplacePts),
 	MP_(surrBasedLocalLayerBypass),
+	MP_(truthPilotConstraint),
 	MP_(vbdFlag),
 	MP_(volQualityFlag),
 	MP_(wilksFlag);
 
 static short
+	MP_(polynomialOrder);
+/* It seems these are redundant with Method_mp_type:
+	MP_(c3AdvanceType),
         MP_(expansionType),
-	MP_(nestingOverride),
-	MP_(refinementType),
+        MP_(nestingOverride),
+        MP_(refinementControl),
+        MP_(refinementType),
 	MP_(wilksSidedInterval);
+*/
 
 static int
 	MP_(batchSize),
+	MP_(batchSizeExplore),
 	MP_(buildSamples),
 	MP_(burnInSamples),
 	MP_(chainSamples),
@@ -7005,11 +6951,8 @@ static int
         MP_(evidenceSamples),
         MP_(iteratorServers),
 	MP_(jumpStep),
-	MP_(maxFunctionEvaluations),
+	MP_(maxCrossIterations),
 	MP_(maxHifiEvals),
-	MP_(maxIterations),
-	MP_(maxRefineIterations),
-	MP_(maxSolverIterations),
 	MP_(mutationRange),
         MP_(neighborOrder),
 	MP_(newSolnsGenerated),
@@ -7033,21 +6976,43 @@ static int
 static size_t
 	MP_(collocationPoints),
         MP_(expansionSamples),
+        MP_(kickRank),
+        MP_(maxCVRankCandidates),
+	MP_(maxFunctionEvals),
+	MP_(maxIterations),
+        MP_(maxRank),
+	MP_(maxRefineIterations),
+	MP_(maxSolverIterations),
         MP_(numCandidateDesigns),
 	MP_(numCandidates),
-    MP_(numDesigns),
-    MP_(numFinalSolutions),
+	MP_(numDesigns),
+	MP_(numFinalSolutions),
 	MP_(numGenerations),
 	MP_(numOffspring),
 	MP_(numParents),
-  	MP_(numPredConfigs);
-
+	MP_(numPredConfigs),
+  //MP_(startOrder),
+  MP_(startRank);
 
 static Method_mp_type
+	MP2s(allocationTarget,TARGET_MEAN),
+  MP2s(allocationTarget,TARGET_SCALARIZATION),
+  MP2s(allocationTarget,TARGET_SIGMA),
+	MP2s(allocationTarget,TARGET_VARIANCE),
+  MP2s(c3AdvanceType,MAX_ORDER_ADVANCEMENT),
+  MP2s(c3AdvanceType,MAX_RANK_ADVANCEMENT),
+  MP2s(c3AdvanceType,MAX_RANK_ORDER_ADVANCEMENT),
+  MP2s(c3AdvanceType,START_ORDER_ADVANCEMENT),
+  MP2s(c3AdvanceType,START_RANK_ADVANCEMENT),
+  MP2s(convergenceToleranceTarget,CONVERGENCE_TOLERANCE_TARGET_COST_CONSTRAINT),
+  MP2s(convergenceToleranceTarget,CONVERGENCE_TOLERANCE_TARGET_VARIANCE_CONSTRAINT),
+  MP2s(convergenceToleranceType,CONVERGENCE_TOLERANCE_TYPE_ABSOLUTE),
+  MP2s(convergenceToleranceType,CONVERGENCE_TOLERANCE_TYPE_RELATIVE),
 	MP2s(covarianceControl,DIAGONAL_COVARIANCE),
 	MP2s(covarianceControl,FULL_COVARIANCE),
 	MP2s(distributionType,COMPLEMENTARY),
 	MP2s(distributionType,CUMULATIVE),
+	MP2s(emulatorType,EXPGP_EMULATOR),
 	MP2s(emulatorType,GP_EMULATOR),
 	MP2s(emulatorType,KRIGING_EMULATOR),
 	MP2s(emulatorType,MF_PCE_EMULATOR),
@@ -7056,6 +7021,11 @@ static Method_mp_type
 	MP2s(emulatorType,PCE_EMULATOR),
 	MP2s(emulatorType,SC_EMULATOR),
 	MP2s(emulatorType,VPS_EMULATOR),
+	MP2s(ensembleSampSolnMode,OFFLINE_PILOT),
+	MP2s(ensembleSampSolnMode,ONLINE_PILOT),
+	MP2s(ensembleSampSolnMode,PILOT_PROJECTION),
+	MP2s(evalSynchronize,BLOCKING_SYNCHRONIZATION),
+	MP2s(evalSynchronize,NONBLOCKING_SYNCHRONIZATION),
 	MP2p(expansionBasisType,ADAPTED_BASIS_EXPANDING_FRONT),
 	MP2p(expansionBasisType,ADAPTED_BASIS_GENERALIZED),
 	MP2p(expansionBasisType,HIERARCHICAL_INTERPOLANT),
@@ -7064,9 +7034,9 @@ static Method_mp_type
 	MP2p(expansionBasisType,TOTAL_ORDER_BASIS),
 	MP2s(expansionType,ASKEY_U),
 	MP2s(expansionType,STD_NORMAL_U),
-	MP2s(finalMomentsType,CENTRAL_MOMENTS),
-	MP2s(finalMomentsType,NO_MOMENTS),
-	MP2s(finalMomentsType,STANDARD_MOMENTS),
+	MP2p(finalMomentsType,CENTRAL_MOMENTS),            // Pecos enumeration
+	MP2p(finalMomentsType,NO_MOMENTS),                 // Pecos enumeration
+	MP2p(finalMomentsType,STANDARD_MOMENTS),           // Pecos enumeration
 	MP2p(growthOverride,RESTRICTED),                   // Pecos enumeration
 	MP2p(growthOverride,UNRESTRICTED),                 // Pecos enumeration
 	MP2s(iteratorScheduling,MASTER_SCHEDULING),
@@ -7083,13 +7053,16 @@ static Method_mp_type
 	MP2s(methodOutput,QUIET_OUTPUT),
 	MP2s(methodOutput,SILENT_OUTPUT),
 	MP2s(methodOutput,VERBOSE_OUTPUT),
-	MP2s(mlmfAllocControl,ESTIMATOR_VARIANCE),
-	MP2s(mlmfAllocControl,GREEDY_REFINEMENT),
-	MP2s(mlmfAllocControl,RIP_SAMPLING),
+	MP2s(multilevAllocControl,ESTIMATOR_VARIANCE),
+	MP2s(multilevAllocControl,GREEDY_REFINEMENT),
+	MP2s(multilevAllocControl,RANK_SAMPLING),
+	MP2s(multilevAllocControl,RIP_SAMPLING),
 	MP2s(multilevDiscrepEmulation,DISTINCT_EMULATION),
 	MP2s(multilevDiscrepEmulation,RECURSIVE_EMULATION),
 	MP2p(nestingOverride,NESTED),                      // Pecos enumeration
 	MP2p(nestingOverride,NON_NESTED),                  // Pecos enumeration
+  MP2s(qoiAggregation,QOI_AGGREGATION_MAX),
+	MP2s(qoiAggregation,QOI_AGGREGATION_SUM),
 	MP2p(refinementControl,DIMENSION_ADAPTIVE_CONTROL_GENERALIZED),// Pecos
 	MP2p(refinementControl,DIMENSION_ADAPTIVE_CONTROL_DECAY),      // Pecos
 	MP2p(refinementControl,DIMENSION_ADAPTIVE_CONTROL_SOBOL),      // Pecos
@@ -7104,11 +7077,15 @@ static Method_mp_type
 	MP2p(regressionType,LEAST_ANGLE_REGRESSION),       // Pecos enumeration
 	MP2p(regressionType,ORTHOG_LEAST_INTERPOLATION),   // Pecos enumeration
 	MP2p(regressionType,ORTHOG_MATCH_PURSUIT),         // Pecos enumeration
+	MP2s(regressionType,FT_LS),
+	MP2s(regressionType,FT_RLS2),
 	MP2s(responseLevelTarget,GEN_RELIABILITIES),
 	MP2s(responseLevelTarget,PROBABILITIES),
 	MP2s(responseLevelTarget,RELIABILITIES),
 	MP2s(responseLevelTargetReduce,SYSTEM_PARALLEL),
 	MP2s(responseLevelTargetReduce,SYSTEM_SERIES),
+        MP2p(statsMetricMode,ACTIVE_EXPANSION_STATS),   // Pecos
+        MP2p(statsMetricMode,COMBINED_EXPANSION_STATS), // Pecos
 	MP2s(surrBasedLocalAcceptLogic,FILTER),
 	MP2s(surrBasedLocalAcceptLogic,TR_RATIO),
 	MP2s(surrBasedLocalConstrRelax,HOMOTOPY),
@@ -7180,9 +7157,10 @@ static Method_mp_utype
 	MP2s(integrationRefine,AIS),
 	MP2s(integrationRefine,IS),
 	MP2s(integrationRefine,MMAIS),
+	MP2s(methodName,APPROXIMATE_CONTROL_VARIATE),
 	MP2s(methodName,ASYNCH_PATTERN_SEARCH),
 	MP2s(methodName,BRANCH_AND_BOUND),
-    MP2s(methodName,C3_FUNCTION_TRAIN),
+	MP2s(methodName,C3_FUNCTION_TRAIN),
 	MP2s(methodName,COLINY_BETA),
 	MP2s(methodName,COLINY_COBYLA),
 	MP2s(methodName,COLINY_DIRECT),
@@ -7207,9 +7185,9 @@ static Method_mp_utype
 	MP2s(methodName,MESH_ADAPTIVE_SEARCH),
 	MP2s(methodName,MOGA),
 	MP2s(methodName,MULTI_START),
-  MP2s(methodName,NCSU_DIRECT),
-  MP2s(methodName,ROL),
-  MP2s(methodName,DEMO_TPL),
+	MP2s(methodName,NCSU_DIRECT),
+	MP2s(methodName,ROL),
+	MP2s(methodName,DEMO_TPL),
 	MP2s(methodName,NL2SOL),
 	MP2s(methodName,NLPQL_SQP),
 	MP2s(methodName,NLSSOL_SQP),
@@ -7229,14 +7207,18 @@ static Method_mp_utype
 	MP2s(methodName,LOCAL_RELIABILITY),
 	MP2s(methodName,MULTIFIDELITY_FUNCTION_TRAIN),
 	MP2s(methodName,MULTIFIDELITY_POLYNOMIAL_CHAOS),
+	MP2s(methodName,MULTIFIDELITY_SAMPLING),
 	MP2s(methodName,MULTIFIDELITY_STOCH_COLLOCATION),
+	MP2s(methodName,MULTILEVEL_FUNCTION_TRAIN),
+	MP2s(methodName,MULTILEVEL_MULTIFIDELITY_SAMPLING),
 	MP2s(methodName,MULTILEVEL_POLYNOMIAL_CHAOS),
 	MP2s(methodName,MULTILEVEL_SAMPLING),
         MP2s(methodName,POF_DARTS),
 	MP2s(methodName,RKD_DARTS),
 	MP2s(methodName,POLYNOMIAL_CHAOS),
-	MP2s(methodName,RANDOM_SAMPLING),
 	MP2s(methodName,STOCH_COLLOCATION),
+	MP2s(methodName,SURROGATE_BASED_UQ),
+	MP2s(methodName,RANDOM_SAMPLING),
 	MP2s(methodName,NONLINEAR_CG),
 	MP2s(methodName,NPSOL_SQP),
 	MP2s(methodName,OPTPP_CG),
@@ -7255,30 +7237,36 @@ static Method_mp_utype
 	MP2s(methodName,LIST_PARAMETER_STUDY),
 	MP2s(methodName,CENTERED_PARAMETER_STUDY),
 	MP2s(methodName,MULTIDIM_PARAMETER_STUDY),
-	MP2s(preSolveMethod,SUBMETHOD_NIP),
-	MP2s(preSolveMethod,SUBMETHOD_NONE),
-	MP2s(preSolveMethod,SUBMETHOD_SQP),
+        MP2s(modelExportFormat,TEXT_ARCHIVE),
+        MP2s(modelExportFormat,BINARY_ARCHIVE),
+	MP2s(optSubProbSolver,SUBMETHOD_NIP),
+	MP2s(optSubProbSolver,SUBMETHOD_NONE),
+	MP2s(optSubProbSolver,SUBMETHOD_SQP),
 	MP2s(pstudyFileFormat,TABULAR_NONE),
         MP2s(pstudyFileFormat,TABULAR_HEADER),
         MP2s(pstudyFileFormat,TABULAR_EVAL_ID),
         MP2s(pstudyFileFormat,TABULAR_IFACE_ID),
         MP2s(pstudyFileFormat,TABULAR_ANNOTATED),
-	MP2s(reliabilitySearchType,AMV_PLUS_U),
-	MP2s(reliabilitySearchType,AMV_PLUS_X),
-	MP2s(reliabilitySearchType,AMV_U),
-	MP2s(reliabilitySearchType,AMV_X),
-	MP2s(reliabilitySearchType,EGRA_U),
-	MP2s(reliabilitySearchType,EGRA_X),
-	MP2s(reliabilitySearchType,NO_APPROX),
-	MP2s(reliabilitySearchType,QMEA_U),
-	MP2s(reliabilitySearchType,QMEA_X),
-	MP2s(reliabilitySearchType,TANA_U),
-	MP2s(reliabilitySearchType,TANA_X),
 	MP2s(sampleType,SUBMETHOD_LHS),
 	MP2s(sampleType,SUBMETHOD_RANDOM),
+	MP2s(subMethod,SUBMETHOD_AMV_PLUS_U),
+	MP2s(subMethod,SUBMETHOD_AMV_PLUS_X),
+	MP2s(subMethod,SUBMETHOD_AMV_U),
+	MP2s(subMethod,SUBMETHOD_AMV_X),
+	MP2s(subMethod,SUBMETHOD_QMEA_U),
+	MP2s(subMethod,SUBMETHOD_QMEA_X),
+	MP2s(subMethod,SUBMETHOD_TANA_U),
+	MP2s(subMethod,SUBMETHOD_TANA_X),
+	MP2s(subMethod,SUBMETHOD_NO_APPROX),
+	MP2s(subMethod,SUBMETHOD_EGRA_U),
+	MP2s(subMethod,SUBMETHOD_EGRA_X),
+	MP2s(subMethod,SUBMETHOD_ACV_IS),
+	MP2s(subMethod,SUBMETHOD_ACV_KL),
+	MP2s(subMethod,SUBMETHOD_ACV_MF),
 	MP2s(subMethod,SUBMETHOD_COLLABORATIVE),
 	MP2s(subMethod,SUBMETHOD_EMBEDDED),
 	MP2s(subMethod,SUBMETHOD_SEQUENTIAL),
+	MP2s(subMethod,SUBMETHOD_MUQ),
 	MP2s(subMethod,SUBMETHOD_DREAM),
 	MP2s(subMethod,SUBMETHOD_WASABI),
 	MP2s(subMethod,SUBMETHOD_GPMSA),
@@ -7313,8 +7301,9 @@ static Method_mp_utype
 #define MP_(x) DataModelRep::* model_mp_##x = &DataModelRep::x
 #define MP2(x,y) model_mp_##x##_##y = {&DataModelRep::x,#y}
 #define MP2s(x,y) model_mp_##x##_##y = {&DataModelRep::x,y}
+#define MP2p(x,y) model_mp_##x##_##y = {&DataModelRep::x,Pecos::y}
 
-static IntSet
+static SizetSet
 	MP_(surrogateFnIndices);
 
 static Model_mp_lit
@@ -7330,6 +7319,9 @@ static Model_mp_lit
 	MP2(modelType,simulation),
 	MP2(modelType,surrogate),
 	MP2(surrogateType,hierarchical),
+	MP2(surrogateType,non_hierarchical),
+	MP2(surrogateType,global_exp_gauss_proc),
+	MP2(surrogateType,global_exp_poly),
 	MP2(surrogateType,global_function_train),
 	MP2(surrogateType,global_gaussian),
 	MP2(surrogateType,global_kriging),
@@ -7342,6 +7334,7 @@ static Model_mp_lit
 	MP2(surrogateType,local_taylor),
         MP2(surrogateType,multipoint_qmea),
         MP2(surrogateType,multipoint_tana),
+        MP2(trendOrder,none),
         MP2(trendOrder,constant),
         MP2(trendOrder,linear),
         MP2(trendOrder,reduced_quadratic),
@@ -7359,13 +7352,25 @@ static Model_mp_type
 	MP2s(approxCorrectionType,ADDITIVE_CORRECTION),
 	MP2s(approxCorrectionType,COMBINED_CORRECTION),
 	MP2s(approxCorrectionType,MULTIPLICATIVE_CORRECTION),
+	MP2s(c3AdvanceType,MAX_ORDER_ADVANCEMENT),
+	MP2s(c3AdvanceType,MAX_RANK_ADVANCEMENT),
+	MP2s(c3AdvanceType,MAX_RANK_ORDER_ADVANCEMENT),
+	MP2s(c3AdvanceType,START_ORDER_ADVANCEMENT),
+	MP2s(c3AdvanceType,START_RANK_ADVANCEMENT),
 	MP2s(pointsManagement,MINIMUM_POINTS),
 	MP2s(pointsManagement,RECOMMENDED_POINTS),
+      //MP2p(refinementControl,UNIFORM_CONTROL),  // Pecos
+      //MP2p(refinementType,P_REFINEMENT),        // Pecos
+	MP2s(regressionType,FT_LS),
+	MP2s(regressionType,FT_RLS2),
 	MP2s(subMethodScheduling,MASTER_SCHEDULING),
+        MP2s(method_rotation,ROTATION_METHOD_UNRANKED),
+	MP2s(method_rotation,ROTATION_METHOD_RANKED),
 	MP2s(subMethodScheduling,PEER_SCHEDULING);
+
       //MP2s(subMethodScheduling,PEER_DYNAMIC_SCHEDULING),
       //MP2s(subMethodScheduling,PEER_STATIC_SCHEDULING),
-        
+
 
 static Model_mp_utype
         MP2s(analyticCovIdForm,EXP_L2),
@@ -7375,6 +7380,11 @@ static Model_mp_utype
         MP2s(exportApproxFormat,TABULAR_EVAL_ID),
         MP2s(exportApproxFormat,TABULAR_IFACE_ID),
         MP2s(exportApproxFormat,TABULAR_ANNOTATED),
+        MP2s(exportApproxVarianceFormat,TABULAR_NONE),
+        MP2s(exportApproxVarianceFormat,TABULAR_HEADER),
+        MP2s(exportApproxVarianceFormat,TABULAR_EVAL_ID),
+        MP2s(exportApproxVarianceFormat,TABULAR_IFACE_ID),
+        MP2s(exportApproxVarianceFormat,TABULAR_ANNOTATED),
       //MP2s(importApproxFormat,TABULAR_NONE),
       //MP2s(importApproxFormat,TABULAR_HEADER),
       //MP2s(importApproxFormat,TABULAR_EVAL_ID),
@@ -7394,30 +7404,36 @@ static Model_mp_utype
         MP2s(modelExportFormat,BINARY_ARCHIVE),
         MP2s(modelExportFormat,ALGEBRAIC_FILE),
         MP2s(modelExportFormat,ALGEBRAIC_CONSOLE),
+        MP2s(modelImportFormat,TEXT_ARCHIVE),
+        MP2s(modelImportFormat,BINARY_ARCHIVE),
         MP2s(randomFieldIdForm,RF_KARHUNEN_LOEVE),
         MP2s(randomFieldIdForm,RF_PCA_GP),
-	      MP2s(subspaceNormalization,SUBSPACE_NORM_MEAN_VALUE),
-	      MP2s(subspaceNormalization,SUBSPACE_NORM_MEAN_GRAD),
-	      MP2s(subspaceNormalization,SUBSPACE_NORM_LOCAL_GRAD),
-	      MP2s(subspaceSampleType,SUBMETHOD_LHS),
-	      MP2s(subspaceSampleType,SUBMETHOD_RANDOM),
-	      MP2s(subspaceIdCVMethod,MINIMUM_METRIC),
-	      MP2s(subspaceIdCVMethod,RELATIVE_TOLERANCE),
-	      MP2s(subspaceIdCVMethod,DECREASE_TOLERANCE);
+	MP2s(subspaceNormalization,SUBSPACE_NORM_MEAN_VALUE),
+	MP2s(subspaceNormalization,SUBSPACE_NORM_MEAN_GRAD),
+	MP2s(subspaceNormalization,SUBSPACE_NORM_LOCAL_GRAD),
+	MP2s(subspaceSampleType,SUBMETHOD_LHS),
+	MP2s(subspaceSampleType,SUBMETHOD_RANDOM),
+	MP2s(subspaceIdCVMethod,MINIMUM_METRIC),
+	MP2s(subspaceIdCVMethod,RELATIVE_TOLERANCE),
+	MP2s(subspaceIdCVMethod,DECREASE_TOLERANCE);
 
 static Real
         MP_(adaptedBasisCollocRatio),
         MP_(annRange),
+	MP_(collocationRatio),
 	MP_(convergenceTolerance),
+	MP_(decreaseTolerance),
         MP_(discontGradThresh),
         MP_(discontJumpThresh),
 	MP_(krigingNugget),
 	MP_(percentFold),
-	MP_(truncationTolerance),
+	MP_(regressionL2Penalty),
 	MP_(relTolerance),
-    MP_(solverTolerance),
-    MP_(roundingTolerance),
-	MP_(decreaseTolerance);
+	MP_(solverRoundingTol),
+	MP_(solverTol),
+	MP_(statsRoundingTol),
+	MP_(truncationTolerance),
+	MP_(adaptedBasisTruncationTolerance);
 
 static RealVector
 	MP_(krigingCorrelations),
@@ -7432,8 +7448,10 @@ static IntVector
 
 static String
 	MP_(actualModelPointer),
+        MP_(advancedOptionsFilename),
 	MP_(decompCellType),
 	MP_(exportApproxPtsFile),
+	MP_(exportApproxVarianceFile),
 	MP_(idModel),
       //MP_(importApproxPtsFile),
 	MP_(importBuildPtsFile),
@@ -7441,6 +7459,7 @@ static String
 	MP_(interfacePointer),
 	MP_(krigingOptMethod),
 	MP_(modelExportPrefix),
+	MP_(modelImportPrefix),
 	MP_(optionalInterfRespPointer),
 	MP_(propagationModelPointer),
 	MP_(refineCVMetric),
@@ -7452,16 +7471,18 @@ static String
 
 static StringArray
         MP_(diagMetrics),
-	MP_(orderedModelPointers),
+	MP_(ensembleModelPointers),
 	MP_(primaryVarMaps),
         MP_(secondaryVarMaps);
 
 static bool
+        MP_(adaptOrder),
         MP_(adaptRank),
 	MP_(autoRefine),
 	MP_(crossValidateFlag),
 	MP_(decompDiscontDetect),
 	MP_(exportSurrogate),
+	MP_(importSurrogate),
 	MP_(hierarchicalTags),
         MP_(identityRespMap),
       //MP_(importApproxActive),
@@ -7473,20 +7494,27 @@ static bool
         MP_(domainDecomp),
         MP_(pointSelection),
         MP_(pressFlag),
-  MP_(subspaceIdBingLi),
-  MP_(subspaceIdConstantine),
-  MP_(subspaceIdEnergy),
-  MP_(subspaceBuildSurrogate),
-  MP_(subspaceIdCV),
-  MP_(subspaceCVIncremental);
+        MP_(respScalingFlag),
+        MP_(subspaceIdBingLi),
+        MP_(subspaceIdConstantine),
+        MP_(subspaceIdEnergy),
+        MP_(subspaceBuildSurrogate),
+        MP_(subspaceIdCV),
+        MP_(subspaceCVIncremental),
+	MP_(tensorGridFlag);
 
 static unsigned short
 	MP_(adaptedBasisSparseGridLev),
-	MP_(adaptedBasisExpOrder);
+	MP_(adaptedBasisExpOrder),
+	MP_(kickOrder),
+        MP_(maxCVOrderCandidates),
+	MP_(maxOrder),
+	MP_(startOrder);
 
 static short
 	MP_(annNodes),
 	MP_(annRandomWeight),
+	MP_(c3AdvanceType),
 	MP_(krigingFindNugget),
 	MP_(krigingMaxTrials),
 	MP_(marsMaxBases),
@@ -7500,10 +7528,10 @@ static short
 static int
         MP_(decompSupportLayers),
         MP_(initialSamples),
-        MP_(maxFunctionEvals),
-        MP_(maxIterations),
+        MP_(maxCrossIterations),
         MP_(numFolds),
         MP_(numReplicates),
+        MP_(numRestarts),
         MP_(pointsTotal),
         MP_(refineCVFolds),
         MP_(softConvergenceLimit),
@@ -7513,14 +7541,17 @@ static int
         MP_(subspaceCVMaxRank);
 
 static size_t
-    MP_(crossMaxIter),
-    MP_(kickRank),
-    MP_(maxOrder),        
-    MP_(maxRank),
-    MP_(startOrder),
-    MP_(startRank);
-//  MP_(verbosity);
+	MP_(collocationPoints),
+	MP_(kickRank),
+        MP_(maxCVRankCandidates),
+        MP_(maxFunctionEvals),
+        MP_(maxIterations),
+	MP_(maxRank),
+	MP_(maxSolverIterations),
+	MP_(startRank);
+//	MP_(verbosity);
     
+#undef MP2p
 #undef MP2s
 #undef MP2
 #undef MP_
@@ -7617,7 +7648,7 @@ static Resp_mp_utype
         MP2s(scalarDataFormat,TABULAR_HEADER),
         MP2s(scalarDataFormat,TABULAR_EVAL_ID),
         MP2s(scalarDataFormat,TABULAR_EXPER_ANNOT);
- 
+
 #undef MP2s
 #undef MP2
 #undef MP_

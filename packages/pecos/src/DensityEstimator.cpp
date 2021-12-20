@@ -17,123 +17,60 @@ namespace Pecos {
 
 // -------------------- constructors and desctructors --------------------
 
-/** The default constructor: samples is NULL in this case.  This
- makes it necessary to check for NULL in the copy constructor,
- assignment operator, and destructor. */
-DensityEstimator::DensityEstimator() :
-        densityEstimator(NULL), referenceCount(1) {
-#ifdef REFCOUNT_DEBUG
-    PCout << "DensityEstimator::DensityEstimator(BaseConstructor) called to "
-    << "build empty envelope." << std::endl;
-#endif
-}
+/** The default constructor: samples is NULL in this case. */
+DensityEstimator::DensityEstimator()
+{ /* empty ctor */ }
 
 /** Envelope constructor only needs to extract enough data to properly
  execute get_density_estimator, since DensityEstimator(BaseConstructor)
  builds the actual base class data for the derived transformations. */
-DensityEstimator::DensityEstimator(const String& density_estimator) :
-        densityEstimator(NULL), referenceCount(1) {
-#ifdef REFCOUNT_DEBUG
-    PCout << "DensityEstimator::DensityEstimator(string&) called to "
-    << "instantiate envelope." << std::endl;
-#endif
-
-    // Set the rep pointer to the appropriate derived type
-    density_estimator_type = density_estimator;
-    densityEstimator = get_density_estimator(density_estimator);
-    if (!densityEstimator) // bad type or insufficient memory
-        abort_handler(-1);
+DensityEstimator::DensityEstimator(const String& density_estimator):
+  // Set the rep pointer to the appropriate derived type
+  density_estimator_type(density_estimator),
+  densityEstimator(get_density_estimator(density_estimator))
+{
+  if (!densityEstimator) // bad type or insufficient memory
+    abort_handler(-1);
 }
 
-/** Copy constructor manages sharing of densityEstimatorand incrementing
- of referenceCount. */
-DensityEstimator::DensityEstimator(const DensityEstimator& density_estimator) {
-    // Increment new (no old to decrement)
-    densityEstimator = density_estimator.densityEstimator;
-
-    if (densityEstimator) // Check for an assignment of NULL
-        densityEstimator->referenceCount++;
-
-#ifdef REFCOUNT_DEBUG
-    PCout << "DensityEstimator::DensityEstimator(DensityEstimator&)"
-    << std::endl;
-    if (densityEstimator)
-    PCout << "densityEstimator referenceCount = " << densityEstimator->referenceCount
-    << std::endl;
-#endif
-}
+/** Copy constructor manages sharing of densityEstimator. */
+DensityEstimator::DensityEstimator(const DensityEstimator& density_estimator):
+  densityEstimator(density_estimator.densityEstimator)
+{ /* empty ctor */ }
 
 /** Assignment operator decrements referenceCount for old dataTransRep,
  assigns new dataTransRep, and increments referenceCount for new
  dataTransRep. */
-DensityEstimator DensityEstimator::operator=(
-        const DensityEstimator& density_estimator) {
-    if (densityEstimator != density_estimator.densityEstimator) { // normal case: old != new
-        // Decrement old
-        if (densityEstimator) {            // Check for null pointer
-            if (--densityEstimator->referenceCount == 0) {
-                delete densityEstimator;
-            }
-        }
-        // Assign and increment new
-        densityEstimator = density_estimator.densityEstimator;
-        if (densityEstimator) // Check for an assignment of NULL
-            densityEstimator->referenceCount++;
-    }
-    // else if assigning same rep, then do nothing since referenceCount
-    // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-    PCout << "DensityEstimator::operator=(DensityEstimator&)" << std::endl;
-    if (densityEstimator)
-    PCout << "densityEstimator referenceCount = " << densityEstimator->referenceCount
-    << std::endl;
-#endif
-
-    return *this; // calls copy constructor since returned by value
+DensityEstimator 
+DensityEstimator::operator=(const DensityEstimator& density_estimator)
+{
+  densityEstimator = density_estimator.densityEstimator;
+  return *this; // calls copy constructor since returned by value
 }
 
-/** Destructor decrements referenceCount and only deletes dataTransRep
- when referenceCount reaches zero. */
-DensityEstimator::~DensityEstimator() {
-    // Check for NULL pointer
-    if (densityEstimator) {
-        --densityEstimator->referenceCount;
-#ifdef REFCOUNT_DEBUG
-        PCout << "densityEstimator referenceCount decremented to "
-        << densityEstimator->referenceCount << std::endl;
-#endif
-        if (densityEstimator->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-            PCout << "deleting densityEstimator" << std::endl;
-#endif
-            delete densityEstimator;
-        }
-    }
-}
+
+DensityEstimator::~DensityEstimator()
+{ /* empty dtor */}
+
 
 // ----------------------------------------------------------------------
 
 /** Used only by the envelope constructor to initialize densityEstimator to the
  appropriate derived type. */
-DensityEstimator* DensityEstimator::get_density_estimator(
-        const String& density_estimator_type) {
-#ifdef REFCOUNT_DEBUG
-    PCout << "Envelope instantiating letter in get_density_estimator(string&)."
-    << std::endl;
-#endif
-
-    if (density_estimator_type == "gaussian_kde") {
-        return new GaussianKDE();
-	// Deactivate until Fabian resolves errors with
-	// Nataf transformation 
-	//} else if (density_estimator_type == "nataf") {
-        //return new NatafDensity();
-    } else {
-        PCerr << "Error: DensityEstimator type '" << density_estimator_type
-                << "' not available." << std::endl;
-        return NULL;
-    }
+std::shared_ptr<DensityEstimator>
+DensityEstimator::get_density_estimator(const String& density_estimator_type)
+{
+  if (density_estimator_type == "gaussian_kde") {
+    return std::make_shared<GaussianKDE>();
+    // Deactivate until Fabian resolves errors with
+    // Nataf transformation 
+    //} else if (density_estimator_type == "nataf") {
+    //return new NatafDensity();
+  } else {
+    PCerr << "Error: DensityEstimator type '" << density_estimator_type
+	  << "' not available." << std::endl;
+    return std::make_shared<DensityEstimator>();
+  }
 }
 
 String DensityEstimator::getType() {
@@ -146,18 +83,18 @@ String DensityEstimator::getType() {
 }
 
 DensityEstimator* DensityEstimator::getEnvelope() {
-    if (densityEstimator) {
-        // return envelope
-        return densityEstimator;
-    } else {
-        // if envelope is letter -> return this
-        return this;
-    }
+  if (densityEstimator) {
+    // return envelope
+    return densityEstimator.get();
+  } else {
+    // if envelope is letter -> return this
+    return this;
+  }
 }
 
-bool DensityEstimator::is_null() {
-    return densityEstimator == NULL;
-}
+//bool DensityEstimator::is_null() {
+//    return densityEstimator == NULL;
+//}
 
   void DensityEstimator::initialize(RealMatrix& samples,Teuchos::ETransp trans){
     if (densityEstimator) { // envelope fwd to letter

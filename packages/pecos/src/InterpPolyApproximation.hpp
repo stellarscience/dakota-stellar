@@ -55,26 +55,35 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  bool update_active_iterators(const UShortArray& key);
+  bool update_active_iterators(const ActiveKey& key);
 
   int min_coefficients() const;
 
   void allocate_arrays();
+
+  void combined_to_active(bool clear_combined);
 
   /// computes component (main and interaction) Sobol' indices
   void compute_component_sobol();
   /// computes total Sobol' indices
   void compute_total_sobol();
 
-  /// compute numerical moments to order 4
+  /// compute numerical moments (to order 4 if full_stats)
   void compute_moments(bool full_stats = true, bool combined_stats = false);
-  /// compute numerical moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x, bool full_stats = true,
-		       bool combined_stats = false);
+  // compute numerical moments in all-variables mode to order 2
+  //void compute_moments(const RealVector& x, bool full_stats = true,
+  //		         bool combined_stats = false);
+
+  const RealVector& expansion_moments() const;
+  const RealVector& numerical_integration_moments() const;
 
   //
   //- Heading: New virtual functions
   //
+
+  /// update surr_data with synthetic data (from evaluating the interpolant)
+  /// in order to ease downstream processing
+  virtual void synthetic_surrogate_data(SurrogateData& surr_data) = 0;
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments,
@@ -127,15 +136,24 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 
 
 inline bool InterpPolyApproximation::
-update_active_iterators(const UShortArray& key)
+update_active_iterators(const ActiveKey& key)
 {
   surrData.active_key(key);
-  if (!modSurrData.is_null())
-    modSurrData.active_key(key);
-
   PolynomialApproximation::update_active_iterators(key);
   return true;
 }
+
+
+/** TO DO: all current cases should use expansion moments (with the
+    distinction drawn between interpolation and integration rules, we
+    prefer Gauss integration rules on interpolant expansions). */
+inline const RealVector& InterpPolyApproximation::expansion_moments() const
+{ return secondaryMoments; }
+
+
+inline const RealVector& InterpPolyApproximation::
+numerical_integration_moments() const
+{ return primaryMomIter->second; }
 
 
 inline void InterpPolyApproximation::
@@ -152,30 +170,20 @@ compute_moments(bool full_stats, bool combined_stats)
   else { // only two moments required for incremental metrics
     //integrate_response_moments(2, combined_stats);
 
-    // this approach utilizes bit trackers for computed moments:
-    numMomentsIter->second.resize(2);
-    if (combined_stats)
-      { combined_mean(); combined_variance(); }
-    else
-      {          mean();          variance(); }
-    expMomentsIter->second.resize(0);
+    // this approach utilizes bit trackers for computed moments
+    PolynomialApproximation::compute_moments(full_stats, combined_stats);
   }
 }
 
 
+/*
 inline void InterpPolyApproximation::
 compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
-  // all variables mode only supports first two moments
-  numMomentsIter->second.resize(2);
-  if (combined_stats)
-    { combined_mean(x); combined_variance(x); }
-  else
-    {          mean(x);          variance(x); }
+  PolynomialApproximation::compute_moments(x, full_stats, combined_stats);
 
   //if (full_stats) integrate_expansion_moments(4, x, combined_stats);
-  //else
-    expMomentsIter->second.resize(0);
+  //else if (!secondaryMoments.empty()) secondaryMoments.resize(0);
   // Note: it would be feasible to implement an all_variables version of
   // integrate_expansion_moments() by evaluating the combined expansion at
   // {design/epistemic=initialPtU,aleatory=Gauss points}
@@ -183,6 +191,7 @@ compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
   // --> would require generation of new TPQ/SSG grid only over aleatory vars
   // --> could possibly retire redundant all_vars functions
 }
+*/
 
 } // namespace Pecos
 

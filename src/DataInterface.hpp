@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -37,7 +38,7 @@ enum {
   FORK_INTERFACE=PROCESS_INTERFACE_BIT, SYSTEM_INTERFACE, GRID_INTERFACE,
   // direct coupled interfaces
   TEST_INTERFACE=DIRECT_INTERFACE_BIT, 
-  MATLAB_INTERFACE, PYTHON_INTERFACE, SCILAB_INTERFACE
+  MATLAB_INTERFACE, PYTHON_INTERFACE, PYBIND11_INTERFACE, SCILAB_INTERFACE
 };
 
 // put this helper function here to encourage sync with enum above
@@ -52,6 +53,7 @@ inline String interface_enum_to_string(unsigned short interface_type)
   case TEST_INTERFACE:    return String("direct");        break;
   case MATLAB_INTERFACE:  return String("matlab");        break;
   case PYTHON_INTERFACE:  return String("python");        break;
+  case PYBIND11_INTERFACE:return String("pybind11");      break;
   case SCILAB_INTERFACE:  return String("scilab");        break;
   default:
     Cerr << "\nError: Unknown interface enum " << interface_type << std::endl;
@@ -89,6 +91,8 @@ class DataInterfaceRep
   friend class DataInterface;
 
 public:
+
+  ~DataInterfaceRep(); ///< destructor
 
   //
   //- Heading: Data
@@ -239,7 +243,6 @@ private:
   //
 
   DataInterfaceRep();  ///< constructor
-  ~DataInterfaceRep(); ///< destructor
 
   //
   //- Heading: Member methods
@@ -257,8 +260,6 @@ private:
   //- Heading: Private data members
   //
 
-  /// number of handle objects sharing this dataInterfaceRep
-  int referenceCount;
 };
 
 
@@ -316,7 +317,7 @@ public:
   void write(MPIPackBuffer& s) const;
 
   /// return dataIfaceRep
-  DataInterfaceRep* data_rep();
+  std::shared_ptr<DataInterfaceRep> data_rep();
 
 private:
 
@@ -325,11 +326,11 @@ private:
   //
 
   /// pointer to the body (handle-body idiom)
-  DataInterfaceRep* dataIfaceRep;
+  std::shared_ptr<DataInterfaceRep> dataIfaceRep;
 };
 
 
-inline DataInterfaceRep* DataInterface::data_rep()
+inline std::shared_ptr<DataInterfaceRep> DataInterface::data_rep()
 {return dataIfaceRep; }
 
 

@@ -17,7 +17,7 @@
 #endif
 
 #include "OptLBFGS.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "ioformat.h"
 
 using namespace std;

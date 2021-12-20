@@ -57,6 +57,7 @@ typedef std::string String;
 // --------------------------------
 typedef Teuchos::SerialDenseVector<int, Real>                RealVector;
 typedef Teuchos::SerialDenseVector<int, int>                 IntVector;
+typedef Teuchos::SerialDenseVector<int, size_t>              SizetVector;
 typedef Teuchos::SerialDenseVector<int, std::complex<Real> > ComplexVector;
 typedef Teuchos::SerialDenseMatrix<int, Real>                RealMatrix;
 typedef Teuchos::SerialDenseMatrix<int, int>                 IntMatrix;
@@ -98,6 +99,7 @@ typedef std::vector<UShort4DArray>     UShort5DArray;
 typedef std::deque<UShortArray>        UShortArrayDeque;
 typedef std::deque<UShort2DArray>      UShort2DArrayDeque;
 typedef std::vector<UShortArrayDeque>  UShortArrayDequeArray;
+typedef std::deque<IntArray>           IntArrayDeque;
 typedef std::vector<size_t>            SizetArray;
 typedef std::vector<SizetArray>        Sizet2DArray;
 typedef std::vector<Sizet2DArray>      Sizet3DArray;
@@ -154,6 +156,7 @@ typedef std::vector<StringRealMap>        StringRealMapArray;
 typedef std::vector<RealRealMap>          RealRealMapArray;
 typedef std::vector<RealRealPairRealMap>  RealRealPairRealMapArray;
 typedef std::vector<IntIntPairRealMap>    IntIntPairRealMapArray;
+typedef std::map<unsigned short, RealArray> UShortRealArrayMap;
 typedef std::map<int, RealVector>         IntRealVectorMap;
 typedef std::map<UShortMultiSet,   Real>  UShortMultiSetRealMap;
 typedef std::map<UShort2DMultiSet, Real>  UShort2DMultiSetRealMap;
@@ -211,12 +214,41 @@ inline size_t find_index(const PecosContainerType& c,
 }
 
 
+template <typename PecosContainerType>
+inline size_t find_index(const PecosContainerType& c,
+			 const typename PecosContainerType::value_type& val,
+			 size_t start, size_t end)
+{
+  // For a default container, employ one traversal
+
+  typename PecosContainerType::const_iterator cit = c.begin();
+  std::advance(cit, start);
+  size_t cntr = start; // force size_t to ensure that _NPOS is valid
+  for (; cit!=c.end() && cntr<end; ++cit, ++cntr)
+    if (*cit == val)
+      return cntr;
+  return _NPOS;
+}
+
+
+template <typename ScalarType>
+inline ScalarType find_min(const std::vector<ScalarType>& vec)
+{
+  size_t i, len = vec.size();
+  ScalarType min = (len) ? vec[0] : std::numeric_limits<ScalarType>::max();
+  for (i=1; i<len; ++i)
+    if (vec[i] < min)
+      min = vec[i];
+  return min;
+}
+
+
 template <typename ScalarType>
 inline ScalarType find_max(const std::vector<ScalarType>& vec)
 {
   size_t i, len = vec.size();
-  ScalarType max = std::numeric_limits<ScalarType>::min();
-  for (i=0; i<len; ++i)
+  ScalarType max = (len) ? vec[0] : std::numeric_limits<ScalarType>::min();
+  for (i=1; i<len; ++i)
     if (vec[i] > max)
       max = vec[i];
   return max;
@@ -334,6 +366,23 @@ inline void push_range_to_back(ContainerT1& array1, OrdinalType p1_index,
   for (i1=p1_index, i2=len2; i1<len1; ++i1, ++i2)
     array2[i2].swap(array1[i1]);
   array1.resize(p1_index);
+}
+
+
+/// equality operator for SizetArray and SizetMultiArrayConstView
+template <typename OrdinalType, typename ScalarType>
+bool operator<(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v1,
+	       const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v2)
+{
+  // Modeled after std::lexicographical_compare()
+  OrdinalType i, len1 = v1.length(), len2 = v2.length();
+  for (i=0; (i < len1) && (i < len2); ++i) {
+    if      (v1[i] < v2[i]) return true;
+    else if (v2[i] < v1[i]) return false;
+  }
+  // have reached one or both ends with equality up to this point
+  // --> v1 is less-than iff it is shorter
+  return (i == len1) && (i != len2);
 }
 
 

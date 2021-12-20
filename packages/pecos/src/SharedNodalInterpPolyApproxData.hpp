@@ -84,7 +84,7 @@ protected:
   //
 
   /// return driverRep
-  IntegrationDriver* driver();
+  std::shared_ptr<IntegrationDriver> driver();
 
 private:
 
@@ -128,8 +128,8 @@ private:
   void update_nonzero_basis_products(const UShort2DArray& sm_multi_index);
 
   /// evaluate 1D integral of product of interpolation polynomials
-  bool basis_product_1d(InterpolationPolynomial* poly_rep_1,
-			InterpolationPolynomial* poly_rep_2,
+  bool basis_product_1d(InterpolationPolynomial& poly_rep_1,
+			InterpolationPolynomial& poly_rep_2,
 			unsigned short key_1, unsigned short key_2,
 			const RealArray& pts, const RealArray& wts, Real& prod);
   /// lookup multidimensional integral of products of interpolation polynomials
@@ -161,7 +161,7 @@ private:
   // the active key to restore following the expansion combination process
   // (this process activates a maximal expansion to facilitate assembly of
   // combined multi-indices and coefficients)
-  //UShortArray prevActiveKey;
+  //ActiveKey prevActiveKey;
 
   /// map from random index to unique nonZerosMapArray
   SizetArray nonZerosMapIndices;
@@ -207,8 +207,8 @@ inline SharedNodalInterpPolyApproxData::~SharedNodalInterpPolyApproxData()
 
 
 inline bool SharedNodalInterpPolyApproxData::
-basis_product_1d(InterpolationPolynomial* poly_rep_1,
-		 InterpolationPolynomial* poly_rep_2,
+basis_product_1d(InterpolationPolynomial& poly_rep_1,
+		 InterpolationPolynomial& poly_rep_2,
 		 unsigned short key_1, unsigned short key_2,
 		 const RealArray& pts, const RealArray& wts, Real& prod)
 {
@@ -216,8 +216,8 @@ basis_product_1d(InterpolationPolynomial* poly_rep_1,
   prod = 0.;
   size_t i, num_pts = pts.size();
   for (i=0; i<num_pts; ++i)
-    prod += wts[i] * poly_rep_1->type1_value(pts[i], key_1)
-                   * poly_rep_2->type1_value(pts[i], key_2);
+    prod += wts[i] * poly_rep_1.type1_value(pts[i], key_1)
+                   * poly_rep_2.type1_value(pts[i], key_2);
   return (std::abs(prod) > tol) ? true : false;
 }
 
@@ -296,7 +296,8 @@ barycentric_exact_index(const UShortArray& basis_index,
 }
 
 
-inline IntegrationDriver* SharedNodalInterpPolyApproxData::driver()
+inline std::shared_ptr<IntegrationDriver>
+SharedNodalInterpPolyApproxData::driver()
 { return driverRep; }
 
 } // namespace Pecos

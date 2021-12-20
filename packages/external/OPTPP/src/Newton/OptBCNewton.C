@@ -16,7 +16,7 @@
 #endif
 
 #include "OptBCNewton.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "ioformat.h"
 #include <float.h>
 #include "Teuchos_LAPACK.hpp"

@@ -265,8 +265,8 @@ dz_ds_factor(short u_type, Real x, Real z) const
   // to STD_UNIFORM: ln x = ln L + (z+1)/2 (ln U - ln L)
   Real log_range = std::log(upperBnd)-std::log(lowerBnd);
   switch (u_type) {
-  case STD_NORMAL:  return x*log_range*NormalRandomVariable::std_pdf(z); break;
-  case STD_UNIFORM: return x*log_range*UniformRandomVariable::std_pdf(); break;
+  case STD_NORMAL:  return x*log_range* NormalRandomVariable::std_pdf(z); break;
+  case STD_UNIFORM: return x*log_range*UniformRandomVariable::std_pdf(z); break;
   //case LOGUNIFORM:  TO DO; break;
   default:
     PCerr << "Error: unsupported u-space type " << u_type

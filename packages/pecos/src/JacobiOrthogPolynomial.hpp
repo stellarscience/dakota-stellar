@@ -133,10 +133,8 @@ inline void JacobiOrthogPolynomial::push_parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) { // first pass
     switch (dist_param) {
     case JACOBI_ALPHA: alphaPoly = param;      break;
     case JACOBI_BETA:   betaPoly = param;      break;
@@ -147,23 +145,23 @@ inline void JacobiOrthogPolynomial::push_parameter(short dist_param, Real param)
   else
     switch (dist_param) {
     case JACOBI_ALPHA:
-      if (real_compare(alphaPoly, param)) parametricUpdate = false;
-      else { alphaPoly = param; parametricUpdate = true; reset_gauss(); }
+      if (!real_compare(alphaPoly, param))
+	{ alphaPoly = param;  reset_gauss(); }
       break;
     case JACOBI_BETA:
-      if (real_compare(betaPoly, param)) parametricUpdate = false;
-      else { betaPoly = param; parametricUpdate = true; reset_gauss(); }
+      if (!real_compare(betaPoly, param))
+	{ betaPoly = param;  reset_gauss(); }
       break;
     case BE_ALPHA: {
       Real bp = param - 1.; // alpha stat to beta poly
-      if (real_compare(betaPoly, bp)) parametricUpdate = false;
-      else { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
+      if (!real_compare(betaPoly, bp))
+	{ betaPoly = bp;  reset_gauss(); }
       break;
     }
     case BE_BETA: {
       Real ap = param - 1.; break; // beta stat to alpha poly
-      if (real_compare(alphaPoly, ap)) parametricUpdate = false;
-      else { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+      if (!real_compare(alphaPoly, ap))
+	{ alphaPoly = ap;  reset_gauss(); }
       break;
     }
     }

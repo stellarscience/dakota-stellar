@@ -46,13 +46,13 @@ void HierarchSparseGridDriver::clear_inactive()
   //smolyakMultiIndex.erase(smolyakMultiIndex.begin(), smolMIIter);
   //smolyakMultiIndex.erase(++sm_it, smolyakMultiIndex.end());
   
-  std::map<UShortArray, UShort3DArray>::iterator sm_it
+  std::map<ActiveKey, UShort3DArray>::iterator sm_it
     = smolyakMultiIndex.begin();
-  std::map<UShortArray, UShort4DArray>::iterator ck_it = collocKey.begin();
-  std::map<UShortArray, Sizet3DArray>::iterator  ci_it = collocIndices.begin();
-  std::map<UShortArray, RealVector2DArray>::iterator t1_it
+  std::map<ActiveKey, UShort4DArray>::iterator ck_it = collocKey.begin();
+  std::map<ActiveKey, Sizet3DArray>::iterator  ci_it = collocIndices.begin();
+  std::map<ActiveKey, RealVector2DArray>::iterator t1_it
     = type1WeightSets.begin();
-  std::map<UShortArray, RealMatrix2DArray>::iterator t2_it
+  std::map<ActiveKey, RealMatrix2DArray>::iterator t2_it
     = type2WeightSets.begin();
   while (sm_it != smolyakMultiIndex.end())
     if (sm_it == smolMIIter) // preserve active
@@ -66,9 +66,9 @@ void HierarchSparseGridDriver::clear_inactive()
 
 
 /*
-const UShortArray& HierarchSparseGridDriver::maximal_grid() const
+const ActiveKey& HierarchSparseGridDriver::maximal_grid() const
 {
-  std::map<UShortArray, RealVector2DArray>::const_iterator
+  std::map<ActiveKey, RealVector2DArray>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;
   size_t l, s, num_lev, num_sets, num_wts, max_wts = 0;
   for (; w_cit!=type1WeightSets.end(); ++w_cit) {
@@ -150,7 +150,8 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
       UShort2DArray& sm_mi_l = sm_mi[lev];
       if (sm_mi_l.empty()) // short cut for uniform decrement
     //if (sm_mi_l.size() != SharedPolyApproxData::total_order_terms())
-	SharedPolyApproxData::total_order_multi_index(lev, numVars, sm_mi_l);
+	SharedPolyApproxData::
+	  total_order_multi_index_by_level(lev, numVars, sm_mi_l);
     }
   }
   else { // utilize webbur::sandia_sgmga_vcn_ordered
@@ -606,7 +607,7 @@ void HierarchSparseGridDriver::compute_grid()
   bool clear = (refineControl != NO_CONTROL); // restore prev state if refined
   update_smolyak_multi_index(clear);          // compute smolyakMultiIndex
   assign_collocation_key();                   // compute collocKey
-  assign_1d_collocation_points_weights();     // define 1-D point/weight sets
+  //assign_1d_collocation_points_weights();   // handled in init_grid_params()
 
   if (nestedGrid) {
     compute_points_weights(smolMIIter->second, collocKeyIter->second,
@@ -834,7 +835,7 @@ void HierarchSparseGridDriver::combine_grid()
     combine_sm_map_ref;
   combinedSmolyakMultiIndex.clear();
   combinedSmolyakMultiIndexMap.resize(num_combine);
-  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
+  std::map<ActiveKey, UShort3DArray>::const_iterator sm_cit;
   for (sm_cit  = smolyakMultiIndex.begin(), i=0;
        sm_cit != smolyakMultiIndex.end(); ++sm_cit, ++i) {
     const UShort3DArray& sm_mi_i = sm_cit->second;
@@ -893,7 +894,7 @@ void HierarchSparseGridDriver::combined_to_active(bool clear_combined)
   // collocation indices are invalidated by expansion combination since the
   // corresponding hierarchical expansions involve overlays of data that no
   // longer reflect individual evaluations (to match collocIndices restoration,
-  // new modSurrData must be defined in HierarchInterpPolyApproximation)
+  // HierarchInterpPolyApproximation invokes synthetic_surrogate_data())
   collocIndIter->second.clear();// don't carry over any old indexing
   assign_collocation_indices(); // default sequential ordering across lev,set,pt
 }
@@ -915,7 +916,7 @@ compute_points_weights(const UShortArray& sm_index,
   // update collocPts1D, type1CollocWts1D, and type2CollocWts1D
   UShortArray total_order;
   level_to_order(sm_index, total_order);
-  update_1d_collocation_points_weights(total_order, sm_index);
+  assign_1d_collocation_points_weights(total_order, sm_index);
 
   // define points and type 1/2 weights; weights are products of 1D weights
   for (k=0; k<num_tp_pts; ++k) {
@@ -1219,7 +1220,7 @@ partition_reference_key(UShort2DArray& ref_key) const
   size_t lev, num_lev = sm_mi.size(), num_sets;
   ref_key.resize(num_lev);
   for (lev=0; lev<num_lev; ++lev) {
-    UShortArray&  ref_l = ref_key[lev];  ref_l.resize(2);  ref_l[0] = 0;
+    UShortArray& ref_l = ref_key[lev];  ref_l.resize(2);  ref_l[0] = 0;
     const UShort2DArray& sm_mi_l = sm_mi[lev];
     num_sets = sm_mi_l.size();
     if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED)
@@ -1254,14 +1255,14 @@ partition_keys(UShort2DArray& ref_key, UShort2DArray& incr_key) const
 
 
 void HierarchSparseGridDriver::
-partition_increment_key(std::map<UShortArray, UShort2DArray>& incr_key_map)
+partition_increment_key(std::map<ActiveKey, UShort2DArray>& incr_key_map)
   const
 {
   unsigned short     active_trial_lev = trialLevIter->second;
   const UShortArray& active_incr_sets = incrSetsIter->second;
 
   incr_key_map.clear();
-  std::map<UShortArray, UShort3DArray>::const_iterator cit;
+  std::map<ActiveKey, UShort3DArray>::const_iterator cit;
   size_t lev, num_lev, num_sets;
   UShort2DArray incr_key;
   for (cit=smolyakMultiIndex.begin(); cit!=smolyakMultiIndex.end(); ++cit) {
@@ -1284,13 +1285,13 @@ partition_increment_key(std::map<UShortArray, UShort2DArray>& incr_key_map)
 
 
 void HierarchSparseGridDriver::
-partition_reference_key(std::map<UShortArray, UShort2DArray>& ref_key_map) const
+partition_reference_key(std::map<ActiveKey, UShort2DArray>& ref_key_map) const
 {
   unsigned short     active_trial_lev = trialLevIter->second;
   const UShortArray& active_incr_sets = incrSetsIter->second;
 
   ref_key_map.clear();
-  std::map<UShortArray, UShort3DArray>::const_iterator cit;
+  std::map<ActiveKey, UShort3DArray>::const_iterator cit;
   size_t lev, num_lev, num_sets;
   UShort2DArray ref_key;
   for (cit=smolyakMultiIndex.begin(); cit!=smolyakMultiIndex.end(); ++cit) {
@@ -1313,14 +1314,14 @@ partition_reference_key(std::map<UShortArray, UShort2DArray>& ref_key_map) const
 
 
 void HierarchSparseGridDriver::
-partition_keys(std::map<UShortArray, UShort2DArray>&  ref_key_map,
-	       std::map<UShortArray, UShort2DArray>& incr_key_map) const
+partition_keys(std::map<ActiveKey, UShort2DArray>&  ref_key_map,
+	       std::map<ActiveKey, UShort2DArray>& incr_key_map) const
 {
   unsigned short     active_trial_lev = trialLevIter->second;
   const UShortArray& active_incr_sets = incrSetsIter->second;
 
   ref_key_map.clear(); incr_key_map.clear();
-  std::map<UShortArray, UShort3DArray>::const_iterator cit;
+  std::map<ActiveKey, UShort3DArray>::const_iterator cit;
   size_t lev, num_lev, num_sets;
   UShort2DArray ref_key, incr_key;
   for (cit=smolyakMultiIndex.begin(); cit!=smolyakMultiIndex.end(); ++cit) {
@@ -1340,7 +1341,7 @@ partition_keys(std::map<UShortArray, UShort2DArray>&  ref_key_map,
       else
 	ref_l[1] = incr_l[0] = active_incr_sets[lev];
     }
-    const UShortArray& key = cit->first;
+    const ActiveKey& key = cit->first;
     ref_key_map[key] = ref_key;  incr_key_map[key] = incr_key;
   }
 }
@@ -1411,8 +1412,8 @@ combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
     comb_t2_wts.resize(max_sets[lev]);
   }
 
-  std::map<UShortArray, RealVector2DArray>::iterator t1w_it;
-  std::map<UShortArray, RealMatrix2DArray>::iterator t2w_it;
+  std::map<ActiveKey, RealVector2DArray>::iterator t1w_it;
+  std::map<ActiveKey, RealMatrix2DArray>::iterator t2w_it;
   for (t1w_it =type1WeightSets.begin(), t2w_it =type2WeightSets.begin(), i=0;
        t1w_it!=type1WeightSets.end() && t2w_it!=type2WeightSets.end();
        ++t1w_it, ++t2w_it, ++i) {

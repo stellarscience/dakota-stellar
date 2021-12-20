@@ -151,6 +151,19 @@ public:
   /// destroy history of Gauss pts/wts (due to distribution parameter changes)
   /** This is defined only for orthogonal polynomials. */
   virtual void reset_gauss();
+  /// return true if state of basis polynomial was reset due to distribution
+  /// parameter change(s)
+  /** This is defined only for orthogonal polynomials. */
+  virtual bool parameter_update() const;
+  /// return state of Gauss pts, true if array of points has been computed
+  /// for this order (since last distribution parameter change)
+  virtual bool points_defined(unsigned short order) const;
+  /// return state of Gauss type 1 weights, true if array of weights has been
+  /// computed for this order (since last distribution parameter change)
+  virtual bool type1_weights_defined(unsigned short order) const;
+  /// return state of Gauss type 2 weights, true if array of weights has been
+  /// computed for this order (since last distribution parameter change)
+  virtual bool type2_weights_defined(unsigned short order) const;
 
   /// (calculate and) return ptFactor
   virtual Real point_factor();
@@ -207,12 +220,12 @@ public:
   /// return basisPolyType
   short basis_type() const;
 
-  /// return parametricUpdate
-  bool parametric_update() const;
+  // return parametricUpdate
+  //bool parametric_update() const;
 
   /// returns polyRep for access to derived class member functions
   /// that are not mapped to the top BasisPolynomial level
-  BasisPolynomial* polynomial_rep() const;
+  std::shared_ptr<BasisPolynomial> polynomial_rep() const;
   /// function to check polyRep (does this handle contain a body)
   bool is_null() const;
 
@@ -236,9 +249,9 @@ protected:
   /// {LAGRANGE,HERMITE}_INTERP, or PIECEWISE_{LINEAR,QUADRATIC,CUBIC}_INTERP
   short basisPolyType;
 
-  /// flag indicating presence of a parametric update to the basis polynomial,
-  /// such that previous points/weights may not be reused
-  bool parametricUpdate;
+  // flag indicating presence of a parametric update to the basis polynomial,
+  // such that previous points/weights may not be reused
+  //bool parametricUpdate;
 
   /// weight discrepancy factor between Abramowitz-Stegun and PDF orthogonality
   Real wtFactor;
@@ -253,16 +266,14 @@ private:
 
   /// Used by the envelope constructor to initialize polyRep to the
   /// appropriate derived type.
-  BasisPolynomial* get_polynomial(short poly_type, short rule);
+  std::shared_ptr<BasisPolynomial> get_polynomial(short poly_type, short rule);
 
   //
   //- Heading: Data
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  BasisPolynomial* polyRep;
-  /// number of objects sharing polyRep
-  int referenceCount;
+  std::shared_ptr<BasisPolynomial> polyRep;
 };
 
 
@@ -270,11 +281,11 @@ inline short BasisPolynomial::basis_type() const
 { return (polyRep) ? polyRep->basisPolyType : basisPolyType; }
 
 
-inline bool BasisPolynomial::parametric_update() const
-{ return (polyRep) ? polyRep->parametricUpdate : parametricUpdate; }
+//inline bool BasisPolynomial::parametric_update() const
+//{ return (polyRep) ? polyRep->parametricUpdate : parametricUpdate; }
 
 
-inline BasisPolynomial* BasisPolynomial::polynomial_rep() const
+inline std::shared_ptr<BasisPolynomial> BasisPolynomial::polynomial_rep() const
 { return polyRep; }
 
 

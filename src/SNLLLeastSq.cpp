@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -329,7 +330,7 @@ nlf2_evaluator_gn(int mode, int n, const RealVector& x, double& f,
       for (j=0; j<snllLSqInstance->numLeastSqTerms; j++)
         grad_f(i) += 2. * local_fn_grads(i,j) * local_fn_vals[j];
       if (snllLSqInstance->outputLevel > NORMAL_OUTPUT)
-	Cout << std::setw(write_precision+7) << grad_f(i+1) << ' ';
+	Cout << std::setw(write_precision+7) << grad_f(i) << ' ';
     }
     if (snllLSqInstance->outputLevel > NORMAL_OUTPUT)
       Cout << "]\n";
@@ -573,14 +574,8 @@ void SNLLLeastSq::reset()
   // reset in case of recursion
   theOptimizer->reset();
 
-  // Compound constraint doesn't get managed in an Optpp::SmartPtr;
-  // mirror the alloc in snll_initialize_run() with this delete in
-  // finalize_run()
-  OPTPP::CompoundConstraint* cc = nlfObjective->getConstraints();
-  if (cc) {
-    delete cc;
-    nlfObjective->setConstraints(NULL);
-  }
+  // clear constraints
+  snll_finalize_run(nlfObjective);
 
   // reset last{FnEvalLocn,EvalMode,EvalVars}
   reset_base();

@@ -854,9 +854,15 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	jacobian_xz(i, i) = NormalRandomVariable::std_pdf(z_var)
 	                  / x_rv_i.pdf(x_vars[i]);                        break;
       }
-    else if (u_type == STD_UNIFORM)
-      jacobian_xz(i, i)
-	= UniformRandomVariable::std_pdf() / x_rv_i.pdf(x_vars[i]);
+    else if (u_type == STD_UNIFORM) {
+      //trans_X_to_Z(x_vars[i], z_var, i);
+      //jacobian_xz(i, i) = UniformRandomVariable::std_pdf(z_var)
+      //                  / x_rv_i.pdf(x_vars[i]);
+
+      // don't bother to compute z for constant pdf:
+      jacobian_xz(i, i)	= UniformRandomVariable::std_pdf(0.)
+	                / x_rv_i.pdf(x_vars[i]);
+    }
     else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL)
       x_rv_i.pull_parameter(E_BETA,  jacobian_xz(i, i));
     else if (u_type == STD_GAMMA       && x_type == GAMMA)
@@ -953,9 +959,15 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	jacobian_zx(i, i)
 	  = x_rv_i.pdf(x_vars[i]) / NormalRandomVariable::std_pdf(z_var); break;
       }
-    else if (u_type == STD_UNIFORM)
-      jacobian_zx(i, i)
-	= x_rv_i.pdf(x_vars[i]) / UniformRandomVariable::std_pdf();
+    else if (u_type == STD_UNIFORM) {
+      //trans_X_to_Z(x_vars[i], z_var, i);
+      //jacobian_zx(i, i) = x_rv_i.pdf(x_vars[i])
+      //                  / UniformRandomVariable::std_pdf(z_var);
+
+      // don't bother to compute z for constant pdf:
+      jacobian_zx(i, i)	= x_rv_i.pdf(x_vars[i])
+	                / UniformRandomVariable::std_pdf(0.);
+    }
     else if (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) {
       Real beta;  x_rv_i.pull_parameter(E_BETA, beta);
       jacobian_zx(i, i) = 1. / beta;
@@ -1338,7 +1350,11 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       }
       default:
 	x = x_vars[i]; pdf = x_rv_i.pdf(x);
-	dx_dz = UniformRandomVariable::std_pdf() / pdf;
+	//trans_X_to_Z(x, z, i); 
+	//dx_dz = UniformRandomVariable::std_pdf(z) / pdf;
+
+	// don't bother to compute z constant pdf eval:
+	dx_dz = UniformRandomVariable::std_pdf(0.) / pdf;
 	hessian_xz[i](i, i) = -dx_dz * dx_dz * x_rv_i.pdf_gradient(x) / pdf;
 	break;
       }

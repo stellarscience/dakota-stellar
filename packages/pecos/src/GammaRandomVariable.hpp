@@ -119,24 +119,25 @@ protected:
   Real alphaShape;
 
   /// pointer to the Boost gamma_distribution instance
-  gamma_dist* gammaDist;
+  std::unique_ptr<gamma_dist> gammaDist;
 };
 
 
 inline GammaRandomVariable::GammaRandomVariable():
-  ExponentialRandomVariable(), alphaShape(1.), gammaDist(NULL)
+  ExponentialRandomVariable(), alphaShape(1.),
+  gammaDist(new gamma_dist(alphaShape, betaScale))
 { ranVarType = STD_GAMMA; }
 
 
 inline GammaRandomVariable::GammaRandomVariable(Real alpha, Real beta):
   ExponentialRandomVariable(beta), alphaShape(alpha),
-  gammaDist(new gamma_dist(alphaShape, betaScale))
+  gammaDist(new gamma_dist(alpha, beta))
 { ranVarType = (beta == 1.) ? STD_GAMMA : GAMMA; }
 // std distribution defined by scale param, while shape param may vary
 
 
 inline GammaRandomVariable::~GammaRandomVariable()
-{ if (gammaDist) delete gammaDist; }
+{ }
 
 
 inline Real GammaRandomVariable::cdf(Real x) const
@@ -429,8 +430,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void GammaRandomVariable::update_boost()
 {
-  if (gammaDist) delete gammaDist;
-  gammaDist = new gamma_dist(alphaShape, betaScale);
+  gammaDist.reset(new gamma_dist(alphaShape, betaScale));
 }
 
 

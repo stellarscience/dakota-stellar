@@ -5,7 +5,7 @@ Dakota INSTALL
 Dakota is a framework which provides access to a broad variety of
 algorithms and services.  Downloading pre-built binaries from the
 Dakota web site or accessing a site-supported installation are the
-simplest routes to access Dakota.
+simplest routes to access Dakota. See https://dakota.sandia.gov.
 
 For more experienced users, building Dakota from source (either
 downloaded or checked out) allows customization with additional
@@ -242,6 +242,14 @@ III. Test Binary Distribution installation.
    on using the dakota executables or see the Quick Start page on the Dakota
    web site.
 
+3. For distributions with Graphical User Interface (GUI) support, the
+   GUI can be launched using the following command:
+
+       Windows Command Terminal: $INSTALL_DIR/gui/DakotaUI.exe
+       Linux:                    dakota-ui.sh
+       Mac OS X:                 dakota-ui.sh
+
+
 ==================
 Source Quick Start
 ==================
@@ -257,7 +265,7 @@ The following are instructions for building Dakota on a Unix-like platform
 in a Bash shell. You may need to use appropriate commands to work for your
 particular platform or shell.
 
-1. Install CMake 3.10 (or later) and ensure it is in your $PATH.
+1. Install CMake 3.12 (or later) and ensure it is in your $PATH.
 
 2. Extract Dakota source archive file. In the example below, Dakota will
    be extracted into the user's home directory, /home/username. 
@@ -326,7 +334,7 @@ Other Resources
 For additional help with installing Dakota from source, please
 visit https://dakota.sandia.gov/content/build-compile-source-code
 
-Topic include:
+Topics include:
 * accessing Dakota via repository checkout
 * source installation dependencies
 * source installation options

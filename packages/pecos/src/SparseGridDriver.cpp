@@ -26,41 +26,6 @@ static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:
 namespace Pecos {
 
 
-void SparseGridDriver::assign_1d_collocation_points_weights()
-{
-  // resize arrays
-  unsigned short ssg_lev = ssgLevIter->second;
-  size_t i, num_levels = ssg_lev + 1, curr_lev;
-  curr_lev = collocPts1D.size();
-  if (num_levels > curr_lev) {
-    collocPts1D.resize(num_levels);
-    for (i=curr_lev; i<num_levels; ++i)
-      collocPts1D[i].resize(numVars);
-  }
-  curr_lev = type1CollocWts1D.size();
-  if (num_levels > curr_lev) {
-    type1CollocWts1D.resize(num_levels);
-    for (i=curr_lev; i<num_levels; ++i)
-      type1CollocWts1D[i].resize(numVars);
-  }
-  curr_lev = type2CollocWts1D.size();
-  if (computeType2Weights && num_levels > curr_lev) {
-    type2CollocWts1D.resize(num_levels);
-    for (i=curr_lev; i<num_levels; ++i)
-      type2CollocWts1D[i].resize(numVars);
-  }
-  // assign values
-  // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
-  unsigned short l_index, q_order;
-  for (i=0; i<numVars; i++)
-    for (l_index=0; l_index<num_levels; ++l_index) {
-      level_to_order(i, l_index, q_order);
-      IntegrationDriver::
-	assign_1d_collocation_points_weights(i, q_order, l_index);
-    }
-}
-
-
 void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 {
   RealVector aniso_wts;
@@ -80,11 +45,11 @@ void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 
 void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 {
-  RealVector& curr_aniso_wts = anisoWtsIter->second;
+  RealVector& active_aniso_wts = anisoWtsIter->second;
   if (aniso_wts.empty()) {
-    if (!curr_aniso_wts.empty()) { // change from current
-      curr_aniso_wts.sizeUninitialized(0);
-      clear_grid(); // clear state to mandate a grid / grid size update
+    if (!active_aniso_wts.empty()) { // change from current
+      active_aniso_wts.sizeUninitialized(0);
+      clear_size(); // clear state to mandate a grid / grid size update
     }
   }
   else {
@@ -103,24 +68,24 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 	{ dim_iso = false; break; }
     // update active anisoLevelWts and grid update indicator
     if (dim_iso) {
-      if (!curr_aniso_wts.empty()) {
-	curr_aniso_wts.sizeUninitialized(0);
-	clear_grid(); // clear state to mandate a grid / grid size update
+      if (!active_aniso_wts.empty()) {
+	active_aniso_wts.sizeUninitialized(0);
+	clear_size(); // clear state to mandate a grid / grid size update
       }
     }
     else {
-      RealVector prev_aniso_wts = curr_aniso_wts; // for update indicator
+      RealVector prev_aniso_wts = active_aniso_wts; // for update indicator
       // truncate any negative values
-      curr_aniso_wts.resize(numVars);
+      active_aniso_wts.resize(numVars);
       for (i=0; i<numVars; ++i)
-	curr_aniso_wts[i] = std::max(aniso_wts[i], 0.);
+	active_aniso_wts[i] = std::max(aniso_wts[i], 0.);
       // normalize and enforce axis lower bounds/weight upper bounds
       int option = 1; // weights scaled so that minimum nonzero entry is 1
       webbur::sandia_sgmga_aniso_normalize(option, numVars,
-					   curr_aniso_wts.values());
+					   active_aniso_wts.values());
 #ifdef DEBUG
       PCout << "anisoLevelWts after sandia_sgmga_aniso_normalize():\n"
-	    << curr_aniso_wts;
+	    << active_aniso_wts;
 #endif
       // enforce axis lower bounds, if present, for current ssgLevel.  An axis
       // lower bound defines a weight upper bound based on the current ssgLevel:
@@ -131,19 +96,20 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       if (!axis_l_bnds.empty()) {
 	Real ssg_lev = (Real)(ssgLevIter->second);
 	for (i=0; i<numVars; ++i)
-	  if (axis_l_bnds[i] > SMALL_NUMBER) {                     // nonzero LB
+	  if (axis_l_bnds[i] > SMALL_NUMBER) {       // nonzero lower bound
 	    Real wt_u_bnd = ssg_lev / axis_l_bnds[i];
-	    curr_aniso_wts[i] = (curr_aniso_wts[i] > SMALL_NUMBER) // nonzero wt
-	      ? std::min(wt_u_bnd, curr_aniso_wts[i]) : wt_u_bnd;
+	    active_aniso_wts[i]
+	      = (active_aniso_wts[i] > SMALL_NUMBER) // nonzero weight
+	      ? std::min(wt_u_bnd, active_aniso_wts[i]) : wt_u_bnd;
 	  }
 #ifdef DEBUG
 	PCout << "anisoLevelWts after axisLowerBounds enforcement:\n"
-	      << curr_aniso_wts;
+	      << active_aniso_wts;
 #endif
       }
       // indicate need for numCollocPts update
-      if (curr_aniso_wts != prev_aniso_wts)
-	clear_grid(); // clear state to mandate a grid / grid size update
+      if (active_aniso_wts != prev_aniso_wts)
+	clear_size(); // clear state to mandate a grid / grid size update
     }
   }
 }
@@ -204,6 +170,22 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 }
 
 
+void SparseGridDriver::
+initialize_grid_parameters(const MultivariateDistribution& mv_dist)
+{
+  IntegrationDriver::initialize_grid_parameters(mv_dist);
+  if (basisParamUpdates.any()) clear_size(); // clear number of colloc points
+
+  // assign is unnecessary as reset/update are sufficiently robust
+  //if (collocPts1D.empty())
+  //  assign_1d_collocation_points_weights();
+  //else {
+    reset_1d_collocation_points_weights();  // replace invalidated pt/wt sets
+    update_1d_collocation_points_weights(); // augment 1-D pt/wt sets
+  //}
+}
+
+
 void SparseGridDriver::precompute_rules()
 {
   unsigned short l, m, ssg_lev = ssgLevIter->second;
@@ -225,6 +207,92 @@ void SparseGridDriver::precompute_rules()
 }
 
 
+void SparseGridDriver::resize_1d_collocation_points_weights()
+{
+  // resize arrays in a one-sided manner (don't prune 1D points)
+
+  unsigned short ssg_lev = ssgLevIter->second;
+  size_t i, num_levels = ssg_lev + 1, curr_lev;
+  curr_lev = collocPts1D.size();
+  if (num_levels > curr_lev) {
+    collocPts1D.resize(num_levels);
+    for (i=curr_lev; i<num_levels; ++i)
+      collocPts1D[i].resize(numVars);
+  }
+  curr_lev = type1CollocWts1D.size();
+  if (num_levels > curr_lev) {
+    type1CollocWts1D.resize(num_levels);
+    for (i=curr_lev; i<num_levels; ++i)
+      type1CollocWts1D[i].resize(numVars);
+  }
+  curr_lev = type2CollocWts1D.size();
+  if (computeType2Weights && num_levels > curr_lev) {
+    type2CollocWts1D.resize(num_levels);
+    for (i=curr_lev; i<num_levels; ++i)
+      type2CollocWts1D[i].resize(numVars);
+  }
+}
+
+
+/*
+void SparseGridDriver::assign_1d_collocation_points_weights()
+{
+  resize_1d_collocation_points_weights();
+
+  // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
+  unsigned short l_index, q_order, num_levels = ssgLevIter->second + 1;
+  for (size_t i=0; i<numVars; i++)
+    for (l_index=0; l_index<num_levels; ++l_index) {
+      level_to_order(i, l_index, q_order);
+      IntegrationDriver::
+	assign_1d_collocation_points_weights(i, q_order, l_index);
+    }
+}
+*/
+
+
+void SparseGridDriver::update_1d_collocation_points_weights()
+{
+  unsigned short curr_levels = collocPts1D.size();
+  resize_1d_collocation_points_weights();
+
+  // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
+  unsigned short l_index, q_order, num_levels = ssgLevIter->second + 1;
+  for (l_index=curr_levels; l_index<num_levels; ++l_index)
+    for (size_t i=0; i<numVars; i++) {
+      level_to_order(i, l_index, q_order);
+      IntegrationDriver::
+	assign_1d_collocation_points_weights(i, q_order, l_index);
+    }
+}
+
+
+void SparseGridDriver::reset_1d_collocation_points_weights()
+{
+  // re-assign 1D pts/wts per variable, if indicated by basisParamUpdates
+  size_t v, num_v = basisParamUpdates.size();
+  for (v=0; v<num_v; ++v)
+    if (basisParamUpdates[v])
+      reset_1d_collocation_points_weights(v);
+}
+
+
+void SparseGridDriver::reset_1d_collocation_points_weights(size_t i)
+{
+  // replaces only the existing pts/wts (no resizing)
+
+  unsigned short lev, order;  size_t num_lev = collocPts1D.size();
+  BasisPolynomial& poly_i = polynomialBasis[i];
+  for (lev=0; lev<num_lev; ++lev) {
+    level_to_order(i, lev, order);
+    collocPts1D[lev][i]        = poly_i.collocation_points(order);
+    type1CollocWts1D[lev][i]   = poly_i.type1_collocation_weights(order);
+    if (computeType2Weights)
+      type2CollocWts1D[lev][i] = poly_i.type2_collocation_weights(order);
+  }
+}
+
+
 void SparseGridDriver::initialize_sets()
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"
@@ -242,11 +310,11 @@ void SparseGridDriver::increment_smolyak_multi_index(const UShortArray& set)
 
 
 bool SparseGridDriver::
-push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+push_trial_available(const ActiveKey& key, const UShortArray& tr_set)
 { return false; }
 
 
-bool SparseGridDriver::push_trial_available(const UShortArray& key)
+bool SparseGridDriver::push_trial_available(const ActiveKey& key)
 { return false; }
 
 
@@ -255,11 +323,11 @@ bool SparseGridDriver::push_trial_available()
 
 
 size_t SparseGridDriver::
-push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+push_trial_index(const ActiveKey& key, const UShortArray& tr_set)
 { return _NPOS; }
 
 
-size_t SparseGridDriver::push_trial_index(const UShortArray& key)
+size_t SparseGridDriver::push_trial_index(const ActiveKey& key)
 { return _NPOS; }
 
 
@@ -267,15 +335,15 @@ size_t SparseGridDriver::push_trial_index()
 { return _NPOS; }
 
 
-size_t SparseGridDriver::push_index(const UShortArray& key) const
+size_t SparseGridDriver::push_index(const ActiveKey& key) const
 { return _NPOS; }
 
 
-size_t SparseGridDriver::restore_index(const UShortArray& key) const
+size_t SparseGridDriver::restore_index(const ActiveKey& key) const
 { return push_index(key); } // default for identity mapping (flat to flat)
 
 
-size_t SparseGridDriver::finalize_index(size_t i, const UShortArray& key) const
+size_t SparseGridDriver::finalize_index(size_t i, const ActiveKey& key) const
 { return i; } // default is an identity mapping
 
 
@@ -352,12 +420,14 @@ void SparseGridDriver::merge_unique()
 { } // not needed for HierarchSparseGridDriver, so use no-op as default
 
 
-const UShortArray& SparseGridDriver::trial_set(const UShortArray& key) const
+const UShortArray& SparseGridDriver::trial_set(const ActiveKey& key) const
 {
   PCerr << "Error: no default implementation for SparseGridDriver::trial_set()."
 	<< std::endl;
   abort_handler(-1);
-  return key; // dummy UShortArray
+  // return dummy for compiler
+  const UShortArraySet& ami = activeMultiIndex.find(key)->second;
+  return *ami.begin();
 }
 
 
@@ -460,9 +530,9 @@ add_active_neighbors(const UShortArray& set, bool frontier)
 void SparseGridDriver::clear_inactive()
 {
   // These are always defined in update_active_iterators()
-  std::map<UShortArray, unsigned short>::iterator sg_it = ssgLevel.begin();
-  std::map<UShortArray, RealVector>::iterator     aw_it = anisoLevelWts.begin();
-  std::map<UShortArray, int>::iterator            cp_it = numCollocPts.begin();
+  std::map<ActiveKey, unsigned short>::iterator sg_it = ssgLevel.begin();
+  std::map<ActiveKey, RealVector>::iterator     aw_it = anisoLevelWts.begin();
+  std::map<ActiveKey, int>::iterator            cp_it = numCollocPts.begin();
   while (sg_it != ssgLevel.end())
     if (sg_it == ssgLevIter) // preserve active
       { ++sg_it; ++aw_it; ++cp_it; }
@@ -474,11 +544,11 @@ void SparseGridDriver::clear_inactive()
 
   // Generalized sparse grid sets may be active
   if (!oldMultiIndex.empty()) {
-    std::map<UShortArray, UShortArraySet>::iterator
+    std::map<ActiveKey, UShortArraySet>::iterator
       om_it = oldMultiIndex.begin(), om_act_it = oldMultiIndex.find(activeKey);
-    std::map<UShortArray, UShortArraySet>::iterator am_it
+    std::map<ActiveKey, UShortArraySet>::iterator am_it
       = activeMultiIndex.begin();
-    std::map<UShortArray, UShortArrayDeque>::iterator pt_it
+    std::map<ActiveKey, UShortArrayDeque>::iterator pt_it
       = poppedTrialSets.begin();
     while (om_it != oldMultiIndex.end())
       if (om_it == om_act_it) // preserve active
@@ -492,7 +562,7 @@ void SparseGridDriver::clear_inactive()
 
   // Anisotropic refinement bounds may be active
   if (!axisLowerBounds.empty()) {
-    std::map<UShortArray, RealVector>::iterator ab_it = axisLowerBounds.begin(),
+    std::map<ActiveKey, RealVector>::iterator ab_it = axisLowerBounds.begin(),
       ab_act_it = axisLowerBounds.find(activeKey);
     while (ab_it != axisLowerBounds.end())
       if (ab_it == ab_act_it) // preserve active
@@ -525,6 +595,12 @@ int SparseGridDriver::level_to_order_exp_hgk_interp(int level, int growth)
   case UNRESTRICTED_GROWTH:
     return orderGenzKeister[std::min(level, 5)]; break;
   }
+
+  PCerr << "Error: Invalid growth enum value " << growth << " in \n"
+	<< "SparseGridDriver::level_to_order_exp_hgk_interp().\n";
+  abort_handler(-1);
+
+  return 0;
 }
 
 
@@ -548,6 +624,12 @@ int SparseGridDriver::level_to_order_exp_closed_interp(int level, int growth)
   case UNRESTRICTED_GROWTH:
     return (int)std::pow(2., level) + 1; break;
   }
+
+  PCerr << "Error: Invalid growth enum value " << growth << " in \n"
+	<< "SparseGridDriver::level_to_order_exp_closed_interp().\n";
+  abort_handler(-1);
+
+  return 0;
 }
 
 
@@ -571,6 +653,12 @@ int SparseGridDriver::level_to_order_exp_open_interp(int level, int growth)
   case UNRESTRICTED_GROWTH:
     return (int)std::pow(2., level+1) - 1; break;
   }
+
+  PCerr << "Error: Invalid growth enum value " << growth << " in \n"
+	<< "SparseGridDriver::level_to_order_exp_open_interp().\n";
+  abort_handler(-1);
+
+  return 0;
 }
 
 } // namespace Pecos

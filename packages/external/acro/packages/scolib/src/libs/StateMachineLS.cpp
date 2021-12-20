@@ -189,6 +189,8 @@ test_and_prep_step( std::vector<int> &current,
                     StateMachineLS::Data::StateTransition &transition,
                     int index )
 {
+  using utilib::operator<<;
+
    list<StateMachineLS::Data::CoReq>::iterator c_it = transition.coreq.begin();
    for ( ; c_it != transition.coreq.end(); ++c_it )
       if ( ! c_it->satisfied(current) )
@@ -254,6 +256,8 @@ void StateMachineLS::reset()
 
 void StateMachineLS::optimize()
 {
+  using utilib::operator<<;
+
    std::time_t start_time = std::time(NULL);
 
    if ( ! data->states_loaded )

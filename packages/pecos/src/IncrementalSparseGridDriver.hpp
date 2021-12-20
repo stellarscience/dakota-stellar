@@ -67,14 +67,14 @@ public:
 
   void initialize_sets();
   void increment_smolyak_multi_index(const UShortArray& set);
-  bool push_trial_available(const UShortArray& key, const UShortArray& tr_set);
-  bool push_trial_available(const UShortArray& key);
+  bool push_trial_available(const ActiveKey& key, const UShortArray& tr_set);
+  bool push_trial_available(const ActiveKey& key);
   bool push_trial_available();
-  size_t push_trial_index(const UShortArray& key, const UShortArray& tr_set);
-  size_t push_trial_index(const UShortArray& key);
+  size_t push_trial_index(const ActiveKey& key, const UShortArray& tr_set);
+  size_t push_trial_index(const ActiveKey& key);
   size_t push_trial_index();
-  size_t push_index(const UShortArray& key) const;
-  //size_t finalize_index(size_t i, const UShortArray& key) const;
+  size_t push_index(const ActiveKey& key) const;
+  //size_t finalize_index(size_t i, const ActiveKey& key) const;
 
   void compute_trial_grid(RealMatrix& var_sets);
   void push_set();
@@ -96,7 +96,7 @@ public:
   /// return active trial set under evaluation as a refinement candidate
   const UShortArray& trial_set() const;
   /// return trial set corresponding to key
-  const UShortArray& trial_set(const UShortArray& key) const;
+  const UShortArray& trial_set(const ActiveKey& key) const;
 
   /// return num_unique2
   int unique_trial_points() const;
@@ -208,98 +208,98 @@ private:
 
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
-  std::map<UShortArray, IntArray> smolyakCoeffsRef;
+  std::map<ActiveKey, IntArray> smolyakCoeffsRef;
   /// reference values for the type1 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type1WeightSets
-  std::map<UShortArray, RealVector> type1WeightSetsRef;
+  std::map<ActiveKey, RealVector> type1WeightSetsRef;
   /// reference values for the type2 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type2WeightSets
-  std::map<UShortArray, RealMatrix> type2WeightSetsRef;
+  std::map<ActiveKey, RealMatrix> type2WeightSetsRef;
 
   /// index into poppedTrialSets for data to be restored
-  std::map<UShortArray, size_t> pushIndex;
+  std::map<ActiveKey, size_t> pushIndex;
   // indices into poppedTrialSets indicating finalization order
-  //std::map<UShortArray, SizetArray> finalizeIndex;
+  //std::map<ActiveKey, SizetArray> finalizeIndex;
 
   /// number of unique points in set 1 (reference)
-  std::map<UShortArray, int> numUnique1;
+  std::map<ActiveKey, int> numUnique1;
   /// active entry within numUnique1
-  std::map<UShortArray, int>::iterator numUniq1Iter;
+  std::map<ActiveKey, int>::iterator numUniq1Iter;
   /// number of unique points in set 2 (increment)
-  std::map<UShortArray, int> numUnique2;
+  std::map<ActiveKey, int> numUnique2;
   /// active entry within numUnique2
-  std::map<UShortArray, int>::iterator numUniq2Iter;
+  std::map<ActiveKey, int>::iterator numUniq2Iter;
 
   /// random vector used within sgmgg for sorting
-  std::map<UShortArray, RealVector> zVec;
+  std::map<ActiveKey, RealVector> zVec;
   /// distance values for sorting in set 1 (reference)
-  std::map<UShortArray, RealVector> r1Vec;
+  std::map<ActiveKey, RealVector> r1Vec;
   /// distance values for sorting in set 2 (increment)
-  std::map<UShortArray, RealVector> r2Vec;
+  std::map<ActiveKey, RealVector> r2Vec;
 
   /// array of collocation points in set 1 (reference)
-  std::map<UShortArray, RealMatrix> a1Points;
+  std::map<ActiveKey, RealMatrix> a1Points;
   /// active entry within a1Points
-  std::map<UShortArray, RealMatrix>::iterator a1PIter;
+  std::map<ActiveKey, RealMatrix>::iterator a1PIter;
   /// vector of type1 weights in set 1 (reference)
-  std::map<UShortArray, RealVector> a1Type1Weights;
+  std::map<ActiveKey, RealVector> a1Type1Weights;
   /// active entry within a1Type1Weights
-  std::map<UShortArray, RealVector>::iterator a1T1WIter;
+  std::map<ActiveKey, RealVector>::iterator a1T1WIter;
   /// matrix of type2 weights in set 1 (reference)
-  std::map<UShortArray, RealMatrix> a1Type2Weights;
+  std::map<ActiveKey, RealMatrix> a1Type2Weights;
   /// active entry within a1Type2Weights
-  std::map<UShortArray, RealMatrix>::iterator a1T2WIter;
+  std::map<ActiveKey, RealMatrix>::iterator a1T2WIter;
 
   /// array of collocation points in set 2 (increment)
-  std::map<UShortArray, RealMatrix> a2Points;
+  std::map<ActiveKey, RealMatrix> a2Points;
   /// active entry within a2Points
-  std::map<UShortArray, RealMatrix>::iterator a2PIter;
+  std::map<ActiveKey, RealMatrix>::iterator a2PIter;
   /// vector of type1 weights in set 2 (increment)
-  std::map<UShortArray, RealVector> a2Type1Weights;
+  std::map<ActiveKey, RealVector> a2Type1Weights;
   /// active entry within a2Type1Weights
-  std::map<UShortArray, RealVector>::iterator a2T1WIter;
+  std::map<ActiveKey, RealVector>::iterator a2T1WIter;
   /// matrix of type2 weights in set 2 (increment)
-  std::map<UShortArray, RealMatrix> a2Type2Weights;
+  std::map<ActiveKey, RealMatrix> a2Type2Weights;
   /// active entry within a2Type2Weights
-  std::map<UShortArray, RealMatrix>::iterator a2T2WIter;
+  std::map<ActiveKey, RealMatrix>::iterator a2T2WIter;
 
   /// ascending sort index for set 1 (reference)
-  std::map<UShortArray, IntArray> sortIndex1;
+  std::map<ActiveKey, IntArray> sortIndex1;
   /// ascending sort index for set 2 (increment)
-  std::map<UShortArray, IntArray> sortIndex2;
+  std::map<ActiveKey, IntArray> sortIndex2;
 
   /// index within a1 (reference set) of unique points
-  std::map<UShortArray, IntArray> uniqueSet1;
+  std::map<ActiveKey, IntArray> uniqueSet1;
   /// active entry within uniqueSet1
-  std::map<UShortArray, IntArray>::iterator uniqSet1Iter;
+  std::map<ActiveKey, IntArray>::iterator uniqSet1Iter;
   /// index within a2 (increment set) of unique points
-  std::map<UShortArray, IntArray> uniqueSet2;
+  std::map<ActiveKey, IntArray> uniqueSet2;
   /// active entry within uniqueSet2
-  std::map<UShortArray, IntArray>::iterator uniqSet2Iter;
+  std::map<ActiveKey, IntArray>::iterator uniqSet2Iter;
 
   /// index within uniqueSet1 corresponding to all of a1
-  std::map<UShortArray, IntArray> uniqueIndex1;
+  std::map<ActiveKey, IntArray> uniqueIndex1;
   /// active entry within uniqueIndex1
-  std::map<UShortArray, IntArray>::iterator uniqInd1Iter;
+  std::map<ActiveKey, IntArray>::iterator uniqInd1Iter;
   /// index within uniqueSet2 corresponding to all of a2
-  std::map<UShortArray, IntArray> uniqueIndex2;
+  std::map<ActiveKey, IntArray> uniqueIndex2;
   /// active entry within uniqueIndex2
-  std::map<UShortArray, IntArray>::iterator uniqInd2Iter;
+  std::map<ActiveKey, IntArray>::iterator uniqInd2Iter;
 
   /// key to unique points in set 1 (reference)
-  std::map<UShortArray, BitArray> isUnique1;
+  std::map<ActiveKey, BitArray> isUnique1;
   /// active entry within isUnique1
-  std::map<UShortArray, BitArray>::iterator isUniq1Iter;
+  std::map<ActiveKey, BitArray>::iterator isUniq1Iter;
   /// key to unique points in set 2 (increment)
-  std::map<UShortArray, BitArray> isUnique2;
+  std::map<ActiveKey, BitArray> isUnique2;
   /// active entry within isUnique2
-  std::map<UShortArray, BitArray>::iterator isUniq2Iter;
+  std::map<ActiveKey, BitArray>::iterator isUniq2Iter;
 };
 
 
 inline IncrementalSparseGridDriver::IncrementalSparseGridDriver():
   CombinedSparseGridDriver(), a1PIter(a1Points.end())
-{ update_active_iterators(); }
+{ IncrementalSparseGridDriver::update_active_iterators(); }
 
 
 inline IncrementalSparseGridDriver::
@@ -308,7 +308,7 @@ IncrementalSparseGridDriver(unsigned short ssg_level,
 			    short refine_control):
   CombinedSparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
   a1PIter(a1Points.end())
-{ update_active_iterators(); }
+{ IncrementalSparseGridDriver::update_active_iterators(); }
 
 
 inline IncrementalSparseGridDriver::~IncrementalSparseGridDriver()
@@ -321,75 +321,96 @@ inline void IncrementalSparseGridDriver::update_active_iterators()
   if (a1PIter != a1Points.end() && a1PIter->first == activeKey)
     return;
 
-  a1PIter = a1Points.find(activeKey);
-  if (a1PIter == a1Points.end()) {
-    std::pair<UShortArray, RealMatrix> ua_pair(activeKey, RealMatrix());
-    a1PIter = a1Points.insert(ua_pair).first;
-  }
-  a1T1WIter = a1Type1Weights.find(activeKey);
-  if (a1T1WIter == a1Type1Weights.end()) {
-    std::pair<UShortArray, RealVector> ua_pair(activeKey, RealVector());
-    a1T1WIter = a1Type1Weights.insert(ua_pair).first;
-  }
-  a1T2WIter = a1Type2Weights.find(activeKey);
-  if (a1T2WIter == a1Type2Weights.end()) {
-    std::pair<UShortArray, RealMatrix> ua_pair(activeKey, RealMatrix());
-    a1T2WIter = a1Type2Weights.insert(ua_pair).first;
-  }
-  a2PIter = a2Points.find(activeKey);
-  if (a2PIter == a2Points.end()) {
-    std::pair<UShortArray, RealMatrix> ua_pair(activeKey, RealMatrix());
-    a2PIter = a2Points.insert(ua_pair).first;
-  }
-  a2T1WIter = a2Type1Weights.find(activeKey);
-  if (a2T1WIter == a2Type1Weights.end()) {
-    std::pair<UShortArray, RealVector> ua_pair(activeKey, RealVector());
-    a2T1WIter = a2Type1Weights.insert(ua_pair).first;
-  }
-  a2T2WIter = a2Type2Weights.find(activeKey);
-  if (a2T2WIter == a2Type2Weights.end()) {
-    std::pair<UShortArray, RealMatrix> ua_pair(activeKey, RealMatrix());
-    a2T2WIter = a2Type2Weights.insert(ua_pair).first;
-  }
+  a1PIter      = a1Points.find(activeKey);
+  a1T1WIter    = a1Type1Weights.find(activeKey);
+  a1T2WIter    = a1Type2Weights.find(activeKey);
+  a2PIter      = a2Points.find(activeKey);
+  a2T1WIter    = a2Type1Weights.find(activeKey);
+  a2T2WIter    = a2Type2Weights.find(activeKey);
   numUniq1Iter = numUnique1.find(activeKey);
-  if (numUniq1Iter == numUnique1.end()) {
-    std::pair<UShortArray, int> ua_pair(activeKey, 0);
-    numUniq1Iter = numUnique1.insert(ua_pair).first;
-  }
   numUniq2Iter = numUnique2.find(activeKey);
-  if (numUniq2Iter == numUnique2.end()) {
-    std::pair<UShortArray, int> ua_pair(activeKey, 0);
-    numUniq2Iter = numUnique2.insert(ua_pair).first;
-  }
   uniqSet1Iter = uniqueSet1.find(activeKey);
-  if (uniqSet1Iter == uniqueSet1.end()) {
-    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
-    uniqSet1Iter = uniqueSet1.insert(ua_pair).first;
-  }
   uniqSet2Iter = uniqueSet2.find(activeKey);
-  if (uniqSet2Iter == uniqueSet2.end()) {
-    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
-    uniqSet2Iter = uniqueSet2.insert(ua_pair).first;
-  }
   uniqInd1Iter = uniqueIndex1.find(activeKey);
-  if (uniqInd1Iter == uniqueIndex1.end()) {
-    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
-    uniqInd1Iter = uniqueIndex1.insert(ua_pair).first;
-  }
   uniqInd2Iter = uniqueIndex2.find(activeKey);
+  isUniq1Iter  = isUnique1.find(activeKey);
+  isUniq2Iter  = isUnique2.find(activeKey);
+
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
+  if (a1PIter    == a1Points.end()       || a1T1WIter == a1Type1Weights.end() ||
+      a1T2WIter  == a1Type2Weights.end() || a2PIter   == a2Points.end()       ||
+      a2T1WIter  == a2Type1Weights.end() || a2T2WIter == a2Type2Weights.end() ||
+      numUniq1Iter == numUnique1.end()   || numUniq2Iter == numUnique2.end()  ||
+      uniqSet1Iter == uniqueSet1.end()   || uniqSet2Iter == uniqueSet2.end()  ||
+      uniqInd1Iter == uniqueIndex1.end() ||
+      uniqInd2Iter == uniqueIndex2.end() ||
+      isUniq1Iter == isUnique1.end()     || isUniq2Iter  == isUnique2.end())
+    active_copy = activeKey.copy();
+  */
+
+  if (a1PIter == a1Points.end()) {
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a1PIter = a1Points.insert(rm_pair).first;
+  }
+  if (a1T1WIter == a1Type1Weights.end()) {
+    std::pair<ActiveKey, RealVector>
+      rv_pair(activeKey/*active_copy*/, RealVector());
+    a1T1WIter = a1Type1Weights.insert(rv_pair).first;
+  }
+  if (a1T2WIter == a1Type2Weights.end()) {
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a1T2WIter = a1Type2Weights.insert(rm_pair).first;
+  }
+  if (a2PIter == a2Points.end()) {
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a2PIter = a2Points.insert(rm_pair).first;
+  }
+  if (a2T1WIter == a2Type1Weights.end()) {
+    std::pair<ActiveKey, RealVector>
+      rv_pair(activeKey/*active_copy*/, RealVector());
+    a2T1WIter = a2Type1Weights.insert(rv_pair).first;
+  }
+  if (a2T2WIter == a2Type2Weights.end()) {
+    std::pair<ActiveKey, RealMatrix>
+      rm_pair(activeKey/*active_copy*/, RealMatrix());
+    a2T2WIter = a2Type2Weights.insert(rm_pair).first;
+  }
+  if (numUniq1Iter == numUnique1.end()) {
+    std::pair<ActiveKey, int> i_pair(activeKey/*active_copy*/, 0);
+    numUniq1Iter = numUnique1.insert(i_pair).first;
+  }
+  if (numUniq2Iter == numUnique2.end()) {
+    std::pair<ActiveKey, int> i_pair(activeKey/*active_copy*/, 0);
+    numUniq2Iter = numUnique2.insert(i_pair).first;
+  }
+  if (uniqSet1Iter == uniqueSet1.end()) {
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqSet1Iter = uniqueSet1.insert(ia_pair).first;
+  }
+  if (uniqSet2Iter == uniqueSet2.end()) {
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqSet2Iter = uniqueSet2.insert(ia_pair).first;
+  }
+  if (uniqInd1Iter == uniqueIndex1.end()) {
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqInd1Iter = uniqueIndex1.insert(ia_pair).first;
+  }
   if (uniqInd2Iter == uniqueIndex2.end()) {
-    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
-    uniqInd2Iter = uniqueIndex2.insert(ua_pair).first;
+    std::pair<ActiveKey, IntArray> ia_pair(activeKey/*active_copy*/,IntArray());
+    uniqInd2Iter = uniqueIndex2.insert(ia_pair).first;
   }
-  isUniq1Iter = isUnique1.find(activeKey);
   if (isUniq1Iter == isUnique1.end()) {
-    std::pair<UShortArray, BitArray> ua_pair(activeKey, BitArray());
-    isUniq1Iter = isUnique1.insert(ua_pair).first;
+    std::pair<ActiveKey, BitArray> ba_pair(activeKey/*active_copy*/,BitArray());
+    isUniq1Iter = isUnique1.insert(ba_pair).first;
   }
-  isUniq2Iter = isUnique2.find(activeKey);
   if (isUniq2Iter == isUnique2.end()) {
-    std::pair<UShortArray, BitArray> ua_pair(activeKey, BitArray());
-    isUniq2Iter = isUnique2.insert(ua_pair).first;
+    std::pair<ActiveKey, BitArray> ba_pair(activeKey/*active_copy*/,BitArray());
+    isUniq2Iter = isUnique2.insert(ba_pair).first;
   }
 
   CombinedSparseGridDriver::update_active_iterators();
@@ -489,9 +510,9 @@ inline void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
 
 
 inline const UShortArray& IncrementalSparseGridDriver::
-trial_set(const UShortArray& key) const
+trial_set(const ActiveKey& key) const
 {
-  std::map<UShortArray, UShort2DArray>::const_iterator cit
+  std::map<ActiveKey, UShort2DArray>::const_iterator cit
     = smolyakMultiIndex.find(key);
   if (cit == smolyakMultiIndex.end()) {
     PCerr << "Error: key not found in IncrementalSparseGridDriver::trial_set()"
@@ -508,7 +529,7 @@ inline const UShortArray& IncrementalSparseGridDriver::trial_set() const
 
 /** identify if newly-pushed trial set exists within stored data sets */
 inline bool IncrementalSparseGridDriver::
-push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+push_trial_available(const ActiveKey& key, const UShortArray& tr_set)
 {
   const UShortArrayDeque& pop_tr = poppedTrialSets[key];
   return (std::find(pop_tr.begin(), pop_tr.end(), tr_set) != pop_tr.end());
@@ -517,7 +538,7 @@ push_trial_available(const UShortArray& key, const UShortArray& tr_set)
 
 /** identify if newly-pushed trial set exists within stored data sets */
 inline bool IncrementalSparseGridDriver::
-push_trial_available(const UShortArray& key)
+push_trial_available(const ActiveKey& key)
 {
   const UShortArrayDeque& pop_tr = poppedTrialSets[key];
   return
@@ -535,13 +556,13 @@ inline bool IncrementalSparseGridDriver::push_trial_available()
 
 /** identify where newly-pushed trial set exists within stored data sets */
 inline size_t IncrementalSparseGridDriver::
-push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+push_trial_index(const ActiveKey& key, const UShortArray& tr_set)
 { return find_index(poppedTrialSets[key], tr_set); }
 
 
 /** identify where newly-pushed trial set exists within stored data sets */
 inline size_t IncrementalSparseGridDriver::
-push_trial_index(const UShortArray& key)
+push_trial_index(const ActiveKey& key)
 { return find_index(poppedTrialSets[key], trial_set(key)); }
 
 
@@ -551,18 +572,18 @@ inline size_t IncrementalSparseGridDriver::push_trial_index()
 
 
 inline size_t IncrementalSparseGridDriver::
-push_index(const UShortArray& key) const
+push_index(const ActiveKey& key) const
 {
-  std::map<UShortArray, size_t>::const_iterator cit = pushIndex.find(key);
+  std::map<ActiveKey, size_t>::const_iterator cit = pushIndex.find(key);
   return (cit == pushIndex.end()) ? _NPOS : cit->second;
 }
 
 
 /*
 inline size_t IncrementalSparseGridDriver::
-finalize_index(size_t i, const UShortArray& key) const
+finalize_index(size_t i, const ActiveKey& key) const
 {
-  std::map<UShortArray, SizetArray>::const_iterator cit
+  std::map<ActiveKey, SizetArray>::const_iterator cit
     = finalizeIndex.find(key);
   return (cit == finalizeIndex.end()) ? _NPOS : cit->second[i];
 }
@@ -595,7 +616,7 @@ inline void IncrementalSparseGridDriver::pop_weights()
 inline const IntArray& IncrementalSparseGridDriver::
 smolyak_coefficients_reference() const
 {
-  std::map<UShortArray, IntArray>::const_iterator cit
+  std::map<ActiveKey, IntArray>::const_iterator cit
     = smolyakCoeffsRef.find(activeKey);
   if (cit == smolyakCoeffsRef.end()) {
     PCerr << "Error: active key not found in CombinedSparseGridDriver::"

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -26,7 +27,7 @@
 #include "SNLLOptimizer.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "LHSDriver.hpp"
-#include "boost/random/mersenne_twister.hpp"
+#include "dakota_mersenne_twister.hpp"
 #include "boost/random.hpp"
 #include "boost/random/normal_distribution.hpp"
 #include "boost/random/variate_generator.hpp"
@@ -62,10 +63,11 @@ NonDBayesCalibration(ProblemDescDB& problem_db, Model& model):
   NonDCalibration(problem_db, model),
   emulatorType(probDescDB.get_short("method.nond.emulator")),
   mcmcModelHasSurrogate(false),
-  mapOptAlgOverride(probDescDB.get_ushort("method.nond.pre_solve_method")),
+  mapOptAlgOverride(probDescDB.get_ushort("method.nond.opt_subproblem_solver")),
   chainSamples(probDescDB.get_int("method.nond.chain_samples")),
   randomSeed(probDescDB.get_int("method.random_seed")),
   mcmcDerivOrder(1),
+  batchSize(1), 
   adaptExpDesign(probDescDB.get_bool("method.nond.adapt_exp_design")),
   initHifiSamples (probDescDB.get_int("method.samples")),
   scalarDataFilename(probDescDB.get_string("responses.scalar_data_filename")),
@@ -98,8 +100,9 @@ NonDBayesCalibration(ProblemDescDB& problem_db, Model& model):
     probDescDB.get_string("method.nond.export_corrected_variance_file")),
   exportCorrVarFormat(
     probDescDB.get_ushort("method.nond.export_corrected_variance_format")),
-  approxCorrectionOrder(probDescDB.get_short("method.nond.correction_order")),
-// BMA: This is probably wrong as config vars need not be continuous!
+  discrepPolyOrder(
+    probDescDB.get_short("method.nond.model_discrepancy.polynomial_order")),
+  // BMA: This is probably wrong as config vars need not be continuous!
   configLowerBnds(probDescDB.get_rv("variables.continuous_state.lower_bounds")),
   configUpperBnds(probDescDB.get_rv("variables.continuous_state.upper_bounds")),
   obsErrorMultiplierMode(
@@ -171,12 +174,19 @@ NonDBayesCalibration(ProblemDescDB& problem_db, Model& model):
       unsigned short sample_type = SUBMETHOD_LHS;
       bool vary_pattern = true;
       String rng("mt19937");
-      NonDLHSSampling* lhs_sampler_rep;
-      lhs_sampler_rep =
-        new NonDLHSSampling(hifiModel, sample_type, num_lhs_samples, randomSeed,
-                            rng, vary_pattern, ACTIVE_UNIFORM);
-      hifiSampler.assign_rep(lhs_sampler_rep, false);
+      auto lhs_sampler_rep = std::make_shared<NonDLHSSampling>
+	(hifiModel, sample_type, num_lhs_samples, randomSeed, rng, vary_pattern,
+	 ACTIVE_UNIFORM);
+      hifiSampler.assign_rep(lhs_sampler_rep);
     }
+  }
+
+  // assign default maxIterations (DataMethod default is SZ_MAX)
+  if (adaptPosteriorRefine) {
+    // BMA --> MSE: Why 5? Fix magic constant
+    batchSize = 5;
+    if (maxIterations == SZ_MAX) // default
+      maxIterations = 25;
   }
 
   switch (emulatorType) {
@@ -185,37 +195,43 @@ NonDBayesCalibration(ProblemDescDB& problem_db, Model& model):
     standardizedSpace = true; break; // nataf defined w/i ProbTransformModel
   default:
     standardizedSpace = probDescDB.get_bool("method.nond.standardized_space");
-
-    /*
-    // define local natafTransform, whether standardized space or not,
-    // since we utilize x-space bounds, moments, density routines
-    initialize_random_variable_transformation();
-    initialize_random_variable_types(ASKEY_U); // need ranVarTypesX below
-    // initialize_random_variable_parameters() is performed at run time
-    initialize_random_variable_correlations();
-    //initialize_final_statistics(); // statistics set is not default
-
-    // only needed if Nataf transform will actually be performed
-    if (standardizedSpace)
-      verify_correlation_support(ASKEY_U);
-    */
     break;
   }
 
-  // should be independent of data resizes
-  construct_mcmc_model();
+  // Errors if there are correlations and the user hasn't specified standardized_space,
+  // since this is currently unsupported.
+  // Note that gamma distribution should be supported but currently results in a seg fault.
+  if ( !standardizedSpace && iteratedModel.multivariate_distribution().correlation() ){
+    Cerr << "Error: correlation is only supported if user specifies standardized_space.\n"
+      << "    Only the following types of correlated random variables are supported:\n"
+      << "    unbounded normal, untruncated lognormal, uniform, exponential, gumbel, \n" 
+      << "    frechet, and weibull."
+	    << std::endl;
+    abort_handler(METHOD_ERROR);
+  }
 
+  // Construct emulator objects for raw QoI, prior to data residual recast
+  construct_mcmc_model();
+  // define variable augmentation within residualModel
   init_hyper_parameters();
+
+  // expand initial point by numHyperparams for use in negLogPostModel
+  size_t i, num_orig_cv = iteratedModel.cv(),
+    num_augment_cv = num_orig_cv + numHyperparams;
+  mapSoln.sizeUninitialized(num_augment_cv);
+  copy_data_partial(mcmcModel.continuous_variables(), mapSoln, 0);
+  for (i=0; i<numHyperparams; ++i)
+    mapSoln[num_orig_cv + i] = invGammaDists[i].mode();
 
   // Now the underlying simulation model mcmcModel is setup; wrap it
   // in a data transformation, making sure to allocate gradient/Hessian space
   if (calibrationData) {
-    residualModel.assign_rep(new
-      DataTransformModel(mcmcModel, expData, numHyperparams, 
-			 obsErrorMultiplierMode, mcmcDerivOrder), false);
+    residualModel.assign_rep(std::make_shared<DataTransformModel>
+			     (mcmcModel, expData, numHyperparams,
+			      obsErrorMultiplierMode, mcmcDerivOrder));
     // update bounds for hyper-parameters
     Real dbl_inf = std::numeric_limits<Real>::infinity();
-    for (size_t i=0; i<numHyperparams; ++i) {
+    for (i=0; i<numHyperparams; ++i) {
       residualModel.continuous_lower_bound(0.0,     numContinuousVars + i);
       residualModel.continuous_upper_bound(dbl_inf, numContinuousVars + i);
     }
@@ -261,7 +277,7 @@ void NonDBayesCalibration::construct_mcmc_model()
       rule_growth = probDescDB.get_short("method.nond.growth_override");
     bool pw_basis = probDescDB.get_bool("method.nond.piecewise_basis"),
        use_derivs = probDescDB.get_bool("method.derivative_usage");
-    NonDExpansion* se_rep;
+    std::shared_ptr<NonDExpansion> se_rep;
 
     if (emulatorType == SC_EMULATOR) { // SC sparse grid interpolation
       unsigned short ssg_level
@@ -275,12 +291,12 @@ void NonDBayesCalibration::construct_mcmc_model()
 	  exp_coeff_approach = Pecos::HIERARCHICAL_SPARSE_GRID;
 	else if (refine_cntl)
 	  exp_coeff_approach = Pecos::INCREMENTAL_SPARSE_GRID;
-	se_rep = new NonDStochCollocation(inbound_model, exp_coeff_approach,
+	se_rep = std::make_shared<NonDStochCollocation>(inbound_model, exp_coeff_approach,
 	  ssg_level, dim_pref, u_space_type, refine_type, refine_cntl,
 	  cov_cntl, rule_nest, rule_growth, pw_basis, use_derivs);
       }
       else if (tpq_order != USHRT_MAX)
-	se_rep = new NonDStochCollocation(inbound_model, Pecos::QUADRATURE,
+	se_rep = std::make_shared<NonDStochCollocation>(inbound_model, Pecos::QUADRATURE,
 	  tpq_order, dim_pref, u_space_type, refine_type, refine_cntl,
 	  cov_cntl, rule_nest, rule_growth, pw_basis, use_derivs);
       mcmcDerivOrder = 3; // Hessian computations not yet implemented for SC
@@ -296,20 +312,20 @@ void NonDBayesCalibration::construct_mcmc_model()
       if (ssg_level != USHRT_MAX) { // PCE sparse grid
 	short exp_coeff_approach = (refine_cntl) ?
 	  Pecos::INCREMENTAL_SPARSE_GRID : Pecos::COMBINED_SPARSE_GRID;
-	se_rep = new NonDPolynomialChaos(inbound_model, exp_coeff_approach,
+	se_rep = std::make_shared<NonDPolynomialChaos>(inbound_model, exp_coeff_approach,
 	  ssg_level, dim_pref, u_space_type, refine_type, refine_cntl,
 	  cov_cntl, rule_nest, rule_growth, pw_basis, use_derivs);
       }
       else if (tpq_order != USHRT_MAX)
-	se_rep = new NonDPolynomialChaos(inbound_model, Pecos::QUADRATURE,
+	se_rep = std::make_shared<NonDPolynomialChaos>(inbound_model, Pecos::QUADRATURE,
 	  tpq_order, dim_pref, u_space_type, refine_type, refine_cntl,
 	  cov_cntl, rule_nest, rule_growth, pw_basis, use_derivs);
       else if (cub_int != USHRT_MAX)
-	se_rep = new NonDPolynomialChaos(inbound_model, Pecos::CUBATURE,
+	se_rep = std::make_shared<NonDPolynomialChaos>(inbound_model, Pecos::CUBATURE,
 	  cub_int, dim_pref, u_space_type, refine_type, refine_cntl,
 	  cov_cntl, rule_nest, rule_growth, pw_basis, use_derivs);
       else { // regression PCE: LeastSq/CS, OLI
-	se_rep = new NonDPolynomialChaos(inbound_model,
+	se_rep = std::make_shared<NonDPolynomialChaos>(inbound_model,
 	  probDescDB.get_short("method.nond.regression_type"), 
 	  probDescDB.get_ushort("method.nond.expansion_order"), dim_pref,
 	  probDescDB.get_sizet("method.nond.collocation_points"),
@@ -340,13 +356,13 @@ void NonDBayesCalibration::construct_mcmc_model()
 	  exp_coeff_approach = Pecos::HIERARCHICAL_SPARSE_GRID;
 	else if (refine_cntl)
 	  exp_coeff_approach = Pecos::INCREMENTAL_SPARSE_GRID;
-	se_rep = new NonDMultilevelStochCollocation(inbound_model,
+	se_rep = std::make_shared<NonDMultilevelStochCollocation>(inbound_model,
 	  exp_coeff_approach, ssg_level_seq, dim_pref, u_space_type,
 	  refine_type, refine_cntl, cov_cntl, ml_alloc_cntl, ml_discrep,
 	  rule_nest, rule_growth, pw_basis, use_derivs);
       }
       else if (!tpq_order_seq.empty())
-	se_rep = new NonDMultilevelStochCollocation(inbound_model,
+	se_rep = std::make_shared<NonDMultilevelStochCollocation>(inbound_model,
 	  Pecos::QUADRATURE, tpq_order_seq, dim_pref, u_space_type, refine_type,
 	  refine_cntl, cov_cntl, ml_alloc_cntl, ml_discrep, rule_nest,
 	  rule_growth, pw_basis, use_derivs);
@@ -365,25 +381,25 @@ void NonDBayesCalibration::construct_mcmc_model()
       if (!ssg_level_seq.empty()) {
 	short exp_coeff_approach = (refine_cntl) ?
 	  Pecos::INCREMENTAL_SPARSE_GRID : Pecos::COMBINED_SPARSE_GRID;
-	se_rep = new NonDMultilevelPolynomialChaos(inbound_model,
+	se_rep = std::make_shared<NonDMultilevelPolynomialChaos>(inbound_model,
 	  exp_coeff_approach, ssg_level_seq, dim_pref, u_space_type,
 	  refine_type, refine_cntl, cov_cntl, ml_alloc_cntl, ml_discrep,
 	  rule_nest, rule_growth, pw_basis, use_derivs);
       }
       else if (!tpq_order_seq.empty())
-	se_rep = new NonDMultilevelPolynomialChaos(inbound_model,
+	se_rep = std::make_shared<NonDMultilevelPolynomialChaos>(inbound_model,
 	  Pecos::QUADRATURE, tpq_order_seq, dim_pref, u_space_type, refine_type,
 	  refine_cntl, cov_cntl, ml_alloc_cntl, ml_discrep, rule_nest,
 	  rule_growth, pw_basis, use_derivs);
       else { // regression PCE: LeastSq/CS, OLI
-	SizetArray pilot; // empty for MF PCE
-	se_rep = new NonDMultilevelPolynomialChaos(
+	SizetArray seed_seq(1, randomSeed); // reuse bayes_calib scalar spec
+	se_rep = std::make_shared<NonDMultilevelPolynomialChaos>(
 	  MULTIFIDELITY_POLYNOMIAL_CHAOS, inbound_model,
 	  probDescDB.get_short("method.nond.regression_type"), 
 	  probDescDB.get_usa("method.nond.expansion_order"), dim_pref,
-	  probDescDB.get_sza("method.nond.collocation_points"), // pts sequence
-	  probDescDB.get_real("method.nond.collocation_ratio"), // single scalar
-	  pilot, randomSeed, u_space_type, refine_type, refine_cntl, cov_cntl,
+	  probDescDB.get_sza("method.nond.collocation_points"), // sequence
+	  probDescDB.get_real("method.nond.collocation_ratio"), // scalar
+	  seed_seq, u_space_type, refine_type, refine_cntl, cov_cntl,
 	  ml_alloc_cntl, ml_discrep, /* rule_nest, rule_growth, */ pw_basis,
 	  use_derivs, probDescDB.get_bool("method.nond.cross_validation"),
 	  probDescDB.get_string("method.import_build_points_file"),
@@ -394,13 +410,13 @@ void NonDBayesCalibration::construct_mcmc_model()
     }
 
     else if (emulatorType == ML_PCE_EMULATOR) {
-      se_rep = new NonDMultilevelPolynomialChaos(MULTILEVEL_POLYNOMIAL_CHAOS,
+      SizetArray seed_seq(1, randomSeed); // reuse bayes_calib scalar spec
+      se_rep = std::make_shared<NonDMultilevelPolynomialChaos>(MULTILEVEL_POLYNOMIAL_CHAOS,
 	inbound_model, probDescDB.get_short("method.nond.regression_type"),
 	probDescDB.get_usa("method.nond.expansion_order"), dim_pref,
-	probDescDB.get_sza("method.nond.collocation_points"), // pts sequence
-	probDescDB.get_real("method.nond.collocation_ratio"), // single scalar
-	probDescDB.get_sza("method.nond.pilot_samples"), randomSeed,
-	u_space_type, refine_type, refine_cntl, cov_cntl,
+	probDescDB.get_sza("method.nond.collocation_points"), // sequence
+	probDescDB.get_real("method.nond.collocation_ratio"), // scalar
+	seed_seq, u_space_type, refine_type, refine_cntl, cov_cntl,
 	probDescDB.get_short("method.nond.multilevel_allocation_control"),
 	probDescDB.get_short("method.nond.multilevel_discrepancy_emulation"),
 	/* rule_nest, rule_growth, */ pw_basis, use_derivs,
@@ -414,10 +430,10 @@ void NonDBayesCalibration::construct_mcmc_model()
     // for adaptive exp refinement, propagate controls from Bayes method spec:
     se_rep->maximum_iterations(maxIterations);
     se_rep->maximum_refinement_iterations(
-      probDescDB.get_int("method.nond.max_refinement_iterations"));
+      probDescDB.get_sizet("method.nond.max_refinement_iterations"));
     se_rep->convergence_tolerance(convergenceTol);
 
-    stochExpIterator.assign_rep(se_rep, false);
+    stochExpIterator.assign_rep(se_rep);
     // no CDF or PDF level mappings
     RealVectorArray empty_rv_array; // empty
     se_rep->requested_levels(empty_rv_array, empty_rv_array, empty_rv_array,
@@ -456,32 +472,38 @@ void NonDBayesCalibration::construct_mcmc_model()
     // these purposes, but +/-3 sigma has little to no effect in current tests.
     bool truncate_bnds = (emulatorType == KRIGING_EMULATOR);
     if (standardizedSpace)
-      lhs_model.assign_rep(new ProbabilityTransformModel(inbound_model,
-	ASKEY_U, truncate_bnds), false); //, 3.)
+      lhs_model.assign_rep(std::make_shared<ProbabilityTransformModel>
+			   (inbound_model, ASKEY_U, truncate_bnds)); //, 3.)
     else
       lhs_model = inbound_model; // shared rep
     // Unlike EGO-based approaches, use ACTIVE sampling mode to concentrate
     // samples in regions of higher prior density
-    NonDLHSSampling* lhs_rep = new
-      NonDLHSSampling(lhs_model, sample_type, samples, randomSeed,
-        probDescDB.get_string("method.random_number_generator"));
-    lhs_iterator.assign_rep(lhs_rep, false);
+    auto lhs_rep = std::make_shared<NonDLHSSampling>
+      (lhs_model, sample_type, samples, randomSeed,
+       probDescDB.get_string("method.random_number_generator"));
+    lhs_iterator.assign_rep(lhs_rep);
 
     ActiveSet gp_set = lhs_model.current_response().active_set(); // copy
     gp_set.request_values(mcmcDerivOrder); // for misfit Hessian
-    mcmcModel.assign_rep(new DataFitSurrModel(lhs_iterator, lhs_model,
-      gp_set, approx_type, approx_order, corr_type, corr_order, data_order,
-      outputLevel, sample_reuse, import_pts_file,
-      probDescDB.get_ushort("method.import_build_format"),
-      probDescDB.get_bool("method.import_build_active_only")), false);
+    mcmcModel.assign_rep(std::make_shared<DataFitSurrModel>
+      (lhs_iterator, lhs_model,
+       gp_set, approx_type, approx_order, corr_type, corr_order, data_order,
+       outputLevel, sample_reuse, import_pts_file,
+       probDescDB.get_ushort("method.import_build_format"),
+       probDescDB.get_bool("method.import_build_active_only")));
     break;
   }
 
   case NO_EMULATOR:
     mcmcModelHasSurrogate = (inbound_model.model_type() == "surrogate");
+    // ASKEY_U is currently the best option for scaling the probability space
+    // (but could be expanded when the intent is not orthogonal polynomials).
+    // If an override is needed to decorrelate priors be transforming to
+    // STD_NORMAL space, this is managed by ProbabilityTransformModel::
+    // verify_correlation_support() on a variable-by-variable basis.
     if (standardizedSpace)
-      mcmcModel.assign_rep(new
-	ProbabilityTransformModel(inbound_model, ASKEY_U), false);
+      mcmcModel.assign_rep(std::make_shared<ProbabilityTransformModel>
+			   (inbound_model, ASKEY_U));
     else
       mcmcModel = inbound_model; // shared rep
 
@@ -530,8 +552,9 @@ void NonDBayesCalibration::init_hyper_parameters()
       { alpha = invGammaAlphas[i]; beta = invGammaBetas[i]; }
     // BMA TODO: could store only one inverse gamma if all parameters the same
     invGammaDists[i] = Pecos::RandomVariable(Pecos::INV_GAMMA);
-    Pecos::InvGammaRandomVariable* rv_rep = 
-      (Pecos::InvGammaRandomVariable*)(invGammaDists[i].random_variable_rep());
+    std::shared_ptr<Pecos::InvGammaRandomVariable> rv_rep =
+      std::static_pointer_cast<Pecos::InvGammaRandomVariable>
+	     (invGammaDists[i].random_variable_rep());
     rv_rep->update(alpha, beta);
   }
 }
@@ -616,18 +639,13 @@ void NonDBayesCalibration::construct_map_model()
   }
 
   // RecastModel for bound-constrained argmin(misfit - log prior)
-  negLogPostModel.assign_rep(new 
-    RecastModel(residualModel, vars_map_indices, recast_vc_totals, 
-		all_relax_di, all_relax_dr, nonlinear_vars_map, NULL,
-		set_recast, primary_resp_map_indices, 
-		secondary_resp_map_indices, 0, nlp_resp_order, 
-		nonlinear_resp_map, neg_log_post_resp_mapping, NULL), false);
-
-  // capture any initial guess from the variables specification (mapSoln
-  // used both for initial guess and for warm starting after refinement)
-  //copy_data(negLogPostModel.continuous_variables(), mapSoln);
+  negLogPostModel.assign_rep(std::make_shared<RecastModel>
+    (residualModel, vars_map_indices, recast_vc_totals,
+     all_relax_di, all_relax_dr, nonlinear_vars_map, nullptr,
+     set_recast, primary_resp_map_indices,
+     secondary_resp_map_indices, 0, nlp_resp_order,
+     nonlinear_resp_map, neg_log_post_resp_mapping, nullptr));
 }
-
 
 void NonDBayesCalibration::construct_map_optimizer() 
 {
@@ -639,16 +657,16 @@ void NonDBayesCalibration::construct_map_optimizer()
   case SUBMETHOD_SQP: {
     // SQP with BFGS Hessians
     int npsol_deriv_level = 3;
-    mapOptimizer.assign_rep(new
-      NPSOLOptimizer(negLogPostModel, npsol_deriv_level, convergenceTol),false);
+    mapOptimizer.assign_rep(std::make_shared<NPSOLOptimizer>
+			    (negLogPostModel, npsol_deriv_level, convergenceTol));
     break;
   }
 #endif
 #ifdef HAVE_OPTPP
   case SUBMETHOD_NIP:
     // full Newton (OPTPP::OptBCNewton)
-    mapOptimizer.assign_rep(new 
-      SNLLOptimizer("optpp_newton", negLogPostModel), false);
+    mapOptimizer.assign_rep(std::make_shared<SNLLOptimizer>
+			    ("optpp_newton", negLogPostModel));
     break;
 #endif
   }
@@ -666,6 +684,7 @@ void NonDBayesCalibration::pre_run()
   // now that vars/labels/bounds/targets have flowed down at run-time from
   // any higher level recursions, propagate them up local Model recursions
   // so that they are correct when they propagate back down.
+  // *** TO DO: count Model recursion layers on top of iteratedModel 
   if (!negLogPostModel.is_null())
     negLogPostModel.update_from_subordinate_model(); // depth = max
   else
@@ -676,21 +695,30 @@ void NonDBayesCalibration::pre_run()
   construct_map_optimizer();
 }
 
-
 void NonDBayesCalibration::core_run()
 {
   nonDBayesInstance = this;
 
+  specify_prior();
+  initialize_model();
+  specify_likelihood();
+  specify_posterior();  
+  init_bayesian_solver();
+
   if (adaptExpDesign) // use meta-iteration in this class
     calibrate_to_hifi();
+  else if (adaptPosteriorRefine)
+    calibrate_with_adaptive_emulator();
   else                // delegate to base class calibration
     calibrate();
+
+  // May need to override this in some child classes without chains
+  compute_statistics();
 
   if (calModelDiscrepancy) // calibrate a model discrepancy function
     build_model_discrepancy();
     //print_discrepancy_results();
 }
-
 
 void NonDBayesCalibration::derived_init_communicators(ParLevLIter pl_iter)
 {
@@ -764,59 +792,301 @@ void NonDBayesCalibration::initialize_model()
     stochExpIterator.run(pl_iter); break;
   }
   default: // GPs and NO_EMULATOR
-    //initialize_random_variable_parameters(); // standardizedSpace or not
     //resize_final_statistics_gradients(); // not required
-    //if (standardizedSpace) transform_correlations();
-    if (emulatorType)      mcmcModel.build_approximation();
+    if (emulatorType)
+      mcmcModel.build_approximation();
     break;
   }
   if(posteriorStatsMutual)
     Cout << "Mutual Information estimation not yet implemented\n";
 }
 
+void NonDBayesCalibration::map_pre_solve(){
+  /// Runs a pre-solve for the MAP point. If running calibrate_to_hifi()
+  /// or calibrate_with_adaptive_emulator(), propagates the solution to
+  /// the mapSoln variable. Returns the optimal solution as a vector.
+
+  // Management of pre_solve spec options occurs in NonDBayesCalibration ctor,
+  // manifesting here as a valid mapOptimizer instance.
+  if (mapOptimizer.is_null()) return;
+  
+  // Pre-solve for MAP point using optimization prior to MCMC.
+
+  Cout << "\nInitiating pre-solve for maximum a posteriori probability (MAP)."
+       << std::endl;
+  // set initial point pulled from mcmcModel at construct time or
+  // warm start from previous map soln computed from previous emulator
+  negLogPostModel.current_variables().continuous_variables(mapSoln);
+
+  mapOptimizer.run();
+  //negLogPostModel.print_evaluation_summary(Cout);
+  //mapOptimizer.print_results(Cout); // needs xform if standardizedSpace
+  Cout << "Maximum a posteriori probability (MAP) point from pre-solve"
+       << "\n(will be used as initial point for MCMC chain):\n";
+
+  // TNP ? Why are we introducting this local variable instead of copying to
+  // mapSoln?
+  const RealVector& map_c_vars
+    = mapOptimizer.variables_results().continuous_variables();
+  print_variables(Cout, map_c_vars);
+  Cout << std::endl;
+
+  // TNP ? Switched to propagating to mapSoln no matter what--is that violating
+  // some underlying assumption?
+  
+  // if multiple pre-solves, propagate MAP as initial guess for next pre-solve
+  //if (adaptPosteriorRefine || adaptExpDesign)
+    copy_data(map_c_vars, mapSoln); // deep copy of view
+
+}
+
+void NonDBayesCalibration::calibrate_with_adaptive_emulator(){
+  /// This method will perform a Bayesian calibration with an emulator, 
+  /// but periodically the emulator is updated with more sample points from the 
+  /// original model in the high-posterior-density region of parameter space.
+  
+  // TNP ? This seems like it maybe should be happening in ctor?
+  if (!emulatorType) { // current spec prevents this
+    Cerr << "Error: adaptive posterior refinement requires emulator model."
+	 << std::endl;
+    abort_handler(METHOD_ERROR);
+  }
+  compactMode = true; // update_model() uses all{Samples,Responses}
+  Real adapt_metric = DBL_MAX; unsigned short int num_mcmc = 0;
+  while (adapt_metric > convergenceTol && num_mcmc <= maxIterations) {
+
+    // TO DO: treat this like cross-validation as there is likely a sweet
+    // spot prior to degradation of conditioning (too much refinement data)
+
+    // place update block here so that chain is always run for initial or
+    // updated emulator; placing block at loop end could result in emulator
+    // convergence w/o final chain.
+    if (num_mcmc) {
+	    // update the emulator surrogate data with new truth evals and
+	    // reconstruct surrogate (e.g., via PCE sparse recovery)
+	    update_model();
+	    // assess posterior convergence via convergence of the emulator coeffs
+	    adapt_metric = assess_emulator_convergence();
+    }
+
+    calibrate();
+
+    // populate allSamples for surrogate updating
+    if (emulatorType == PCE_EMULATOR)
+      filter_chain_by_conditioning();
+    else
+      best_to_all();
+    
+    ++num_mcmc;
+
+    // assess convergence of the posterior via sample-based K-L divergence:
+    //adapt_metric = assess_posterior_convergence();
+  } // adapt while
+}
+
+void NonDBayesCalibration::best_to_all()
+{
+  if (outputLevel >= NORMAL_OUTPUT) Cout << "Chain filtering results:\n";
+
+  int num_best = bestSamples.size();
+  if (allSamples.numCols() != num_best)
+    allSamples.shapeUninitialized(numContinuousVars, num_best);
+
+  std::/*multi*/map<Real, RealVector>::const_iterator
+    bs_it = bestSamples.begin(), bs_end = bestSamples.end();
+  for (int i=0; bs_it != bs_end; ++bs_it, ++i) {
+    Teuchos::setCol(bs_it->second, i, allSamples);
+    if (outputLevel >= NORMAL_OUTPUT) {
+      Cout << "Best point " << i+1 << ": Log posterior = " << bs_it->first
+	   << " Sample:";
+      // BMA TODO: vector writer?
+      //      Cout << bs_it->second;
+      write_col_vector_trans(Cout, (int)i, allSamples, false, false, true);
+    }
+  }
+}
+
+
+void NonDBayesCalibration::update_model()
+{
+  if (!emulatorType) {
+    Cerr << "Error: NonDBayesCalibration::update_model() requires an "
+	 << "emulator model." << std::endl;
+    abort_handler(METHOD_ERROR);
+  }
+
+  // perform truth evals (in parallel) for selected points
+  if (outputLevel >= NORMAL_OUTPUT)
+    Cout << "Updating emulator: evaluating " << allSamples.numCols()
+	 << " best points." << std::endl;
+  // bypass surrogate but preserve transformations to standardized space
+  short orig_resp_mode = mcmcModel.surrogate_response_mode(); // store mode
+  mcmcModel.surrogate_response_mode(BYPASS_SURROGATE); // actual model evals
+  switch (emulatorType) {
+  case PCE_EMULATOR: case SC_EMULATOR:
+  case ML_PCE_EMULATOR: case MF_PCE_EMULATOR: case MF_SC_EMULATOR:
+    nondInstance = (NonD*)stochExpIterator.iterator_rep().get();
+    evaluate_parameter_sets(mcmcModel, true, false); // log allResp, no best
+    nondInstance = this; // restore
+    break;
+  case GP_EMULATOR: case KRIGING_EMULATOR:
+    if (standardizedSpace)
+      nondInstance = (NonD*)mcmcModel.subordinate_iterator().iterator_rep().get();
+    evaluate_parameter_sets(mcmcModel, true, false); // log allResp, no best
+    if (standardizedSpace)
+      nondInstance = this; // restore
+    break;
+  }
+  mcmcModel.surrogate_response_mode(orig_resp_mode); // restore mode
+
+  // update mcmcModel with new data from iteratedModel
+  if (outputLevel >= NORMAL_OUTPUT)
+    Cout << "Updating emulator: appending " << allResponses.size()
+	 << " new data sets." << std::endl;
+  switch (emulatorType) {
+  case PCE_EMULATOR: case SC_EMULATOR:
+  case ML_PCE_EMULATOR: case MF_PCE_EMULATOR: case MF_SC_EMULATOR: {
+    // Adapt the expansion in sync with the dataset using a top-down design
+    // (more explicit than embedded logic w/i mcmcModel.append_approximation).
+    std::shared_ptr<NonDExpansion> se_iterator =
+      std::static_pointer_cast<NonDExpansion>(stochExpIterator.iterator_rep());
+    se_iterator->append_expansion(allSamples, allResponses);
+    // TO DO: order increment places addtnl reqmts on emulator conv assessment
+    break;
+  }
+  case GP_EMULATOR: case KRIGING_EMULATOR:
+    mcmcModel.append_approximation(allSamples, allResponses, true); // rebuild
+    break;
+  }
+}
+
+
+Real NonDBayesCalibration::assess_emulator_convergence()
+{
+  // coeff reference point not yet available; force another iteration rather
+  // than use norm of current coeffs (stopping on small norm is not meaningful)
+  if (prevCoeffs.empty()) {
+    switch (emulatorType) {
+    case PCE_EMULATOR: case ML_PCE_EMULATOR: case MF_PCE_EMULATOR:
+      prevCoeffs = mcmcModel.approximation_coefficients(true);  break;
+    case SC_EMULATOR: case MF_SC_EMULATOR:
+      prevCoeffs = mcmcModel.approximation_coefficients(false); break;
+    case GP_EMULATOR: case KRIGING_EMULATOR:
+      Cerr << "Warning: convergence norm not yet defined for GP emulators in "
+	   << "NonDBayesCalibration::assess_emulator_convergence()."
+	   << std::endl;
+      break;
+    }
+    return DBL_MAX;
+  }
+
+  Real l2_norm_delta_coeffs = 0., delta_coeff_ij;
+  switch (emulatorType) {
+  case PCE_EMULATOR: case ML_PCE_EMULATOR: case MF_PCE_EMULATOR: {
+    // normalized coeffs:
+    const RealVectorArray& coeffs = mcmcModel.approximation_coefficients(true);
+    size_t i, j, num_qoi = coeffs.size(),
+      num_curr_coeffs, num_prev_coeffs, num_coeffs;
+
+    // This approach assumes a well-ordered progression in multiIndex, which is
+    // acceptable for regression PCE using consistently incremented (candidate)
+    // expansion definitions.  Sparsity is not a concern as returned coeffs are
+    // inflated to be dense w.r.t. SharedOrthogPolyApproxData::multiIndex.
+    // Could implement as resize (inflat smaller w/ 0's) + vector difference +
+    // Frobenious norm, but current approach should have lower overhead.
+    for (i=0; i<num_qoi; ++i) {
+      const RealVector&      coeffs_i =     coeffs[i];
+      const RealVector& prev_coeffs_i = prevCoeffs[i];
+      num_curr_coeffs = coeffs_i.length();
+      num_prev_coeffs = prev_coeffs_i.length();
+      num_coeffs = std::max(num_curr_coeffs, num_prev_coeffs);
+      for (j=0; j<num_coeffs; ++j) {
+	delta_coeff_ij = 0.;
+	if (j<num_curr_coeffs) delta_coeff_ij += coeffs_i[j];
+	if (j<num_prev_coeffs) delta_coeff_ij -= prev_coeffs_i[j];
+	l2_norm_delta_coeffs += delta_coeff_ij * delta_coeff_ij;
+      }
+    }
+
+    prevCoeffs = coeffs;
+    break;
+  }
+  case SC_EMULATOR: case MF_SC_EMULATOR: {
+    // Interpolation could use a similar concept with the expansion coeffs,
+    // although adaptation would imply differences in the grid.
+    const RealVectorArray& coeffs = mcmcModel.approximation_coefficients(false);
+
+    Cerr << "Warning: convergence norm not yet defined for SC emulator in "
+	 << "NonDBayesCalibration::assess_emulator_convergence()."
+	 << std::endl;
+    //abort_handler(METHOD_ERROR);
+    return DBL_MAX;
+    break;
+  }
+  case GP_EMULATOR: case KRIGING_EMULATOR:
+    // Consider use of correlation lengths.
+    // TO DO: define SurfpackApproximation::approximation_coefficients()...
+    Cerr << "Warning: convergence norm not yet defined for GP emulators in "
+	 << "NonDBayesCalibration::assess_emulator_convergence()."
+	 << std::endl;
+    //abort_handler(METHOD_ERROR);
+    return DBL_MAX;
+    break;
+  }
+
+  if (outputLevel >= NORMAL_OUTPUT) {
+    Real norm = std::sqrt(l2_norm_delta_coeffs);
+    Cout << "Assessing emulator convergence: l2 norm = " << norm << std::endl;
+    return norm;
+  }
+  else
+    return std::sqrt(l2_norm_delta_coeffs);
+} // assess_emulator_convergence
 
 void NonDBayesCalibration::calibrate_to_hifi()
 {
-  const RealVector initial_point(Teuchos::Copy, 
-      				 mcmcModel.continuous_variables().values(), 
-				 mcmcModel.continuous_variables().length());
-  
   /* TODO:
      - Handling of hyperparameters
      - More efficient resizing/reconstruction
-     - Use hierarhical surrogate eval modes
+     - Use hierarchical surrogate eval modes
   */
-  int num_exp = expData.num_experiments();
-  int num_lhs_samples = std::max(initHifiSamples - num_exp, 0);
-  if (num_lhs_samples > 0) 
-    add_lhs_hifi_data();
-  num_exp = expData.num_experiments();
-  int random_seed = randomSeed; 
-  
-  // Apply hifi error
-  const RealVector& hifi_sim_error = hifiModel.current_response().
-                                       shared_data().simulation_error();
-  if (hifi_sim_error.length() > 0)  
-    for (int i = 0; i < num_exp; i++) 
-      apply_error_vec(hifi_sim_error, random_seed, i);
 
-  if (outputLevel >= DEBUG_OUTPUT)
-    for (size_t i=0; i<initHifiSamples; i++)
-      Cout << "Exp Data  i " << i << " value = " << expData.all_data(i);
-
-  // Build matrix of candidate designs
-  int num_candidates = numCandidates;
-  RealMatrix design_matrix;
-  build_designs(design_matrix);
-
-  bool stop_metric = false;
-  size_t optimal_ind;
-  double max_MI;
-  double prev_MI;
-  int max_hifi = (maxHifiEvals > -1.) ? maxHifiEvals : numCandidates;
+  // TODO? Make a struct?
+  const RealVector initial_point(Teuchos::Copy, 
+      				 mcmcModel.continuous_variables().values(), 
+				 mcmcModel.continuous_variables().length());
+  int random_seed = randomSeed;  // locally incremented
+  int num_exp;
+  int max_hifi = (maxHifiEvals >= 0) ? maxHifiEvals : numCandidates;
   int num_hifi = 0;
   int num_it = 1;
+  bool stop_metric = false;
+  double prev_MI = std::numeric_limits<Real>::infinity();
+
+  // We assume the hifiModel's active variables are the config vars
+  int num_design_vars =
+    hifiModel.cv() + hifiModel.div() + hifiModel.dsv() + hifiModel.drv();
+  VariablesArray design_matrix, optimal_config_matrix;
+  size_and_fill(hifiModel.current_variables().shared_data(), numCandidates,
+		design_matrix);
+  size_and_fill(hifiModel.current_variables().shared_data(), batchEvals,
+		optimal_config_matrix);
+
   std::ofstream out_file("experimental_design_output.txt");
+  RealMatrix mi_chain; // filtered chain used to computed mutual information
+  RealMatrix resp_matrix; // array that will contain new hifi model evals 
+  RealVector MI_vec(batchEvals); // mutual information for design point batches
+
+  // Get initial set of hifi model evaluations
+  add_lhs_hifi_data();
+  num_exp = expData.num_experiments();
+  apply_hifi_sim_error(random_seed, num_exp);
+ 
+  if (outputLevel >= DEBUG_OUTPUT)
+    for (size_t i=0; i<initHifiSamples; i++) // TNP ? Why is this not num_exp?
+      Cout << "Exp Data  i " << i << " value = " << expData.all_data(i);
+
+  build_designs(design_matrix);
 
   if (outputLevel >= DEBUG_OUTPUT) {
     Cout << "Design Matrix   " << design_matrix << '\n';
@@ -825,160 +1095,67 @@ void NonDBayesCalibration::calibrate_to_hifi()
 
   while (!stop_metric) {
     
-    // EVALUATE STOPPING CRITERIA
-    stop_metric = eval_hi2lo_stop(stop_metric, prev_MI, max_MI, num_it, 
-	                          num_hifi, max_hifi, num_candidates);
-
-    // If the experiment data changed, need to update a number of
-    // models that wrap it.  TODO: make this more lightweight instead
-    // of reconstructing
+    eval_hi2lo_stop(stop_metric, prev_MI, MI_vec, 
+		    num_hifi, max_hifi, design_matrix.size());
+    
+    // TODO: Make function update_calibration_data() or something
+    residualModel.assign_rep(std::make_shared<DataTransformModel>
+			     (mcmcModel, expData, numHyperparams,
+			      obsErrorMultiplierMode, mcmcDerivOrder));
+    construct_map_model();
+    construct_map_optimizer(); 
 
     // BMA TODO: this doesn't permit use of hyperparameters (see main ctor)
     mcmcModel.continuous_variables(initial_point);
-    residualModel.assign_rep(new
-      DataTransformModel(mcmcModel, expData, numHyperparams,
-			 obsErrorMultiplierMode, mcmcDerivOrder), false);
-    construct_map_optimizer();
-
-    // Run the underlying calibration solver (MCMC)
+    // TNP TODO: expose opt_for_map() and run_chain() 
     calibrate();
 
-    if (outputLevel >= DEBUG_OUTPUT) {
-      // Print chain moments
-      StringArray combined_labels;
-      copy_data(residualModel.continuous_variable_labels(), 
-  	combined_labels);
-      NonDSampling::print_moments(Cout, chainStats, RealMatrix(), 
-	  "posterior variable", STANDARD_MOMENTS, combined_labels, false); 
-      // Print response moments
-      StringArray resp_labels = mcmcModel.current_response().function_labels();
-      NonDSampling::print_moments(Cout, fnStats, RealMatrix(), 
-          "response function", STANDARD_MOMENTS, resp_labels, false); 
-    }
+    print_hi2lo_chain_moments();
 
+    // Compute batch points, either because the stop metric is still false, 
+    // or because the user specified no hifi evaluations. This way they
+    // are reported what evaluations would be done.
     if (!stop_metric || max_hifi == 0) {
 
-      if (outputLevel >= NORMAL_OUTPUT) 
-	print_hi2lo_begin(num_it);
+      print_hi2lo_begin(num_it);
 
-      // After QUESO is run, get the posterior values of the samples; go
-      // through all the designs and pick the one with maximum mutual
-      // information
-  
-      RealMatrix mi_chain;
+      // Removing burn-in and thinning
       filter_chain(acceptanceChain, mi_chain, 5000);
-      int num_filtered = mi_chain.numCols();
 
-      int batch_size = batchEvals;
-      if (max_hifi != 0)  
-        if (num_candidates < batchEvals || max_hifi - num_hifi < batchEvals) 
-	  batchEvals = min(num_candidates, max_hifi - num_hifi);
       // Build optimal observations matrix, contains obsverations from
       // previously selected optimal designs
-      RealMatrix optimal_obs;  
-      RealVector optimal_config(design_matrix.numRows());
-      RealMatrix optimal_config_matrix(design_matrix.numRows(), batchEvals);
-      RealVector MI_vec(batchEvals);
+      //RealMatrix optimal_obs; // TNP ? This doesn't seem to be doing anything
+ 
+      // After calibration is run, get the posterior values of the samples; 
+      // loop through designs and pick batch with maximum mutual information
+      choose_batch_from_mutual_info( random_seed, num_it, max_hifi, num_hifi, 
+          mi_chain, design_matrix, optimal_config_matrix, MI_vec );
 
-      RealMatrix Xmatrix;
-      // For loop for batch MI 
-      for (int batch_n = 1; batch_n < batchEvals+1; batch_n ++) {
-        Xmatrix.reshape(numContinuousVars + batch_n * numFunctions,
-	    		num_filtered);
-	
-        // Build simulation error matrix
-        RealMatrix sim_error_matrix;
-        const RealVector& sim_error_vec = mcmcModel.current_response().
-                                          shared_data().simulation_error();
-        if (sim_error_vec.length() > 0) {
-          sim_error_matrix.reshape(numFunctions, num_filtered);
-          build_error_matrix(sim_error_vec, sim_error_matrix, random_seed);
-        }
-
-        for (size_t i=0; i<num_candidates; i++) {
-          RealVector xi_i = Teuchos::getCol(Teuchos::View, design_matrix, 
-	      				    int(i));
-          Model::inactive_variables(xi_i, mcmcModel); 
-	  
-	  build_hi2lo_xmatrix(Xmatrix, batch_n, mi_chain, sim_error_matrix);
-
-          // calculate the mutual information b/w post theta and lofi responses
-          Real MI = knn_mutual_info(Xmatrix, numContinuousVars,
-				    batch_n * numFunctions, mutualInfoAlg);
-	  if (outputLevel >= NORMAL_OUTPUT) 
-	    print_hi2lo_status(num_it, i, xi_i, MI);
-    
-          // Now track max MI:
-          if (i == 0) {
-	    max_MI = MI;
-	    optimal_ind = i;
-          }
-          else 
-            if ( MI > max_MI) {
-              max_MI = MI;
-	      optimal_ind = i;
-            }
-        } // end for over the number of candidates
-    
-        MI_vec[batch_n-1] = max_MI;
-        optimal_config = Teuchos::getCol(Teuchos::Copy, design_matrix,
-    					           int(optimal_ind));
-	Teuchos::setCol(optimal_config, batch_n-1, optimal_config_matrix);
-        // Update optimal_obs matrix
-        if (batchEvals > 1) {
-	  // Evaluate lofi model at optimal design, update Xmatrix
-	  RealMatrix lofi_resp_matrix;
-          Model::inactive_variables(optimal_config, mcmcModel);
-	  Model::evaluate(mi_chain, mcmcModel, lofi_resp_matrix);
-          if (sim_error_matrix.numRows() > 0)
-	    lofi_resp_matrix += sim_error_matrix;
-
-	  RealMatrix optimal_obs
-	    (Teuchos::View, Xmatrix, numFunctions, num_filtered,
-	     numContinuousVars + (batch_n-1)*numFunctions, 0);
-	  optimal_obs.assign(lofi_resp_matrix);
-        }
-
-        // update list of candidates
-        remove_column(design_matrix, optimal_ind);
-        --num_candidates;
-	if (batch_size > 1) 
-          if (outputLevel >= NORMAL_OUTPUT) 
-	    print_hi2lo_batch_status(num_it, batch_n, batchEvals, 
-				     optimal_config, max_MI);
-      } // end batch_n loop
-
-      // RUN HIFI MODEL WITH NEW POINT(S)
-      RealMatrix resp_matrix;
       if (max_hifi > 0) {
-	run_hifi(optimal_config_matrix, resp_matrix);
-        if (hifi_sim_error.length() > 0) // apply sim error to new point
-          for (int i = 0; i < optimal_config_matrix.numCols(); i++) 
-            apply_error_vec(hifi_sim_error, random_seed, num_exp+num_hifi+i);
-	num_hifi += optimal_config_matrix.numCols();;
+        // TODO: Should be using new batch evaluators for this.
+        run_hifi(optimal_config_matrix, resp_matrix);
+        apply_hifi_sim_error( random_seed, optimal_config_matrix.size(), 
+            num_exp+num_hifi);
+	      num_hifi += optimal_config_matrix.size();
       }
       num_it++;
 
-      // Print results to screen and to file
-      if (outputLevel >= NORMAL_OUTPUT) 
-	print_hi2lo_selected(num_it, batchEvals, optimal_config_matrix, 
-	    		     optimal_config, max_MI);
-      print_hi2lo_file(out_file, num_it, batchEvals, optimal_config_matrix, 
-	    	MI_vec, max_hifi, resp_matrix, optimal_config, max_MI);
+      print_hi2lo_selected(num_it, optimal_config_matrix, MI_vec);
+      print_hi2lo_file(out_file, num_it, optimal_config_matrix, 
+          MI_vec, resp_matrix); 
     } // end MI loop
   } // end while loop
 }
 
-bool NonDBayesCalibration::eval_hi2lo_stop(bool stop_metric, double prev_MI,
-    			   double max_MI, int num_it, int num_hifi, int 
-			   max_hifi, int num_candidates)
+void NonDBayesCalibration::eval_hi2lo_stop(bool& stop_metric, double& prev_MI,
+              const RealVector& MI_vec, int num_hifi, int max_hifi, 
+              int num_candidates)
 {
+  
   // check relative MI change
-  if (num_it == 1)
-    prev_MI = max_MI;
-  else if (num_it > 1) {
-    double MIdiff = prev_MI - max_MI;
-    double MIrel = fabs(MIdiff/prev_MI);
+  double max_MI = MI_vec[ MI_vec.length()-1 ];
+  if ( prev_MI != std::numeric_limits<Real>::infinity() ){
+    double MIrel = fabs((prev_MI - max_MI)/prev_MI);
     if (MIrel < 0.05) {
       stop_metric = true;
       Cout << "Experimental Design Stop Criteria met: "
@@ -1006,28 +1183,46 @@ bool NonDBayesCalibration::eval_hi2lo_stop(bool stop_metric, double prev_MI,
          << "been reached \n" 
          << '\n';
   }
-  return stop_metric;
 }
 
 void NonDBayesCalibration::print_hi2lo_begin(int num_it)
 {
+  if (outputLevel >= NORMAL_OUTPUT) {
   Cout << "\n----------------------------------------------\n";
   Cout << "Begin Experimental Design Iteration " << num_it;
   Cout << "\n----------------------------------------------\n";
+  }
 }
 	    
 void NonDBayesCalibration::print_hi2lo_status(int num_it, int i, 
-    			   const RealVector& xi_i, double MI)
+    			   const Variables& xi_i, double MI)
 {
   Cout << "\n----------------------------------------------\n";
   Cout << "Experimental Design Iteration "<< num_it <<" Progress";
   Cout << "\n----------------------------------------------\n";
-  Cout << "Design candidate " << i << " :\n" << xi_i;
+  Cout << "Design candidate " << i << " :\n";
+  xi_i.write(Cout, ACTIVE_VARS);
   Cout << "Mutual Information = " << MI << '\n'; 
 }
 	    
+void NonDBayesCalibration::print_hi2lo_chain_moments()
+{
+  if (outputLevel < DEBUG_OUTPUT) 
+    return;
+
+  StringArray combined_labels;
+  copy_data(residualModel.continuous_variable_labels(), 
+   	        combined_labels);
+  NonDSampling::print_moments(Cout, chainStats, RealMatrix(), 
+  "posterior variable", Pecos::STANDARD_MOMENTS, combined_labels, false); 
+  // Print response moments
+  StringArray resp_labels = mcmcModel.current_response().function_labels();
+  NonDSampling::print_moments(Cout, fnStats, RealMatrix(), 
+      "response function", Pecos::STANDARD_MOMENTS, resp_labels, false); 
+}
+
 void NonDBayesCalibration::print_hi2lo_batch_status(int num_it, int batch_n, 
-    			   int batchEvals, const RealVector& optimal_config, 
+    			   int batchEvals, const Variables& optimal_config, 
 			   double max_MI)
 {
   Cout << "\n----------------------------------------------\n";
@@ -1035,79 +1230,189 @@ void NonDBayesCalibration::print_hi2lo_batch_status(int num_it, int batch_n,
   Cout << "\n----------------------------------------------\n";
   Cout << "Point " << batch_n << " of " << batchEvals 
        << " selected\n";
-  Cout << "Optimal design:\n" << optimal_config;
+  Cout << "Optimal design:\n";
+  optimal_config.write(Cout, ACTIVE_VARS);
   Cout << "Mutual information = " << max_MI << '\n';
   Cout << "\n";
 }
  
-void NonDBayesCalibration::print_hi2lo_selected(int num_it, int batchEvals, 
-    			   RealMatrix& optimal_config_matrix, const RealVector&
-      		           optimal_config, double max_MI)
+void NonDBayesCalibration::print_hi2lo_selected(int num_it, 
+    			   const VariablesArray& optimal_config_matrix, 
+             const RealVector& MI_vec)
 {
+  if (outputLevel < NORMAL_OUTPUT) 
+    return; 
+
+  int batch_evals = optimal_config_matrix.size();
   Cout << "\n----------------------------------------------\n";
   Cout << "Experimental Design Iteration " << num_it-1 << " Complete";
   Cout << "\n----------------------------------------------\n";
-  if (batchEvals > 1) {
-    Cout << batchEvals << " optimal designs selected\n";
-    for (int batch_n = 0; batch_n < batchEvals; batch_n++) {
-      RealVector col = Teuchos::getCol(Teuchos::View, 
-			       optimal_config_matrix, batch_n);
-      Cout << col;
-    }
-  } 
+  if (batch_evals > 1)
+    Cout << batch_evals << " optimal designs selected\n";
   else 
-    Cout << "Optimal design:\n" << optimal_config;
-  Cout << "Mutual information = " << max_MI << '\n';
+    Cout << "Optimal design:\n";
+  
+  for (int batch_n = 0; batch_n < batch_evals; batch_n++) {
+    const Variables& col = optimal_config_matrix[batch_n];
+
+    //Cout << "Design point " << col; 
+    col.write(Cout, ACTIVE_VARS); 
+    // TNP NOTE: This was printing just one MI even if there was
+    // a batch. I had it print for each element in the vector.
+  }
+  Cout << "Mutual information = " << MI_vec[MI_vec.length()-1] << '\n';
   Cout << "\n";
 }
 
 void NonDBayesCalibration::print_hi2lo_file(std::ostream& out_file, int num_it, 
-    			   int batchEvals, RealMatrix& optimal_config_matrix, 
-			   const RealVector& MI_vec, int max_hifi, RealMatrix& 
-			   resp_matrix, const RealVector& optimal_config, 
-			   double max_MI)
+    			   const VariablesArray& optimal_config_matrix, 
+			        const RealVector& MI_vec, RealMatrix& resp_matrix )
 {  
 
+  int batch_evals = optimal_config_matrix.size();
+  // TNP: This output spec is just so it is compatible with the
+  // old way
   out_file << "ITERATION " << num_it -1 << "\n";
-  if (batchEvals > 1) {
-    out_file << batchEvals << " optimal designs selected\n\n";
-    for (int batch_n = 0; batch_n < batchEvals; batch_n++) {
-      RealVector col = Teuchos::getCol(Teuchos::View, 
-                                optimal_config_matrix, batch_n);
-      out_file << "Design point " << col;
+  if (batch_evals > 1) 
+    out_file << batch_evals << " optimal designs selected\n\n";
+  else
+    out_file << "Optimal Design: ";
+
+  for (int batch_n = 0; batch_n < batch_evals; batch_n++) {
+    const Variables& col = optimal_config_matrix[batch_n];
+      if (batch_evals > 1){ out_file << "Design point "; }
+      col.write(out_file, ACTIVE_VARS);
       out_file << "Mutual Information = " << MI_vec[batch_n] << '\n';
-      if (max_hifi > 0) { 
+      if (resp_matrix.numCols() > 0) { 
         RealVector col = Teuchos::getCol(Teuchos::View, resp_matrix, 
    	                                 batch_n);
         out_file << "Hifi Response = " << col << '\n';
       }
-    }
-  } 
-  else { 
-    out_file << "Optimal Design: " << optimal_config;
-    out_file << "Mutual Information = " << max_MI << '\n';
-    if (max_hifi > 0) { 
-      RealVector col = Teuchos::getCol(Teuchos::View, resp_matrix, 0);
-      out_file << "Hifi Response = " << col << '\n';
-    }
   }
+}
+
+void NonDBayesCalibration::choose_batch_from_mutual_info( int random_seed, 
+                           int num_it, int max_hifi, int num_hifi,
+                           RealMatrix& mi_chain, VariablesArray& design_matrix, 
+                           VariablesArray& optimal_config_matrix, 
+                           RealVector& MI_vec)
+{
+
+  // Choose next optimal points to add.  Note that this optimization 
+  // is done for a batch of points.  The best point is chosen based on  
+  // mutual information between the model parameters and experimental data.  
+  // Then, conditional on adding this point, a next best point is added 
+  // based on conditional MI. 
+ 
+  // If there are fewer designs or allowed model evaluations than the 
+  // batch size, resize arrays.
+  if (max_hifi != 0)  
+    if (design_matrix.size() < batchEvals || 
+        max_hifi - num_hifi < batchEvals){ 
+      batchEvals = min(design_matrix.size(), max_hifi - num_hifi);
+      size_and_fill(hifiModel.current_variables().shared_data(), batchEvals,
+		    optimal_config_matrix);
+      MI_vec.resize(batchEvals);
+    }
+
+  //int batch_size = MI_vec.length();
+  double max_MI;
+  int num_filtered = mi_chain.numCols();
+  size_t optimal_ind;
+  RealMatrix Xmatrix;
+  // For loop for batch MI 
+  for (int batch_n = 1; batch_n < batchEvals+1; batch_n ++) {
+    Xmatrix.reshape(numContinuousVars + batch_n * numFunctions,
+                    num_filtered);
+	
+    // Build simulation error matrix
+    RealMatrix sim_error_matrix;
+    const RealVector& sim_error_vec = mcmcModel.current_response().
+                                      shared_data().simulation_error();
+    if (sim_error_vec.length() > 0) {
+      sim_error_matrix.reshape(numFunctions, num_filtered);
+      build_error_matrix(sim_error_vec, sim_error_matrix, random_seed);
+    }
+
+    for (size_t i=0; i < design_matrix.size(); i++) {
+      const Variables& xi_i = design_matrix[i]; // active are config vars
+      mcmcModel.current_variables().inactive_from_active(xi_i);
+
+      build_hi2lo_xmatrix(Xmatrix, batch_n, mi_chain, sim_error_matrix);
+
+      // calculate the mutual information b/w post theta and lofi responses
+      Real MI = knn_mutual_info(Xmatrix, numContinuousVars,
+			        batch_n * numFunctions, mutualInfoAlg);
+      if (outputLevel >= NORMAL_OUTPUT) 
+        print_hi2lo_status(num_it, i, xi_i, MI);
+    
+      // Now track max MI:
+      if (i == 0) {
+        max_MI = MI;
+        optimal_ind = i;
+      }
+      else 
+        if ( MI > max_MI) {
+          max_MI = MI;
+          optimal_ind = i;
+        }
+    } // end for over the number of candidates
+    
+    MI_vec[batch_n-1] = max_MI;
+
+    // store the optimal config and a convenience reference (active are config)
+    optimal_config_matrix[batch_n-1] = design_matrix[optimal_ind].copy();
+    const Variables& optimal_config = optimal_config_matrix[batch_n-1];
+
+    // Update optimal_obs matrix
+    if (batchEvals > 1) {
+    // Evaluate lofi model at optimal design, update Xmatrix
+      RealMatrix lofi_resp_matrix;
+      mcmcModel.current_variables().inactive_from_active(optimal_config);
+      Model::evaluate(mi_chain, mcmcModel, lofi_resp_matrix);
+      if (sim_error_matrix.numRows() > 0)
+        lofi_resp_matrix += sim_error_matrix;
+
+      // TNP ? What is this for? 
+      // BMA: looks like it's saving the optimal responses
+      // corresponding to optimal config var values?
+      //RealMatrix optimal_obs
+      //  (Teuchos::View, Xmatrix, numFunctions, num_filtered,
+      //   numContinuousVars + (batch_n-1)*numFunctions, 0);
+      //optimal_obs.assign(lofi_resp_matrix);
+    }
+
+    // update list of candidates
+    design_matrix.erase(design_matrix.begin() + optimal_ind);
+    //--num_candidates;
+    if (batchEvals > 1) 
+      if (outputLevel >= NORMAL_OUTPUT) 
+        print_hi2lo_batch_status(num_it, batch_n, batchEvals, 
+				 optimal_config, max_MI);
+  } // end batch_n loop
+
 }
 
 void NonDBayesCalibration::add_lhs_hifi_data()
 {
+  // If #init hifi samples, do a no-op 
+  if ( initHifiSamples <= expData.num_experiments() )
+    return;
+
   hifiSampler.run();
 
   int num_exp = expData.num_experiments();
-  const RealMatrix& all_samples = hifiSampler.all_samples();
+  const VariablesArray& all_variables = hifiSampler.all_variables();
   const IntResponseMap& all_responses = hifiSampler.all_responses();
 
   if (num_exp == 0) {
     // No file data; all initial hifi calibration data points come from LHS
     // BMA TODO: Once ExperimentData can be updated, post this into
     // expData directly
-    ExperimentData exp_data(initHifiSamples, 
+    ExperimentData exp_data(initHifiSamples,
+			    mcmcModel.current_variables().shared_data(),
                             mcmcModel.current_response().shared_data(), 
-                            all_samples, all_responses, outputLevel);
+                            all_variables, all_responses, outputLevel);
     expData = exp_data;
   }
   else {
@@ -1116,18 +1421,28 @@ void NonDBayesCalibration::add_lhs_hifi_data()
     IntRespMCIter responses_it = all_responses.begin();
     IntRespMCIter responses_end = all_responses.end();
     for (int i=0 ; responses_it != responses_end; ++responses_it, ++i) {
-      RealVector col_vec = 
-        Teuchos::getCol(Teuchos::Copy, const_cast<RealMatrix&>(all_samples),
-                        i);
-      expData.add_data(col_vec, responses_it->second.copy());
+      expData.add_data(mcmcModel.current_variables().shared_data(),
+		       all_variables[i], responses_it->second.copy());
     }
   }
 }
-    
+
+void NonDBayesCalibration::apply_hifi_sim_error(int& random_seed, 
+    int num_exp, int exp_offset){
+  // Apply hifi error
+  const RealVector& hifi_sim_error = hifiModel.current_response().
+                                       shared_data().simulation_error();
+  if (hifi_sim_error.length() > 0){
+    for (int i = 0; i < num_exp; i++) 
+      apply_error_vec(hifi_sim_error, random_seed, exp_offset+i);
+  }
+}
+
 void NonDBayesCalibration::apply_error_vec(const RealVector& sim_error_vec,
     			   int &stoch_seed, int experiment)
 { 
-  int num_exp = expData.num_experiments();
+  // TNP TODO: Seems like tests don't cover sim err length > 1
+  //int num_exp = expData.num_experiments();
   RealVector error_vec(numFunctions);
   Real stdev;
   boost::mt19937 rnumGenerator;
@@ -1195,35 +1510,27 @@ void NonDBayesCalibration::build_error_matrix(const RealVector& sim_error_vec,
   }
 }
 
-void NonDBayesCalibration::build_designs(RealMatrix& design_matrix)
+/** On entry, design_matrix already sized to numCandidates. */
+void NonDBayesCalibration::build_designs(VariablesArray& design_matrix)
 {
   // We assume the hifiModel's active variables are the config vars
-  size_t num_candidates_in = 0, num_design_vars =
-    hifiModel.cv() + hifiModel.div() + hifiModel.dsv() + hifiModel.drv();
-  design_matrix.shape(num_design_vars, numCandidates);
+  size_t num_candidates_in = 0;
 
-  // If available, import data first
+  // If available, import data first into beginning of design_matrix
   if (!importCandPtsFile.empty()) {
-    RealMatrix design_matrix_in;
-    TabularIO::read_data_tabular(importCandPtsFile,
-				 "user-provided candidate points",
-				 design_matrix_in, num_design_vars,
-				 importCandFormat, false);
-    num_candidates_in = design_matrix_in.numCols();
-    if (num_candidates_in > numCandidates) {
-      // truncate the imported data
-      num_candidates_in = numCandidates;
-      design_matrix_in.reshape(num_design_vars, num_candidates_in);
-      if (outputLevel >= VERBOSE_OUTPUT) {
-	Cout << "\nWarning: Bayesian design of experiments only using the "
-	     << "first " << numCandidates << " candidates in " 
-	     << importCandPtsFile << '\n';
-      }
+
+    // BMA TODO: maybe merge read config vars single file?
+    // read directly into design_matrix, until at most numCandidates
+    auto numin_havemore = TabularIO::read_data_tabular
+      (importCandPtsFile, "user-provided candidate points",
+       numCandidates, design_matrix, importCandFormat);
+
+    num_candidates_in = numin_havemore.first;
+    if (numin_havemore.second && outputLevel >= VERBOSE_OUTPUT) {
+      Cout << "\nWarning: Bayesian design of experiments only using the "
+	   << "first " << numCandidates << " candidates in " 
+	   << importCandPtsFile << '\n';
     }
-    // populate the sub-matrix (possibly full matrix) of imported candidates
-    RealMatrix des_mat_imported(Teuchos::View, design_matrix,
-				num_design_vars, num_candidates_in, 0, 0);
-    des_mat_imported.assign(design_matrix_in);
   }
 
   // If needed, supplement with LHS-generated designs
@@ -1235,20 +1542,18 @@ void NonDBayesCalibration::build_designs(RealMatrix& design_matrix)
     bool vary_pattern = true;
     String rng("mt19937");
     int random_seed_1 = randomSeed+1;
-    NonDLHSSampling* lhs_sampler_rep2 =
-      new NonDLHSSampling(hifiModel, sample_type, new_candidates, random_seed_1,
-			  rng, vary_pattern, ACTIVE_UNIFORM);
-    lhs_iterator2.assign_rep(lhs_sampler_rep2, false);
+    auto lhs_sampler_rep2 = std::make_shared<NonDLHSSampling>
+      (hifiModel, sample_type, new_candidates, random_seed_1,
+       rng, vary_pattern, ACTIVE_UNIFORM);
+    lhs_iterator2.assign_rep(lhs_sampler_rep2);
     lhs_iterator2.pre_run();
-
-    // populate the sub-matrix (possibly full matrix) of generated candidates
-    RealMatrix des_mat_generated(Teuchos::View, design_matrix,
-				 num_design_vars, new_candidates,
-				 0, num_candidates_in);
-    des_mat_generated.assign(lhs_iterator2.all_samples());
+    // populate the sub-set (possibly full set) of generated candidates
+    // could skip this copy if the lhs_iterator2 doesn't share any other uses
+    const auto& lhs_all_vars = lhs_iterator2.all_variables();
+    for (size_t i=0; i<new_candidates; ++i)
+      design_matrix[num_candidates_in + i] = lhs_all_vars[i].copy();
   }
 }
-
 	  
 void NonDBayesCalibration::build_hi2lo_xmatrix(RealMatrix& Xmatrix, int i, 
     			   const RealMatrix& mi_chain, RealMatrix& 
@@ -1259,6 +1564,9 @@ void NonDBayesCalibration::build_hi2lo_xmatrix(RealMatrix& Xmatrix, int i,
  
   // receive the evals in a separate matrix for safety
   RealMatrix lofi_resp_matrix;
+  // BMA: I believe mi_chain should be the active calibration
+  // parameters theta only, so the mcmcModel (DataTransformModel)
+  // manages the config vars...
   Model::evaluate(mi_chain, mcmcModel, lofi_resp_matrix);
  
   //concatenate posterior_theta and lofi_resp_mat into Xmatrix
@@ -1275,23 +1583,28 @@ void NonDBayesCalibration::build_hi2lo_xmatrix(RealMatrix& Xmatrix, int i,
     xmatrix_curr_responses += sim_error_matrix;
 }
 
-void NonDBayesCalibration::run_hifi(RealMatrix& optimal_config_matrix, 
-    			   RealMatrix& resp_matrix)
+void 
+NonDBayesCalibration::run_hifi(const VariablesArray& optimal_config_matrix, 
+			       RealMatrix& resp_matrix)
 {
   // batch evaluate hifiModel, populating resp_matrix
+  // evaluate sends the passed Variables to active on hifiModel
   Model::evaluate(optimal_config_matrix, hifiModel, resp_matrix);
   // update hifi experiment data
   RealMatrix::ordinalType col_ind;
-  RealMatrix::ordinalType num_evals = optimal_config_matrix.numCols();
+  RealMatrix::ordinalType num_evals = optimal_config_matrix.size();
   for (col_ind = 0; col_ind < num_evals; ++col_ind) {
-    RealVector config_vars =
-      Teuchos::getCol(Teuchos::Copy, optimal_config_matrix, col_ind);
+    
+    const Variables& config_vars = optimal_config_matrix[col_ind];
+
     // ExperimentData requires a new Response for each insertion
     RealVector hifi_fn_vals =
       Teuchos::getCol(Teuchos::Copy, resp_matrix, col_ind);
     Response hifi_resp = hifiModel.current_response().copy();
     hifi_resp.function_values(hifi_fn_vals);
-    expData.add_data(config_vars, hifi_resp);
+
+    expData.add_data(mcmcModel.current_variables().shared_data(),
+		     config_vars, hifi_resp);
   }
 }
     
@@ -1321,22 +1634,23 @@ void NonDBayesCalibration::build_scalar_discrepancy()
   mcmcModel.continuous_variables(ave_params);
   
   int num_exp = expData.num_experiments();
-  size_t num_configvars = expData.config_vars()[0].length();
+  size_t num_configvars = expData.num_config_vars();
+  std::vector<RealVector> config_vars = expData.config_vars_as_real();
   RealMatrix allConfigInputs(num_configvars,num_exp);
   for (int i = 0; i < num_exp; i++) {
-    RealVector config_vec = expData.config_vars()[i];
+    const RealVector& config_vec = config_vars[i];
     Teuchos::setCol(config_vec, i, allConfigInputs);
   } 
 
   // Initialize DiscrepancyCorrection class
-  IntSet fn_indices;
+  SizetSet fn_indices;
   // Hardcode for now, call id_surrogates eventually? See SurrogateModel.cpp 
-  for (int i = 0; i < numFunctions; ++i)
+  for (size_t i = 0; i < numFunctions; ++i)
     fn_indices.insert(i);
   DiscrepancyCorrection modelDisc;
-  short corr_type = ADDITIVE_CORRECTION; 
+  short corr_type = ADDITIVE_CORRECTION, corr_order = 0;
   modelDisc.initialize(fn_indices, numFunctions, num_configvars, corr_type, 
-       		       approxCorrectionOrder, discrepancyType);
+       		       corr_order, discrepancyType, discrepPolyOrder);
 
   // Construct config var information
   Variables vars_copy = mcmcModel.current_variables().copy();
@@ -1486,7 +1800,8 @@ void NonDBayesCalibration::build_field_discrepancy()
   //mcmcModel.evaluate();
  
   int num_exp = expData.num_experiments();
-  size_t num_configvars = expData.config_vars()[0].length();
+  size_t num_configvars = expData.num_config_vars();
+  std::vector<RealVector> config_vars = expData.config_vars_as_real();
   // KAM TODO: add catch when num_config_vars == 0. Trying to retrieve
   // this length will seg fault
 
@@ -1504,7 +1819,7 @@ void NonDBayesCalibration::build_field_discrepancy()
       int num_indepvars = vars_mat.numRows();
       int dim_indepvars = vars_mat.numCols();
       vars_mat.reshape(num_indepvars, dim_indepvars + num_configvars);
-      RealVector config_vec = expData.config_vars()[j];
+      const RealVector& config_vec = config_vars[j];
       col_vec.resize(num_indepvars);
       for (int k = 0; k < num_configvars; k++) {
         col_vec.putScalar(config_vec[k]);
@@ -1539,7 +1854,7 @@ void NonDBayesCalibration::build_field_discrepancy()
   RealVector concat_disc;
   for (int i = 0; i < num_exp; i++) {
     const IntVector field_lengths = expData.field_lengths(i);
-    RealVector config_vec = expData.config_vars()[i];
+    const RealVector& config_vec = config_vars[i];
     Model::inactive_variables(config_vec, mcmcModel);
     mcmcModel.evaluate();
     for (int j = 0; j < field_lengths.length(); j++) {
@@ -1604,7 +1919,7 @@ void NonDBayesCalibration::build_field_discrepancy()
     for (int j = 0; j < num_exp; j++) {
       num_pred = num_exp;
       configpred_mat.shapeUninitialized(num_configvars, num_exp);
-      RealVector config_vec = expData.config_vars()[j];
+      const RealVector& config_vec = config_vars[j];
       Teuchos::setCol(config_vec, j, configpred_mat);
     }
   }
@@ -1702,7 +2017,7 @@ void NonDBayesCalibration::build_GP_field(const RealMatrix& discrep_vars_mat,
   Approximation gpApproximation(sharedData);
 
   // build the GP for the discrepancy
-  gpApproximation.add_array(discrep_vars_mat,concat_disc);
+  gpApproximation.add_array(discrep_vars_mat, true, concat_disc, true); // deep
   gpApproximation.build();
   //gpApproximations.export_model(GPstring, GPPrefix, ALGEBRAIC_FILE);
   int pred_length = discrep_vars_pred.numCols();
@@ -1734,7 +2049,7 @@ void NonDBayesCalibration::export_discrepancy(RealMatrix&
       		       "NonDBayesCalibration discrepancy response export");
 
   TabularIO::write_header_tabular(discrep_stream, output_vars, resp_labels, 
-      				  "config_id", discrep_format);
+      				  "config_id", "interface", discrep_format);
   discrep_stream << std::setprecision(write_precision)
     		 << std::resetiosflags(std::ios::floatfield);
   for (int i = 0; i < num_pred; ++i) {
@@ -1764,7 +2079,7 @@ void NonDBayesCalibration::export_discrepancy(RealMatrix&
       		       "NonDBayesCalibration corrected model response export");
 
   TabularIO::write_header_tabular(corrmodel_stream, output_vars, resp_labels, 
-      				  "config_id", corrmodel_format);
+      				  "config_id", "interface", corrmodel_format);
   corrmodel_stream << std::setprecision(write_precision)
     		 << std::resetiosflags(std::ios::floatfield);
   for (int i = 0; i < num_pred; ++i) {
@@ -1801,7 +2116,7 @@ void NonDBayesCalibration::export_discrepancy(RealMatrix&
     var_labels[i] = s.str();
   }
   TabularIO::write_header_tabular(discrepvar_stream, output_vars, var_labels, 
-      				  "pred_config", discrepvar_format);
+      				  "pred_config", "interface",discrepvar_format);
   discrepvar_stream << std::setprecision(write_precision)
     		 << std::resetiosflags(std::ios::floatfield);
   for (int i = 0; i < num_pred; ++i) {
@@ -1843,7 +2158,7 @@ void NonDBayesCalibration::export_field_discrepancy(RealMatrix& pred_vars_mat)
       		       "NonDBayesCalibration discrepancy response export");
 
   TabularIO::write_header_tabular(discrep_stream, output_vars, resp_labels, 
-      				  "config_id", discrep_format);
+      				  "config_id", "interface", discrep_format);
   discrep_stream << std::setprecision(write_precision)
     		 << std::resetiosflags(std::ios::floatfield);
   int ind = 0;
@@ -1884,7 +2199,7 @@ void NonDBayesCalibration::export_field_discrepancy(RealMatrix& pred_vars_mat)
       		       "NonDBayesCalibration corrected model response export");
 
   TabularIO::write_header_tabular(corrmodel_stream, output_vars, resp_labels, 
-      				  "config_id", corrmodel_format);
+      				  "config_id", "interface", corrmodel_format);
   corrmodel_stream << std::setprecision(write_precision)
     		 << std::resetiosflags(std::ios::floatfield);
   ind = 0;
@@ -1933,7 +2248,7 @@ void NonDBayesCalibration::export_field_discrepancy(RealMatrix& pred_vars_mat)
     var_labels[i] = s.str();
   }
   TabularIO::write_header_tabular(discrepvar_stream, output_vars, var_labels, 
-      				  "pred_config", discrepvar_format);
+      				  "pred_config", "interface",discrepvar_format);
   discrepvar_stream << std::setprecision(write_precision)
     		 << std::resetiosflags(std::ios::floatfield);
   ind = 0;
@@ -2024,7 +2339,7 @@ void NonDBayesCalibration::prior_cholesky_factorization()
     Teuchos::SerialSpdDenseSolver<int, Real> corr_solver;
     RealSymMatrix prior_cov_matrix;//= ();
 
-    Cerr << "prior_cholesky_factorization() not yet implmented for this case."
+    Cerr << "prior_cholesky_factorization() not yet implemented for this case."
 	 << std::endl;
     abort_handler(-1);
 
@@ -2280,8 +2595,10 @@ void NonDBayesCalibration::compute_statistics()
 
   }
 
-  NonDSampling::compute_moments(filtered_chain, chainStats, STANDARD_MOMENTS);
-  NonDSampling::compute_moments(filteredFnVals,    fnStats, STANDARD_MOMENTS);
+  NonDSampling::compute_moments(filtered_chain, chainStats,
+				Pecos::STANDARD_MOMENTS);
+  NonDSampling::compute_moments(filteredFnVals, fnStats,
+				Pecos::STANDARD_MOMENTS);
   if (!requestedProbLevels[0].empty())
     compute_intervals();
 
@@ -2497,9 +2814,8 @@ export_chain(RealMatrix& filtered_chain, RealMatrix& filtered_fn_vals)
   }
   */
 
-  TabularIO::
-    write_header_tabular(export_mcmc_stream, output_vars, 
-			 resp_labels, "mcmc_id", exportMCMCFormat);
+  TabularIO::write_header_tabular(export_mcmc_stream, output_vars, resp_labels,
+				  "mcmc_id", "interface", exportMCMCFormat);
 
   size_t wpp4 = write_precision+4;
   export_mcmc_stream << std::setprecision(write_precision) 
@@ -2841,11 +3157,11 @@ void NonDBayesCalibration::print_results(std::ostream& s, short results_state)
   StringArray combined_labels;
   copy_data(residualModel.continuous_variable_labels(), combined_labels);
   NonDSampling::print_moments(s, chainStats, RealMatrix(), 
-      "posterior variable", STANDARD_MOMENTS, combined_labels, false); 
+      "posterior variable", Pecos::STANDARD_MOMENTS, combined_labels, false); 
   // Print response moments
   StringArray resp_labels = mcmcModel.current_response().function_labels();
   NonDSampling::print_moments(s, fnStats, RealMatrix(), 
-      "response function", STANDARD_MOMENTS, resp_labels, false); 
+      "response function", Pecos::STANDARD_MOMENTS, resp_labels, false); 
   
   // Print chain diagnostics for variables
   if (chainDiagnostics)
@@ -2862,6 +3178,35 @@ void NonDBayesCalibration::print_results(std::ostream& s, short results_state)
   // Print posterior stats
   if (posteriorStatsKL)
     print_kl(s);
+}
+
+void NonDBayesCalibration::
+print_variables(std::ostream& s, const RealVector& c_vars)
+{
+  StringMultiArrayConstView cv_labels =
+    iteratedModel.continuous_variable_labels();
+  // the residualModel includes any hyper-parameters
+  StringArray combined_labels;
+  copy_data(residualModel.continuous_variable_labels(), combined_labels);
+
+  size_t wpp7 = write_precision+7;
+
+  // print MAP for continuous random variables
+  if (standardizedSpace) {
+    RealVector u_rv(Teuchos::View, c_vars.values(), numContinuousVars);
+    RealVector x_rv;
+    mcmcModel.probability_transformation().trans_U_to_X(u_rv, x_rv);
+    write_data(Cout, x_rv, cv_labels);
+  }
+  else
+    for (size_t j=0; j<numContinuousVars; ++j)
+      s << "                     " << std::setw(wpp7) << c_vars[j]
+	<< ' ' << cv_labels[j] << '\n';
+  // print MAP for hyper-parameters (e.g., observation error params)
+  for (size_t j=0; j<numHyperparams; ++j)
+    s << "                     " << std::setw(wpp7)
+      << c_vars[numContinuousVars+j] << ' '
+      << combined_labels[numContinuousVars + j] << '\n';
 }
 
 void NonDBayesCalibration::kl_post_prior(RealMatrix& acceptanceChain)
@@ -3401,7 +3746,7 @@ void NonDBayesCalibration::scale_model()
     Cout << "Initializing scaling transformation" << std::endl;
 
   // residualModel becomes the sub-model of a RecastModel:
-  residualModel.assign_rep(new ScalingModel(residualModel), false);
+  residualModel.assign_rep(std::make_shared<ScalingModel>(residualModel));
   // scalingModel = residualModel;
 }
 
@@ -3424,7 +3769,7 @@ void NonDBayesCalibration::weight_model()
     }
 
   // TODO: pass sqrt to WeightingModel
-  residualModel.assign_rep(new WeightingModel(residualModel), false);
+  residualModel.assign_rep(std::make_shared<WeightingModel>(residualModel));
 }
 
 } // namespace Dakota

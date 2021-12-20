@@ -40,8 +40,14 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
   corrMatrix = corr;
   activeCorr = active_corr; // active RV subset for correlation matrix
 
+  initialize_correlations();
+}
+
+
+void MarginalsCorrDistribution::initialize_correlations()
+{
   correlationFlag = false;
-  size_t num_corr = corr.numRows();
+  size_t num_corr = corrMatrix.numRows();
   if (num_corr == 0) return;
 
   size_t num_rv = randomVars.size();
@@ -68,7 +74,7 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
     if (no_mask || activeCorr[i]) {
       for (j=0, cntr_j=0; j<i; ++j) {
 	if (no_mask || activeCorr[j]) {
-	  if (std::abs(corr(cntr_i, cntr_j)) > SMALL_NUMBER)
+	  if (std::abs(corrMatrix(cntr_i, cntr_j)) > SMALL_NUMBER)
 	    correlationFlag = true;
 	  ++cntr_j;
 	}
@@ -82,8 +88,9 @@ initialize_correlations(const RealSymMatrix& corr, const BitArray& active_corr)
 
 /** For general random variable ordering (e.g., NestedModel mappings). */
 void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
-			     size_t pull_index, size_t push_index)
+pull_distribution_parameters
+(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+ size_t pull_index, size_t push_index)
 {
   RandomVariable&       push_rv = randomVars[push_index];
   const RandomVariable& pull_rv = pull_mvd_rep->random_variable(pull_index);
@@ -91,10 +98,10 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
         pull_type = pull_mvd_rep->random_variable_type(pull_index);
   switch (push_type) {
 
-    // push RV are fully standardized: no updates to perform
-  case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:           break;
+  // push RV are fully standardized: no updates to perform
+  case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:  break;
 
-    // push RV have standardized scale params; copy shape params
+  // push RV have standardized scale params; copy shape params
   case STD_BETA: {
     Real alpha;  pull_rv.pull_parameter(BE_ALPHA, alpha);
     Real beta;   pull_rv.pull_parameter(BE_BETA,  beta);
@@ -108,13 +115,13 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
     break;
   }
 
-    // push RV are non-standard, pull all non-standard data from rv_in
+  // push RV are non-standard, pull all non-standard data from rv_in
   default:
     switch (pull_type) {
-      // pull RV are fully standardized: no data to pull
-    case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:         break;
+    // pull RV are fully standardized: no data to pull
+    case STD_NORMAL:  case STD_UNIFORM:  case STD_EXPONENTIAL:  break;
 
-      // pull RV have standardized scale params; pull shape params
+    // pull RV have standardized scale params; pull shape params
     case STD_BETA: {
       Real alpha;  pull_rv.pull_parameter(BE_ALPHA, alpha);
       Real beta;   pull_rv.pull_parameter(BE_BETA,  beta);
@@ -128,21 +135,23 @@ pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
       break;
     }
 
-      // pull and push RV are non-standardized; copy all params
+    // pull and push RV are non-standardized; copy all params
     default:
-      push_rv.copy_parameters(pull_rv);                                break;
+      push_rv.copy_parameters(pull_rv);                         break;
     }
     break;
   }
 }
 
 
-void MarginalsCorrDistribution::copy_rep(MultivariateDistribution* source_rep)
+void MarginalsCorrDistribution::
+copy_rep(std::shared_ptr<MultivariateDistribution> source_rep)
 {
   // copy base class data
   MultivariateDistribution::copy_rep(source_rep);
   // specialization for marginals + corr
-  MarginalsCorrDistribution* mcd_rep = (MarginalsCorrDistribution*)source_rep;
+  std::shared_ptr<MarginalsCorrDistribution> mcd_rep =
+    std::static_pointer_cast<MarginalsCorrDistribution>(source_rep);
   initialize_types(mcd_rep->ranVarTypes, mcd_rep->activeVars);
   initialize_correlations(mcd_rep->corrMatrix, mcd_rep->activeCorr);
   pull_distribution_parameters(source_rep);

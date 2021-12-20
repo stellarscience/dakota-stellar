@@ -24,7 +24,7 @@
 using namespace std;
 
 #include "OptNewtonLike.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "ioformat.h"
 #include "Teuchos_SerialDenseMatrix.hpp"
 #include "Teuchos_SerialDenseVector.hpp"

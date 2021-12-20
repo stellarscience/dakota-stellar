@@ -30,12 +30,13 @@ class AppRequest;
 class AppResponse;
 } // namespace colin
 
-/// Support "printing" AppResponse objects
-std::ostream& operator<<(std::ostream& os, const colin::AppResponse& r);
-
 
 namespace colin
 {
+
+/// Support "printing" AppResponse objects
+std::ostream& operator<<(std::ostream& os, const colin::AppResponse& r);
+
 class Application_Base;
 class ResponseGenerator;
 
@@ -48,15 +49,15 @@ class ResponseGenerator;
 class AppResponse
 {
    friend class ResponseGenerator;
-   friend std::ostream& ::operator<<(std::ostream& os, const AppResponse& r);
+   friend std::ostream& colin::operator<<(std::ostream& os, const AppResponse& r);
 
 public: // typedefs
 
    ///
-   typedef std::pair<response_info_t, const utilib::Any >  response_pair_t;
+   typedef std::pair<response_info_t, utilib::Any >  response_pair_t;
 
    ///
-   typedef std::map<response_info_t, const utilib::Any >  response_map_t;
+   typedef std::map<response_info_t, utilib::Any >  response_map_t;
 
 public: // construct / destruct / copy / compare methods
 

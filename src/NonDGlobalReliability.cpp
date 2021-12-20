@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -28,9 +29,9 @@
 #include "ProbabilityTransformModel.hpp"
 #include "DataFitSurrModel.hpp"
 #include "DakotaApproximation.hpp"
+#include "DakotaSurrogatesGP.hpp"
 #include "ProblemDescDB.hpp"
 #include "NormalRandomVariable.hpp"
-#include <boost/lexical_cast.hpp>
 
 //#define DEBUG
 //#define DEGUG_PLOTS
@@ -69,7 +70,7 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
   NonDReliability(problem_db, model),
   meritFunctionType(AUGMENTED_LAGRANGIAN_MERIT), dataOrder(1)
 {
-  if (mppSearchType < EGRA_X) {
+  if (mppSearchType != SUBMETHOD_EGRA_X && mppSearchType != SUBMETHOD_EGRA_U) {
     Cerr << "Error: only x-space and u-space EGRA are currently supported in "
 	 << "global_reliability."<< std::endl;
     abort_handler(-1); 
@@ -127,6 +128,8 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
   String approx_type = "global_kriging";
   if (probDescDB.get_short("method.nond.emulator") == GP_EMULATOR)
     approx_type = "global_gaussian";
+  else if (probDescDB.get_short("method.nond.emulator") == EXPGP_EMULATOR)
+    approx_type = "global_exp_gauss_proc";
 
   unsigned short sample_type = SUBMETHOD_DEFAULT;
   UShortArray approx_order; // not used for GP/kriging
@@ -159,26 +162,26 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
 
   //int symbols = samples; // symbols needed for DDACE
   Iterator dace_iterator;
-  NonDLHSSampling* lhs_sampler_rep;
   // instantiate the Nataf ProbabilityTransform and GP DataFit recursions
-  if (mppSearchType == EGRA_X) { // Recast( DataFit( iteratedModel ) )
+  if (mppSearchType == SUBMETHOD_EGRA_X) { // Recast( DataFit( iteratedModel ) )
 
     // The following uses on the fly derived ctor:
-    lhs_sampler_rep = new NonDLHSSampling(iteratedModel, sample_type, samples,
-      lhs_seed, rng, vary_pattern, ACTIVE_UNIFORM);
+    auto lhs_sampler_rep = std::make_shared<NonDLHSSampling>
+      (iteratedModel, sample_type, samples,
+       lhs_seed, rng, vary_pattern, ACTIVE_UNIFORM);
     //unsigned short dace_method = SUBMETHOD_LHS; // submethod enum
     //lhs_sampler_rep = new DDACEDesignCompExp(iteratedModel, samples, symbols,
     //                                         lhs_seed, dace_method);
     //unsigned short dace_method = FSU_HAMMERSLEY;
     //lhs_sampler_rep = new FSUDesignCompExp(iteratedModel, samples, lhs_seed,
     //                                       dace_method);
-    dace_iterator.assign_rep(lhs_sampler_rep, false);
+    dace_iterator.assign_rep(lhs_sampler_rep);
 
     // Construct g-hat(x) using a GP approximation over the active/uncertain
     // vars (same view as iteratedModel: not the typical All view for DACE).
     // For RBDO with GP over {u}+{d}, view set to All from all_variables spec.
     Model g_hat_x_model;
-    IntSet surr_fn_indices; // Only want functions with requested levels
+    SizetSet surr_fn_indices; // Only want functions with requested levels
     ActiveSet set = iteratedModel.current_response().active_set();// copy
     set.request_values(0);
     for (i=0; i<numFunctions; ++i)
@@ -188,45 +191,54 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
     //const Variables& curr_vars = iteratedModel.current_variables();
     ActiveSet gp_set = iteratedModel.current_response().active_set(); // copy
     gp_set.request_values(1);// no surr deriv evals, but GP may be grad-enhanced
-    g_hat_x_model.assign_rep(new DataFitSurrModel(dace_iterator, iteratedModel,
-      gp_set, approx_type, approx_order, corr_type, corr_order, dataOrder,
+    g_hat_x_model.assign_rep(std::make_shared<DataFitSurrModel>
+      (dace_iterator, iteratedModel,
+       gp_set, approx_type, approx_order, corr_type, corr_order, dataOrder,
       outputLevel, sample_reuse, import_pts_file,
-      probDescDB.get_ushort("method.import_build_format"),
-      probDescDB.get_bool("method.import_build_active_only"),
-      probDescDB.get_string("method.export_approx_points_file"),
-      probDescDB.get_ushort("method.export_approx_format")), false);
+       probDescDB.get_ushort("method.import_build_format"),
+       probDescDB.get_bool("method.import_build_active_only"),
+       probDescDB.get_string("method.export_approx_points_file"),
+       probDescDB.get_ushort("method.export_approx_format")));
     g_hat_x_model.surrogate_function_indices(surr_fn_indices);
 
+    if (approx_type == "global_exp_gauss_proc") {
+      String advanced_options_file
+          = problem_db.get_string("method.advanced_options_file");
+      if (!advanced_options_file.empty())
+        set_model_gp_options(g_hat_x_model, advanced_options_file);
+    }
+
     // Recast g-hat(x) to G-hat(u); truncate dist bnds
-    uSpaceModel.assign_rep(new
-      ProbabilityTransformModel(g_hat_x_model, STD_NORMAL_U, true, 5.), false);
+    uSpaceModel.assign_rep(std::make_shared<ProbabilityTransformModel>
+			   (g_hat_x_model, STD_NORMAL_U, true, 5.));
   }
   else { // DataFit( Recast( iteratedModel ) )
 
     // Recast g(x) to G(u); truncate dist bnds
     Model g_u_model;
-    g_u_model.assign_rep(new
-      ProbabilityTransformModel(iteratedModel, STD_NORMAL_U, true, 5.), false);
+    g_u_model.assign_rep(std::make_shared<ProbabilityTransformModel>
+			 (iteratedModel, STD_NORMAL_U, true, 5.));
 
     // For additional generality, could develop on the fly envelope ctor:
     //Iterator dace_iterator(g_u_model, dace_method, ...);
 
     // The following use on-the-fly derived ctors:
-    lhs_sampler_rep = new NonDLHSSampling(g_u_model, sample_type,
-      samples, lhs_seed, rng, vary_pattern, ACTIVE_UNIFORM);
+    auto lhs_sampler_rep = std::make_shared<NonDLHSSampling>
+      (g_u_model, sample_type,
+       samples, lhs_seed, rng, vary_pattern, ACTIVE_UNIFORM);
     //unsigned short dace_method = SUBMETHOD_LHS; // submethod enum
     //lhs_sampler_rep = new DDACEDesignCompExp(g_u_model, samples, symbols,
     //                                         lhs_seed, dace_method);
     //unsigned short dace_method = FSU_HAMMERSLEY;
     //lhs_sampler_rep = new FSUDesignCompExp(g_u_model, samples, lhs_seed,
     //                                       dace_method);
-    dace_iterator.assign_rep(lhs_sampler_rep, false);
+    dace_iterator.assign_rep(lhs_sampler_rep);
 
     // Construct G-hat(u) using a GP approximation over the active/uncertain
     // variables (using the same view as iteratedModel/g_u_model: not the
     // typical All view for DACE).
     // For RBDO with GP over {u}+{d}, view set to All from all_variables spec.
-    IntSet surr_fn_indices; // Only want functions with requested levels
+    SizetSet surr_fn_indices; // Only want functions with requested levels
     ActiveSet set = iteratedModel.current_response().active_set();// copy
     set.request_values(0);
     for (i=0; i<numFunctions; ++i)
@@ -237,14 +249,22 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
     //const Variables& g_u_vars = g_u_model.current_variables();
     ActiveSet gp_set = g_u_model.current_response().active_set(); // copy
     gp_set.request_values(1);// no surr deriv evals, but GP may be grad-enhanced
-    uSpaceModel.assign_rep(new DataFitSurrModel(dace_iterator, g_u_model,
-      gp_set, approx_type, approx_order, corr_type, corr_order, dataOrder,
-      outputLevel, sample_reuse, import_pts_file,
-      probDescDB.get_ushort("method.import_build_format"),
-      probDescDB.get_bool("method.import_build_active_only"),
-      probDescDB.get_string("method.export_approx_points_file"),
-      probDescDB.get_ushort("method.export_approx_format")), false);
+    uSpaceModel.assign_rep(std::make_shared<DataFitSurrModel>
+      (dace_iterator, g_u_model,
+       gp_set, approx_type, approx_order, corr_type, corr_order, dataOrder,
+       outputLevel, sample_reuse, import_pts_file,
+       probDescDB.get_ushort("method.import_build_format"),
+       probDescDB.get_bool("method.import_build_active_only"),
+       probDescDB.get_string("method.export_approx_points_file"),
+       probDescDB.get_ushort("method.export_approx_format")));
     uSpaceModel.surrogate_function_indices(surr_fn_indices);
+
+    if (approx_type == "global_exp_gauss_proc") {
+      String advanced_options_file
+          = problem_db.get_string("method.advanced_options_file");
+      if (!advanced_options_file.empty())
+        set_model_gp_options(uSpaceModel, advanced_options_file);
+    }
   }
 
   // Following this ctor, IteratorScheduler::init_iterator() initializes the
@@ -269,9 +289,9 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
   SizetArray recast_vars_comps_total;  // default: empty; no change in size
   BitArray all_relax_di, all_relax_dr; // default: empty; no discrete relaxation
   short recast_resp_order = 1; // nongradient-based optimizers
-  mppModel.assign_rep(
-    new RecastModel(uSpaceModel, recast_vars_comps_total, all_relax_di,
-		    all_relax_dr, 1, 0, 0, recast_resp_order), false);
+  mppModel.assign_rep(std::make_shared<RecastModel>
+		      (uSpaceModel, recast_vars_comps_total, all_relax_di,
+		       all_relax_dr, 1, 0, 0, recast_resp_order));
 
   // For formulations with one objective and one equality constraint,
   // use the following instead:
@@ -280,11 +300,11 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
   //mppModel.nonlinear_eq_constraint_targets(nln_eq_targets);
 
   // must use alternate NoDB ctor chain
-  int max_iter = 1000, max_eval = 10000;
+  size_t max_iter = 1000, max_eval = 10000;
   double min_box_size = 1.e-15, vol_box_size = 1.e-15;
 #ifdef HAVE_NCSU  
-  mppOptimizer.assign_rep(new NCSUOptimizer(mppModel, max_iter, max_eval,
-					    min_box_size, vol_box_size), false);
+  mppOptimizer.assign_rep(std::make_shared<NCSUOptimizer>
+    (mppModel, max_iter, max_eval, min_box_size, vol_box_size));
   //#ifdef HAVE_ACRO
   //int coliny_seed = 0; // system-generated, for now
   //mppOptimizer.assign_rep(new
@@ -308,11 +328,11 @@ NonDGlobalReliability(ProblemDescDB& problem_db, Model& model):
   bool x_model_flag = false, use_model_bounds = true, track_extreme = pdfOutput;
   integrationRefinement = MMAIS; vary_pattern = true;
 
-  NonDAdaptImpSampling* importance_sampler_rep = new
-    NonDAdaptImpSampling(uSpaceModel, sample_type, refine_samples, refine_seed,
-			 rng, vary_pattern, integrationRefinement, cdfFlag,
-			 x_model_flag, use_model_bounds, track_extreme);
-  importanceSampler.assign_rep(importance_sampler_rep, false);
+  auto importance_sampler_rep = std::make_shared<NonDAdaptImpSampling>
+    (uSpaceModel, sample_type, refine_samples, refine_seed,
+     rng, vary_pattern, integrationRefinement, cdfFlag,
+     x_model_flag, use_model_bounds, track_extreme);
+  importanceSampler.assign_rep(importance_sampler_rep);
 }
 
 
@@ -379,6 +399,30 @@ void NonDGlobalReliability::derived_free_communicators(ParLevLIter pl_iter)
 }
 
 
+void NonDGlobalReliability::pre_run()
+{
+  Analyzer::pre_run();
+
+  // IteratorScheduler::run_iterator() + Analyzer::initialize_run() ensure
+  // initialization of Model mappings for iteratedModel, but local recursions
+  // are not visible -> recur DataFitSurr +  ProbabilityTransform if needed.
+  // > Note: part of this occurs at DataFit build time. Therefore, take
+  //         care to avoid redundancy using mappingInitialized flag.
+  if (!mppModel.mapping_initialized()) {
+    ParLevLIter pl_iter = methodPCIter->mi_parallel_level_iterator(miPLIndex);
+    /*bool var_size_changed =*/ mppModel.initialize_mapping(pl_iter);
+    //if (var_size_changed) resize();
+  }
+
+  // now that vars/labels/bounds/targets have flowed down at run-time from
+  // any higher level recursions, propagate them up local Model recursions
+  // so that they are correct when they propagate back down.  There is no
+  // need to recur below iteratedModel.
+  size_t layers = 3;  // DFSModel + PTModel + RModel
+  mppModel.update_from_subordinate_model(layers-1); // recur twice
+}
+
+
 void NonDGlobalReliability::core_run()
 {
   // set the object instance pointer for use within static member functions
@@ -396,7 +440,7 @@ void NonDGlobalReliability::core_run()
 
 void NonDGlobalReliability::optimize_gaussian_process()
 {
-  if (mppSearchType == EGRA_X) {
+  if (mppSearchType == SUBMETHOD_EGRA_X) {
     // Assign non-default global variable bounds for use in PStudyDACE methods
     // that require a bounded region (NIDR default truncates infinite/semi-
     // infinite tails using 3-sigma by default to allow use outside NonD). As
@@ -489,7 +533,8 @@ void NonDGlobalReliability::optimize_gaussian_process()
 	// construct global optimizer and its EI/EF recast model
 	Sizet2DArray vars_map, primary_resp_map, secondary_resp_map;
 	BoolDequeArray nonlinear_resp_map(1, BoolDeque(1, true));
-	RecastModel* mpp_model_rep = (RecastModel*)mppModel.model_rep();
+	std::shared_ptr<RecastModel> mpp_model_rep =
+	  std::static_pointer_cast<RecastModel>(mppModel.model_rep());
 	if (ria_flag) {
 	  // Standard RIA : min u'u s.t. g = z_bar
 	  // use RIA evaluators to recast g into global opt subproblem
@@ -602,11 +647,11 @@ void NonDGlobalReliability::optimize_gaussian_process()
     
 	// Check for convergence based on max EIF/EFF
 	// BMA: was previously hard-wired: convergenceTol = .001;
-        if (maxIterations < 0) 
-          maxIterations  = 25*numContinuousVars;
+        if (maxIterations == SZ_MAX) // default value
+          maxIterations = 25*numContinuousVars;
 	if (approxIters >= maxIterations || -exp_fns_star < convergenceTol)
 	  approxConverged = true;
-	else if (mppSearchType == EGRA_X) {
+	else if (mppSearchType == SUBMETHOD_EGRA_X) {
 	  // Evaluate response_star_truth in x-space
 	  x_truth_evaluation(c_vars_u, dataOrder);
 	  // Update the GP approximation in x-space
@@ -643,8 +688,7 @@ void NonDGlobalReliability::optimize_gaussian_process()
     //   eff, and truth (if requested)
     if (num_levels) {  // can only plot if GP was built!
       std::string samsfile("egra_sams");
-      std::string tag = "_" + boost::lexical_cast<std::string>(respFnCount+1) +
-                        ".out";
+      std::string tag = "_" + std::to_string(respFnCount+1) + ".out";
       samsfile += tag;
       std::ofstream samsOut(samsfile.c_str(),std::ios::out);
       samsOut << std::scientific;
@@ -655,7 +699,7 @@ void NonDGlobalReliability::optimize_gaussian_process()
 	const RealVector& sams = gp_data.continuous_variables(i); // view
 	Real true_fn = gp_data.response_function(i);
 	
-	if (mppSearchType == EGRA_X) {
+	if (mppSearchType == SUBMETHOD_EGRA_X) {
 	  RealVector sams_u(num_vars);
 	  uSpaceModel.probability_transformation().trans_X_to_U(sams,sams_u);
 	  
@@ -703,13 +747,14 @@ void NonDGlobalReliability::optimize_gaussian_process()
 		  << u_pt[1] << ' ' << std::setw(13) << gp_fns[respFnCount];
 	    
 	    RealVector variance;
-	    if (mppSearchType == EGRA_X) { // Recast( DataFit( iteratedModel ) )
-	      // RecastModel::derived_evaluate() propagates u_pt to x_pt
+	    if (mppSearchType == SUBMETHOD_EGRA_X) {
+	      // Recast( DataFit( iteratedModel ) )
+	      // > RecastModel::derived_evaluate() propagates u_pt to x_pt
 	      Model& dfs_model = uSpaceModel.subordinate_model();
 	      variance = dfs_model.approximation_variances(
 		dfs_model.current_variables()); // x_pt
 	    }
-	    else // EGRA_U: DataFit( Recast( iteratedModel ) )
+	    else // SUBMETHOD_EGRA_U: DataFit( Recast( iteratedModel ) )
 	      variance = uSpaceModel.approximation_variances(
 		uSpaceModel.current_variables()); // u_pt
 	    
@@ -739,19 +784,30 @@ void NonDGlobalReliability::optimize_gaussian_process()
 #endif //DEBUG
 
   } // end loop over response fns
+
+  // (conditionally) export final surrogates after all responses built
+  // User might expect x-space, but will get u-space if they requested it
+  if (mppSearchType == SUBMETHOD_EGRA_X) {
+    // uSpaceModel = Recast(DataFit(iteratedModel))
+    Model& dfs_model = uSpaceModel.subordinate_model();
+    export_final_surrogates(dfs_model);
+  }
+  else
+    export_final_surrogates(uSpaceModel);
 }
 
 
 void NonDGlobalReliability::importance_sampling()
 {
-  bool x_data_flag = (mppSearchType == EGRA_X);
+  bool x_data_flag = (mppSearchType == SUBMETHOD_EGRA_X);
   size_t i;
   statCount = 0;
   const ShortArray& final_res_asv = finalStatistics.active_set_request_vector();
   ParLevLIter pl_iter = methodPCIter->mi_parallel_level_iterator(miPLIndex);
   // rep needed for access to functions not mapped to Iterator level
-  NonDAdaptImpSampling* importance_sampler_rep
-    = (NonDAdaptImpSampling*)importanceSampler.iterator_rep();
+  std::shared_ptr<NonDAdaptImpSampling> importance_sampler_rep =
+    std::static_pointer_cast<NonDAdaptImpSampling>
+    (importanceSampler.iterator_rep());
 
   for (respFnCount=0; respFnCount<numFunctions; respFnCount++) {
 
@@ -869,13 +925,13 @@ expected_improvement(const RealVector& expected_values,
   // Get variance from the GP; Expected values are passed in
   // If GP built in x-space, transform input point to x-space to get variance
   RealVector variances;
-  if (mppSearchType == EGRA_X) { // uSpaceModel = Recast(DataFit(iteratedModel))
+  if (mppSearchType == SUBMETHOD_EGRA_X) { // Recast(DataFit(iteratedModel))
     Model& dfs_model = uSpaceModel.subordinate_model();
     // assume recast_vars have been propagated to GP just prior to call
     variances
       = dfs_model.approximation_variances(dfs_model.current_variables());
   }
-  else                   // EGRA_U: uSpaceModel = DataFit(Recast(iteratedModel))
+  else                   // SUBMETHOD_EGRA_U: DataFit(Recast(iteratedModel))
     variances = uSpaceModel.approximation_variances(recast_vars);
     
   Real mean = expected_values[respFnCount];
@@ -917,13 +973,13 @@ expected_feasibility(const RealVector& expected_values,
   // Get variance from the GP; Expected values are passed in
   // If GP built in x-space, transform input point to x-space to get variance
   RealVector variances;
-  if (mppSearchType == EGRA_X) { // uSpaceModel = Recast(DataFit(iteratedModel))
+  if (mppSearchType == SUBMETHOD_EGRA_X) { // Recast(DataFit(iteratedModel))
     Model& dfs_model = uSpaceModel.subordinate_model();
     // assume recast_vars have been propagated to GP just prior to call
     variances
       = dfs_model.approximation_variances(dfs_model.current_variables());
   }
-  else                   // EGRA_U: uSpaceModel = DataFit(Recast(iteratedModel))
+  else                   // SUBMETHOD_EGRA_U: DataFit(Recast(iteratedModel))
     variances = uSpaceModel.approximation_variances(recast_vars);
   
   Real mean  = expected_values[respFnCount],
@@ -976,7 +1032,7 @@ void NonDGlobalReliability::get_best_sample()
   for (i=0; i<num_samples; i++) {
     true_vars_x_cv = Teuchos::getCol(Teuchos::View,
       const_cast<RealMatrix&>(true_vars_x), (int)i);
-    if (mppSearchType == EGRA_X)
+    if (mppSearchType == SUBMETHOD_EGRA_X)
       uSpaceModel.probability_transformation().trans_X_to_U(true_vars_x_cv,
 							    true_c_vars_u[i]);
     else

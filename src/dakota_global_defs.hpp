@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -17,6 +18,7 @@
 
 #include "dakota_system_defs.hpp"
 #include <stdexcept>
+#include <limits>
 
 namespace Dakota {
 
@@ -24,7 +26,9 @@ namespace Dakota {
 // Special values
 // --------------
 /// special value returned by index() when entry not found
-const size_t _NPOS = ~(size_t)0; // one's complement
+//const size_t _NPOS  = ~(size_t)0; // one's complement
+const size_t SZ_MAX = std::numeric_limits<size_t>::max();
+const size_t _NPOS  = SZ_MAX; // alias old definition
 /// bound beyond which constraints are considered inactive
 const double BIG_REAL_BOUND = 1.0e+30;
 /// constant pi

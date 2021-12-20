@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -43,12 +44,27 @@ enum { NOCOVAR=0, EXP_L2, EXP_L1 };
 enum { SUBSPACE_NORM_DEFAULT=0, SUBSPACE_NORM_MEAN_VALUE,
        SUBSPACE_NORM_MEAN_GRAD, SUBSPACE_NORM_LOCAL_GRAD }; 
 
+// -----------------------
+// AdaptedBasis
+// -----------------------
+// define special values for generating the basis adaptation rotation matrix
+enum {ROTATION_METHOD_UNRANKED, ROTATION_METHOD_RANKED};    
+
 /// define special values for componentParallelMode
 /// (active model for parallel scheduling)
-enum { SURROGATE_MODEL=1, TRUTH_MODEL };
+enum { NO_PARALLEL_MODE=0, SURROGATE_MODEL_MODE, TRUTH_MODEL_MODE,
+       SUB_MODEL_MODE, INTERFACE_MODE };
 
 /// define special values for distParamDerivs
 enum { NO_DERIVS=0, ALL_DERIVS, MIXED_DERIVS }; 
+
+// define special values for regressionType in C3 FT (outside of Pecos).
+// Note that C3 and Pecos are mutually exclusive: use of values from multiple
+// enums should not conflict
+enum { FT_LS, FT_RLS2 };//, FT_RLSD2, FT_RLSRKHS, FT_RLS1 };
+// define special values for c3AdvanceType
+enum { NO_C3_ADVANCEMENT=0, START_RANK_ADVANCEMENT, START_ORDER_ADVANCEMENT,
+       MAX_RANK_ADVANCEMENT, MAX_ORDER_ADVANCEMENT, MAX_RANK_ORDER_ADVANCEMENT};
 
 
 /// Body class for model specification data.
@@ -69,6 +85,8 @@ class DataModelRep
   friend class DataModel;
 
 public:
+
+  ~DataModelRep(); ///< destructor
 
   //
   //- Heading: Data
@@ -116,7 +134,7 @@ public:
   // surrogate models
 
   /// array specifying the response function set that is approximated
-  IntSet surrogateFnIndices;
+  SizetSet surrogateFnIndices;
   /// the selected surrogate type: local_taylor, multipoint_tana,
   /// global_(neural_network,mars,orthogonal_polynomial,gaussian,
   /// polynomial,kriging), or hierarchical
@@ -125,10 +143,11 @@ public:
   /// used in constructing surrogates (from the \c actual_model_pointer
   /// specification in \ref ModelSurrL and \ref ModelSurrMP)
   String actualModelPointer;
-  /// an ordered list of model pointers (low to high) corresponding to a
-  /// hierarchy of modeling fidelity (from the \c ordered_model_fidelities
-  /// specification in \ref ModelSurrH)
-  StringArray orderedModelPointers;
+  /// an ordered (low to high) or unordered (peer) set of model pointers
+  /// corresponding to a ensemble of modeling fidelities (from the \c
+  /// ordered_model_fidelities specification in \ref ModelSurrH or the
+  /// \c unordered_model_fidelities specification in \ref ModelSurrNonH)
+  StringArray ensembleModelPointers;
 
   // controls for number of points with which to build the model
 
@@ -168,14 +187,24 @@ public:
   /// tabular format for the approx point export file
   unsigned short exportApproxFormat;
 
+  /// filename for surrogate variance evaluation export
+  String exportApproxVarianceFile;
+  /// tabular format for the approx variance export file
+  unsigned short exportApproxVarianceFormat;
+
   /// Option to turn on surrogate model export (export_model)
   bool exportSurrogate;
-
   /// the filename prefix for export_model
   String modelExportPrefix;
-
   /// Format selection for export_model
   unsigned short modelExportFormat;
+
+  /// Option to turn on surrogate model import (import_model)
+  bool importSurrogate;
+  /// the filename prefix for import_model
+  String modelImportPrefix;
+  /// Format selection for import_model
+  unsigned short modelImportFormat;
 
   /// correction type for global and hierarchical approximations:
   /// NO_CORRECTION, ADDITIVE_CORRECTION, MULTIPLICATIVE_CORRECTION,
@@ -189,6 +218,10 @@ public:
   /// flags the use of derivatives in building global approximations
   /// (from the \c use_derivatives specification in \ref ModelSurrG)
   bool modelUseDerivsFlag;
+  /// flag to indicate bounds-based scaling of current response data set
+  /// prior to surrogate build; important for data fits of decaying
+  /// discrepancy data using regression with absolute tolerances
+  bool respScalingFlag;
   /// scalar integer indicating the order of the polynomial approximation
   /// (1=linear, 2=quadratic, 3=cubic; from the \c polynomial specification
   /// in \ref ModelSurrG)
@@ -229,6 +262,8 @@ public:
   short annNodes;
   /// range for artificial neural network approximation
   Real annRange;
+  /// number of restarts for gradient-based optimization in GP
+  int numRestarts;
 
   /// whether domain decomposition is enabled
   bool domainDecomp;
@@ -271,6 +306,9 @@ public:
   bool importChalUseVariableLabels;
   /// whether to import active variables only
   bool importChallengeActive;
+
+  /// file containing advanced surrogate option overrides
+  String advancedOptionsFilename;
 
   // nested models
 
@@ -319,7 +357,7 @@ public:
   /// refinement samples to add in each batch
   IntVector refineSamples;
   /// maximum number of subspace build iterations
-  int maxIterations;
+  size_t maxIterations;
   /// convergence tolerance on build process
   Real convergenceTolerance;
 
@@ -363,17 +401,32 @@ public:
   /// Contains which cutoff method to use in the cross validation metric
   unsigned short subspaceIdCVMethod;
 
-
   // Function-Train Options
 
-  /// Optimization tolerance for FT regression
-  double solverTolerance;
-  /// Rounding tolerance for adaptive algorithms
-  double roundingTolerance;
+  /// type of (regularized) regression: FT_LS or FT_RLS2
+  short regressionType;
+  /// penalty parameter for regularized regression (FT_RLS2)
+  Real regressionL2Penalty;
+  /// max iterations for optimization solver used in FT regression
+  size_t maxSolverIterations;
+  /// maximum number of cross iterations
+  int maxCrossIterations;
+  /// optimization tolerance for FT regression
+  Real solverTol;
+  /// Rounding tolerance for FT regression
+  Real solverRoundingTol;
+  /// arithmetic (rounding) tolerance for FT sums and products
+  Real statsRoundingTol;
+  /// sub-sample a tensor grid for generating regression data
+  bool tensorGridFlag;
   /// starting polynomial order
-  size_t startOrder;
+  unsigned short startOrder;
+  /// polynomial order increment when adapting
+  unsigned short kickOrder;
   /// maximum order of basis polynomials
-  size_t maxOrder;
+  unsigned short maxOrder;
+  /// whether or not to adapt order by cross validation
+  bool adaptOrder;
   /// starting rank
   size_t startRank;
   /// rank increase increment
@@ -382,16 +435,27 @@ public:
   size_t maxRank;
   /// whether or not to adapt rank
   bool adaptRank;
-  /// maximum number of cross iterations
-  size_t crossMaxIter;
-  // Verbosity level
-  //size_t verbosity;
-    
+  /// maximum number of cross-validation candidates for adaptRank
+  size_t maxCVRankCandidates;
+  ///maximum number of cross-validation candidates for adaptOrder
+  unsigned short maxCVOrderCandidates;
+  /// quantity to increment (start rank, start order, max rank, max order,
+  /// max rank + max order) for FT (uniform) p-refinement
+  short c3AdvanceType;
+  // refinement type for stochastic expansions: P_REFINEMENT, H_REFINEMENT
+  //short refinementType;
+  // refinement control for stochastic expansions: UNIFORM, DIMENSION_ADAPTIVE
+  //short refinementControl;
+
+  /// number of data points used in FT construction by regression
+  size_t collocationPoints;
+  /// ratio of number of points to nuber of unknowns
+  Real collocationRatio;
 
   /// whether automatic surrogate refinement is enabled
   bool autoRefine;
   /// maximum evals in refinement
-  int maxFunctionEvals;
+  size_t maxFunctionEvals;
   /// metric to use in cross-validation guided refinement
   String refineCVMetric;
   /// max number of iterations in refinement without improvement
@@ -408,6 +472,9 @@ public:
   /// collocation ratio for low-order PCE used to compute rotation
   /// matrix within adapted basis approach to dimension reduction
   Real adaptedBasisCollocRatio;
+  
+  short method_rotation;
+  Real adaptedBasisTruncationTolerance;
 
   // random field models
 
@@ -432,7 +499,6 @@ private:
   //
 
   DataModelRep();  ///< constructor
-  ~DataModelRep(); ///< destructor
 
   //
   //- Heading: Member methods
@@ -450,8 +516,6 @@ private:
   //- Heading: Private convenience functions
   //
 
-  /// number of handle objects sharing this dataModelRep
-  int referenceCount;
 };
 
 
@@ -507,7 +571,7 @@ public:
   void write(MPIPackBuffer& s) const;
 
   /// return dataModelRep
-  DataModelRep* data_rep();
+  std::shared_ptr<DataModelRep> data_rep();
 
 private:
 
@@ -516,11 +580,11 @@ private:
   //
 
   /// pointer to the body (handle-body idiom)
-  DataModelRep* dataModelRep;
+  std::shared_ptr<DataModelRep> dataModelRep;
 };
 
 
-inline DataModelRep* DataModel::data_rep()
+inline std::shared_ptr<DataModelRep> DataModel::data_rep()
 {return dataModelRep; }
 
 

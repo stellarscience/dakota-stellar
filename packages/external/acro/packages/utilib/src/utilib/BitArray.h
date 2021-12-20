@@ -167,8 +167,6 @@ if (ndx >= Len)
 
 DEFINE_DEFAULT_ANY_PRINTER(BitArray);
 
-} // namespace utilib
-
 /// Set equal to a constant
 inline utilib::BitArray& operator<<(utilib::BitArray& x, int val)
 {
@@ -180,6 +178,9 @@ else
    EXCEPTION_MNGR(std::runtime_error, "operator<< : value " << val << " out of range.");
 return x;
 }
+
+
+} // namespace utilib
 
 
 #endif

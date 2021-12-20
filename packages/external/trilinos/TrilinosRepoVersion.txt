@@ -1,3 +1,3 @@
 *** Base Git Repo: Trilinos
-d2fcc2f [Sat Mar 2 02:14:57 2019 -0700] <trilinos-autotester@trilinos.org>
-Merge Pull Request #4531 from trilinos/Trilinos/master_merge_20190302_000620
+9fec352 [Wed Aug 5 19:22:40 2020 -0600] <trilinos@sandia.gov>
+Merge Pull Request #7735 from ZUUL42/Trilinos/update_ver_num_13

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -243,47 +244,35 @@ protected:
   Model& subordinate_model();
 
   /// set key in subModel
-  void active_model_key(const UShortArray& mi_key);
+  void active_model_key(const Pecos::ActiveKey& key);
   /// remove keys in subModel
   void clear_model_keys();
 
   /// return surrogate model, if present, within subModel
-  Model& surrogate_model();
-  /// set surrogate model key within subModel
-  void surrogate_model_key(unsigned short lf_model_index,
-			   unsigned short lf_soln_lev_index);
-  /// set surrogate model key within subModel
-  void surrogate_model_key(const UShortArray& lf_key);
-  /// return surrogate model key from subModel
-  const UShortArray& surrogate_model_key() const;
+  Model& surrogate_model(size_t i = _NPOS);
+  /// return surrogate model, if present, within subModel
+  const Model& surrogate_model(size_t i = _NPOS) const;
 
   /// return truth model, if present, within subModel
   Model& truth_model();
-  /// set truth model key within subModel
-  void truth_model_key(unsigned short hf_model_index,
-		       unsigned short hf_soln_lev_index);
-  /// set truth model key within subModel
-  void truth_model_key(const UShortArray& hf_key);
-  /// return truth model key from subModel
-  const UShortArray& truth_model_key() const;
+  /// return truth model, if present, within subModel
+  const Model& truth_model() const;
 
   /// add subModel to list and recurse into subModel
   void derived_subordinate_models(ModelList& ml, bool recurse_flag);
   /// pass request to subModel if recursing and then resize from its results
-  void resize_from_subordinate_model(size_t depth =
-				     std::numeric_limits<size_t>::max());
+  void resize_from_subordinate_model(size_t depth = SZ_MAX);
   /// pass request to subModel if recursing and then update from its results
-  void update_from_subordinate_model(size_t depth =
-				     std::numeric_limits<size_t>::max());
+  void update_from_subordinate_model(size_t depth = SZ_MAX);
   /// return subModel interface
   Interface& derived_interface();
 
   /// return size of subModel::solnControlCostMap
   size_t solution_levels() const;
   /// activate entry in subModel::solnControlCostMap
-  void solution_level_index(unsigned short lev_index);
+  void solution_level_cost_index(size_t cost_index);
   /// return active entry in subModel::solnControlCostMap
-  unsigned short solution_level_index() const;
+  size_t solution_level_cost_index() const;
   /// return cost estimates from subModel::solnControlCostMap
   RealVector solution_level_costs() const;
   /// return active cost estimate from subModel::solnControlCostMap
@@ -296,14 +285,14 @@ protected:
 
   /// update the subModel's surrogate response function indices
   /// (DataFitSurrModel::surrogateFnIndices)
-  void surrogate_function_indices(const IntSet& surr_fn_indices);
+  void surrogate_function_indices(const SizetSet& surr_fn_indices);
 
   /// update the subModel's surrogate response mode
   /// (SurrogateModel::responseMode)
   void surrogate_response_mode(short mode);
 
-  /// link SurrogateData instances within the subModel
-  void link_multilevel_approximation_data();
+  // link SurrogateData instances within the subModel
+  //void link_multilevel_approximation_data();
 
   /// retrieve subModel's correction type
   short correction_type();
@@ -365,8 +354,7 @@ protected:
   /// retrieve the approximation variances from the subModel
   const RealVector& approximation_variances(const Variables& vars);
   /// retrieve the approximation data from the subModel
-  const Pecos::SurrogateData&
-    approximation_data(size_t fn_index, size_t d_index = _NPOS);
+  const Pecos::SurrogateData& approximation_data(size_t fn_index);
 
   /// RecastModel only supports parallelism in subModel, so this
   /// virtual function redefinition is simply a sanity check.
@@ -480,11 +468,28 @@ protected:
   /// update current variables/bounds/labels/constraints from subModel
   void update_from_model(Model& model);
   /// update active variables/bounds/labels from subModel
-  bool update_variables_from_model(Model& model);
+  virtual bool update_variables_from_model(Model& model);
+  /// update all variable values from passed sub-model
+  void update_variable_values(const Model& model);
+  /// update discrete variable values from passed sub-model
+  void update_discrete_variable_values(const Model& model);
+  /// update all variable bounds from passed sub-model
+  void update_variable_bounds(const Model& model);
+  /// update discrete variable bounds from passed sub-model
+  void update_discrete_variable_bounds(const Model& model);
+  /// update all variable labels from passed sub-model
+  void update_variable_labels(const Model& model);
+  /// update discrete variable labels from passed sub-model
+  void update_discrete_variable_labels(const Model& model);
+  /// update linear constraints from passed sub-model
+  void update_linear_constraints(const Model& model);
   /// update complement of active variables/bounds/labels from subModel
   void update_variables_active_complement_from_model(Model& model);
-  /// update nonlinear constraint bounds/targets from subModel
+  /// update labels and nonlinear constraint bounds/targets from subModel
   void update_response_from_model(Model& model);
+  /// update just secondary response from subModel
+  void update_secondary_response(const Model& model);
+
 
   //
   //- Heading: Data members
@@ -608,7 +613,7 @@ private:
 
 
 inline RecastModel::~RecastModel()
-{ } // Virtual destructor handles referenceCount at Strategy level.
+{ }
 
 
 inline bool RecastModel::nonlinear_variables_mapping() const
@@ -721,47 +726,28 @@ inline Model& RecastModel::subordinate_model()
 { return subModel; }
 
 
-inline void RecastModel::active_model_key(const UShortArray& mi_key)
-{ subModel.active_model_key(mi_key); }
+inline void RecastModel::active_model_key(const Pecos::ActiveKey& key)
+{ subModel.active_model_key(key); }
 
 
 inline void RecastModel::clear_model_keys()
 { subModel.clear_model_keys(); }
 
 
-inline Model& RecastModel::surrogate_model()
-{ return subModel.surrogate_model(); }
+inline Model& RecastModel::surrogate_model(size_t i)
+{ return subModel.surrogate_model(i); }
 
 
-inline void RecastModel::
-surrogate_model_key(unsigned short lf_model_index,
-		    unsigned short lf_soln_lev_index)
-{ subModel.surrogate_model_key(lf_model_index, lf_soln_lev_index); }
-
-
-inline void RecastModel::surrogate_model_key(const UShortArray& lf_key)
-{ subModel.surrogate_model_key(lf_key); }
-
-
-inline const UShortArray& RecastModel::surrogate_model_key() const
-{ return subModel.surrogate_model_key(); }
+inline const Model& RecastModel::surrogate_model(size_t i) const
+{ return subModel.surrogate_model(i); }
 
 
 inline Model& RecastModel::truth_model()
 { return subModel.truth_model(); }
 
 
-inline void RecastModel::
-truth_model_key(unsigned short hf_model_index, unsigned short hf_soln_lev_index)
-{ subModel.truth_model_key(hf_model_index, hf_soln_lev_index); }
-
-
-inline void RecastModel::truth_model_key(const UShortArray& hf_key)
-{ subModel.truth_model_key(hf_key); }
-
-
-inline const UShortArray& RecastModel::truth_model_key() const
-{ return subModel.truth_model_key(); }
+inline const Model& RecastModel::truth_model() const
+{ return subModel.truth_model(); }
 
 
 inline void RecastModel::
@@ -776,7 +762,7 @@ derived_subordinate_models(ModelList& ml, bool recurse_flag)
 inline void RecastModel::resize_from_subordinate_model(size_t depth)
 {
   // data flows from the bottom-up, so recurse first
-  if (depth == std::numeric_limits<size_t>::max())
+  if (depth == SZ_MAX)
     subModel.resize_from_subordinate_model(depth); // retain special value (inf)
   else if (depth)
     subModel.resize_from_subordinate_model(depth - 1); // decrement
@@ -801,7 +787,7 @@ inline void RecastModel::resize_from_subordinate_model(size_t depth)
 inline void RecastModel::update_from_subordinate_model(size_t depth)
 {
   // data flows from the bottom-up, so recurse first
-  if (depth == std::numeric_limits<size_t>::max())
+  if (depth == SZ_MAX)
     subModel.update_from_subordinate_model(depth); // retain special value (inf)
   else if (depth)
     subModel.update_from_subordinate_model(depth - 1); // decrement
@@ -820,12 +806,12 @@ inline size_t RecastModel::solution_levels() const
 { return subModel.solution_levels(); }
 
 
-inline void RecastModel::solution_level_index(unsigned short lev_index)
-{ subModel.solution_level_index(lev_index); }
+inline void RecastModel::solution_level_cost_index(size_t cost_index)
+{ subModel.solution_level_cost_index(cost_index); }
 
 
-inline unsigned short RecastModel::solution_level_index() const
-{ return subModel.solution_level_index(); }
+inline size_t RecastModel::solution_level_cost_index() const
+{ return subModel.solution_level_cost_index(); }
 
 
 inline RealVector RecastModel::solution_level_costs() const
@@ -846,7 +832,7 @@ primary_response_fn_weights(const RealVector& wts, bool recurse_flag)
 
 
 inline void RecastModel::
-surrogate_function_indices(const IntSet& surr_fn_indices)
+surrogate_function_indices(const SizetSet& surr_fn_indices)
 { subModel.surrogate_function_indices(surr_fn_indices); }
 
 
@@ -857,8 +843,8 @@ inline void RecastModel::surrogate_response_mode(short mode)
 { /* if (mode == BYPASS_SURROGATE) */ subModel.surrogate_response_mode(mode); }
 
 
-inline void RecastModel::link_multilevel_approximation_data()
-{ subModel.link_multilevel_approximation_data(); }
+//inline void RecastModel::link_multilevel_approximation_data()
+//{ subModel.link_multilevel_approximation_data(); }
 
 
 inline short RecastModel::correction_type()
@@ -978,14 +964,14 @@ approximation_variances(const Variables& vars)
 
 
 inline const Pecos::SurrogateData& RecastModel::
-approximation_data(size_t fn_index, size_t d_index)
-{ return subModel.approximation_data(fn_index, d_index); }
+approximation_data(size_t fn_index)
+{ return subModel.approximation_data(fn_index); }
 
 
 inline void RecastModel::component_parallel_mode(short mode)
 {
-  //if (mode != SUB_MODEL) {
-  //  Cerr << "Error: RecastModel only supports the SUB_MODEL component "
+  //if (mode != SUB_MODEL_MODE) {
+  //  Cerr << "Error: RecastModel only supports the SUB_MODEL_MODE component "
   //       << "parallel mode." << std::endl;
   //  abort_handler(-1);
   //}

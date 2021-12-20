@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -71,6 +72,11 @@ public:
 
   /// print the final statistics
   void print_results(std::ostream& s, short results_state = FINAL_RESULTS);
+
+  /// return importanceSamplingType
+  unsigned short sampling_scheme() const;
+  /// return refineSamples
+  int refinement_samples() const;
 
   //
   //- Heading: Member functions
@@ -203,6 +209,14 @@ nested_variable_mappings(const SizetArray& c_index1,
 				       dr_index1, c_target2, di_target2,
 				       ds_target2, dr_target2);
 }
+
+
+inline unsigned short NonDAdaptImpSampling::sampling_scheme() const
+{ return importanceSamplingType; }
+
+
+inline int NonDAdaptImpSampling::refinement_samples() const
+{ return refineSamples; }
 
 
 inline Real NonDAdaptImpSampling::final_probability()

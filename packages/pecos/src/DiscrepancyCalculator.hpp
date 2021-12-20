@@ -21,6 +21,9 @@
 
 namespace Pecos {
 
+class SurrogateData; // forward declaration
+class ActiveKey;
+
 
 /// Class for discrepancy calculations
 
@@ -45,54 +48,75 @@ public:
   //
 
   /// check for numerical issues with multiplicative discrepancy calculations
-  bool check_multiplicative(Real truth_fn, Real approx_fn, short corr_order);
+  static bool check_multiplicative(Real truth_fn, Real approx_fn,
+				   short corr_order);
   /// check for numerical issues with multiplicative discrepancy calculations
-  bool check_multiplicative(const RealVector& truth_fns,
-			    const RealVector& approx_fns, short corr_order);
+  static bool check_multiplicative(const RealVector& truth_fns,
+				   const RealVector& approx_fns,
+				   short corr_order);
 
   /// compute additive 0th order correction between truth and approximate values
-  void compute_additive(Real truth_fn, Real approx_fn, Real& discrep_fn);
+  static void compute_additive(Real truth_fn, Real approx_fn, Real& discrep_fn);
   /// compute additive 1st order correction between truth and
   /// approximate gradients
-  void compute_additive(const RealVector& truth_grad,
-			const RealVector& approx_grad,RealVector& discrep_grad);
+  static void compute_additive(const RealVector& truth_grad,
+			       const RealVector& approx_grad,
+			       RealVector& discrep_grad);
   /// compute additive 2nd order correction between truth and
   /// approximate Hessians
-  void compute_additive(const RealSymMatrix& truth_hess,
-			const RealSymMatrix& approx_hess,
-			RealSymMatrix& discrep_hess);
+  static void compute_additive(const RealSymMatrix& truth_hess,
+			       const RealSymMatrix& approx_hess,
+			       RealSymMatrix& discrep_hess);
   /// compute additive corrections between truth and approximate responses
   /// for all requested orders
-  void compute_additive(Real truth_fn, const RealVector& truth_grad,
-			const RealSymMatrix& truth_hess,
-			Real approx_fn, const RealVector& approx_grad,
-			const RealSymMatrix& approx_hess,
-			Real& discrep_fn, RealVector& discrep_grad,
-			RealSymMatrix& discrep_hess, short data_bits = 7);
+  static void compute_additive(Real truth_fn, const RealVector& truth_grad,
+			       const RealSymMatrix& truth_hess,
+			       Real approx_fn, const RealVector& approx_grad,
+			       const RealSymMatrix& approx_hess,
+			       Real& discrep_fn, RealVector& discrep_grad,
+			       RealSymMatrix& discrep_hess,
+			       short data_bits = 7);
 
   /// compute multiplicative 0th order correction between truth and
   /// approximate values
-  void compute_multiplicative(Real truth_fn, Real approx_fn, Real& discrep_fn);
+  static void compute_multiplicative(Real truth_fn, Real approx_fn,
+				     Real& discrep_fn);
   /// compute multiplicative 1st order correction between truth and
   /// approximate gradients
-  void compute_multiplicative(Real truth_fn, const RealVector& truth_grad,
-			      Real approx_fn, const RealVector& approx_grad,
-			      RealVector& discrep_grad);
+  static void compute_multiplicative(Real truth_fn,
+				     const RealVector& truth_grad,
+				     Real approx_fn,
+				     const RealVector& approx_grad,
+				     RealVector& discrep_grad);
   /// compute multiplicative 2nd order correction between truth and
   /// approximate Hessians
-  void compute_multiplicative(Real truth_fn, const RealVector& truth_grad,
-			      const RealSymMatrix& truth_hess,
-			      Real approx_fn, const RealVector& approx_grad,
-			      const RealSymMatrix& approx_hess,
-			      RealSymMatrix& discrep_hess);
+  static void compute_multiplicative(Real truth_fn,
+				     const RealVector& truth_grad,
+				     const RealSymMatrix& truth_hess,
+				     Real approx_fn,
+				     const RealVector& approx_grad,
+				     const RealSymMatrix& approx_hess,
+				     RealSymMatrix& discrep_hess);
   /// compute multiplicative corrections between truth and approximate
   /// responses for all required orders
-  void compute_multiplicative(Real truth_fn, const RealVector& truth_grad,
-			      const RealSymMatrix& truth_hess,
-			      Real approx_fn, const RealVector& approx_grad,
-			      const RealSymMatrix& approx_hess,
-			      Real& discrep_fn, RealVector& discrep_grad,
-			      RealSymMatrix& discrep_hess, short data_bits = 7);
+  static void compute_multiplicative(Real truth_fn,
+				     const RealVector& truth_grad,
+				     const RealSymMatrix& truth_hess,
+				     Real approx_fn,
+				     const RealVector& approx_grad,
+				     const RealSymMatrix& approx_hess,
+				     Real& discrep_fn, RealVector& discrep_grad,
+				     RealSymMatrix& discrep_hess,
+				     short data_bits = 7);
+
+  /// compute discrepancies for arrays of SurrogateDataResp
+  static void compute(const SDRArray& hf_sdr_array,
+		      const SDRArray& lf_sdr_array,
+		      SDRArray& delta_sdr_array, short combine_type);
+  /// compute discrepancies between two model keys in surr_data and store
+  /// results in the discrepancy key
+  static void compute(SurrogateData& surr_data, const ActiveKey& delta_key,
+		      short combine_type);
 
   /*
   /// function for applying additive correction to an approximate response

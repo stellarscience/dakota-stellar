@@ -52,7 +52,7 @@ public:
   void increment_smolyak_multi_index(const UShortArray& set);
   void pop_set();
   const UShortArray& trial_set() const;
-  const UShortArray& trial_set(const UShortArray& key) const;
+  const UShortArray& trial_set(const ActiveKey& key) const;
   void print_smolyak_multi_index() const;
 
   //
@@ -117,7 +117,7 @@ inline const UShortArray& LightweightSparseGridDriver::trial_set() const
 
 
 inline const UShortArray& LightweightSparseGridDriver::
-trial_set(const UShortArray& key) const
+trial_set(const ActiveKey& key) const
 { return smolyakMultiIndex.back(); } // key ignored in this case
 
 

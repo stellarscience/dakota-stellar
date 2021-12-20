@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -82,7 +83,8 @@ namespace Dakota
     VPSApproximation::VPSApproximation(const SharedApproxData& shared_data):
                                        Approximation(NoDBBaseConstructor(), shared_data)
     {
-        SharedSurfpackApproxData* dat = dynamic_cast<SharedSurfpackApproxData*> (shared_data.data_rep());
+      std::shared_ptr<SharedSurfpackApproxData> dat =
+	std::static_pointer_cast<SharedSurfpackApproxData>(shared_data.data_rep());
         
         surrogateOrder = dat->approxOrder;
         
@@ -260,8 +262,7 @@ namespace Dakota
         std::cout << std::endl;
         std::cout << "-- Problem Info --" << std::endl;
         
-	const Pecos::SurrogateData& approx_data = surrogate_data();
-        numObs = approx_data.points(); // number of points
+        numObs = approxData.points(); // number of points
         size_t num_v = sharedDataRep->numVars;  // number of variables
         
         std::cout<< ".: VPS :.   Constructing a surrogate using " <<  numObs << " sample points." << std::endl;
@@ -355,7 +356,7 @@ namespace Dakota
         _f_min = DBL_MAX;
         _f_max = -_f_min;
 
-	short active_bits_0 = approx_data.response_data()[0].active_bits();
+	short active_bits_0 = approxData.response_data()[0].active_bits();
 
         #ifdef DEBUG_TEST_FUNCTION
         
@@ -498,8 +499,8 @@ namespace Dakota
         #else
         
         // Retrieve function values
-	const SDVArray& sdv_array = approx_data.variables_data();
-	const SDRArray& sdr_array = approx_data.response_data();
+	const Pecos::SDVArray& sdv_array = approxData.variables_data();
+	const Pecos::SDRArray& sdr_array = approxData.response_data();
         for (size_t ipoint = 0; ipoint < _num_inserted_points; ipoint++)
         {
             const RealVector& c_vars = sdv_array[ipoint].continuous_variables();
@@ -853,18 +854,15 @@ namespace Dakota
         }
         else if (_vps_subsurrogate == GP)
         {
-	    const Pecos::SurrogateData& approx_data = surrogate_data();
-            const SDVArray& training_vars = approx_data.variables_data();
-            const SDRArray& training_resp = approx_data.response_data();
+	    const Pecos::SDVArray& training_vars = approxData.variables_data();
+	    const Pecos::SDRArray& training_resp = approxData.response_data();
             
             for (size_t j = 0; j <= _vps_ext_neighbors[cell_index][0]; j++) // loop over neighbors
             {
                 size_t neighbor = cell_index;
                 if (j > 0) neighbor = _vps_ext_neighbors[cell_index][j];
                 
-                gpApproximations[cell_index].add(training_vars[neighbor], false, false); // not anchor, shallow
-                
-                gpApproximations[cell_index].add(training_resp[neighbor], false, false); // not anchor, shallow
+                gpApproximations[cell_index].add(training_vars[neighbor], false, training_resp[neighbor], false, false, INT_MAX); // shallow, shallow, not anchor,no eval id tracking
             }
             gpApproximations[cell_index].build();
         }
@@ -1827,10 +1825,11 @@ namespace Dakota
         
         cc = 1.0 / 9007199254740992.0; // inverse of 2^53rd power
         size_t i;
-        size_t qlen = indx = sizeof Q / sizeof Q[0];
+        size_t qlen = sizeof Q / sizeof Q[0];
+	indx = qlen;
         for (i = 0; i < qlen; i++) Q[i] = 0;
         
-        double c = 0.0; zc = 0.0;	/* current CSWB and SWB `borrow` */
+        c = 0.0; zc = 0.0;	/* current CSWB and SWB `borrow` */
         zx = 5212886298506819.0 / 9007199254740992.0;	/* SWB seed1 */
         zy = 2020898595989513.0 / 9007199254740992.0;	/* SWB seed2 */
         
@@ -3241,7 +3240,7 @@ namespace Dakota
     }
 
     //int VPSApproximation::num_constraints() const
-    //{ return (surrogate_data().anchor()) ? 1 : 0; }
+    //{ return (approxData.anchor()) ? 1 : 0; }
 
     void VPSApproximation::build()
     {

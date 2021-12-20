@@ -22,29 +22,16 @@ namespace Pecos {
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_shared_data() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~SharedBasisApproxData). */
+    letter IS the representation, its rep pointer is set to NULL. */
 SharedBasisApproxData::
 SharedBasisApproxData(BaseConstructor, short basis_type, size_t num_vars):
-  basisType(basis_type), numVars(num_vars), dataRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "SharedBasisApproxData::SharedBasisApproxData(BaseConstructor) "
-        << "called to build base class for letter." << std::endl;
-#endif
-}
+  basisType(basis_type), numVars(num_vars)
+{ /* empty ctor */ }
 
 
-/** The default constructor: dataRep is NULL in this case.  This
-    makes it necessary to check for NULL in the copy constructor,
-    assignment operator, and destructor. */
-SharedBasisApproxData::SharedBasisApproxData(): dataRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "SharedBasisApproxData::SharedBasisApproxData() called to build "
-        << "empty envelope." << std::endl;
-#endif
-}
+/** The default constructor: dataRep is NULL in this case. */
+SharedBasisApproxData::SharedBasisApproxData()
+{ /* empty ctor */ }
 
 
 /** Envelope constructor only needs to extract enough data to properly
@@ -53,15 +40,9 @@ SharedBasisApproxData::SharedBasisApproxData(): dataRep(NULL), referenceCount(1)
 SharedBasisApproxData::
 SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 		      size_t num_vars):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "SharedBasisApproxData::SharedBasisApproxData(short) called to "
-        << "instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  dataRep = get_shared_data(basis_type, approx_order, num_vars);
+  dataRep(get_shared_data(basis_type, approx_order, num_vars))
+{
   if ( !dataRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -69,47 +50,46 @@ SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 
 /** Used only by the envelope constructor to initialize dataRep to the 
     appropriate derived type. */
-SharedBasisApproxData* SharedBasisApproxData::
+std::shared_ptr<SharedBasisApproxData> SharedBasisApproxData::
 get_shared_data(short basis_type, const UShortArray& approx_order,
 		size_t num_vars)
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_shared_data()." << std::endl;
-#endif
-
   switch (basis_type) {
   case GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
-    return new SharedNodalInterpPolyApproxData(basis_type, num_vars);
+    return std::make_shared<SharedNodalInterpPolyApproxData>
+      (basis_type, num_vars);
     break;
   case GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    return new SharedHierarchInterpPolyApproxData(basis_type, num_vars);
+    return std::make_shared<SharedHierarchInterpPolyApproxData>
+      (basis_type, num_vars);
     break;
   case GLOBAL_REGRESSION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_REGRESSION_ORTHOGONAL_POLYNOMIAL:
     // L1 or L2 regression
-    return new
-      SharedRegressOrthogPolyApproxData(basis_type, approx_order, num_vars);
+    return std::make_shared<SharedRegressOrthogPolyApproxData>
+      (basis_type, approx_order, num_vars);
     break;
   case GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_PROJECTION_ORTHOGONAL_POLYNOMIAL:
     // projection via numerical integration of inner products
-    return new
-      SharedProjectOrthogPolyApproxData(basis_type, approx_order, num_vars);
+    return std::make_shared<SharedProjectOrthogPolyApproxData>
+      (basis_type, approx_order, num_vars);
     break;
   case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     // coefficient import -- no coefficient computation required
-    return new SharedOrthogPolyApproxData(basis_type, approx_order, num_vars);
+    return std::make_shared<SharedOrthogPolyApproxData>
+      (basis_type, approx_order, num_vars);
     break;
   //case FOURIER_BASIS:
-  //  return new SharedFourierBasisApproxData(num_vars); break;
+  //  return std::make_shared<SharedFourierBasisApproxData>(num_vars); break;
   //case EIGEN_BASIS:
-  //  return new SharedEigenBasisApproxData(num_vars);   break;
+  //  return std::make_shared<SharedEigenBasisApproxData>(num_vars);   break;
   default:
     PCerr << "Error: SharedBasisApproxData type " << basis_type
 	  << " not available." << std::endl;
-    return NULL; break;
+    return std::shared_ptr<SharedBasisApproxData>(); break;
   }
 }
 
@@ -122,16 +102,10 @@ SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 		      size_t num_vars, const ExpansionConfigOptions& ec_options,
 		      const BasisConfigOptions& bc_options,
 		      const RegressionConfigOptions& rc_options):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "SharedBasisApproxData::SharedBasisApproxData(short) called to "
-        << "instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  dataRep = get_shared_data(basis_type, approx_order, num_vars,
-			    ec_options, bc_options, rc_options);
+  dataRep(get_shared_data(basis_type, approx_order, num_vars,
+			  ec_options, bc_options, rc_options))
+{
   if ( !dataRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -139,159 +113,75 @@ SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 
 /** Used only by the envelope constructor to initialize dataRep to the 
     appropriate derived type. */
-SharedBasisApproxData* SharedBasisApproxData::
+std::shared_ptr<SharedBasisApproxData> SharedBasisApproxData::
 get_shared_data(short basis_type, const UShortArray& approx_order,
 		size_t num_vars, const ExpansionConfigOptions& ec_options,
 		const BasisConfigOptions& bc_options,
 		const RegressionConfigOptions& rc_options)
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_shared_data()." << std::endl;
-#endif
-
   switch (basis_type) {
   case GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
-    return new SharedNodalInterpPolyApproxData(basis_type, num_vars,
-					       ec_options, bc_options);
+    return std::make_shared<SharedNodalInterpPolyApproxData>
+      (basis_type, num_vars, ec_options, bc_options);
     break;
   case GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    return new SharedHierarchInterpPolyApproxData(basis_type, num_vars,
-						  ec_options, bc_options);
+    return std::make_shared<SharedHierarchInterpPolyApproxData>
+      (basis_type, num_vars, ec_options, bc_options);
     break;
   case GLOBAL_REGRESSION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_REGRESSION_ORTHOGONAL_POLYNOMIAL:
     // L1 or L2 regression
-    return new SharedRegressOrthogPolyApproxData(basis_type, approx_order,
-						 num_vars, ec_options,
-						 bc_options, rc_options);
+    return std::make_shared<SharedRegressOrthogPolyApproxData>
+      (basis_type, approx_order, num_vars, ec_options, bc_options, rc_options);
     break;
   case GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_PROJECTION_ORTHOGONAL_POLYNOMIAL:
     // projection via numerical integration of inner products
-    return new SharedProjectOrthogPolyApproxData(basis_type, approx_order,
-						 num_vars, ec_options,
-						 bc_options);
+    return std::make_shared<SharedProjectOrthogPolyApproxData>
+      (basis_type, approx_order, num_vars, ec_options, bc_options);
     break;
   case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     // coefficient import -- no coefficient computation required
-    return new SharedOrthogPolyApproxData(basis_type, approx_order, num_vars,
-					  ec_options, bc_options);
+    return std::make_shared<SharedOrthogPolyApproxData>
+      (basis_type, approx_order, num_vars, ec_options, bc_options);
     break;
   //case FOURIER_BASIS:
-  //  return new SharedFourierBasisApproxData(num_vars); break;
+  //  return std::make_shared<SharedFourierBasisApproxData>(num_vars); break;
   //case EIGEN_BASIS:
-  //  return new SharedEigenBasisApproxData(num_vars);   break;
+  //  return std::make_shared<SharedEigenBasisApproxData>(num_vars);   break;
   default:
     PCerr << "Error: SharedBasisApproxData type " << basis_type
 	  << " not available." << std::endl;
-    return NULL; break;
+    return std::shared_ptr<SharedBasisApproxData>(); break;
   }
 }
 
 
-/** Copy constructor manages sharing of dataRep and incrementing
-    of referenceCount. */
+/** Copy constructor manages sharing of dataRep. */
 SharedBasisApproxData::
-SharedBasisApproxData(const SharedBasisApproxData& shared_data)
-{
-  // Increment new (no old to decrement)
-  dataRep = shared_data.dataRep;
-  if (dataRep) // Check for an assignment of NULL
-    dataRep->referenceCount++;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "SharedBasisApproxData::SharedBasisApproxData"
-	<< "(SharedBasisApproxData&)" << std::endl;
-  if (dataRep)
-    PCout << "dataRep referenceCount = " << dataRep->referenceCount<< std::endl;
-#endif
-}
+SharedBasisApproxData(const SharedBasisApproxData& shared_data):
+  dataRep(shared_data.dataRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old dataRep,
-    assigns new dataRep, and increments referenceCount for new
-    dataRep. */
 SharedBasisApproxData SharedBasisApproxData::
 operator=(const SharedBasisApproxData& shared_data)
 {
-  if (dataRep != shared_data.dataRep) { // std case: old != new
-    // Decrement old
-    if (dataRep) // Check for null pointer
-      if (--dataRep->referenceCount == 0) 
-	delete dataRep;
-    // Assign and increment new
-    dataRep = shared_data.dataRep;
-    if (dataRep) // Check for an assignment of NULL
-      dataRep->referenceCount++;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "SharedBasisApproxData::operator=(SharedBasisApproxData&)"
-	<< std::endl;
-  if (dataRep)
-    PCout << "dataRep referenceCount = " << dataRep->referenceCount<< std::endl;
-#endif
-
+  dataRep = shared_data.dataRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes dataRep
-    when referenceCount reaches zero. */
 SharedBasisApproxData::~SharedBasisApproxData()
-{
-  // Check for NULL pointer 
-  if (dataRep) {
-    --dataRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "dataRep referenceCount decremented to "
-	  << dataRep->referenceCount << std::endl;
-#endif
-    if (dataRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting dataRep" << std::endl;
-#endif
-      delete dataRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 void SharedBasisApproxData::
-assign_rep(SharedBasisApproxData* data_rep, bool ref_count_incr)
+assign_rep(std::shared_ptr<SharedBasisApproxData> data_rep)
 {
-  if (dataRep == data_rep) {
-    // if ref_count_incr = true (rep from another envelope), do nothing as
-    // referenceCount should already be correct (see also operator= logic).
-    // if ref_count_incr = false (rep from on the fly), then this is an error.
-    if (!ref_count_incr) {
-      PCerr << "Error: duplicated data_rep pointer assignment without "
-	    << "reference count increment in SharedBasisApproxData::"
-	    << "assign_rep()." << std::endl;
-      abort_handler(-1);
-    }
-  }
-  else { // normal case: old != new
-    // Decrement old
-    if (dataRep) // Check for NULL
-      if ( --dataRep->referenceCount == 0 ) 
-	delete dataRep;
-    // Assign new
-    dataRep = data_rep;
-    // Increment new
-    if (dataRep && ref_count_incr) // Check for NULL & honor ref_count_incr
-      dataRep->referenceCount++;
-  }
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "SharedBasisApproxData::assign_rep(BasisApproximation*)" <<std::endl;
-  if (dataRep)
-    PCout << "dataRep referenceCount = " << dataRep->referenceCount <<std::endl;
-#endif
+  dataRep = data_rep;
 }
 
 } // namespace Pecos

@@ -37,11 +37,11 @@ namespace {
   //------------------------------------
   // Compute numerical inner product
   //------------------------------------
-  Real charlier_inner_prod(unsigned nterms, Real p, short order1, short order2, BasisPolynomial * poly)
+  Real charlier_inner_prod(unsigned nterms, Real p, short order1, short order2, BasisPolynomial& poly)
   {
     Real sum = 0.0;
     for( short i=0; i<nterms; ++i )
-      sum += std::pow(p,i)/BasisPolynomial::factorial(i)*poly->type1_value(Real(i),order1)*poly->type1_value(Real(i),order2);
+      sum += std::pow(p,i)/BasisPolynomial::factorial(i)*poly.type1_value(Real(i),order1)*poly.type1_value(Real(i),order2);
 
     return sum;
   }
@@ -53,7 +53,8 @@ namespace {
 TEUCHOS_UNIT_TEST(discrete_orthog_poly, charlier1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(CHARLIER_DISCRETE);
-  CharlierOrthogPolynomial * ptr = dynamic_cast<CharlierOrthogPolynomial*>(poly_basis.polynomial_rep());
+  auto ptr = std::dynamic_pointer_cast<CharlierOrthogPolynomial>
+    (poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
@@ -73,7 +74,7 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, charlier1)
   for( short i=0; i<8; ++i ) {
     Real exact_orth_val = charlier_exact_orthog(p, i);
     for( short j=0; j<8; ++j ) {
-      Real numerical_orth_val = charlier_inner_prod(NUM_TERMS_TO_SUM, p, i, j, ptr);
+      Real numerical_orth_val = charlier_inner_prod(NUM_TERMS_TO_SUM, p, i, j, *ptr);
       if( i == j ) {
         TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
@@ -104,11 +105,11 @@ namespace {
   //------------------------------------
   // Compute numerical inner product
   //------------------------------------
-  Real krawtchouck_inner_prod(short N, Real p, short order1, short order2, BasisPolynomial * poly)
+  Real krawtchouck_inner_prod(short N, Real p, short order1, short order2, BasisPolynomial& poly)
   {
     Real sum = 0.0;
     for( short i=0; i<N+1; ++i )
-      sum += BasisPolynomial::n_choose_k(N,i)*std::pow(p,i)*std::pow(1.0-p,N-i)*poly->type1_value(Real(i),order1)*poly->type1_value(Real(i),order2);
+      sum += BasisPolynomial::n_choose_k(N,i)*std::pow(p,i)*std::pow(1.0-p,N-i)*poly.type1_value(Real(i),order1)*poly.type1_value(Real(i),order2);
 
     return sum;
   }
@@ -120,7 +121,8 @@ namespace {
 TEUCHOS_UNIT_TEST(discrete_orthog_poly, krawtchouck1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(KRAWTCHOUK_DISCRETE);
-  KrawtchoukOrthogPolynomial * ptr = dynamic_cast<KrawtchoukOrthogPolynomial*>(poly_basis.polynomial_rep());
+  auto ptr = std::dynamic_pointer_cast<KrawtchoukOrthogPolynomial>
+    (poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
@@ -139,7 +141,7 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, krawtchouck1)
   for( short i=0; i<11; ++i ) {
     Real exact_orth_val = krawtchouck_exact_orthog(N, p, i);
     for( short j=0; j<11; ++j ) {
-      Real numerical_orth_val = krawtchouck_inner_prod(N, p, i, j, ptr);
+      Real numerical_orth_val = krawtchouck_inner_prod(N, p, i, j, *ptr);
       if( i == j ) {
         TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
@@ -170,11 +172,11 @@ namespace {
   //------------------------------------
   // Compute numerical inner product
   //------------------------------------
-  Real meixner_inner_prod(unsigned nterms, Real c, Real B, short order1, short order2, BasisPolynomial * poly)
+  Real meixner_inner_prod(unsigned nterms, Real c, Real B, short order1, short order2, BasisPolynomial& poly)
   {
     Real sum = 0.0;
     for( short i=0; i<nterms; ++i )
-      sum += BasisPolynomial::pochhammer(B,i)*std::pow(c,i)/BasisPolynomial::factorial(i)*poly->type1_value(Real(i),order1)*poly->type1_value(Real(i),order2);
+      sum += BasisPolynomial::pochhammer(B,i)*std::pow(c,i)/BasisPolynomial::factorial(i)*poly.type1_value(Real(i),order1)*poly.type1_value(Real(i),order2);
 
     return sum;
   }
@@ -186,7 +188,8 @@ namespace {
 TEUCHOS_UNIT_TEST(discrete_orthog_poly, meixner1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(MEIXNER_DISCRETE);
-  MeixnerOrthogPolynomial * ptr = dynamic_cast<MeixnerOrthogPolynomial*>(poly_basis.polynomial_rep());
+  auto ptr = std::dynamic_pointer_cast<MeixnerOrthogPolynomial>
+    (poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
@@ -206,7 +209,7 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, meixner1)
   for( short i=0; i<7; ++i ) {
     Real exact_orth_val = meixner_exact_orthog(c, beta, i);
     for( short j=0; j<7; ++j ) {
-      Real numerical_orth_val = meixner_inner_prod(NUM_TERMS_TO_SUM, c, beta, i, j, ptr);
+      Real numerical_orth_val = meixner_inner_prod(NUM_TERMS_TO_SUM, c, beta, i, j, *ptr);
       if( i == j ) {
         TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
@@ -238,14 +241,14 @@ namespace {
   //------------------------------------
   // Compute numerical inner product
   //------------------------------------
-  Real hahn_inner_prod(unsigned int N, unsigned int a, unsigned int b, short order1, short order2, BasisPolynomial * poly)
+  Real hahn_inner_prod(unsigned int N, unsigned int a, unsigned int b, short order1, short order2, BasisPolynomial& poly)
   {
     Real sum = 0.0;
     for( short i=0; i<N+1; ++i ) {
       Real x = Real(i);
       short sa = short(a);
       short sb = short(b);
-      Real term = BasisPolynomial::n_choose_k(sa+i,i)*BasisPolynomial::n_choose_k(sb+N-i,N-i)*poly->type1_value(x,order1)*poly->type1_value(x,order2);
+      Real term = BasisPolynomial::n_choose_k(sa+i,i)*BasisPolynomial::n_choose_k(sb+N-i,N-i)*poly.type1_value(x,order1)*poly.type1_value(x,order2);
       sum += term;
     }
 
@@ -259,7 +262,8 @@ namespace {
 TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
 {
   BasisPolynomial poly_basis = BasisPolynomial(HAHN_DISCRETE);
-  HahnOrthogPolynomial * ptr = dynamic_cast<HahnOrthogPolynomial*>(poly_basis.polynomial_rep());
+  auto ptr = std::dynamic_pointer_cast<HahnOrthogPolynomial>
+    (poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
@@ -283,7 +287,7 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
   for( short i=0; i<11; ++i ) {
     Real exact_orth_val = hahn_exact_orthog(totalPop, selectPop, N, i);
     for( short j=0; j<11; ++j ) {
-      Real numerical_orth_val = hahn_inner_prod(N, totalPop, selectPop, i, j, ptr);
+      Real numerical_orth_val = hahn_inner_prod(N, totalPop, selectPop, i, j, *ptr);
       if( i == j ) {
         TEST_FLOATING_EQUALITY( exact_orth_val, numerical_orth_val, TEST_TOL );
       }
@@ -353,8 +357,8 @@ void histpt_check_orthog(size_t num_vals, ScalarType pt_vals[],
 TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_int)
 {
   BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
-  NumericGenOrthogPolynomial * ptr =
-    dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
+  auto ptr = std::dynamic_pointer_cast<NumericGenOrthogPolynomial>
+    (poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
   // Test orthogonality to discrete data
@@ -392,8 +396,8 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_int)
 TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_str)
 {
   BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
-  NumericGenOrthogPolynomial * ptr =
-    dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
+  auto ptr = std::dynamic_pointer_cast<NumericGenOrthogPolynomial>
+    (poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
   // Test orthogonality to discrete data
@@ -439,8 +443,8 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_str)
 TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_real)
 {
   BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
-  NumericGenOrthogPolynomial * ptr =
-    dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
+  auto ptr = std::dynamic_pointer_cast<NumericGenOrthogPolynomial>
+    (poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
   // Test orthogonality to discrete data

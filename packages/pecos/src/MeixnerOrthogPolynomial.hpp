@@ -114,19 +114,16 @@ push_parameter(short dist_param, Real param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) // first pass
     switch (dist_param) {
     case NBI_P_PER_TRIAL: case GE_P_PER_TRIAL: probPerTrial = param; break;
     }
-  }
   else
     switch (dist_param) {
     case NBI_P_PER_TRIAL: case GE_P_PER_TRIAL:
-      if (real_compare(probPerTrial, param)) parametricUpdate = false;
-      else { probPerTrial = param; parametricUpdate = true; reset_gauss(); }
+      if (!real_compare(probPerTrial, param))
+	{ probPerTrial = param;  reset_gauss(); }
       break;
     }
 }
@@ -137,19 +134,15 @@ push_parameter(short dist_param, unsigned int param)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
-  // Therefore, set parametricUpdate to false unless an actual parameter change.
   // Logic for first pass included for completeness, but should not be needed.
-  if (collocPoints.empty() || collocWeights.empty()) { // first pass
-    parametricUpdate = true; // prevent false if default value assigned
+  if (collocPointsMap.empty() || collocWeightsMap.empty()) // first pass
     switch (dist_param) {
     case NBI_TRIALS: /* case GE_TRIALS: */ numTrials = param; break;
     }
-  }
   else
     switch (dist_param) {
     case NBI_TRIALS: /* case GE_TRIALS: */
-      if (numTrials == param)    parametricUpdate = false;
-      else { numTrials = param;  parametricUpdate = true; reset_gauss(); }
+      if (numTrials != param)  { numTrials = param;  reset_gauss(); }
       break;
     }
 }

@@ -109,9 +109,11 @@ void SharedNodalInterpPolyApproxData::allocate_data()
     expMomentIntDriver = IntegrationDriver(driver_type);
     expMomentIntDriver.mode(INTEGRATION_MODE);
     if (driver_type == COMBINED_SPARSE_GRID) {
-      CombinedSparseGridDriver* driver = (CombinedSparseGridDriver*)driverRep;
-      CombinedSparseGridDriver* alt_driver
-	= (CombinedSparseGridDriver*)expMomentIntDriver.driver_rep();
+      std::shared_ptr<CombinedSparseGridDriver> driver =
+	std::static_pointer_cast<CombinedSparseGridDriver>(driverRep);
+      std::shared_ptr<CombinedSparseGridDriver> alt_driver =
+	std::static_pointer_cast<CombinedSparseGridDriver>
+	(expMomentIntDriver.driver_rep());
       alt_driver->growth_rate(driver->growth_rate());
       //alt_driver->refinement_control(driver->refinement_control());
       alt_driver->track_collocation_details(false);
@@ -141,13 +143,14 @@ void SharedNodalInterpPolyApproxData::allocate_component_sobol()
       sobolIndexMap.clear();
       switch (expConfigOptions.expCoeffsSolnApproach) {
       case QUADRATURE: {
-	TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+	std::shared_ptr<TensorProductDriver> tpq_driver =
+	  std::static_pointer_cast<TensorProductDriver>(driverRep);
 	multi_index_to_sobol_index_map(tpq_driver->collocation_key());
 	break;
       }
       case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-	CombinedSparseGridDriver* csg_driver
-	  = (CombinedSparseGridDriver*)driverRep;
+	std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+	  std::static_pointer_cast<CombinedSparseGridDriver>(driverRep);
 	const IntArray&      sm_coeffs  = csg_driver->smolyak_coefficients();
 	const UShort3DArray& colloc_key = csg_driver->collocation_key();
 	size_t i, num_smolyak_indices = sm_coeffs.size();
@@ -178,8 +181,8 @@ void SharedNodalInterpPolyApproxData::increment_component_sobol()
   switch (expConfigOptions.expCoeffsSolnApproach) {
   //case QUADRATURE: // increment_data() uses allocate_component_sobol()
   case INCREMENTAL_SPARSE_GRID: {
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
     switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       if (isg_driver->smolyak_coefficients().back()) {
@@ -651,7 +654,7 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
     nonZerosMapMaxLevels.assign(num_nz, 0);
     nonZerosMapArray.resize(num_nz);
   }
-  InterpolationPolynomial *poly_rep_i, *poly_rep_j;
+  std::shared_ptr<InterpolationPolynomial> poly_rep_i, poly_rep_j;
   UShort2DMultiSet map_key; UShortMultiSet mk1, mk2;
   size_t k, l, v, v_cntr = 0, num_pts_i, num_pts_j, nz_index;
   unsigned short j_start, max_lev_v, start; Real basis_prod_v;
@@ -667,13 +670,13 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
       UShort2DMultiSetRealMap& non_zeros_map = nonZerosMapArray[nz_index];
       for (i=1; i<=max_lev_v; ++i) {
 	// InterpolationPolynomial is polynomialBasis[level][var]
-	poly_rep_i = (InterpolationPolynomial*)
-	  polynomialBasis[i][v].polynomial_rep();
+	poly_rep_i = std::static_pointer_cast<InterpolationPolynomial>
+	  (polynomialBasis[i][v].polynomial_rep());
 	num_pts_i = poly_rep_i->interpolation_size();
 	j_start = (i<start) ? start : 1;
 	for (j=j_start; j<i; ++j) {
-	  poly_rep_j = (InterpolationPolynomial*)
-	    polynomialBasis[j][v].polynomial_rep();
+	  poly_rep_j = std::static_pointer_cast<InterpolationPolynomial>
+	    (polynomialBasis[j][v].polynomial_rep());
 	  num_pts_j = poly_rep_j->interpolation_size();
 	  mk1.clear(); mk1.insert(num_pts_i);
 	  mk2.clear(); mk2.insert(num_pts_j);
@@ -681,7 +684,7 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
 	    kit = mk1.insert(k);
 	    map_key.clear(); map_key.insert(mk1);
 	    for (l=0; l<num_pts_j; ++l) {
-	      if (basis_product_1d(poly_rep_i, poly_rep_j, k, l, pts_1d_v,
+	      if (basis_product_1d(*poly_rep_i, *poly_rep_j, k, l, pts_1d_v,
 				   t1_wts_1d_v, basis_prod_v)) {
 		lit = mk2.insert(l); mit = map_key.insert(mk2);
 		non_zeros_map[map_key] = basis_prod_v;

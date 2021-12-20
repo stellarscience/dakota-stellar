@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -31,19 +32,18 @@ PecosApproximation::PecosApproximation(const SharedApproxData& shared_data):
   // initialize the former approximation instance, which retains a pointer to
   // the shared data representation.
 
-  SharedPecosApproxData* shared_pecos_data_rep
-    = (SharedPecosApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPecosApproxData> shared_pecos_data_rep
+    = std::static_pointer_cast<SharedPecosApproxData>(sharedDataRep);
   pecosBasisApprox
     = Pecos::BasisApproximation(shared_pecos_data_rep->pecos_shared_data());
 
-  // Make a shallow copy of initial approxData instance (shared rep).
-  // Note: there is only one empty SurrogateData instance at construct time
-  pecosBasisApprox.surrogate_data(approxData.front());
-  // modified SurrogateData is linked downstream, if needed (ML-MF)
+  // Make a shallow copy of approxData instance (shared rep).
+  // Note: this SurrogateData instance is empty at construct time.
+  pecosBasisApprox.surrogate_data(approxData);
 
   // convenience pointer (we use PolynomialApproximation exclusively)
-  polyApproxRep
-    = (Pecos::PolynomialApproximation*)pecosBasisApprox.approx_rep();
+  polyApproxRep = std::static_pointer_cast<Pecos::PolynomialApproximation>
+    (pecosBasisApprox.approx_rep());
 }
 
 
@@ -60,34 +60,34 @@ PecosApproximation(ProblemDescDB& problem_db,
   // initialize the former approximation instance, which retains a pointer to
   // the shared data representation.
 
-  SharedPecosApproxData* shared_pecos_data_rep
-    = (SharedPecosApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPecosApproxData> shared_pecos_data_rep
+    = std::static_pointer_cast<SharedPecosApproxData>(sharedDataRep);
   pecosBasisApprox
     = Pecos::BasisApproximation(shared_pecos_data_rep->pecos_shared_data());
 
-  // Make a shallow copy of initial approxData instance (shared rep):
-  // Note: there is only one empty SurrogateData instance at construct time
-  pecosBasisApprox.surrogate_data(approxData.front());
-  // modified SurrogateData is linked downstream, if needed (ML-MF)
+  // Make a shallow copy of approxData instance (shared rep).
+  // Note: this SurrogateData instance is empty at construct time.
+  pecosBasisApprox.surrogate_data(approxData);
 
   // convenience pointer (we use PolynomialApproximation exclusively)
-  polyApproxRep
-    = (Pecos::PolynomialApproximation*)pecosBasisApprox.approx_rep();
+  polyApproxRep = std::static_pointer_cast<Pecos::PolynomialApproximation>
+  (pecosBasisApprox.approx_rep());
 }
 
 
+/*
 void PecosApproximation::link_multilevel_surrogate_data()
 {
-  // Manage {surr,modSurr}Data instances (approxDataKeys and activeDataIndex
-  // are managed in SharedPecosApproxData).
+  // Manage {surr,modSurr}Data instances (activeKey and original/modified
+  // approxData indices are managed in SharedPecosApproxData).
   // > SurrogateModel::aggregate_response() uses order of HF,LF
   // > ApproximationInterface::{mixed,shallow}_add() assigns aggregate response
   //   data to each approxData instance in turn.
 
   SharedPecosApproxData* shared_data_rep
     = (SharedPecosApproxData*)sharedDataRep;
-  switch (shared_data_rep->pecos_shared_data_rep()->discrepancy_type()) {
-  case Pecos::DISTINCT_DISCREP: case Pecos::RECURSIVE_DISCREP: {
+  switch (shared_data_rep->pecos_shared_data_rep()->discrepancy_reduction()) {
+  case Pecos::DISTINCT_DISCREPANCY: case Pecos::RECURSIVE_DISCREPANCY: {
     // push another SurrogateData instance for modSurrData
     // (allows consolidation of Approximation::push/pop operations)
     const UShortArray& key = approxData.back().active_key();
@@ -100,5 +100,6 @@ void PecosApproximation::link_multilevel_surrogate_data()
     break;
   }
 }
+*/
 
 } // namespace Dakota

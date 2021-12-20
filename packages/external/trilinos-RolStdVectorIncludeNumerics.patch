@@ -1,0 +1,12 @@
+diff --git a/packages/rol/src/vector/ROL_StdVector.hpp b/packages/rol/src/vector/ROL_StdVector.hpp
+index f21f9e9f..d9c9c3cc 100644
+--- a/packages/rol/src/vector/ROL_StdVector.hpp
++++ b/packages/rol/src/vector/ROL_StdVector.hpp
+@@ -47,6 +47,7 @@
+ #include <algorithm>
+ #include <cstdlib>
+ #include <initializer_list>
++#include <numeric>
+ #include "ROL_Vector.hpp"
+ 
+ /** \class ROL::StdVector

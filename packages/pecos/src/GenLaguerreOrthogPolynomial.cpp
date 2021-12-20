@@ -169,39 +169,42 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  if (collocPoints.size() != order) { // if not already computed
-    collocPoints.resize(order);
-    switch (order) {
-    case 1: // zeros of L^(alphaPoly)_1(x) for one gen Gauss-Laguerre pt:
-      collocPoints[0] =  1. + alphaPoly;
-      break;
-    case 2: { // zeros of L^(alphaPoly)_2(x) for two gen Gauss-Laguerre pts:
-      Real srap2 = sqrt(alphaPoly + 2.);
-      collocPoints[0] = alphaPoly + 2. - srap2;
-      collocPoints[1] = alphaPoly + 2. + srap2;
-      break;
-    }
-    default:
-#ifdef HAVE_SPARSE_GRID
-      // sandia_rules.C calculates points/weights together
-      if (collocWeights.size() != order)
-	collocWeights.resize(order);
-      webbur::gen_laguerre_compute(order, alphaPoly, &collocPoints[0],
-				   &collocWeights[0]);
-      Real wt_factor = weight_factor();
-      for (size_t i=0; i<order; i++)
-	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
-#else
-      PCerr << "Error: overflow in maximum quadrature order limit (2) in "
-	    << "GenLaguerreOrthogPolynomial::collocation_points().  Configure "
-	    << "with VPISparseGrid to extend range." << std::endl;
-      abort_handler(-1);
-#endif
-      break;
-    }
-  }
+  UShortRealArrayMap::iterator it = collocPointsMap.find(order);
+  if (it != collocPointsMap.end())
+    return it->second;
 
-  return collocPoints;
+  RealArray& colloc_pts = collocPointsMap[order]; // create new array
+  colloc_pts.resize(order);
+  switch (order) {
+  case 1: // zeros of L^(alphaPoly)_1(x) for one gen Gauss-Laguerre pt:
+    colloc_pts[0] =  1. + alphaPoly;
+    break;
+  case 2: { // zeros of L^(alphaPoly)_2(x) for two gen Gauss-Laguerre pts:
+    Real srap2 = sqrt(alphaPoly + 2.);
+    colloc_pts[0] = alphaPoly + 2. - srap2;
+    colloc_pts[1] = alphaPoly + 2. + srap2;
+    break;
+  }
+  default:
+#ifdef HAVE_SPARSE_GRID
+    // sandia_rules.C calculates points/weights together
+    RealArray& colloc_wts = collocWeightsMap[order];
+    if (colloc_wts.size() != order)
+      colloc_wts.resize(order);
+    webbur::gen_laguerre_compute(order, alphaPoly, &colloc_pts[0],
+				 &colloc_wts[0]);
+    Real wt_factor = weight_factor();
+    for (size_t i=0; i<order; i++)
+      colloc_wts[i] *= wt_factor; // polynomial weight fn -> PDF
+#else
+    PCerr << "Error: overflow in maximum quadrature order limit (2) in "
+	  << "GenLaguerreOrthogPolynomial::collocation_points().  Configure "
+	  << "with VPISparseGrid to extend range." << std::endl;
+    abort_handler(-1);
+#endif
+    break;
+  }
+  return colloc_pts;
 }
 
 
@@ -215,41 +218,44 @@ type1_collocation_weights(unsigned short order)
   // The sums of the weights = 1, which is the integral of the density function
   // x^alphaPoly exp(-x)/Gamma(alpha+1) over the support range of [0,+infinity].
 
-  if (collocWeights.size() != order) { // if not already computed
-    collocWeights.resize(order);
-    switch (order) {
-    case 1: // weight for one generalized Gauss-Laguerre point:
-      collocWeights[0] = 1.;
-      break;
-    default:
-#ifdef HAVE_SPARSE_GRID
-      // sandia_rules.C calculates points/weights together
-      if (collocPoints.size() != order)
-	collocPoints.resize(order);
-      webbur::gen_laguerre_compute(order, alphaPoly, &collocPoints[0],
-				   &collocWeights[0]);
-      Real wt_factor = weight_factor();
-      for (size_t i=0; i<order; i++)
-	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
-#else
-      // define Gauss wts from Gauss pts using formula above
-      const RealArray& colloc_pts = collocation_points(order);
-      for (size_t i=0; i<order; i++) {
-	Real x_i = colloc_pts[i];
-	// For integer alphaPoly:
-	//collocWeights[i] = factorial_ratio(order+alphaPoly-1, order) * x_i /
-	//  (order+alphaPoly) / factorial(alphaPoly) /
-	//  std::pow(type1_value(x_i,order-1),2);
-	// For real alphaPoly:
-	collocWeights[i] = pochhammer(alphaPoly+1., order)*x_i/factorial(order)
-	  /std::pow((order+alphaPoly) * type1_value(x_i, order-1), 2);
-      }
-#endif
-      break;
-    }
-  }
+  UShortRealArrayMap::iterator it = collocWeightsMap.find(order);
+  if (it != collocWeightsMap.end())
+    return it->second;
 
-  return collocWeights;
+  RealArray& colloc_wts = collocWeightsMap[order]; // create new array
+  colloc_wts.resize(order);
+  switch (order) {
+  case 1: // weight for one generalized Gauss-Laguerre point:
+    colloc_wts[0] = 1.;
+    break;
+  default:
+#ifdef HAVE_SPARSE_GRID
+    // sandia_rules.C calculates points/weights together
+    RealArray& colloc_pts = collocPointsMap[order];
+    if (colloc_pts.size() != order)
+      colloc_pts.resize(order);
+    webbur::gen_laguerre_compute(order, alphaPoly, &colloc_pts[0],
+				 &colloc_wts[0]);
+    Real wt_factor = weight_factor();
+    for (size_t i=0; i<order; i++)
+      colloc_wts[i] *= wt_factor; // polynomial weight fn -> PDF
+#else
+    // define Gauss wts from Gauss pts using formula above
+    const RealArray& colloc_pts = collocation_points(order);
+    for (size_t i=0; i<order; i++) {
+      Real x_i = colloc_pts[i];
+      // For integer alphaPoly:
+      //colloc_wts[i] = factorial_ratio(order+alphaPoly-1, order) * x_i /
+      //  (order+alphaPoly) / factorial(alphaPoly) /
+      //  std::pow(type1_value(x_i,order-1),2);
+      // For real alphaPoly:
+      colloc_wts[i] = pochhammer(alphaPoly+1., order)*x_i/factorial(order)
+	/ std::pow((order+alphaPoly) * type1_value(x_i, order-1), 2);
+    }
+#endif
+    break;
+  }
+  return colloc_wts;
 }
 
 

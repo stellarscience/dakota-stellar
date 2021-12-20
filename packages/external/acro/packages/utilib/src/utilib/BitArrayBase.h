@@ -591,8 +591,6 @@ int BitArrayBase<k,T,P>::serializer( SerialObject::elementList_t& serial,
 
 
 
-} // namespace utilib
-
 /*
 ** TODO: find/write a test for this
 */
@@ -701,5 +699,9 @@ return x;
 }
 
 #endif
+
+
+} // namespace utilib
+
 
 #endif

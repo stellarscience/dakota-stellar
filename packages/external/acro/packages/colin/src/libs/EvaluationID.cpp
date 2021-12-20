@@ -20,6 +20,9 @@ using std::cerr;
 using std::endl;
 
 
+namespace colin
+{
+
 ///
 std::ostream& operator<<(std::ostream& os, const colin::EvaluationID& id)
 {
@@ -29,9 +32,6 @@ std::ostream& operator<<(std::ostream& os, const colin::EvaluationID& id)
    return os;
 }
 
-
-namespace colin
-{
 
 //======================================================================
 // EvaluationID member functions

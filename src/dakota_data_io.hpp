@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -14,13 +15,10 @@
 #include "dakota_data_types.hpp"
 #include "ExperimentDataUtils.hpp"
 #include "MPIPackBuffer.hpp"
-#include <boost/foreach.hpp>
-// including lexical_cast.hpp breaks a number of (mostly RBDO) tests...
-//#include <boost/lexical_cast.hpp>
+#include "ActiveKey.hpp"
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/split_free.hpp>
-#include <boost/shared_ptr.hpp>
 
 namespace boost {
 namespace serialization {
@@ -134,41 +132,6 @@ BOOST_SERIALIZATION_SPLIT_FREE(Dakota::BitArray)
 /// Register separate load/save for StringMultiArray type
 BOOST_SERIALIZATION_SPLIT_FREE(Dakota::StringMultiArray)
 
-#if 0
-// WJB - ToDo:  double-check with Brian Adams.  Any value in leaving this
-// hack in the code base if not being used / tested?
-namespace {
-  template<class SharedPointer> struct Holder {
-    SharedPointer p;
-
-    Holder(const SharedPointer &p) : p(p) {}
-    Holder(const Holder &other) : p(other.p) {}
-    Holder(Holder &&other) : p(std::move(other.p)) {}
-
-    void operator () (...) { p.reset(); }
-  };
-}
-
-template<class T> std::shared_ptr<T> to_std_ptr(const boost::shared_ptr<T> &p) {
-  typedef Holder<std::shared_ptr<T>> H;
-  if(H *h = boost::get_deleter<H, T>(p)) {
-    return h->p;
-  }
-  else {
-    return std::shared_ptr<T>(p.get(), Holder<boost::shared_ptr<T>>(p));
-  }
-}
-
-template<class T> boost::shared_ptr<T> to_boost_ptr(const std::shared_ptr<T> &p){
-  typedef Holder<boost::shared_ptr<T>> H;
-  if(H * h = std::get_deleter<H, T>(p)) {
-    return h->p;
-  }
-   else {
-    return boost::shared_ptr<T>(p.get(), Holder<std::shared_ptr<T>>(p));
-  }
-}
-#endif
 
 namespace Dakota {
 
@@ -261,13 +224,13 @@ void read_unsized_data(std::istream& s,
 void read_config_vars_multifile(const std::string& basename,
                                 int num_expts,
                                 int ncv,
-                                RealVectorArray& config_vars);
+				std::vector<Variables>& config_vars);
 
 /// file reader for configuration data supplied via a single file
 void read_config_vars_singlefile(const std::string& basename,
                                  int num_expts,
                                  int ncv,
-                                 RealVectorArray& config_vars);
+				 std::vector<Variables>& config_vars);
 
 /// file reader for vector field (response) data
 void read_field_values(const std::string& basename,
@@ -506,13 +469,9 @@ void read_data_tabular(std::istream& s,
       s >> std::ws;
     }
     else {
-      char err[80];
-      std::sprintf(err,
-	      "At EOF: insufficient tabular data for SerialDenseVector[%d]", i);
-      // TODO: enable this code once we can safely include lexical_cast.hpp
-      // std::string err;
-      // err += "At EOF: insufficient tabular data for SerialDenseVector[";
-      // err += boost::lexical_cast<std::string>(i) + "]";
+      std::string err = 
+	"At EOF: insufficient tabular data for SerialDenseVector[" +
+	std::to_string(i) + "]";
       throw TabularDataTruncated(err);
     }
   }
@@ -531,17 +490,16 @@ void read_data_partial_tabular(std::istream& s,
 	 << "exceeds length of SerialDenseVector." << std::endl;
     abort_handler(-1);
   }
+  s >> std::ws;
   for (i=start_index; i<end; ++i) {
-    if (s)
+    if (s && !s.eof()) {
       s >> v[i];
+      s >> std::ws;
+    }
     else {
-      char err[80];
-      std::sprintf(err,
-	      "At EOF: insufficient tabular data for SerialDenseVector[%zu]", i);
-      // TODO: enable this code once we can safely include lexical_cast.hpp
-      // std::string err;
-      // err += "At EOF: insufficient tabular data for SerialDenseVector[";
-      // err += boost::lexical_cast<std::string>(i) + "]";
+      std::string err =
+	"At EOF: insufficient tabular data for SerialDenseVector[" + 
+	std::to_string(i) + "]";
       throw TabularDataTruncated(err);
     }
   }
@@ -563,13 +521,9 @@ void read_data_partial_tabular(std::istream& s, OrdinalType start_index,
     if (s)
       s >> v[i];
     else {
-      char err[80];
-      std::sprintf(err,
-	      "At EOF: insufficient tabular data for StringMultiArray[%zu]", i);
-      // TODO: enable this code once we can safely include lexical_cast.hpp
-      // std::string err;
-      // err += "At EOF: insufficient tabular data for StringMultiArray[";
-      // err += boost::lexical_cast<std::string>(i) + "]";
+      std::string err = 
+	"At EOF: insufficient tabular data for StringMultiArray[" + 
+	std::to_string(i) + "]";
       throw TabularDataTruncated(err);
     }
   }
@@ -690,7 +644,7 @@ template <typename ArrayT>
 inline void array_read(std::istream& s, ArrayT& v)
 {
   typename ArrayT::size_type len = v.size();
-  for (register typename ArrayT::size_type i=0; i<len; ++i)
+  for (typename ArrayT::size_type i=0; i<len; ++i)
     s >> v[i];
 }
 
@@ -1291,7 +1245,7 @@ inline void array_write(std::ostream& s, const ArrayT& v)
 {
   s << std::scientific << std::setprecision(write_precision);
   typename ArrayT::size_type len = v.size();
-  for (register typename ArrayT::size_type i=0; i<len; ++i)
+  for (typename ArrayT::size_type i=0; i<len; ++i)
     s << "                     " << std::setw(write_precision+7)
       << v[i] << '\n';
 }
@@ -1309,7 +1263,7 @@ inline void array_write(std::ostream& s, const ArrayT& v,
 	 << "length of vector." << std::endl;
     abort_handler(-1);
   }
-  for (register typename ArrayT::size_type i=0; i<len; ++i)
+  for (typename ArrayT::size_type i=0; i<len; ++i)
     s << "                     " << std::setw(write_precision+7)
       << v[i] << ' ' << label_array[i] << '\n';
 }
@@ -1348,7 +1302,7 @@ inline void array_write_aprepro(std::ostream& s, const ArrayT& v,
 	 << "length of vector." << std::endl;
     abort_handler(-1);
   }
-  for (register typename ArrayT::size_type i=0; i<len; ++i)
+  for (typename ArrayT::size_type i=0; i<len; ++i)
     s << "                    { "
       << std::setw(15) << std::setiosflags(std::ios::left)
       << label_array[i].c_str() << std::resetiosflags(std::ios::adjustfield)
@@ -1369,116 +1323,115 @@ inline void array_write_annotated(std::ostream& s, const ArrayT& v,
   typename ArrayT::size_type len = v.size();
   if (write_len)
     s << len << ' ';
-  for (register typename ArrayT::size_type i=0; i<len; ++i)
+  for (typename ArrayT::size_type i=0; i<len; ++i)
     s << v[i] << ' ';
 }
 
 
-// ----------------------------------------
-// templated MPIUnpackBuffer read functions
-// ----------------------------------------
-
-
-/// standard MPI buffer extraction operator for full SerialDenseVector
-/// with labels
-template <typename OrdinalType, typename ScalarType>
-void read_data(MPIUnpackBuffer& s,
-	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
-	       StringMultiArray& label_array)
-{
-  OrdinalType i, len;
-  s >> len;
-  if( len != v.length() )
-    v.sizeUninitialized(len);
-  if( len != label_array.size() )
-    label_array.resize(boost::extents[len]);
-  for (i=0; i<len; ++i)
-    s >> v[i] >> label_array[i];
-}
-
-
-/// standard MPI buffer extraction operator for full SerialDenseVector
-/// with labels
-template <typename OrdinalType, typename ScalarType>
-void read_data(MPIUnpackBuffer& s,
-	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
-	       StringMultiArrayView label_array)
-{
-  OrdinalType i, len;
-  s >> len;
-  if( len != v.length() )
-    v.sizeUninitialized(len);
-  if( len != label_array.size() ) {
-    Cerr << "Error: size of label_array in read_data(MPIUnpackBuffer&) does "
-	 << "not equal length of SerialDenseVector." << std::endl;
-    abort_handler(-1);
-  }
-  for (i=0; i<len; ++i)
-    s >> v[i] >> label_array[i];
-}
-
-
-/// standard MPI buffer extraction operator for StringMultiArray with labels
-inline void read_data(MPIUnpackBuffer& s, StringMultiArray& v,
-		      StringMultiArrayView label_array)
-{
-  size_t i, len;
-  s >> len;
-  if( len != v.size() )
-    v.resize(boost::extents[len]);
-  if( len != label_array.size() ) {
-    Cerr << "Error: size of label_array in read_data(MPIUnpackBuffer&) does "
-	 << "not equal length of StringMultiArray." << std::endl;
-    abort_handler(-1);
-  }
-  for (i=0; i<len; ++i)
-    s >> v[i] >> label_array[i];
-}
-
-
-// ---------------------------------------
-// templated MPIPackBuffer write functions (in namespace Dakota)
-// ---------------------------------------
-
-
-/// standard MPI buffer insertion operator for full SerialDenseVector
-/// with labels
-template <typename OrdinalType, typename ScalarType>
-void write_data(MPIPackBuffer& s,
-		const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
-		const StringMultiArray& label_array)
-{
-  OrdinalType i, len = v.length();
-  if (label_array.size() != len) {
-    Cerr << "Error: size of label_array in write_data(MPIPackBuffer) "
-	 << "does not equal length of SerialDenseVector." << std::endl;
-    abort_handler(-1);
-  }
-  s << len;
-  for (i=0; i<len; ++i)
-    s << v[i] << label_array[i];
-}
-
-
-/// standard MPI buffer insertion operator for StringMultiArray with labels
-inline void write_data(MPIPackBuffer& s, const StringMultiArray& v,
-		       StringMultiArrayConstView label_array)
-{
-  size_t i, len = v.size();
-  if (label_array.size() != len) {
-    Cerr << "Error: size of label_array in write_data(MPIPackBuffer) "
-	 << "does not equal length of StringMultiArray." << std::endl;
-    abort_handler(-1);
-  }
-  s << len;
-  for (i=0; i<len; ++i)
-    s << v[i] << label_array[i];
-}
-
-
-// ----------------------------------------------------------------------------
+// ------------------------------------------------------
 // templated MPIPackBuffer insertion/extraction operators (in namespace Dakota)
-// ----------------------------------------------------------------------------
+// ------------------------------------------------------
+
+
+// MSE 1/29/2021: introduce random-access conditional with C++11:
+// > one option is iterator-based "tag-dispatch"
+// > another option is enable_if<>, but this approach seems more complex
+// Thanks to stackoverflow.com post 23848011 for sample code adapted below
+
+// helper alias:
+template<typename ContainerT>
+using IteratorCategoryOf = typename
+  std::iterator_traits<typename ContainerT::iterator>::iterator_category;
+
+
+template<typename ContainerT>
+void container_read(MPIUnpackBuffer& s, ContainerT& c,
+		    std::forward_iterator_tag) // generic version
+{
+#ifdef DAKOTA_HAVE_MPI
+  c.clear();
+  typename ContainerT::size_type i, len;
+  s >> len;
+  for (i=0; i<len; ++i) {
+    typename ContainerT::value_type data;// fresh alloc in case T is ref-counted
+    s >> data;
+    c.push_back(data);
+  }
+#endif
+}
+
+template<typename ContainerT>
+void container_read(MPIUnpackBuffer& s, ContainerT& c,
+		    std::random_access_iterator_tag) // random-access version
+{
+  // Container types with random-access iterators include vector<T>, deque<T>.
+  // While the generic version above could be augmented with reserve(len) for
+  // vector, deque does not support this.  Therefore, we use resize() with
+  // operator[] instead of reserve() + push_back():
+#ifdef DAKOTA_HAVE_MPI
+  c.clear(); // ensures fresh allocations in resize() (see note above)
+  typename ContainerT::size_type i, len;
+  s >> len;
+  c.resize(len); // deque<T> supports resize() but not reserve()
+  for (i=0; i<len; ++i)
+    s >> c[i];
+#endif
+}
+
+template<typename ContainerT>
+MPIUnpackBuffer& operator>>(MPIUnpackBuffer& s, ContainerT& c) // two versions
+{ container_read(s, c, IteratorCategoryOf<ContainerT>()); return s; }
+
+
+template<typename ContainerT>
+MPIPackBuffer& operator<<(MPIPackBuffer& s, const ContainerT& c) // one version
+{
+#ifdef DAKOTA_HAVE_MPI
+  typename ContainerT::size_type len = c.size();
+  s << len;
+  for (const typename ContainerT::value_type& entry : c)
+    s << entry;
+#endif
+  return s;
+}
+
+
+/// stream insertion for BitArray
+template <typename Block, typename Allocator>
+inline MPIPackBuffer& 
+operator<<(MPIPackBuffer& s, const boost::dynamic_bitset<Block, Allocator>& bs)
+{ 
+  size_t size = bs.size();
+  s << size;
+
+  // create a vector of blocks and insert it it
+  std::vector<Block> vec_block(bs.num_blocks());
+  to_block_range(bs, vec_block.begin());
+  s << vec_block;
+
+  return s; 
+}
+
+
+/// stream extraction for BitArray
+template <typename Block, typename Allocator>
+inline MPIUnpackBuffer& 
+operator>>(MPIUnpackBuffer& s, boost::dynamic_bitset<Block, Allocator>& bs)
+{ 
+  size_t size;
+  s >> size;
+
+  bs.resize(size);
+
+  // Load vector
+  std::vector<Block> vec_block;
+  s >> vec_block;
+
+  // Convert vector into a bitset
+  from_block_range(vec_block.begin(), vec_block.end(), bs);
+
+  return s;
+}
 
 
 /// global MPIUnpackBuffer extraction operator for std::pair
@@ -1501,47 +1454,16 @@ MPIPackBuffer& operator<<(MPIPackBuffer& s, const std::pair<U,V>& data)
 }
 
 
-/*
-/// global MPIUnpackBuffer extraction operator for std::vector
-/// (specialization of ContainerT template in MPIPackBuffer.hpp)
-template <typename T>
-MPIUnpackBuffer& operator>>(MPIUnpackBuffer& s, std::vector<T>& data)
-{
-  size_t i, len;
-  s >> len;
-  data.resize(len);
-  for (i=0; i<len; ++i)
-    s >> data[i];
-  return s;
-}
-
-
-/// global MPIPackBuffer insertion operator for std::vector
-/// (specialization of ContainerT template in MPIPackBuffer.hpp)
-template <typename T>
-MPIPackBuffer& operator<<(MPIPackBuffer& s, const std::vector<T>& data)
-{
-  size_t i, len = data.size();
-  s << len;
-  for (i=0; i<len; ++i)
-    s << data[i];
-  return s;
-}
-*/
-
-
 /// global MPIUnpackBuffer extraction operator for std::set
 template <typename T>
 MPIUnpackBuffer& operator>>(MPIUnpackBuffer& s, std::set<T>& data)
 {
-  data.clear();
-  size_t i, len;
+  size_t i, len;  T val;
   s >> len;
-  T val;
-  for (i=0; i<len; ++i){
-    s >> val; 
-    data.insert(val);
-  }
+
+  data.clear();
+  for (i=0; i<len; ++i)
+    { s >> val; data.insert(val); }
   return s;
 }
 
@@ -1672,6 +1594,100 @@ MPIUnpackBuffer& operator>>(MPIUnpackBuffer& s,
 }
 
 
+// -----------------------------------------------------
+// templated MPI{Pack,Unpack}Buffer read,write functions (in namespace Dakota)
+// -----------------------------------------------------
+
+
+/// MPI buffer extraction operator for full SerialDenseVector with labels
+template <typename OrdinalType, typename ScalarType>
+void read_data(MPIUnpackBuffer& s,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
+	       StringMultiArray& label_array)
+{
+  OrdinalType i, len;
+  s >> len;
+  if( len != v.length() )
+    v.sizeUninitialized(len);
+  if( len != label_array.size() )
+    label_array.resize(boost::extents[len]);
+  for (i=0; i<len; ++i)
+    s >> v[i] >> label_array[i];
+}
+
+
+/// MPI buffer extraction operator for full SerialDenseVector with labels
+template <typename OrdinalType, typename ScalarType>
+void read_data(MPIUnpackBuffer& s,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
+	       StringMultiArrayView label_array)
+{
+  OrdinalType i, len;
+  s >> len;
+  if( len != v.length() )
+    v.sizeUninitialized(len);
+  if( len != label_array.size() ) {
+    Cerr << "Error: size of label_array in read_data(MPIUnpackBuffer&) does "
+	 << "not equal length of SerialDenseVector." << std::endl;
+    abort_handler(-1);
+  }
+  for (i=0; i<len; ++i)
+    s >> v[i] >> label_array[i];
+}
+
+
+/// MPI buffer extraction operator for StringMultiArray with labels
+inline void read_data(MPIUnpackBuffer& s, StringMultiArray& v,
+		      StringMultiArrayView label_array)
+{
+  size_t i, len;
+  s >> len;
+  if( len != v.size() )
+    v.resize(boost::extents[len]);
+  if( len != label_array.size() ) {
+    Cerr << "Error: size of label_array in read_data(MPIUnpackBuffer&) does "
+	 << "not equal length of StringMultiArray." << std::endl;
+    abort_handler(-1);
+  }
+  for (i=0; i<len; ++i)
+    s >> v[i] >> label_array[i];
+}
+
+
+/// MPI buffer insertion operator for full SerialDenseVector with labels
+template <typename OrdinalType, typename ScalarType>
+void write_data(MPIPackBuffer& s,
+		const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
+		const StringMultiArray& label_array)
+{
+  OrdinalType i, len = v.length();
+  if (label_array.size() != len) {
+    Cerr << "Error: size of label_array in write_data(MPIPackBuffer) "
+	 << "does not equal length of SerialDenseVector." << std::endl;
+    abort_handler(-1);
+  }
+  s << len;
+  for (i=0; i<len; ++i)
+    s << v[i] << label_array[i];
+}
+
+
+/// MPI buffer insertion operator for StringMultiArray with labels
+inline void write_data(MPIPackBuffer& s, const StringMultiArray& v,
+		       StringMultiArrayConstView label_array)
+{
+  size_t i, len = v.size();
+  if (label_array.size() != len) {
+    Cerr << "Error: size of label_array in write_data(MPIPackBuffer) "
+	 << "does not equal length of StringMultiArray." << std::endl;
+    abort_handler(-1);
+  }
+  s << len;
+  for (i=0; i<len; ++i)
+    s << v[i] << label_array[i];
+}
+
+
 // -----------------------------------------------------------------------
 // templated iostream insertion/extraction operators (in namespace Dakota)
 // -----------------------------------------------------------------------
@@ -1693,9 +1709,8 @@ inline std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 template <typename T>
 inline std::ostream& operator<<(std::ostream& s, const std::list<T>& data)
 {
-  BOOST_FOREACH(const typename std::list<T>::value_type& entry, data) {
+  for(const typename std::list<T>::value_type& entry : data)
     s << "                     " << entry << '\n';
-  }  
   return s;
 }
 
@@ -1776,6 +1791,40 @@ template <typename OrdinalType, typename ScalarType>
 inline std::ostream& operator<<(std::ostream& s,
   const Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType>& data)
 { write_data(s, data, true, true, true); return s; }
+
+// Note: these operators for Pecos types have to be promoted to the Dakota
+//       namespace for MPI buffer streams to resolve ambiguity between the
+//       Pecos templated stream operators and the generic ContainerT templates
+//       in this file.
+
+/// stream extraction operator for ActiveKeyData.  Calls read(Stream&).
+//template <typename Stream>
+//Stream& operator>>(Stream& s, Pecos::ActiveKeyData& key_data)
+inline MPIUnpackBuffer& operator>>(MPIUnpackBuffer& s,
+				   Pecos::ActiveKeyData& key_data)
+{ key_data.read(s); return s; }
+
+
+/// stream insertion operator for ActiveKeyData.  Calls write(Stream&).
+//template <typename Stream>
+//Stream& operator<<(Stream& s, const Pecos::ActiveKeyData& key_data)
+inline MPIPackBuffer& operator<<(MPIPackBuffer& s,
+				 const Pecos::ActiveKeyData& key_data)
+{ key_data.write(s); return s; }
+
+
+/// stream extraction operator for ActiveKey.  Calls read(Stream&).
+//template <typename Stream>
+//Stream& operator>>(Stream& s, Pecos::ActiveKey& key)
+inline MPIUnpackBuffer& operator>>(MPIUnpackBuffer& s, Pecos::ActiveKey& key)
+{ key.read(s); return s; }
+
+
+/// stream insertion operator for ActiveKey.  Calls write(Stream&).
+//template <typename Stream>
+//Stream& operator<<(Stream& s, const Pecos::ActiveKey& key)
+inline MPIPackBuffer& operator<<(MPIPackBuffer& s, const Pecos::ActiveKey& key)
+{ key.write(s); return s; }
 
 } // namespace Dakota
 

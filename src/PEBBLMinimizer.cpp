@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -61,7 +62,7 @@ PebbldMinimizer::PebbldMinimizer(Model &model)
 {//branchAndBound(model)
 };
 
-PebbldMinimizer::PebbldMinimizer(Model &model, int random_seed, int max_iter, int max_eval) 
+PebbldMinimizer::PebbldMinimizer(Model &model, int random_seed, size_t max_iter, size_t max_eval) 
        : Minimizer(BRANCH_AND_BOUND, model, std::shared_ptr<TraitsBase>(new PebbldTraits()))
 {//branchAndBound(model,random_seed, max_iter, max_eval)
 };

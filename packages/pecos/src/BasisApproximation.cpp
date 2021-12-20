@@ -22,30 +22,16 @@ namespace Pecos {
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_basis_approx() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~BasisApproximation). */
+    letter IS the representation, its rep pointer is set to NULL. */
 BasisApproximation::
 BasisApproximation(BaseConstructor, const SharedBasisApproxData& shared_data):
-  sharedDataRep(shared_data.data_rep()), basisApproxRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisApproximation::BasisApproximation(BaseConstructor) called to "
-        << "build base class for letter." << std::endl;
-#endif
-}
+  sharedDataRep(shared_data.data_rep())
+{ /* empty ctor */ }
 
 
-/** The default constructor: basisApproxRep is NULL in this case.  This
-    makes it necessary to check for NULL in the copy constructor,
-    assignment operator, and destructor. */
-BasisApproximation::BasisApproximation():
-  basisApproxRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisApproximation::BasisApproximation() called to build empty "
-        << "envelope." << std::endl;
-#endif
-}
+/** The default constructor: basisApproxRep is NULL in this case. */
+BasisApproximation::BasisApproximation()
+{ /* empty ctor */ }
 
 
 /** Envelope constructor only needs to extract enough data to properly
@@ -53,15 +39,9 @@ BasisApproximation::BasisApproximation():
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
 BasisApproximation(const SharedBasisApproxData& shared_data):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisApproximation::BasisApproximation(string&) called to "
-        << "instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  basisApproxRep = get_basis_approx(shared_data);
+  basisApproxRep(get_basis_approx(shared_data))
+{
   if ( !basisApproxRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -69,146 +49,61 @@ BasisApproximation(const SharedBasisApproxData& shared_data):
 
 /** Used only by the envelope constructor to initialize basisApproxRep to the 
     appropriate derived type. */
-BasisApproximation* BasisApproximation::
+std::shared_ptr<BasisApproximation> BasisApproximation::
 get_basis_approx(const SharedBasisApproxData& shared_data)
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_basis_approx(string&)."
-        << std::endl;
-#endif
-
   switch (shared_data.data_rep()->basisType) {
   case GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
-    return new NodalInterpPolyApproximation(shared_data);    break;
+    return std::make_shared<NodalInterpPolyApproximation>(shared_data); break;
   case GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    return new HierarchInterpPolyApproximation(shared_data); break;
+    return std::make_shared<HierarchInterpPolyApproximation>(shared_data); break;
   case GLOBAL_REGRESSION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_REGRESSION_ORTHOGONAL_POLYNOMIAL:
     // L1 or L2 regression
-    return new RegressOrthogPolyApproximation(shared_data);  break;
+    return std::make_shared<RegressOrthogPolyApproximation>(shared_data); break;
   case GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_PROJECTION_ORTHOGONAL_POLYNOMIAL:
     // projection via numerical integration of inner products
-    return new ProjectOrthogPolyApproximation(shared_data);  break;
+    return std::make_shared<ProjectOrthogPolyApproximation>(shared_data); break;
   case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     // coefficient import -- no coefficient computation required
-    return new OrthogPolyApproximation(shared_data);         break;
+    return std::make_shared<OrthogPolyApproximation>(shared_data); break;
   //case FOURIER_BASIS:
-  //  return new FourierBasisApproximation();                break;
+  //  return std::make_shared<FourierBasisApproximation>(); break;
   //case EIGEN_BASIS:
-  //  return new SVDLeftEigenBasisApproximation();           break;
+  //  return std::make_shared<SVDLeftEigenBasisApproximation>(); break;
   default:
     PCerr << "Error: BasisApproximation type "
 	  << shared_data.data_rep()->basisType << " not available."<< std::endl;
-    return NULL; break;
+    return std::shared_ptr<BasisApproximation>(); break;
   }
 }
 
 
-/** Copy constructor manages sharing of basisApproxRep and incrementing
-    of referenceCount. */
-BasisApproximation::BasisApproximation(const BasisApproximation& basis_approx)
-{
-  // Increment new (no old to decrement)
-  basisApproxRep = basis_approx.basisApproxRep;
-  if (basisApproxRep) // Check for an assignment of NULL
-    basisApproxRep->referenceCount++;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisApproximation::BasisApproximation(BasisApproximation&)"
-	<< std::endl;
-  if (basisApproxRep)
-    PCout << "basisApproxRep referenceCount = "
-	  << basisApproxRep->referenceCount << std::endl;
-#endif
-}
+/** Copy constructor manages sharing of basisApproxRep. */
+BasisApproximation::BasisApproximation(const BasisApproximation& basis_approx):
+  basisApproxRep(basis_approx.basisApproxRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old basisApproxRep,
-    assigns new basisApproxRep, and increments referenceCount for new
-    basisApproxRep. */
 BasisApproximation BasisApproximation::
 operator=(const BasisApproximation& basis_approx)
 {
-  if (basisApproxRep != basis_approx.basisApproxRep) { // std case: old != new
-    // Decrement old
-    if (basisApproxRep) // Check for null pointer
-      if (--basisApproxRep->referenceCount == 0) 
-	delete basisApproxRep;
-    // Assign and increment new
-    basisApproxRep = basis_approx.basisApproxRep;
-    if (basisApproxRep) // Check for an assignment of NULL
-      basisApproxRep->referenceCount++;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisApproximation::operator=(BasisApproximation&)" << std::endl;
-  if (basisApproxRep)
-    PCout << "basisApproxRep referenceCount = "
-	  << basisApproxRep->referenceCount << std::endl;
-#endif
-
+  basisApproxRep = basis_approx.basisApproxRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes basisApproxRep
-    when referenceCount reaches zero. */
 BasisApproximation::~BasisApproximation()
-{ 
-  // Check for NULL pointer 
-  if (basisApproxRep) {
-    --basisApproxRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "basisApproxRep referenceCount decremented to "
-	  << basisApproxRep->referenceCount << std::endl;
-#endif
-    if (basisApproxRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting basisApproxRep" << std::endl;
-#endif
-      delete basisApproxRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 void BasisApproximation::
-assign_rep(BasisApproximation* approx_rep, bool ref_count_incr)
+assign_rep(std::shared_ptr<BasisApproximation> approx_rep)
 {
-  if (basisApproxRep == approx_rep) {
-    // if ref_count_incr = true (rep from another envelope), do nothing as
-    // referenceCount should already be correct (see also operator= logic).
-    // if ref_count_incr = false (rep from on the fly), then this is an error.
-    if (!ref_count_incr) {
-      PCerr << "Error: duplicated approx_rep pointer assignment without "
-	    << "reference count increment in BasisApproximation::assign_rep()."
-	    << std::endl;
-      abort_handler(-1);
-    }
-  }
-  else { // normal case: old != new
-    // Decrement old
-    if (basisApproxRep) // Check for NULL
-      if ( --basisApproxRep->referenceCount == 0 ) 
-	delete basisApproxRep;
-    // Assign new
-    basisApproxRep = approx_rep;
-    // Increment new
-    if (basisApproxRep && ref_count_incr)// Check for NULL; honor ref_count_incr
-      basisApproxRep->referenceCount++;
-  }
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "BasisApproximation::assign_rep(BasisApproximation*)" << std::endl;
-  if (basisApproxRep)
-    PCout << "basisApproxRep referenceCount = "
-	  << basisApproxRep->referenceCount << std::endl;
-#endif
+  basisApproxRep = approx_rep;
 }
 
 
@@ -284,42 +179,6 @@ SurrogateData& BasisApproximation::surrogate_data()
 }
 
 
-void BasisApproximation::modified_surrogate_data(const SurrogateData& data)
-{
-  if (basisApproxRep)
-    basisApproxRep->modified_surrogate_data(data);
-  else {
-    PCerr << "Error: modified_surrogate_data(SurrogateData&) not available "
-	  << "for this basis approximation type." << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-const SurrogateData& BasisApproximation::modified_surrogate_data() const
-{
-  if (!basisApproxRep) {
-    PCerr << "Error: modified_surrogate_data() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-
-  return basisApproxRep->modified_surrogate_data();
-}
-
-
-SurrogateData& BasisApproximation::modified_surrogate_data()
-{
-  if (!basisApproxRep) {
-    PCerr << "Error: modified_surrogate_data() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-
-  return basisApproxRep->modified_surrogate_data();
-}
-
-
 int BasisApproximation::min_coefficients() const
 {
   if (!basisApproxRep) { // no default implementation
@@ -389,6 +248,13 @@ void BasisApproximation::finalize_coefficients()
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+bool BasisApproximation::advancement_available()
+{
+  // default is no saturation in refinement candidates
+  return (basisApproxRep) ? basisApproxRep->advancement_available() : true;
 }
 
 

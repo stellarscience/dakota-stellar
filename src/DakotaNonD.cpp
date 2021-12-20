@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -33,18 +34,18 @@ NonD* NonD::nondInstance(NULL);
 
 NonD::NonD(ProblemDescDB& problem_db, Model& model):
   Analyzer(problem_db, model),
-  respLevelTarget(probDescDB.get_short("method.nond.response_level_target")),
+  respLevelTarget(problem_db.get_short("method.nond.response_level_target")),
   respLevelTargetReduce(
-    probDescDB.get_short("method.nond.response_level_target_reduce")),
-  requestedRespLevels(probDescDB.get_rva("method.nond.response_levels")),
-  requestedProbLevels(probDescDB.get_rva("method.nond.probability_levels")),
-  requestedRelLevels(probDescDB.get_rva("method.nond.reliability_levels")),
+    problem_db.get_short("method.nond.response_level_target_reduce")),
+  requestedRespLevels(problem_db.get_rva("method.nond.response_levels")),
+  requestedProbLevels(problem_db.get_rva("method.nond.probability_levels")),
+  requestedRelLevels(problem_db.get_rva("method.nond.reliability_levels")),
   requestedGenRelLevels(
-    probDescDB.get_rva("method.nond.gen_reliability_levels")),
+    problem_db.get_rva("method.nond.gen_reliability_levels")),
   totalLevelRequests(0),
-  cdfFlag(probDescDB.get_short("method.nond.distribution") != COMPLEMENTARY),
+  cdfFlag(problem_db.get_short("method.nond.distribution") != COMPLEMENTARY),
   pdfOutput(false),
-  finalMomentsType(probDescDB.get_short("method.nond.final_moments"))
+  finalMomentsType(problem_db.get_short("method.nond.final_moments"))
 {
   initialize_counts();
 
@@ -74,7 +75,7 @@ NonD::NonD(ProblemDescDB& problem_db, Model& model):
 
 NonD::NonD(unsigned short method_name, Model& model):
   Analyzer(method_name, model), totalLevelRequests(0), cdfFlag(true),
-  pdfOutput(false), finalMomentsType(STANDARD_MOMENTS)
+  pdfOutput(false), finalMomentsType(Pecos::STANDARD_MOMENTS)
 {
   // NonDEvidence and NonDAdaptImpSampling use this ctor
 
@@ -90,7 +91,7 @@ NonD::NonD(unsigned short method_name, Model& model):
 NonD::NonD(unsigned short method_name, const RealVector& lower_bnds,
 	   const RealVector& upper_bnds):
   Analyzer(method_name), epistemicStats(false), totalLevelRequests(0),
-  cdfFlag(true), pdfOutput(false), finalMomentsType(STANDARD_MOMENTS)
+  cdfFlag(true), pdfOutput(false), finalMomentsType(Pecos::STANDARD_MOMENTS)
 {
   // ConcurrentStrategy uses this ctor for design opt, either for multi-start
   // initial points or multibjective weight sets.
@@ -252,8 +253,8 @@ construct_lhs(Iterator& u_space_sampler, Model& u_model,
   }
 
   // construct NonDLHSSampling with default sampling_vars_mode (ACTIVE)
-  u_space_sampler.assign_rep(new NonDLHSSampling(u_model, sample_type,
-    num_samples, seed, rng, vary_pattern, sampling_vars_mode), false);
+  u_space_sampler.assign_rep(std::make_shared<NonDLHSSampling>(u_model,
+    sample_type, num_samples, seed, rng, vary_pattern, sampling_vars_mode));
 }
 
 
@@ -312,7 +313,7 @@ void NonD::initialize_final_statistics()
       std::sprintf(resp_tag, "_r%zu", i+1);
       if (finalMomentsType) {
 	stats_labels[cntr++] = String("mean") + String(resp_tag);
-	stats_labels[cntr++] = (finalMomentsType == CENTRAL_MOMENTS) ?
+	stats_labels[cntr++] = (finalMomentsType == Pecos::CENTRAL_MOMENTS) ?
 	  String("variance") + String(resp_tag) :
 	  String("std_dev")  + String(resp_tag);
       }
@@ -349,11 +350,12 @@ void NonD::initialize_final_statistics()
 }
 
 
-void NonD::pull_level_mappings(RealVector& level_maps)
+void NonD::pull_level_mappings(RealVector& level_maps, size_t offset)
 {
-  level_maps.sizeUninitialized(totalLevelRequests);
+  if (level_maps.length() < offset + totalLevelRequests)
+    level_maps.resize(totalLevelRequests);
 
-  size_t i, j, num_lev, cntr = 0;
+  size_t i, j, num_lev, cntr = offset;
   for (i=0; i<numFunctions; ++i) {
     num_lev = requestedRespLevels[i].length();
     switch (respLevelTarget) {
@@ -378,9 +380,15 @@ void NonD::pull_level_mappings(RealVector& level_maps)
 }
 
 
-void NonD::push_level_mappings(const RealVector& level_maps)
+void NonD::push_level_mappings(const RealVector& level_maps, size_t offset)
 {
-  size_t i, j, num_lev, cntr = 0;
+  if (level_maps.length() < offset + totalLevelRequests) {
+    Cerr << "Error: insufficient vector length in NonD::push_level_mappings()"
+	 << std::endl;
+    abort_handler(METHOD_ERROR);
+  }
+
+  size_t i, j, num_lev, cntr = offset;
   for (i=0; i<numFunctions; ++i) {
     num_lev = requestedRespLevels[i].length();
     switch (respLevelTarget) {
@@ -405,62 +413,103 @@ void NonD::push_level_mappings(const RealVector& level_maps)
 }
 
 
+/** A one-dimensional sequence is assumed in this case. */
 void NonD::
-load_pilot_sample(const SizetArray& pilot_spec, SizetArray& delta_N_l)
+configure_sequence(//unsigned short hierarch_dim,
+		   size_t& num_steps, size_t& secondary_index, short& seq_type)
 {
-  size_t pilot_size = pilot_spec.size(), delta_size = delta_N_l.size();
-  if (delta_size == pilot_size)
+  // Allow either model forms or discretization levels, but not both
+  // (precedence determined by ML/MF calling algorithm)
+  ModelList& sub_models = iteratedModel.subordinate_models(false);
+  ModelLIter m_iter = --sub_models.end(); // HF model
+  size_t num_mf = sub_models.size(), num_hf_lev = m_iter->solution_levels();
+
+  //switch (hierarch_dim) {
+  //case 1:
+    if (iteratedModel.multilevel()) {
+      seq_type  = Pecos::RESOLUTION_LEVEL_SEQUENCE;
+      num_steps = num_hf_lev;  secondary_index = num_mf - 1;
+      if (num_mf > 1)
+	Cerr << "Warning: multiple model forms will be ignored by "
+	     << "NonD::configure_sequence().\n";
+    }
+    else if (iteratedModel.multifidelity()) {
+      seq_type  = Pecos::MODEL_FORM_SEQUENCE;
+      num_steps = num_mf;
+      // retain each model's active solution control index:
+      secondary_index = SZ_MAX;
+      if (num_hf_lev > 1)
+	Cerr << "Warning: solution control levels will be ignored by "
+	     << "NonD::configure_sequence().\n";
+    }
+    else {
+      Cerr << "Error: no model hierarchy evident in NonD::configure_sequence()."
+	   << std::endl;
+      abort_handler(METHOD_ERROR);
+    }
+  /*
+    break;
+  case 2:
+    if (iteratedModel.multilevel_multifidelity()) {
+      seq_type  = Pecos::MODEL_FORM_RESOLUTION_LEVEL_SEQUENCE;
+      num_steps = num_mf;
+      secondary_index = num_hf_lev; // use this field as secondary step count?
+    }
+    else {
+      Cerr << "Error: no compatible model hierarchy evident in NonDExpansion::"
+	   << "configure_sequence()." << std::endl;
+      abort_handler(METHOD_ERROR);
+    }
+    break;
+  }
+  */
+}
+
+
+bool NonD::
+query_cost(unsigned short num_steps, bool multilevel, RealVector& cost)
+{
+  bool cost_defined = true;
+  ModelList& sub_models = iteratedModel.subordinate_models(false);
+  ModelLIter m_iter;
+  if (multilevel) {
+    ModelLIter m_iter = --sub_models.end(); // HF model
+    cost = m_iter->solution_level_costs();  // can be empty
+    if (cost.length() != num_steps)
+      cost_defined = false;
+  }
+  else  {
+    cost.sizeUninitialized(num_steps);
+    m_iter = sub_models.begin();
+    for (unsigned short i=0; i<num_steps; ++i, ++m_iter) {
+      cost[i] = m_iter->solution_level_cost(); // cost for active soln index
+      if (cost[i] <= 0.) cost_defined = false;
+    }
+  }
+  if (!cost_defined) cost.sizeUninitialized(0); // for compute_equivalent_cost()
+  return cost_defined;
+}
+
+
+void NonD::
+load_pilot_sample(const SizetArray& pilot_spec, size_t num_steps,
+		  SizetArray& delta_N_l)
+{
+  size_t pilot_size = pilot_spec.size();
+  if (num_steps == pilot_size)
     delta_N_l = pilot_spec;
   else if (pilot_size <= 1) {
     size_t num_samp = (pilot_size) ? pilot_spec[0] : 100;
-    delta_N_l.assign(delta_size, num_samp);
+    delta_N_l.assign(num_steps, num_samp);
   }
   else {
     Cerr << "Error: inconsistent pilot sample size (" << pilot_size
-	 << ") in load_pilot_sample(SizetArray).  " << delta_size
+	 << ") in NonD::load_pilot_sample(SizetArray).  " << num_steps
 	 << " expected." << std::endl;
     abort_handler(METHOD_ERROR);
   }
 
   Cout << "\nPilot sample:\n" << delta_N_l << std::endl;
-}
-
-
-void NonD::
-load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
-		  SizetArray& delta_N_l)
-{
-  size_t num_mf = N_l.size(), pilot_size = pilot_spec.size(), delta_size;
-
-  if (num_mf > 1) { // CV only case
-    delta_size = num_mf;
-    for (size_t i=0; i<num_mf; ++i)
-      if (N_l[i].size() > 1) {
-	Cerr << "Error: multidimensional N_l not expected in 1-dimensional "
-	     << "load_pilot_sample(SizetArray)" << std::endl;
-	abort_handler(METHOD_ERROR);
-      }
-    Cout << "\nMultifidelity pilot sample:\n";
-  }
-  else { // ML only case
-    delta_size = N_l[0].size();
-    Cout << "\nMultilevel pilot sample:\n";
-  }
-
-  if (delta_size == pilot_size)
-    delta_N_l = pilot_spec;
-  else if (pilot_size <= 1) {
-    size_t num_samp = (pilot_size) ? pilot_spec[0] : 100;
-    delta_N_l.assign(delta_size, num_samp);
-  }
-  else {
-    Cerr << "Error: inconsistent pilot sample size (" << pilot_size
-	 << ") in load_pilot_sample(SizetArray).  " << delta_size
-	 << " expected." << std::endl;
-    abort_handler(METHOD_ERROR);
-  }
-
-  Cout << delta_N_l << std::endl;
 }
 
 
@@ -472,6 +521,7 @@ load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
   delta_N_l.resize(num_mf);
 
   // allow several different pilot sample specifications
+  // This approach assumes MLMF: includes all model forms and resolution levels
   if (pilot_size <= 1) {
     num_samp = (pilot_size) ? pilot_spec[0] : 100;
     for (i=0; i<num_mf; ++i)
@@ -482,7 +532,6 @@ load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
     bool same_lev = true;
 
     for (i=0; i<num_mf; ++i) {
-      // for now, only SimulationModel supports solution_levels()
       num_lev = N_l[i].size();
       delta_N_l[i].resize(num_lev);
       if (i && num_lev != num_prev_lev) same_lev = false;
@@ -505,13 +554,43 @@ load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
     }
     else {
       Cerr << "Error: inconsistent pilot sample size (" << pilot_size
-	   << ") in load_pilot_sample(Sizet2DArray)." << std::endl;
+	   << ") in NonD::load_pilot_sample(Sizet2DArray)." << std::endl;
       abort_handler(METHOD_ERROR);
     }
   }
 
   Cout << "\nMultilevel-multifidelity pilot sample:\n";
   print_multilevel_evaluation_summary(Cout, delta_N_l);
+}
+
+
+void NonD::
+inflate_final_samples(const Sizet2DArray& N_l_2D, bool multilev,
+		      size_t fixed_index, Sizet3DArray& N_l_3D)
+{
+  // 2D array is num_steps x num_qoi
+  // 3D array is num_mf x num_lev x num_qoi which we slice as either:
+  // > MF case: 1:num_mf x active_lev x 1:num_qoi
+  // > ML case: active_mf x 1:num_lev x 1:num_qoi
+
+  size_t i, num_mf = N_l_3D.size();  
+  if (multilev) // ML case
+    N_l_3D[fixed_index] = N_l_2D;
+  else { // MF case
+    if (fixed_index == SZ_MAX) {
+      ModelList& sub_models = iteratedModel.subordinate_models(false);
+      ModelLIter m_iter = sub_models.begin();
+      size_t m_soln_lev, active_lev;
+      for (i=0; i<num_mf && m_iter != sub_models.end(); ++i, ++m_iter) {
+	m_soln_lev = m_iter->solution_level_cost_index();
+	active_lev = (m_soln_lev == _NPOS) ? 0 : m_soln_lev;
+	N_l_3D[i][active_lev] = N_l_2D[i];  // assign vector of qoi samples
+      }
+    }
+    else // valid fixed_index
+      for (i=0; i<num_mf; ++i)
+	N_l_3D[i][fixed_index] = N_l_2D[i]; // assign vector of qoi samples
+  }
 }
 
 
@@ -1060,25 +1139,88 @@ print_multilevel_evaluation_summary(std::ostream& s, const Sizet2DArray& N_samp)
   size_t j, width = write_precision+7, num_lev = N_samp.size();
   for (j=0; j<num_lev; ++j) {
     const SizetArray& N_j = N_samp[j];
-    s << "                     " << std::setw(width) << N_j[0];
-    if (!homogeneous(N_j)) // print all qoi counts
-      for (size_t q=1; q<numFunctions; ++q)
-	s << ' ' << N_j[q];
-    s << '\n';
+    if (!N_j.empty()) {
+      s << "                     " << std::setw(width) << N_j[0];
+      if (!homogeneous(N_j)) { // print all counts in this 1D array
+	size_t q, num_q = N_j.size();
+	for (size_t q=1; q<num_q; ++q)
+	  s << ' ' << N_j[q];
+      }
+      s << '\n';
+    }
   }
 }
 
 
 void NonD::
-print_multilevel_evaluation_summary(std::ostream& s, const Sizet3DArray& N_samp)
+print_multilevel_evaluation_summary(std::ostream& s, const Sizet3DArray& N_samp,
+				    String type)
 {
   size_t i, j, num_mf = N_samp.size(), width = write_precision+7;
-  if (num_mf == 1)  s << "<<<<< Final samples per level:\n";
-  else              s << "<<<<< Final samples per model form:\n";
+  if (num_mf == 1)  s << "<<<<< " << type << " samples per level:\n";
+  else              s << "<<<<< " << type << " samples per model form:\n";
   for (i=0; i<num_mf; ++i) {
     if (num_mf > 1) s << "      Model Form " << i+1 << ":\n";
     print_multilevel_evaluation_summary(s, N_samp[i]);
   }
+}
+
+
+unsigned short NonD::
+sub_optimizer_select(unsigned short requested_sub_method,
+		     unsigned short   default_sub_method)
+{
+  unsigned short assigned_sub_method = requested_sub_method;
+  switch (requested_sub_method) {
+  case SUBMETHOD_SQP:
+#ifndef HAVE_NPSOL
+    Cerr << "\nError: this executable not configured with NPSOL SQP."
+	 << "\n       Please select alternate sub-method solver." << std::endl;
+    assigned_sub_method = SUBMETHOD_NONE; // model,optimizer not constructed
+#endif
+    break;
+  case SUBMETHOD_NIP:
+#ifndef HAVE_OPTPP
+    Cerr << "\nError: this executable not configured with OPT++ NIP."
+	 << "\n       Please select alternate sub-method solver." << std::endl;
+    assigned_sub_method = SUBMETHOD_NONE; // model,optimizer not constructed
+#endif
+    break;
+  case SUBMETHOD_DEFAULT:
+    switch (default_sub_method) {
+    case SUBMETHOD_SQP: // use SUBMETHOD_SQP if available
+#ifdef HAVE_NPSOL
+      assigned_sub_method = SUBMETHOD_SQP;
+#elif HAVE_OPTPP
+      assigned_sub_method = SUBMETHOD_NIP;
+#endif
+      break;
+    case SUBMETHOD_NIP:
+#ifdef HAVE_OPTPP
+      assigned_sub_method = SUBMETHOD_NIP;
+#elif HAVE_NPSOL
+      assigned_sub_method = SUBMETHOD_SQP;
+#endif
+      break;
+    }
+    if (assigned_sub_method == SUBMETHOD_DEFAULT) {
+      Cerr << "\nError: this executable not configured with an available "
+	   << "sub-method solver." << std::endl;
+      assigned_sub_method = SUBMETHOD_NONE;
+    }
+    break;
+  case SUBMETHOD_NONE:
+    // assigned = requested = SUBMETHOD_NONE is valid for the case where a
+    // sub-method solve is to be suppressed; clients are free to treat this
+    // return value as an error
+    break;
+  default:
+    Cerr << "\nError: sub-method not recognized in NonD::"
+	 << "sub_optimizer_select()." << std::endl;
+    assigned_sub_method = SUBMETHOD_NONE;
+    break;
+  }
+  return assigned_sub_method;
 }
 
 
@@ -1290,7 +1432,7 @@ void NonD::archive_allocate_pdf() // const
 
 void NonD::archive_pdf(size_t i, size_t inc_id) // const
 {
-  if (!resultsDB.active()) return;
+  if (!resultsDB.active() || !pdfOutput ) return;
 
   size_t pdf_len = computedPDFOrdinates[i].length();
   RealMatrix pdf(3, pdf_len);
@@ -1312,6 +1454,12 @@ void NonD::archive_pdf(size_t i, size_t inc_id) // const
   scales.emplace(0, RealScale("lower_bounds", &computedPDFAbscissas[i][0], pdf_len, ScaleScope::UNSHARED));
   scales.emplace(0, RealScale("upper_bounds", &computedPDFAbscissas[i][1], pdf_len, ScaleScope::UNSHARED));
   resultsDB.insert(run_identifier(),location, computedPDFOrdinates[i], scales);
+}
+
+void NonD::archive_equiv_hf_evals(const Real equiv_hf_evals) {
+  if (!resultsDB.active()) return;
+  resultsDB.add_metadata_to_execution(run_identifier(), 
+      {ResultAttribute<Real>("equiv_hf_evals",equiv_hf_evals)});
 }
 
 } // namespace Dakota

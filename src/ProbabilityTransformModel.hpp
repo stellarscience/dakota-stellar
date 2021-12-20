@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -61,8 +62,7 @@ protected:
   //bool initialize_mapping(ParLevLIter pl_iter);
   //bool finalize_mapping();
   bool resize_pending() const;
-  void update_from_subordinate_model(size_t depth =
-				     std::numeric_limits<size_t>::max());
+  void update_from_subordinate_model(size_t depth = SZ_MAX);
 
   /// set primaryACVarMapIndices and secondaryACVarMapTargets (only, for now)
   void nested_variable_mappings(const SizetArray& c_index1,
@@ -110,9 +110,6 @@ protected:
 
   /// instantiate and initialize natafTransform
   void initialize_nataf();
-  // alternate form: initialize natafTransform based on incoming data
-  //void initialize_nataf(const Pecos::ProbabilityTransformation& transform,
-  //			bool deep_copy = false);
 
   // x-space correlations assigned in Model and u-space is uncorrelated
   //void update_distribution_correlations();
@@ -279,47 +276,6 @@ inline void ProbabilityTransformModel::initialize_nataf()
 }
 
 
-/* This function is commonly used to publish tranformation data when
-   the Model variables are in a transformed space (e.g., u-space) and
-   ProbabilityTransformation::ranVarTypes et al. may not be generated
-   directly.  This allows for the use of inverse transformations to
-   return the transformed space variables to their original states.
-void ProbabilityTransformModel::
-initialize_nataf(const Pecos::ProbabilityTransformation& transform,
-		 bool deep_copy)
-{
-  if (deep_copy) {
-    initialize_nataf();
-    natafTransform.copy(transform);
-    // TO DO: deep copy of randomVarsX not yet implemented in
-    // Pecos::ProbabilityTransformation::copy()
-  }
-  else
-    natafTransform = transform; // shared rep
-}
-*/
-
-
-inline void ProbabilityTransformModel::
-initialize_transformation(short u_space_type)
-{
-  if (mvDist.is_null()) // already initialized: no current reason to update
-    mvDist = Pecos::MultivariateDistribution(Pecos::MARGINALS_CORRELATIONS);
-
-  const Pecos::MultivariateDistribution& x_dist
-    = subModel.multivariate_distribution();
-  initialize_distribution_types(u_space_type, x_dist, mvDist);
-  initialize_nataf();
-  initialize_dakota_variable_types();
-  verify_correlation_support(u_space_type);
-
-  // pull reference values for distribution params as there are some run-time
-  // operations that require them (e.g. grid_size() for maxConcurrency).
-  // These params are updated below at run time.
-  mvDist.pull_distribution_parameters(x_dist);
-}
-
-
 inline void ProbabilityTransformModel::update_transformation()
 {
   mvDist.pull_distribution_parameters(subModel.multivariate_distribution());
@@ -336,6 +292,25 @@ inline void ProbabilityTransformModel::update_transformation()
 
 
 inline void ProbabilityTransformModel::
+initialize_transformation(short u_space_type)
+{
+  if (mvDist.is_null()) // already initialized: no current reason to update
+    mvDist = Pecos::MultivariateDistribution(Pecos::MARGINALS_CORRELATIONS);
+
+  const Pecos::MultivariateDistribution& x_dist
+    = subModel.multivariate_distribution();
+  initialize_distribution_types(u_space_type, x_dist, mvDist);
+  initialize_nataf();
+  initialize_dakota_variable_types();
+  verify_correlation_support(u_space_type);
+
+  // also perform run-time update as some construct-time operations require it
+  // (e.g. grid_size() for maxConcurrency, inverse vars transform in ctor).
+  update_transformation();
+}
+
+
+inline void ProbabilityTransformModel::
 update_from_subordinate_model(size_t depth)
 {
   // standard updates for RecastModels, including subModel recursion
@@ -343,7 +318,7 @@ update_from_subordinate_model(size_t depth)
   // ordering problem with invMapping dependence on dist params
 
   // data flows from the bottom-up, so recurse first
-  if (depth == std::numeric_limits<size_t>::max())
+  if (depth == SZ_MAX)
     subModel.update_from_subordinate_model(depth); // retain special value (inf)
   else if (depth)
     subModel.update_from_subordinate_model(depth - 1); // decrement

@@ -110,13 +110,13 @@ protected:
   Real betaStat;
 
   /// pointer to the Boost weibull_distribution instance
-  weibull_dist* weibullDist;
+  std::unique_ptr<weibull_dist> weibullDist;
 };
 
 
 inline WeibullRandomVariable::WeibullRandomVariable():
   RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(1.),
-  weibullDist(NULL)
+  weibullDist(new weibull_dist(alphaStat, betaStat))
 { ranVarType = WEIBULL; }
 
 
@@ -127,7 +127,7 @@ inline WeibullRandomVariable::WeibullRandomVariable(Real alpha, Real beta):
 
 
 inline WeibullRandomVariable::~WeibullRandomVariable()
-{ if (weibullDist) delete weibullDist; }
+{ }
 
 
 inline Real WeibullRandomVariable::cdf(Real x) const
@@ -340,8 +340,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void WeibullRandomVariable::update_boost()
 {
-  if (weibullDist) delete weibullDist;
-  weibullDist = new weibull_dist(alphaStat, betaStat);
+  weibullDist.reset(new weibull_dist(alphaStat, betaStat));
 }
 
 

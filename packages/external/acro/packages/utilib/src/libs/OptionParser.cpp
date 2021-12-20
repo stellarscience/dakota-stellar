@@ -437,8 +437,10 @@ void OptionParser::write_values(std::ostream& os, const std::string& opt_label) 
          if (output.size() == 0)
             os << "\"\"";
          else if ( output.find(" ") != string::npos &&
-                   ! (( output[0] == '"' ) && ( *output.rbegin() == '"' ) ||
-                      ( output[0] == '[' ) && ( *output.rbegin() == ']' )))
+                   ! ( (output[0] == '"'  &&  *output.rbegin() == '"') ||
+                       (output[0] == '['  &&  *output.rbegin() == ']')
+		       )
+		   )
             // Instead of explicitly testing for std::string and
             // CharString, we will simply look for data with a space
             // that is not already within quotes or look like a vector.
@@ -702,7 +704,7 @@ void OptionParser::add_parameter(data_t any_param)
          if (param.name == "")
          {
             std::string tmp;
-            tmp += "_" + param.short_name;;
+            tmp += std::string("_") + param.short_name;
             parameters[tmp] = any_param;
          }
       }

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -24,7 +25,7 @@
 // always declare ASL rather than have a conditionally included class member
 struct ASL;
 
-namespace Pecos { class SurrogateData; }
+namespace Pecos { class SurrogateData; class ActiveKey; }
 
 namespace Dakota {
 
@@ -123,22 +124,18 @@ public:
   /// ApproximationInterface (used by DataFitSurrModels).
   virtual int recommended_points(bool constraint_flag) const;
 
-  /// activate an approximation state based on its multi-index key
-  virtual void active_model_key(const UShortArray& mi_key);
+  /// activate an approximation state based on its key
+  virtual void active_model_key(const Pecos::ActiveKey& key);
   /// reset initial state by removing all model keys for an approximation
   virtual void clear_model_keys();
 
-  /// assign key for the surrogate model within a {truth,surrogate} pairing
-  virtual void surrogate_model_key(const UShortArray& key);
-  /// assign key for the truth model within a {truth,surrogate} pairing
-  virtual void truth_model_key(const UShortArray& key);
-
   /// set the (currently active) approximation function index set
-  virtual void approximation_function_indices(const IntSet& approx_fn_indices);
+  virtual void
+    approximation_function_indices(const SizetSet& approx_fn_indices);
 
-  /// link together more than one SurrogateData instance within an
-  /// ApproximationInterface
-  virtual void link_multilevel_approximation_data();
+  // link together more than one SurrogateData instance within an
+  // ApproximationInterface
+  //virtual void link_multilevel_approximation_data();
 
   /// updates the anchor point for an approximation
   virtual void update_approximation(const Variables& vars,
@@ -159,6 +156,17 @@ public:
   /// appends multiple points to an existing approximation
   virtual void append_approximation(const VariablesArray& vars_array,
 				    const IntResponseMap& resp_map);
+  /// appends multiple points to an existing approximation
+  virtual void append_approximation(const IntVariablesMap& vars_map,
+				    const IntResponseMap&  resp_map);
+
+  /// replace the response for a single point within an existing approximation
+  virtual void replace_approximation(const IntResponsePair& response_pr);
+  /// replace responses for multiple points within an existing approximation
+  virtual void replace_approximation(const IntResponseMap& resp_map);
+  /// assigns trackEvalIds to activate tracking of evaluation ids within
+  /// surrogate data, enabling id-based lookups for data replacement
+  virtual void track_evaluation_ids(bool track);
 
   /// builds the approximation
   virtual void build_approximation(const RealVector& c_l_bnds,
@@ -170,7 +178,7 @@ public:
   virtual void export_approximation();
 
   /// rebuilds the approximation after a data update
-  virtual void rebuild_approximation(const BoolDeque& rebuild_deque);
+  virtual void rebuild_approximation(const BitArray& rebuild_fns);
 
   /// removes data from last append from the approximation
   virtual void pop_approximation(bool save_data);
@@ -191,6 +199,13 @@ public:
   /// clear inactive approximation data
   virtual void clear_inactive();
 
+  /// query for available advancements in approximation resolution controls
+  virtual bool advancement_available();
+  /// query for change in approximation formulation
+  virtual bool formulation_updated() const;
+  /// assign an updated status for approximation formulation to force rebuild
+  virtual void formulation_updated(bool update);
+
   /// approximation cross-validation quality metrics per response function
   virtual Real2DArray cv_diagnostics(const StringArray& metric_types, 
 				     unsigned num_folds);
@@ -209,8 +224,7 @@ public:
   virtual std::vector<Approximation>& approximations();
   /// retrieve the approximation data from a particular Approximation
   /// within an ApproximationInterface
-  virtual const Pecos::SurrogateData&
-    approximation_data(size_t fn_index, size_t d_index = _NPOS);
+  virtual const Pecos::SurrogateData& approximation_data(size_t fn_index);
 
   /// retrieve the approximation coefficients from each Approximation
   /// within an ApproximationInterface
@@ -238,7 +252,6 @@ public:
   /// clean up any interface parameter/response files when aborting
   virtual void file_cleanup() const;
 
-
   //
   //- Heading: Set and Inquire functions
   //
@@ -248,7 +261,13 @@ public:
   void cache_unmatched_response(int raw_id);
 
   /// assign letter or replace existing letter with a new one
-  void assign_rep(Interface* interface_rep, bool ref_count_incr = true);
+  void assign_rep(std::shared_ptr<Interface> interface_rep);
+
+  /// assign letter or replace existing letter with a new one
+  /// DEPRECATED, but left for library mode clients to migrate:
+  /// transfers memory ownership to the contained shared_ptr;
+  /// ref_count_incr is ignored
+  void assign_rep(Interface* interface_rep, bool ref_count_incr = false);
 
   /// returns the interface type
   unsigned short interface_type() const;
@@ -279,6 +298,9 @@ public:
 
   /// function to check interfaceRep (does this envelope contain a letter?)
   bool is_null() const;
+
+  /// function to return the letter
+  std::shared_ptr<Interface> interface_rep();
 
   /// set the evaluation tag prefix (does not recurse)
   void eval_tag_prefix(const String& eval_id_str, bool append_iface_id = true);
@@ -415,7 +437,7 @@ private:
   //
 
   /// Used by the envelope to instantiate the correct letter class
-  Interface* get_interface(ProblemDescDB& problem_db);
+  std::shared_ptr<Interface> get_interface(ProblemDescDB& problem_db);
 
   /// Used by algebraic mappings to determine the correct AMPL function
   /// evaluation call to make
@@ -459,9 +481,7 @@ private:
   int numAlgebraicResponses;
 
   /// pointer to the letter (initialized only for the envelope)
-  Interface* interfaceRep;
-  /// number of objects sharing interfaceRep
-  int referenceCount;
+  std::shared_ptr<Interface> interfaceRep;
 
   /// pointer to an AMPL solver library (ASL) object
   ASL *asl;
@@ -492,6 +512,9 @@ inline bool Interface::iterator_eval_dedicated_master() const
 
 inline bool Interface::is_null() const
 { return (interfaceRep) ? false : true; }
+
+inline std::shared_ptr<Interface> Interface::interface_rep()
+{ return interfaceRep; }
 
 
 /// global comparison function for Interface

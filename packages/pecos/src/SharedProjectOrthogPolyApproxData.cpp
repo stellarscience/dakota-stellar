@@ -31,17 +31,17 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
   // is not robust enough for anisotropic updates --> track using Prev arrays.
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(driverRep);
+    const UShortArray& quad_order = tpq_driver->quadrature_order();
     // Note: unlike ssg_level, quad_order includes anisotropic weighting
-    bool update_exp_form
-      = (expConfigOptions.refineControl || quad_order != quadOrderPrev ||
-	 activeKey  != prevActiveKey);
+    bool update_exp_form = (expConfigOptions.refineControl ||
+      quad_order != quadOrderPrev || activeKey != prevActiveKey);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
       UShortArray int_order(numVars);
-      quadrature_order_to_integrand_order(driverRep, quad_order, int_order);
+      quadrature_order_to_integrand_order(*driverRep, quad_order, int_order);
       UShortArray& ao = approxOrdIter->second;
       integrand_order_to_expansion_order(int_order, ao);
       UShort2DArray& mi = multiIndexIter->second;
@@ -71,7 +71,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     break;
   }
   case CUBATURE: {
-    CubatureDriver* cub_driver = (CubatureDriver*)driverRep;
+    std::shared_ptr<CubatureDriver> cub_driver =
+      std::static_pointer_cast<CubatureDriver>(driverRep);
     //unsigned short cub_int_order = cub_driver->integrand_order();
     //bool update_exp_form = (expConfigOptions.refineControl ||
     //  cub_int_order != cubIntOrderPrev || activeKey != prevActiveKey);
@@ -97,7 +98,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     break;
   }
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(driverRep);
     unsigned short    ssg_level = csg_driver->level();
     const RealVector& aniso_wts = csg_driver->anisotropic_weights();
     bool update_exp_form
@@ -107,7 +109,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 
     UShort2DArray& mi = multiIndexIter->second;
     if (update_exp_form) {
-      sparse_grid_multi_index(csg_driver, mi);
+      sparse_grid_multi_index(*csg_driver, mi);
 
       // precomputation performed by ssgDriver prior to allocate_data()
       //precompute_maximal_rules(multiIndex);
@@ -136,10 +138,11 @@ void SharedProjectOrthogPolyApproxData::increment_data()
     prevMultiIndex = multiIndexIter->second;
     prevApproxOrder = approxOrdIter->second;
 
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    std::shared_ptr<TensorProductDriver> tpq_driver =
+      std::static_pointer_cast<TensorProductDriver>(driverRep);
     const UShortArray& quad_order = tpq_driver->quadrature_order();
     UShortArray int_order(numVars);
-    quadrature_order_to_integrand_order(driverRep, quad_order, int_order);
+    quadrature_order_to_integrand_order(*driverRep, quad_order, int_order);
     UShortArray& ao = approxOrdIter->second;
     integrand_order_to_expansion_order(int_order, ao);
     UShort2DArray& mi = multiIndexIter->second;
@@ -151,16 +154,16 @@ void SharedProjectOrthogPolyApproxData::increment_data()
     break;
   }
   case INCREMENTAL_SPARSE_GRID: { // augment previous data
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
     switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       // increment tpMultiIndex{,Map,MapRef} arrays, update tpMultiIndex,
       // update multiIndex and append bookkeeping
-      increment_trial_set(isg_driver, multiIndexIter->second);
+      increment_trial_set(*isg_driver, multiIndexIter->second);
       break;
     default: // UNIFORM_CONTROL, DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY}
-      increment_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
+      increment_sparse_grid_multi_index(*isg_driver, multiIndexIter->second);
       break;
     }
     // update Sobol' array sizes to pick up new interaction terms
@@ -179,8 +182,8 @@ void SharedProjectOrthogPolyApproxData::increment_component_sobol()
   switch (expConfigOptions.expCoeffsSolnApproach) {
   //case QUADRATURE: // increment_data() uses allocate_component_sobol()
   case INCREMENTAL_SPARSE_GRID: {
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
     switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       if (isg_driver->smolyak_coefficients().back()) {
@@ -223,8 +226,8 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
     multiIndexIter->second = prevMultiIndex;
     break;
   case INCREMENTAL_SPARSE_GRID: {
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
     // Note: trial/increment sets are still available since expansion pop is
     // ordered to precede grid pop (reverse order from increment grid +
     // update / push expansion)
@@ -233,7 +236,7 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
       decrement_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
     default: // UNIFORM_CONTROL, DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY}
-      decrement_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
+      decrement_sparse_grid_multi_index(*isg_driver, multiIndexIter->second);
       break;
     }
   }
@@ -250,9 +253,9 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
     // for decrement
     prevMultiIndex = mi;  prevApproxOrder = ao;
 
-    std::map<UShortArray, UShort2DArrayDeque >::iterator pop1_it
+    std::map<ActiveKey, UShort2DArrayDeque >::iterator pop1_it
       = poppedMultiIndex.find(activeKey);
-    std::map<UShortArray, UShortArrayDeque >::iterator pop2_it
+    std::map<ActiveKey, UShortArrayDeque >::iterator pop2_it
       = poppedApproxOrder.find(activeKey);
     if (pop1_it == poppedMultiIndex.end()  || pop1_it->second.empty() ||
 	pop2_it == poppedApproxOrder.end() || pop2_it->second.empty() ) {
@@ -267,14 +270,14 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
     break;
   }
   case INCREMENTAL_SPARSE_GRID: {
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
     switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       pre_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
     default: // UNIFORM_CONTROL, DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY}
-      push_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
+      push_sparse_grid_multi_index(*isg_driver, multiIndexIter->second);
       break;
     }
   }
@@ -287,8 +290,8 @@ void SharedProjectOrthogPolyApproxData::post_push_data()
   switch (expConfigOptions.expCoeffsSolnApproach) {
   //case QUADRATURE: case CUBATURE: // no-op
   case INCREMENTAL_SPARSE_GRID: {
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(driverRep);
     switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       post_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
@@ -305,9 +308,9 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: { // for completeness (not used)
-    std::map<UShortArray, UShort2DArrayDeque >::iterator pop1_it
+    std::map<ActiveKey, UShort2DArrayDeque >::iterator pop1_it
       = poppedMultiIndex.find(activeKey);
-    std::map<UShortArray, UShortArrayDeque >::iterator pop2_it
+    std::map<ActiveKey, UShortArrayDeque >::iterator pop2_it
       = poppedApproxOrder.find(activeKey);
     if (pop1_it == poppedMultiIndex.end() ||
 	pop2_it == poppedApproxOrder.end()) {
@@ -389,7 +392,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       // roll up approxOrders to define combinedMultiIndex
       size_t cntr, j, num_seq = approxOrder.size() - 2; // bridge first to last
       if (num_seq) combinedMultiIndexSeq.resize(num_seq);
-      std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
+      std::map<ActiveKey, UShortArray>::iterator ao_it = approxOrder.begin();
       UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
       for (cntr=0; ao_it!=approxOrder.end(); ++ao_it) {
 	const UShortArray& ao = ao_it->second;
@@ -408,11 +411,11 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       //active_key(driverRep->maximal_grid());
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
-      CombinedSparseGridDriver* csg_driver
-	= (CombinedSparseGridDriver*)driverRep;
-      const std::map<UShortArray, UShort2DArray>& sm_mi_map
+      std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+	std::static_pointer_cast<CombinedSparseGridDriver>(driverRep);
+      const std::map<ActiveKey, UShort2DArray>& sm_mi_map
 	= csg_driver->smolyak_multi_index_map();
-      std::map<UShortArray, UShort2DArray>::const_iterator sm_it;
+      std::map<ActiveKey, UShort2DArray>::const_iterator sm_it;
 
       // Define Pareto expansion orders for first level
       sm_it = sm_mi_map.begin();
@@ -421,7 +424,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       UShortArray exp_order, exp_order_prod(numVars);
       UShort2DArray pareto_eo_1, pareto_eo_2, pareto_eo_prod, tp_mi;
       for (i=0; i<num_sm_mi; ++i) {
-	sparse_grid_level_to_expansion_order(csg_driver, sm_mi_1[i], exp_order);
+	sparse_grid_level_to_expansion_order(*csg_driver, sm_mi_1[i], exp_order);
 	update_pareto_set(exp_order, pareto_eo_1);
       }
 
@@ -436,7 +439,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
 	++sm_it;  const UShort2DArray& sm_mi_2 = sm_it->second;
 	num_sm_mi = sm_mi_2.size();  pareto_eo_2.clear();
 	for (i=0; i<num_sm_mi; ++i) {
-	  sparse_grid_level_to_expansion_order(csg_driver,sm_mi_2[i],exp_order);
+	  sparse_grid_level_to_expansion_order(*csg_driver,sm_mi_2[i],exp_order);
 	  update_pareto_set(exp_order, pareto_eo_2);
 	}
 
@@ -494,10 +497,10 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
 
 
 void SharedProjectOrthogPolyApproxData::
-sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+sparse_grid_multi_index(CombinedSparseGridDriver& csg_driver,
 			UShort2DArray& multi_index)
 {
-  const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
+  const UShort2DArray& sm_mi = csg_driver.smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_mi.size();
 
   // assemble a complete list of individual polynomial coverage
@@ -539,7 +542,7 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
     short exp_growth = (sparseGridExpansion == SPARSE_INT_RESTR_TENSOR_SUM_EXP)
       ? MODERATE_RESTRICTED_GROWTH : UNRESTRICTED_GROWTH;
     for (i=0; i<num_smolyak_indices; ++i) {
-      sparse_grid_level_to_expansion_order(csg_driver, sm_multi_index[i],
+      sparse_grid_level_to_expansion_order(*csg_driver, sm_multi_index[i],
                                            exp_order,  exp_growth);
       tensor_product_multi_index(exp_order, tp_multi_index);
       append_multi_index(tp_multi_index, multi_index);
@@ -612,7 +615,7 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 
 
 void SharedProjectOrthogPolyApproxData::
-increment_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
+increment_sparse_grid_multi_index(IncrementalSparseGridDriver& isg_driver,
 				  UShort2DArray& multi_index)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
@@ -620,7 +623,7 @@ increment_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
   SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   size_t num_tp_mi = tp_mi.size();
 
-  const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
+  const UShort2DArray& sm_mi = isg_driver.smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_mi.size();
 
   tp_mi.resize(num_smolyak_indices);
@@ -639,7 +642,7 @@ increment_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
 
 
 void SharedProjectOrthogPolyApproxData::
-decrement_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
+decrement_sparse_grid_multi_index(IncrementalSparseGridDriver& isg_driver,
 				  UShort2DArray& multi_index)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
@@ -648,7 +651,7 @@ decrement_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
   size_t num_tp_mi = tp_mi.size();
 
   size_t i, num_smolyak_indices
-    = isg_driver->smolyak_coefficients_reference().size();
+    = isg_driver.smolyak_coefficients_reference().size();
   UShort2DArrayDeque&  pop_tp_mi = poppedMultiIndex[activeKey];
   SizetArrayDeque& pop_tp_mi_map = poppedMultiIndexMap[activeKey];
   SizetDeque&  pop_tp_mi_map_ref = poppedMultiIndexMapRef[activeKey];
@@ -668,7 +671,7 @@ decrement_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
 
 
 void SharedProjectOrthogPolyApproxData::
-push_sparse_grid_multi_index(IncrementalSparseGridDriver* isg_driver,
+push_sparse_grid_multi_index(IncrementalSparseGridDriver& isg_driver,
 			     UShort2DArray& multi_index)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];

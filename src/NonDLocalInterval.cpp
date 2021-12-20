@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -56,59 +57,32 @@ NonDLocalInterval::NonDLocalInterval(ProblemDescDB& problem_db, Model& model):
   SizetArray recast_vars_comps_total;  // default: empty; no change in size
   BitArray all_relax_di, all_relax_dr; // default: empty; no discrete relaxation
   short recast_resp_order = 3; // gradient-based quasi-Newton optimizers
-  minMaxModel.assign_rep(
-    new RecastModel(iteratedModel, recast_vars_comps_total, all_relax_di,
-		    all_relax_dr, 1, 0, 0, recast_resp_order), false);
-
-  unsigned short opt_algorithm = probDescDB.get_ushort("method.sub_method");
-  if (opt_algorithm == SUBMETHOD_SQP) {
-#ifdef HAVE_NPSOL
-    npsolFlag = true;
-#else
-    Cerr << "\nError: this executable not configured with NPSOL SQP.\n         "
-	 << "Please select OPT++ NIP within local_interval_est." << std::endl;
-    err_flag = true;
-#endif
-  }
-  else if (opt_algorithm == SUBMETHOD_NIP) {
-#ifdef HAVE_OPTPP
-    npsolFlag = false;
-#else
-    Cerr << "\nError: this executable not configured with OPT++ NIP.\n         "
-	 << "please select NPSOL SQP within local_interval_est." << std::endl;
-    err_flag = true;
-#endif
-  }
-  else if (opt_algorithm == SUBMETHOD_DEFAULT) {
-#ifdef HAVE_NPSOL
-    npsolFlag = true;
-#elif HAVE_OPTPP
-    npsolFlag = false;
-#else
-    Cerr << "\nError: this executable not configured with NPSOL or OPT++.\n"
-	 << "       NonDLocalInterval requires a gradient-based optimizer."
-	 << std::endl;
-    err_flag = true;
-#endif
-  }
- 
-  if (err_flag)
-    abort_handler(-1);
+  minMaxModel.assign_rep(std::make_shared<RecastModel>
+			 (iteratedModel, recast_vars_comps_total, all_relax_di,
+			  all_relax_dr, 1, 0, 0, recast_resp_order));
 
   // instantiate the optimizer used to compute the output interval bounds
-  if (npsolFlag) {
-#ifdef HAVE_NPSOL  
-    int npsol_deriv_level = 3;
-    minMaxOptimizer.assign_rep(new 
-      NPSOLOptimizer(minMaxModel, npsol_deriv_level, convergenceTol), false);
+  switch (sub_optimizer_select(probDescDB.get_ushort("method.sub_method"))) {
+  case SUBMETHOD_SQP: {
+#ifdef HAVE_NPSOL
+    int deriv_level = 3;
+    minMaxOptimizer.assign_rep(std::make_shared<NPSOLOptimizer>
+			       (minMaxModel, deriv_level, convergenceTol));
 #endif // HAVE_NPSOL
+    npsolFlag =  true; break;
   }
-  else {
+  case SUBMETHOD_NIP:
 #ifdef HAVE_OPTPP
-    minMaxOptimizer.assign_rep(new
-      SNLLOptimizer("optpp_q_newton", minMaxModel), false);
+    minMaxOptimizer.assign_rep(std::make_shared<SNLLOptimizer>
+			       ("optpp_q_newton", minMaxModel));
 #endif // HAVE_OPTPP
+    npsolFlag = false; break;
+  default:
+    npsolFlag = false; err_flag = true; break;
   }
+
+  if (err_flag)
+    abort_handler(METHOD_ERROR);
 
   // Prevent nesting of an instance of a Fortran iterator within another
   // instance of the same iterator (which would result in data clashes since
@@ -177,7 +151,13 @@ void NonDLocalInterval::core_run()
   nondLIInstance = this;
 
   // *** TO DO: requires mapping pointers for correct updating logic ***
-  minMaxModel.update_from_subordinate_model();
+  //
+  // now that vars/labels/bounds/targets have flowed down at run-time from
+  // any higher level recursions, propagate them up local Model recursions
+  // so that they are correct when they propagate back down.  There is no
+  // need to recur below iteratedModel.
+  size_t layers = 1;
+  minMaxModel.update_from_subordinate_model(layers-1);
 
   RealVector min_initial_pt, max_initial_pt;
   copy_data(minMaxModel.continuous_variables(), min_initial_pt); // view->copy
@@ -188,7 +168,8 @@ void NonDLocalInterval::core_run()
   BoolDequeArray nonlinear_resp_map(1);
   nonlinear_resp_map[0] = BoolDeque(numFunctions, false);
   BoolDeque max_sense(1);
-  RecastModel* model_rep = (RecastModel*)minMaxModel.model_rep();
+  std::shared_ptr<RecastModel> model_rep =
+    std::static_pointer_cast<RecastModel>(minMaxModel.model_rep());
 
   initialize(); // virtual fn for initializing loop controls
 
@@ -300,8 +281,8 @@ void NonDLocalInterval::method_recourse()
   if (npsolFlag) {
     // if NPSOL already assigned, then reassign; otherwise just set the flag.
 #ifdef HAVE_OPTPP
-    minMaxOptimizer.assign_rep(
-      new SNLLOptimizer("optpp_q_newton", minMaxModel), false);
+    minMaxOptimizer.assign_rep(std::make_shared<SNLLOptimizer>
+			       ("optpp_q_newton", minMaxModel));
 #else
     Cerr << "\nError: method recourse not possible in NonDLocalInterval "
 	 << "(OPT++ NIP unavailable).\n";

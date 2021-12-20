@@ -63,13 +63,6 @@ public:
   /// get PolynomialApproximation::surrData (non-const)
   virtual SurrogateData& surrogate_data();
 
-  /// set PolynomialApproximation::modSurrData
-  virtual void modified_surrogate_data(const SurrogateData& data);
-  /// get PolynomialApproximation::modSurrData (const)
-  virtual const SurrogateData& modified_surrogate_data() const;
-  /// get PolynomialApproximation::modSurrData (non-const)
-  virtual SurrogateData& modified_surrogate_data();
-
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;
@@ -85,6 +78,10 @@ public:
   virtual void push_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
+
+  /// test whether a refinement candidate can be generated for an approximation
+  /// or if refinement has "saturated"
+  virtual bool advancement_available();
 
   /*
   /// store the current coefficients for later combination
@@ -125,11 +122,11 @@ public:
   //
 
   /// assign letter or replace existing letter with a new one
-  void assign_rep(BasisApproximation* approx_rep, bool ref_count_incr);
+  void assign_rep(std::shared_ptr<BasisApproximation> approx_rep);
 
   /// returns approxRep for access to derived class member functions
   /// that are not mapped to the top Approximation level
-  BasisApproximation* approx_rep() const;
+  std::shared_ptr<BasisApproximation> approx_rep() const;
 
 protected:
 
@@ -147,7 +144,7 @@ protected:
   //
 
   /// contains the approximation data that is shared among the response set
-  SharedBasisApproxData* sharedDataRep;
+  std::shared_ptr<SharedBasisApproxData> sharedDataRep;
 
 private:
 
@@ -157,7 +154,7 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// basisApproxRep to the appropriate derived type.
-  BasisApproximation*
+  std::shared_ptr<BasisApproximation>
     get_basis_approx(const SharedBasisApproxData& shared_data);
 
   //
@@ -165,13 +162,11 @@ private:
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  BasisApproximation* basisApproxRep;
-  /// number of objects sharing basisApproxRep
-  int referenceCount;
+  std::shared_ptr<BasisApproximation> basisApproxRep;
 };
 
 
-inline BasisApproximation* BasisApproximation::approx_rep() const
+inline std::shared_ptr<BasisApproximation> BasisApproximation::approx_rep() const
 { return basisApproxRep; }
 
 } // namespace Pecos

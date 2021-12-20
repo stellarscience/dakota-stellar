@@ -6,7 +6,7 @@
 #  For more information, see the README file in the top Pecos directory.
 #  _______________________________________________________________________
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.12)
 
 set( CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
@@ -76,15 +76,7 @@ if(NOT DEFINED BLAS_LIBS OR NOT DEFINED LAPACK_LIBS)
   endif()
 endif()
 
-# Mandate a system or user-provided Boost
-if(Boost_DIR)
-  include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-else()
-  find_package(Boost REQUIRED)
-  if(Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-  endif()
-endif(Boost_DIR)
+find_package(Boost 1.58 REQUIRED)
 
 if (NOT BUILD_IN_TRILINOS)
 
@@ -252,7 +244,6 @@ endif()
 # distutils setup.py. Must add this subdirectory after all other core
 # libraries. TODO: check for required dependencies.
 if(PECOS_ENABLE_PYTHONAPI)
-  find_package(PythonInterp REQUIRED)
   add_subdirectory(python)
 endif()
 

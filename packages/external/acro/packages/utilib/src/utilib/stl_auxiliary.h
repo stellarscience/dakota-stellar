@@ -120,8 +120,6 @@ else
 return is;
 }
 
-} // namespace utilib
-
 
 /// Stream operator for copying one vector into another
 template <class Type1, class Type2>
@@ -587,5 +585,8 @@ utilib::UnPackBuffer& operator>>(utilib::UnPackBuffer& is, utilib::bimap<KEY,VAL
       }
    return is;
 }
+
+} // namespace utilib
+
 
 #endif

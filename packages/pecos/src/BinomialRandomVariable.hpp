@@ -99,13 +99,13 @@ protected:
   unsigned int numTrials;
 
   /// pointer to the Boost binomial_distribution instance
-  binomial_dist* binomialDist;
+  std::unique_ptr<binomial_dist> binomialDist;
 };
 
 
 inline BinomialRandomVariable::BinomialRandomVariable():
   RandomVariable(BaseConstructor()), probPerTrial(1.), numTrials(1), 
-  binomialDist(NULL)
+  binomialDist(new binomial_dist((Real)numTrials, probPerTrial))
 { ranVarType = BINOMIAL; }
 
 
@@ -118,7 +118,7 @@ BinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
 
 
 inline BinomialRandomVariable::~BinomialRandomVariable()
-{ if (binomialDist) delete binomialDist; }
+{ }
 
 
 inline Real BinomialRandomVariable::cdf(Real x) const
@@ -230,8 +230,7 @@ inline RealRealPair BinomialRandomVariable::distribution_bounds() const
 
 inline void BinomialRandomVariable::update_boost()
 {
-  if (binomialDist) delete binomialDist;
-  binomialDist = new binomial_dist((Real)numTrials, probPerTrial);
+  binomialDist.reset(new binomial_dist((Real)numTrials, probPerTrial));
 }
 
 

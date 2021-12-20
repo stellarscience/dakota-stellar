@@ -60,26 +60,26 @@ public:
   void clear_inactive();
   void clear_keys();
 
-  //const UShortArray& maximal_grid() const;
+  //const ActiveKey& maximal_grid() const;
 
   void initialize_sets();
   void increment_smolyak_multi_index(const UShortArray& set);
-  bool push_trial_available(const UShortArray& key, const UShortArray& tr_set);
-  bool push_trial_available(const UShortArray& key);
+  bool push_trial_available(const ActiveKey& key, const UShortArray& tr_set);
+  bool push_trial_available(const ActiveKey& key);
   bool push_trial_available();
-  size_t push_trial_index(const UShortArray& key, const UShortArray& tr_set);
-  size_t push_trial_index(const UShortArray& key);
+  size_t push_trial_index(const ActiveKey& key, const UShortArray& tr_set);
+  size_t push_trial_index(const ActiveKey& key);
   size_t push_trial_index();
-  size_t push_index(const UShortArray& key) const;
-  size_t restore_index(const UShortArray& key) const;
-  size_t finalize_index(size_t i, const UShortArray& key) const;
+  size_t push_index(const ActiveKey& key) const;
+  size_t restore_index(const ActiveKey& key) const;
+  size_t finalize_index(size_t i, const ActiveKey& key) const;
   void push_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_set();
   void finalize_sets(bool output_sets, bool converged_within_tol,
 		     bool reverted);
 
-  const UShortArray& trial_set(const UShortArray& key) const;
+  const UShortArray& trial_set(const ActiveKey& key) const;
   const UShortArray& trial_set() const;
   unsigned short trial_level() const;
   int unique_trial_points() const;
@@ -158,7 +158,7 @@ public:
   const UShortArray& increment_sets() const;
 
   // return number of sets within popped{T1,T2}WtSets identified by key
-  //size_t popped_sets(const UShortArray& key) const;
+  //size_t popped_sets(const ActiveKey& key) const;
   // return number of sets within popped{T1,T2}WtSets identified by activeKey
   //size_t popped_sets() const;
 
@@ -167,9 +167,9 @@ public:
   /// set active entry in smolyakMultiIndex
   void smolyak_multi_index(const UShort3DArray& sm_mi);
   /// return smolyakMultiIndex[key]
-  const UShort3DArray& smolyak_multi_index(const UShortArray& key) const;
+  const UShort3DArray& smolyak_multi_index(const ActiveKey& key) const;
   /// return smolyakMultiIndex
-  const std::map<UShortArray, UShort3DArray>& smolyak_multi_index_map() const;
+  const std::map<ActiveKey, UShort3DArray>& smolyak_multi_index_map() const;
 
   /// set trackCollocIndices
   void track_collocation_indices(bool track_colloc_indices);
@@ -181,18 +181,18 @@ public:
   /// set active entry in collocKey
   void collocation_key(const UShort4DArray& key);
   /// return collocKey[key]
-  const UShort4DArray& collocation_key(const UShortArray& key) const;
+  const UShort4DArray& collocation_key(const ActiveKey& key) const;
   /// return collocKey
-  const std::map<UShortArray, UShort4DArray>& collocation_key_map() const;
+  const std::map<ActiveKey, UShort4DArray>& collocation_key_map() const;
 
   /// return active entry in collocIndices
   const Sizet3DArray& collocation_indices() const;
   /// set active entry in collocIndices
   void collocation_indices(const Sizet3DArray& indices);
   /// return collocIndices[key]
-  const Sizet3DArray& collocation_indices(const UShortArray& key) const;
+  const Sizet3DArray& collocation_indices(const ActiveKey& key) const;
   /// return collocIndices
-  const std::map<UShortArray, Sizet3DArray>& collocation_indices_map() const;
+  const std::map<ActiveKey, Sizet3DArray>& collocation_indices_map() const;
 
   /// convert a one-sided increment as in incrementSets (assumes end is defined
   /// by the total number of sets) to a two-sided key (with beginning and end)
@@ -210,15 +210,15 @@ public:
   /// discriminate portions of the level-set hierarchy that are in the
   /// current increment for each model key
   void partition_increment_key(
-    std::map<UShortArray, UShort2DArray>& incr_key_map) const;
+    std::map<ActiveKey, UShort2DArray>& incr_key_map) const;
   /// discriminate portions of the level-set hierarchy that are reference sets
   /// for each model key
   void partition_reference_key(
-    std::map<UShortArray, UShort2DArray>& ref_key_map) const;
+    std::map<ActiveKey, UShort2DArray>& ref_key_map) const;
   /// discriminate portions of the level-set hierarchy that are reference sets
   /// from those in the current increment for each model key
-  void partition_keys(std::map<UShortArray, UShort2DArray>& ref_key_map,
-    std::map<UShortArray, UShort2DArray>& incr_key_map) const;
+  void partition_keys(std::map<ActiveKey, UShort2DArray>& ref_key_map,
+    std::map<ActiveKey, UShort2DArray>& incr_key_map) const;
 
   /// discriminate portions of the active level-set-point hierarchy that are
   /// in the reference grid from those in the current increment
@@ -254,11 +254,11 @@ public:
   void type2_hierarchical_weight_sets(const RealMatrix2DArray& t2_wts);
 
   /// return complete map for variableSets
-  const std::map<UShortArray, RealMatrix2DArray>& variable_sets_map() const;
+  const std::map<ActiveKey, RealMatrix2DArray>& variable_sets_map() const;
   /// return complete map for type1WeightSets
-  const std::map<UShortArray, RealVector2DArray>& type1_weight_sets_map() const;
+  const std::map<ActiveKey, RealVector2DArray>& type1_weight_sets_map() const;
   /// return complete map for type2WeightSets
-  const std::map<UShortArray, RealMatrix2DArray>& type2_weight_sets_map() const;
+  const std::map<ActiveKey, RealMatrix2DArray>& type2_weight_sets_map() const;
 
   /// return combinedSmolyakMultiIndex
   const UShort3DArray& combined_smolyak_multi_index() const;
@@ -313,47 +313,47 @@ private:
       are offset from the i indices (1-based) normally used in the Smolyak
       expressions.  The indices correspond to levels, one within each
       anisotropic tensor-product integration of a Smolyak recursion. */
-  std::map<UShortArray, UShort3DArray> smolyakMultiIndex;
+  std::map<ActiveKey, UShort3DArray> smolyakMultiIndex;
   /// iterator for active entry within smolyakMultiIndex
-  std::map<UShortArray, UShort3DArray>::iterator smolMIIter;
+  std::map<ActiveKey, UShort3DArray>::iterator smolMIIter;
 
   /// level of trial evaluation set passed to increment_smolyak_multi_index()
   /// during an index set-based refinement
-  std::map<UShortArray, unsigned short> trialLevel;
+  std::map<ActiveKey, unsigned short> trialLevel;
   /// iterator for active entry within trialLevel
-  std::map<UShortArray, unsigned short>::iterator trialLevIter;
+  std::map<ActiveKey, unsigned short>::iterator trialLevIter;
   /// identifies the trailing index set increments within smolyakMultiIndex
   /// due to an isotropic/anistropic grid refinement
-  std::map<UShortArray, UShortArray> incrementSets;
+  std::map<ActiveKey, UShortArray> incrementSets;
   /// iterator for active entry within incrementSets
-  std::map<UShortArray, UShortArray>::iterator incrSetsIter;
+  std::map<ActiveKey, UShortArray>::iterator incrSetsIter;
 
   /// levels-by-index sets-by-numDeltaPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
-  std::map<UShortArray, UShort4DArray> collocKey;
+  std::map<ActiveKey, UShort4DArray> collocKey;
   /// iterator for active entry within collocKey
-  std::map<UShortArray, UShort4DArray>::iterator collocKeyIter;
+  std::map<ActiveKey, UShort4DArray>::iterator collocKeyIter;
 
   /// levels-by-index sets-by-numTensorProductPts array for linking the
   /// set of tensor products to the unique collocation points evaluated
-  std::map<UShortArray, Sizet3DArray> collocIndices;
+  std::map<ActiveKey, Sizet3DArray> collocIndices;
   /// iterator for active entry within collocIndices
-  std::map<UShortArray, Sizet3DArray>::iterator collocIndIter;
+  std::map<ActiveKey, Sizet3DArray>::iterator collocIndIter;
 
   /// the set of points in the sparse grid
-  std::map<UShortArray, RealMatrix2DArray> variableSets;
+  std::map<ActiveKey, RealMatrix2DArray> variableSets;
   /// iterator for active entry within variableSets
-  std::map<UShortArray, RealMatrix2DArray>::iterator varSetsIter;
+  std::map<ActiveKey, RealMatrix2DArray>::iterator varSetsIter;
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
-  std::map<UShortArray, RealVector2DArray> type1WeightSets;
+  std::map<ActiveKey, RealVector2DArray> type1WeightSets;
   /// iterator for active entry within type1WeightSets
-  std::map<UShortArray, RealVector2DArray>::iterator t1WtIter;
+  std::map<ActiveKey, RealVector2DArray>::iterator t1WtIter;
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the sparse grid
-  std::map<UShortArray, RealMatrix2DArray> type2WeightSets;
+  std::map<ActiveKey, RealMatrix2DArray> type2WeightSets;
   /// iterator for active entry within type2WeightSets
-  std::map<UShortArray, RealMatrix2DArray>::iterator t2WtIter;
+  std::map<ActiveKey, RealMatrix2DArray>::iterator t2WtIter;
 
   /// multi-index that is the result of combining a set of level expansions
   /// (defined from HierarchSparseGridDriver::smolyakMultiIndex)
@@ -382,29 +382,29 @@ private:
   //RealMatrix concatT2WeightSets;
 
   /// popped trial sets that were computed but not selected
-  std::map<UShortArray, UShortArrayDequeArray> poppedLevMultiIndex;
+  std::map<ActiveKey, UShortArrayDequeArray> poppedLevMultiIndex;
   /// hierarchical index into poppedLevMultiIndex[lev] for data to be pushed
-  std::map<UShortArray, size_t> pushIndex;
+  std::map<ActiveKey, size_t> pushIndex;
   /// flattened index for data to be restored
-  std::map<UShortArray, size_t> restoreIndex;
+  std::map<ActiveKey, size_t> restoreIndex;
   /// flattened indices for data to be finalized
-  std::map<UShortArray, SizetArray> finalizeIndex;
+  std::map<ActiveKey, SizetArray> finalizeIndex;
 
   /// point sets popped during decrement for later restoration to variableSets
-  std::map<UShortArray, RealMatrixDequeArray> poppedVarSets;
+  std::map<ActiveKey, RealMatrixDequeArray> poppedVarSets;
   /// type 1 weight sets popped during decrement for later restoration to
   /// type1WeightSets
-  std::map<UShortArray, RealVectorDequeArray> poppedT1WtSets;
+  std::map<ActiveKey, RealVectorDequeArray> poppedT1WtSets;
   /// type 2 weight sets popped during decrement for later restoration to
   /// type2WeightSets
-  std::map<UShortArray, RealMatrixDequeArray> poppedT2WtSets;
+  std::map<ActiveKey, RealMatrixDequeArray> poppedT2WtSets;
 };
 
 
 inline HierarchSparseGridDriver::HierarchSparseGridDriver():
   SparseGridDriver(), nestedGrid(true), trackCollocIndices(true),
   smolMIIter(smolyakMultiIndex.end())
-{ update_active_iterators(); }
+{ HierarchSparseGridDriver::update_active_iterators(); }
 
 
 inline HierarchSparseGridDriver::
@@ -413,7 +413,7 @@ HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
   nestedGrid(true), trackCollocIndices(true),
   smolMIIter(smolyakMultiIndex.end())
-{ update_active_iterators(); }
+{ HierarchSparseGridDriver::update_active_iterators(); }
 
 
 inline HierarchSparseGridDriver::~HierarchSparseGridDriver()
@@ -426,47 +426,66 @@ inline void HierarchSparseGridDriver::update_active_iterators()
   if (smolMIIter != smolyakMultiIndex.end() && smolMIIter->first == activeKey)
     return;
 
-  smolMIIter = smolyakMultiIndex.find(activeKey);
+  smolMIIter    = smolyakMultiIndex.find(activeKey);
+  trialLevIter  = trialLevel.find(activeKey);
+  incrSetsIter  = incrementSets.find(activeKey);
+  collocKeyIter = collocKey.find(activeKey);
+  collocIndIter = collocIndices.find(activeKey);
+  varSetsIter   = variableSets.find(activeKey);
+  t1WtIter      = type1WeightSets.find(activeKey);
+  t2WtIter      = type2WeightSets.find(activeKey);
+
+  /* So long as we only create new keys and avoid modifying existing ones,
+     this deep copy is not needed.
+  ActiveKey active_copy; // share 1 deep copy of current active key
+  if (smolMIIter    == smolyakMultiIndex.end() ||
+      trialLevIter  == trialLevel.end()        ||
+      incrSetsIter  == incrementSets.end()     ||
+      collocKeyIter == collocKey.end()         ||
+      collocIndIter == collocIndices.end()     ||
+      varSetsIter   == variableSets.end()      ||
+      t1WtIter      == type1WeightSets.end()   ||
+      t2WtIter      == type2WeightSets.end())
+    active_copy = activeKey.copy();
+  */
+
   if (smolMIIter == smolyakMultiIndex.end()) {
-    std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
+    std::pair<ActiveKey, UShort3DArray>
+      u3a_pair(activeKey/*active_copy*/, UShort3DArray());
     smolMIIter = smolyakMultiIndex.insert(u3a_pair).first;
   }
-  trialLevIter = trialLevel.find(activeKey);
   if (trialLevIter == trialLevel.end()) {
-    std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
+    std::pair<ActiveKey, unsigned short> us_pair(activeKey/*active_copy*/, 0);
     trialLevIter = trialLevel.insert(us_pair).first;
   }
-  incrSetsIter = incrementSets.find(activeKey);
   if (incrSetsIter == incrementSets.end()) {
-    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());
+    std::pair<ActiveKey, UShortArray>
+      ua_pair(activeKey/*active_copy*/, UShortArray());
     incrSetsIter = incrementSets.insert(ua_pair).first;
   }
-  collocKeyIter = collocKey.find(activeKey);
   if (collocKeyIter == collocKey.end()) {
-    std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
+    std::pair<ActiveKey, UShort4DArray>
+      u4a_pair(activeKey/*active_copy*/, UShort4DArray());
     collocKeyIter = collocKey.insert(u4a_pair).first;
   }
-  collocIndIter = collocIndices.find(activeKey);
   if (collocIndIter == collocIndices.end()) {
-    std::pair<UShortArray, Sizet3DArray> s3a_pair(activeKey, Sizet3DArray());
+    std::pair<ActiveKey, Sizet3DArray>
+      s3a_pair(activeKey/*active_copy*/, Sizet3DArray());
     collocIndIter = collocIndices.insert(s3a_pair).first;
   }
-  varSetsIter = variableSets.find(activeKey);
   if (varSetsIter == variableSets.end()) {
-    std::pair<UShortArray, RealMatrix2DArray>
-      rm2_pair(activeKey, RealMatrix2DArray());
+    std::pair<ActiveKey, RealMatrix2DArray>
+      rm2_pair(activeKey/*active_copy*/, RealMatrix2DArray());
     varSetsIter = variableSets.insert(rm2_pair).first;
   }
-  t1WtIter = type1WeightSets.find(activeKey);
   if (t1WtIter == type1WeightSets.end()) {
-    std::pair<UShortArray, RealVector2DArray>
-      rv2_pair(activeKey, RealVector2DArray());
+    std::pair<ActiveKey, RealVector2DArray>
+      rv2_pair(activeKey/*active_copy*/, RealVector2DArray());
     t1WtIter = type1WeightSets.insert(rv2_pair).first;
   }
-  t2WtIter = type2WeightSets.find(activeKey);
   if (t2WtIter == type2WeightSets.end()) {
-    std::pair<UShortArray, RealMatrix2DArray>
-      rm2_pair(activeKey, RealMatrix2DArray());
+    std::pair<ActiveKey, RealMatrix2DArray>
+      rm2_pair(activeKey/*active_copy*/, RealMatrix2DArray());
     t2WtIter = type2WeightSets.insert(rm2_pair).first;
   }
 
@@ -541,11 +560,11 @@ inline void HierarchSparseGridDriver::clear_keys()
 
 
 inline const UShortArray& HierarchSparseGridDriver::
-trial_set(const UShortArray& key) const
+trial_set(const ActiveKey& key) const
 {
-  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit
+  std::map<ActiveKey, UShort3DArray>::const_iterator sm_cit
     = smolyakMultiIndex.find(key);
-  std::map<UShortArray, unsigned short>::const_iterator tl_cit
+  std::map<ActiveKey, unsigned short>::const_iterator tl_cit
     = trialLevel.find(key);
   if (sm_cit == smolyakMultiIndex.end() || tl_cit == trialLevel.end()) {
     PCerr << "Error: key not found in HierarchSparseGridDriver::trial_set()"
@@ -570,7 +589,7 @@ inline int HierarchSparseGridDriver::unique_trial_points() const
 
 /** identify if newly-pushed trial set exists within stored data sets */
 inline bool HierarchSparseGridDriver::
-push_trial_available(const UShortArray& key, const UShortArray& tr_set)
+push_trial_available(const ActiveKey& key, const UShortArray& tr_set)
 {
   size_t tr_lev = l1_norm(tr_set);
   const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
@@ -586,7 +605,7 @@ push_trial_available(const UShortArray& key, const UShortArray& tr_set)
 
 /** identify if newly-pushed trial set exists within stored data sets */
 inline bool HierarchSparseGridDriver::
-push_trial_available(const UShortArray& key)
+push_trial_available(const ActiveKey& key)
 {
   const UShortArray& tr_set = trial_set(key);
   size_t tr_lev = l1_norm(tr_set);
@@ -608,7 +627,7 @@ inline bool HierarchSparseGridDriver::push_trial_available()
 
 /** identify where newly-pushed trial set exists within stored data sets */
 inline size_t HierarchSparseGridDriver::
-push_trial_index(const UShortArray& key, const UShortArray& tr_set)
+push_trial_index(const ActiveKey& key, const UShortArray& tr_set)
 {
   size_t tr_lev = l1_norm(tr_set);
   const UShortArrayDequeArray& pop_mi = poppedLevMultiIndex[key];
@@ -617,7 +636,7 @@ push_trial_index(const UShortArray& key, const UShortArray& tr_set)
 
 
 /** identify where newly-pushed trial set exists within stored data sets */
-inline size_t HierarchSparseGridDriver::push_trial_index(const UShortArray& key)
+inline size_t HierarchSparseGridDriver::push_trial_index(const ActiveKey& key)
 {
   const UShortArray& tr_set = trial_set(key);
   size_t tr_lev = l1_norm(tr_set);
@@ -631,25 +650,25 @@ inline size_t HierarchSparseGridDriver::push_trial_index()
 { return push_trial_index(activeKey, trial_set()); }
 
 
-inline size_t HierarchSparseGridDriver::push_index(const UShortArray& key) const
+inline size_t HierarchSparseGridDriver::push_index(const ActiveKey& key) const
 {
-  std::map<UShortArray, size_t>::const_iterator cit = pushIndex.find(key);
+  std::map<ActiveKey, size_t>::const_iterator cit = pushIndex.find(key);
   return (cit == pushIndex.end()) ? _NPOS : cit->second;
 }
 
 
 inline size_t HierarchSparseGridDriver::
-restore_index(const UShortArray& key) const
+restore_index(const ActiveKey& key) const
 {
-  std::map<UShortArray, size_t>::const_iterator cit = restoreIndex.find(key);
+  std::map<ActiveKey, size_t>::const_iterator cit = restoreIndex.find(key);
   return (cit == restoreIndex.end()) ? _NPOS : cit->second;
 }
 
 
 inline size_t HierarchSparseGridDriver::
-finalize_index(size_t i, const UShortArray& key) const
+finalize_index(size_t i, const ActiveKey& key) const
 {
-  std::map<UShortArray, SizetArray>::const_iterator cit
+  std::map<ActiveKey, SizetArray>::const_iterator cit
     = finalizeIndex.find(key);
   return (cit == finalizeIndex.end()) ? _NPOS : cit->second[i];
 }
@@ -661,12 +680,12 @@ inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
 
 /*
 inline size_t HierarchSparseGridDriver::
-popped_sets(const UShortArray& key) const
+popped_sets(const ActiveKey& key) const
 {
   // Avoid double lookup since T2 cannot currently exist w/o T1
   //return std::max(poppedT1WtSets[key].size(), poppedT2WtSets[key].size());
 
-  std::map<UShortArray, RealVectorDequeArray>::const_iterator cit
+  std::map<ActiveKey, RealVectorDequeArray>::const_iterator cit
     = poppedT1WtSets.find(key);
   if (cit == poppedT1WtSets.end())
     return 0;
@@ -711,9 +730,9 @@ smolyak_multi_index(const UShort3DArray& sm_mi)
 
 
 inline const UShort3DArray& HierarchSparseGridDriver::
-smolyak_multi_index(const UShortArray& key) const
+smolyak_multi_index(const ActiveKey& key) const
 {
-  std::map<UShortArray, UShort3DArray>::const_iterator cit
+  std::map<ActiveKey, UShort3DArray>::const_iterator cit
     = smolyakMultiIndex.find(key);
   if (cit == smolyakMultiIndex.end()) {
     PCerr << "Error: key not found in HierarchSparseGridDriver::"
@@ -724,7 +743,7 @@ smolyak_multi_index(const UShortArray& key) const
 }
 
 
-inline const std::map<UShortArray, UShort3DArray>& HierarchSparseGridDriver::
+inline const std::map<ActiveKey, UShort3DArray>& HierarchSparseGridDriver::
 smolyak_multi_index_map() const
 { return smolyakMultiIndex; }
 
@@ -747,9 +766,9 @@ inline void HierarchSparseGridDriver::collocation_key(const UShort4DArray& key)
 
 
 inline const UShort4DArray& HierarchSparseGridDriver::
-collocation_key(const UShortArray& key) const
+collocation_key(const ActiveKey& key) const
 {
-  std::map<UShortArray, UShort4DArray>::const_iterator cit
+  std::map<ActiveKey, UShort4DArray>::const_iterator cit
     = collocKey.find(key);
   if (cit == collocKey.end()) {
     PCerr << "Error: key not found in HierarchSparseGridDriver::"
@@ -760,7 +779,7 @@ collocation_key(const UShortArray& key) const
 }
 
 
-inline const std::map<UShortArray, UShort4DArray>& HierarchSparseGridDriver::
+inline const std::map<ActiveKey, UShort4DArray>& HierarchSparseGridDriver::
 collocation_key_map() const
 { return collocKey; }
 
@@ -775,9 +794,9 @@ collocation_indices(const Sizet3DArray& indices)
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::
-collocation_indices(const UShortArray& key) const
+collocation_indices(const ActiveKey& key) const
 {
-  std::map<UShortArray, Sizet3DArray>::const_iterator cit
+  std::map<ActiveKey, Sizet3DArray>::const_iterator cit
     = collocIndices.find(key);
   if (cit == collocIndices.end()) {
     PCerr << "Error: key not found in HierarchSparseGridDriver::"
@@ -788,7 +807,7 @@ collocation_indices(const UShortArray& key) const
 }
 
 
-inline const std::map<UShortArray, Sizet3DArray>& HierarchSparseGridDriver::
+inline const std::map<ActiveKey, Sizet3DArray>& HierarchSparseGridDriver::
 collocation_indices_map() const
 { return collocIndices; }
 
@@ -854,17 +873,17 @@ type2_hierarchical_weight_sets(const RealMatrix2DArray& rm2)
 { t2WtIter->second = rm2; }
 
 
-inline const std::map<UShortArray, RealMatrix2DArray>&
+inline const std::map<ActiveKey, RealMatrix2DArray>&
 HierarchSparseGridDriver::variable_sets_map() const
 { return variableSets; }
 
 
-inline const std::map<UShortArray, RealVector2DArray>&
+inline const std::map<ActiveKey, RealVector2DArray>&
 HierarchSparseGridDriver::type1_weight_sets_map() const
 { return type1WeightSets; }
 
 
-inline const std::map<UShortArray, RealMatrix2DArray>&
+inline const std::map<ActiveKey, RealMatrix2DArray>&
 HierarchSparseGridDriver::type2_weight_sets_map() const
 { return type2WeightSets; }
 

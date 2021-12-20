@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -116,9 +117,8 @@ void SNLLBase::snll_pre_instantiate(bool bound_constr_flag, int num_constr)
 void SNLLBase::
 snll_post_instantiate(int num_cv, bool vendor_num_grad_flag,
 		      const String& finite_diff_type, const RealVector& fdss,
-		      int max_iter, int max_fn_evals,
-		      Real conv_tol, Real grad_tol,
-		      Real max_step, bool bound_constr_flag,
+		      size_t max_iter, size_t max_eval, Real conv_tol,
+		      Real grad_tol, Real max_step, bool bound_constr_flag,
 		      int num_constr, short output_lev,
 		      OPTPP::OptimizeClass* the_optimizer, 
 		      OPTPP::NLP0* nlf_objective,
@@ -163,7 +163,7 @@ snll_post_instantiate(int num_cv, bool vendor_num_grad_flag,
   the_optimizer->setGradTol(grad_tol); 
 
   the_optimizer->setMaxStep(max_step);
-  the_optimizer->setMaxFeval(max_fn_evals);
+  the_optimizer->setMaxFeval(max_eval);
   the_optimizer->setMaxIter(max_iter);
 
   if (output_lev == DEBUG_OUTPUT)
@@ -214,7 +214,7 @@ snll_initialize_run(OPTPP::NLP0* nlf_objective, OPTPP::NLP* nlp_constraint,
 
   // perform a deep copy to disconnect from Dakota's Teuchos::View
   RealVector x(Teuchos::Copy, init_pt.values(), init_pt.length());
-  nlf_objective->setX(x);  // setX accepts a ColumnVector
+  nlf_objective->setX(x);
   size_t num_cv = init_pt.length();
 
   // Instantiate bound, linear, and nonlinear constraints and append them to
@@ -321,13 +321,19 @@ void SNLLBase::snll_post_run(OPTPP::NLP0* nlf_objective)
   optLSqInstance->
     bestVariablesArray.front().continuous_variables(nlf_objective->getXc());
 
-  // TO DO: Deallocate local memory allocations (is this needed w/ SmartPtr?).
-  //if (bc) delete bc;
-  //if (li) delete li;
-  //if (le) delete le;
-  //if (ni) delete ni;
-  //if (ne) delete ne;
-  //delete cc;
+  // See SNLL{Optimizer,LeastSq}::reset() for constraint deallocation
+}
+
+
+void SNLLBase::snll_finalize_run(OPTPP::NLP0* nlf_objective)
+{
+  // Compound constraint doesn't get managed in an Optpp::SmartPtr;
+  // mirrors the alloc in snll_initialize_run() above
+  OPTPP::CompoundConstraint* cc = nlf_objective->getConstraints();
+  if (cc) {
+    delete cc;
+    nlf_objective->setConstraints(NULL);
+  }
 }
 
 

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -11,21 +12,22 @@
 //- Owner:        Mike Eldred
 
 #include "DataMethod.hpp"
+#include "DataModel.hpp" // for C3 FT enumerations
 #include "dakota_data_io.hpp"
 #include "pecos_global_defs.hpp"
 #ifdef HAVE_OPTPP
 #include "globals.h"
 #endif
 
-
 namespace Dakota {
 
 DataMethodRep::DataMethodRep():
-  methodOutput(NORMAL_OUTPUT), maxIterations(-1), maxRefineIterations(-1),
-  maxSolverIterations(-1), maxFunctionEvaluations(1000), speculativeFlag(false),
-  methodUseDerivsFlag(false),
-  convergenceTolerance(-std::numeric_limits<double>::max()),
+  methodOutput(NORMAL_OUTPUT), maxIterations(SZ_MAX),
+  maxRefineIterations(SZ_MAX), maxSolverIterations(SZ_MAX),
+  maxFunctionEvals(SZ_MAX), speculativeFlag(false), methodUseDerivsFlag(false),
   constraintTolerance(0.), methodScaling(false), numFinalSolutions(0),
+  convergenceTolerance(-std::numeric_limits<double>::max()),
+  relativeConvMetric(true), statsMetricMode(Pecos::DEFAULT_EXPANSION_STATS),
   methodName(DEFAULT_METHOD), subMethod(SUBMETHOD_DEFAULT),
   // Meta-iterators
   iteratorServers(0), procsPerIterator(0), // 0 defaults to detect user spec
@@ -53,9 +55,9 @@ DataMethodRep::DataMethodRep():
   absConvTol(-1.), xConvTol(-1.), singConvTol(-1.), singRadius(-1.),
   falseConvTol(-1.), initTRRadius(-1.), covarianceType(0), regressDiag(false),
   // OPT++
-  // searchMethod default is null since "trust_region" is preferred for 
+  // searchMethod default is null since "trust_region" is preferred for
   // unconstrained opt., whereas "line_search" is preferred for bc opt.
-  gradientTolerance(0.0001), maxStep(1.e+3), 
+  gradientTolerance(0.0001), maxStep(1.e+3),
 #if HAVE_OPTPP
   meritFn(OPTPP::ArgaezTapia),
 #else
@@ -71,7 +73,7 @@ DataMethodRep::DataMethodRep():
   localBalanceParam(-1.), maxBoxSize(-1.), minBoxSize(-1.),
   //boxDivision("major_dimension"), // leave empty string as default
   mutationAdaptive(true), showMiscOptions(false),
-  // These attributes must replicate the Coliny defaults due to Coliny 
+  // These attributes must replicate the Coliny defaults due to Coliny
   // member fn. structure:
   mutationRate(1.0),
   mutationScale(0.1), contractFactor(0.5),
@@ -81,14 +83,16 @@ DataMethodRep::DataMethodRep():
   // defaults:
   solnTarget(-DBL_MAX), // COLINY default of 1.e-5 can cause premature term.
   // These attributes use dummy defaults which are used to trigger conditional
-  // option processing (since we don't want to get out of synch with SGOPT's 
-  // defaults which may change).  The dummy defaults should be values which 
+  // option processing (since we don't want to get out of synch with SGOPT's
+  // defaults which may change).  The dummy defaults should be values which
   // are _not_ reasonable user inputs.
   mutationMinScale(-1.), initDelta(-1.), threshDelta(-1.),
   newSolnsGenerated(-9999), numberRetained(-9999),
   expansionFlag(true), // default = on, no_expansion spec turns off
   expandAfterSuccess(0), contractAfterFail(0), mutationRange(-9999),
   randomizeOrderFlag(false), //betaSolverName(""),
+  // COLINY + APPSPACK
+  evalSynchronize(DEFAULT_SYNCHRONIZATION),
   // JEGA
   numCrossPoints(2), numParents(2), numOffspring(2), //convergenceType(""),
   percentChange(0.1), numGenerations(15), fitnessLimit(6.0),
@@ -100,10 +104,10 @@ DataMethodRep::DataMethodRep():
   initializationType("unique_random"),
   //mutationType(""), replacementType(""), fitnessType(""),
   populationSize(50), //flatFile(),
-  // NCSU 
+  // NCSU
   volBoxSize(-1.),
   // DDACE
-  numSymbols(0),mainEffectsFlag(false),
+  numSymbols(0), mainEffectsFlag(false),
   // FSUDace
   latinizeFlag(false), volQualityFlag(false), numTrials(10000),
   //initializationType("grid"), trialType("random"),
@@ -113,6 +117,12 @@ DataMethodRep::DataMethodRep():
   initMeshSize(1.0), minMeshSize(1.e-6), historyFile("mads_history"),
   displayFormat("bbe obj"), vns(0.0), neighborOrder(1), showAllEval(false),
   useSurrogate("none"),
+  // C3 FT
+  maxCrossIterations(1), solverTol(1.e-10), solverRoundingTol(1.e-10),
+  statsRoundingTol(1.e-10), startOrder(2), kickOrder(1), maxOrder(USHRT_MAX),
+  adaptOrder(false), startRank(2), kickRank(1), maxRank(SZ_MAX),
+  adaptRank(false), maxCVRankCandidates(SZ_MAX),
+  maxCVOrderCandidates(USHRT_MAX), c3AdvanceType(NO_C3_ADVANCEMENT),
   // NonD & DACE
   numSamples(0), fixedSeedFlag(false),
   fixedSequenceFlag(false), //default is variable sampling patterns
@@ -121,26 +131,30 @@ DataMethodRep::DataMethodRep():
   percentVarianceExplained(0.95), wilksFlag(false), wilksOrder(1),
   wilksConfidenceLevel(0.95), wilksSidedInterval(ONE_SIDED_UPPER),
   // NonD
-  vbdOrder(0), covarianceControl(DEFAULT_COVARIANCE), rngName("mt19937"),
-  refinementType(Pecos::NO_REFINEMENT), refinementControl(Pecos::NO_CONTROL),
+  respScalingFlag(false), vbdOrder(0), covarianceControl(DEFAULT_COVARIANCE),
+  rngName("mt19937"), refinementType(Pecos::NO_REFINEMENT),
+  refinementControl(Pecos::NO_CONTROL),
   nestingOverride(Pecos::NO_NESTING_OVERRIDE),
   growthOverride(Pecos::NO_GROWTH_OVERRIDE), expansionType(EXTENDED_U),
   piecewiseBasis(false), expansionBasisType(Pecos::DEFAULT_BASIS),
   quadratureOrder(USHRT_MAX), sparseGridLevel(USHRT_MAX),
-  expansionOrder(USHRT_MAX),
-  collocationPoints(std::numeric_limits<size_t>::max()),
-  expansionSamples(std::numeric_limits<size_t>::max()),
+  expansionOrder(USHRT_MAX), collocationPoints(SZ_MAX),
+  expansionSamples(SZ_MAX), truthPilotConstraint(false),
+  ensembleSampSolnMode(ONLINE_PILOT), allocationTarget(TARGET_MEAN),
+  useTargetVarianceOptimizationFlag(false), qoiAggregation(QOI_AGGREGATION_SUM),
+  convergenceToleranceType(CONVERGENCE_TOLERANCE_TYPE_RELATIVE),
+  convergenceToleranceTarget(CONVERGENCE_TOLERANCE_TARGET_VARIANCE_CONSTRAINT),
   //expansionSampleType("lhs"),
   cubIntOrder(USHRT_MAX), collocationRatio(0.), collocRatioTermsOrder(1.),
   regressionType(Pecos::DEFAULT_REGRESSION), lsRegressionType(DEFAULT_LS),
   regressionL2Penalty(0.), crossValidation(false), crossValidNoiseOnly(false),
   //adaptedBasisInitLevel(0),
   adaptedBasisAdvancements(3), normalizedCoeffs(false), tensorGridFlag(false),
-  multilevDiscrepEmulation(DEFAULT_EMULATION),
   sampleType(SUBMETHOD_DEFAULT), dOptimal(false), numCandidateDesigns(0),
-  reliabilitySearchType(MV), integrationRefine(NO_INT_REFINE),
-  mlmfAllocControl(DEFAULT_MLMF_CONTROL), multilevEstimatorRate(2.),
-  finalMomentsType(STANDARD_MOMENTS), distributionType(CUMULATIVE),
+  //reliabilitySearchType(MV),
+  integrationRefine(NO_INT_REFINE), multilevAllocControl(DEFAULT_MLMF_CONTROL),
+  multilevEstimatorRate(2.), multilevDiscrepEmulation(DEFAULT_EMULATION),
+  finalMomentsType(Pecos::STANDARD_MOMENTS), distributionType(CUMULATIVE),
   responseLevelTarget(PROBABILITIES), responseLevelTargetReduce(COMPONENT),
   chainSamples(0), buildSamples(0), samplesOnEmulator(0), emulatorOrder(0),
   emulatorType(NO_EMULATOR), mcmcType("dram"), standardizedSpace(false),
@@ -148,19 +162,18 @@ DataMethodRep::DataMethodRep():
   posteriorStatsKL(false), posteriorStatsMutual(false),
   posteriorStatsKDE(false), chainDiagnostics(false), chainDiagnosticsCI(false),
   modelEvidence(false), modelEvidMC(false), modelEvidLaplace(false),
-  preSolveMethod(SUBMETHOD_DEFAULT), priorPropCovMult(1.0),
+  optSubProbSolver(SUBMETHOD_DEFAULT), priorPropCovMult(1.0),
   proposalCovUpdatePeriod(std::numeric_limits<int>::max()),
   fitnessMetricType("predicted_variance"), batchSelectionType("naive"),
   lipschitzType("local"), calibrateErrorMode(CALIBRATE_NONE),
   burnInSamples(0), subSamplingPeriod(1), calModelDiscrepancy(false),
   numPredConfigs(0), importPredConfigFormat(TABULAR_ANNOTATED),
-  modelDiscrepancyType("global_kriging"),
-  approxCorrectionOrder(2), exportCorrModelFormat(TABULAR_ANNOTATED),
+  modelDiscrepancyType("global_kriging"), polynomialOrder(2),
+  exportCorrModelFormat(TABULAR_ANNOTATED),
   exportCorrVarFormat(TABULAR_ANNOTATED),
-  exportDiscrepFormat(TABULAR_ANNOTATED), adaptExpDesign(false), 
-  mutualInfoKSG2(false),
-  importCandFormat(TABULAR_ANNOTATED), numCandidates(0), maxHifiEvals(-1.),  
-  batchSize(1),
+  exportDiscrepFormat(TABULAR_ANNOTATED), adaptExpDesign(false),
+  mutualInfoKSG2(false), importCandFormat(TABULAR_ANNOTATED),
+  numCandidates(0), maxHifiEvals(-1), batchSize(1), batchSizeExplore(0),
   // DREAM
   numChains(3), numCR(3), crossoverChainPairs(3), grThreshold(1.2),
   jumpStep(5),
@@ -168,7 +181,7 @@ DataMethodRep::DataMethodRep():
   // Wasabi
   numPushforwardSamples(10000),
   // Parameter Study
-  numSteps(0), pstudyFileFormat(TABULAR_ANNOTATED), pstudyFileActive(false), 
+  numSteps(0), pstudyFileFormat(TABULAR_ANNOTATED), pstudyFileActive(false),
   // Verification
   refinementRate(2.),
   // Point import/export files
@@ -176,7 +189,8 @@ DataMethodRep::DataMethodRep():
   importApproxFormat(TABULAR_ANNOTATED),  importApproxActive(false),
   exportApproxFormat(TABULAR_ANNOTATED),
   exportSampleSeqFlag(false), exportSamplesFormat(TABULAR_ANNOTATED),
-  referenceCount(1)
+  exportSurrogate(false), modelExportPrefix("exported_surrogate"),
+  modelExportFormat(NO_MODEL_FORMAT)
 { }
 
 
@@ -184,10 +198,11 @@ void DataMethodRep::write(MPIPackBuffer& s) const
 {
   s << idMethod << modelPointer << lowFidModelPointer << methodOutput
     << maxIterations << maxRefineIterations << maxSolverIterations
-    << maxFunctionEvaluations << speculativeFlag << methodUseDerivsFlag
-    << convergenceTolerance << constraintTolerance << methodScaling
-    << numFinalSolutions << methodName << subMethod << subMethodName
-    << subModelPointer << subMethodPointer;
+    << maxFunctionEvals << speculativeFlag << methodUseDerivsFlag
+    << constraintTolerance << methodScaling << numFinalSolutions
+    << convergenceTolerance << relativeConvMetric << statsMetricMode
+    << methodName << subMethod << subMethodName << subModelPointer
+    << subMethodPointer;
 
   // Meta-iterators
   s << iteratorServers << procsPerIterator << iteratorScheduling
@@ -251,22 +266,28 @@ void DataMethodRep::write(MPIPackBuffer& s) const
   s << initializationType << flatFile << logFile << populationSize
     << printPopFlag;
 
-  // NCSU 
+  // NCSU
   s << volBoxSize;
 
   // DDACE
   s << numSymbols << mainEffectsFlag;
 
-  // FSUDace 
+  // FSUDace
   s << latinizeFlag << volQualityFlag << sequenceStart << sequenceLeap
     << primeBase << numTrials << trialType;
 
   // COLINY, NonD, DACE, & JEGA
-  s << randomSeed;
+  s << randomSeed << randomSeedSeq;
 
   // MADS
   s << initMeshSize << minMeshSize << historyFile << displayFormat << vns
     << neighborOrder << showAllEval << useSurrogate;
+
+  // C3 FT
+  s << maxCrossIterations << solverTol << solverRoundingTol << statsRoundingTol
+    << startOrder << kickOrder << maxOrder << adaptOrder
+    << startRank  << kickRank  << maxRank  << adaptRank << maxCVRankCandidates
+    << maxCVOrderCandidates << c3AdvanceType << startOrderSeq << startRankSeq;
 
   // NonD & DACE
   s << numSamples << fixedSeedFlag << fixedSequenceFlag
@@ -275,23 +296,25 @@ void DataMethodRep::write(MPIPackBuffer& s) const
     << wilksConfidenceLevel << wilksSidedInterval;
 
   // NonD
-  s << vbdOrder << covarianceControl << rngName << refinementType
-    << refinementControl << nestingOverride << growthOverride << expansionType
-    << piecewiseBasis << expansionBasisType << quadratureOrderSeq
-    << sparseGridLevelSeq << expansionOrderSeq << collocationPointsSeq
-    << expansionSamplesSeq << quadratureOrder << sparseGridLevel
-    << expansionOrder << collocationPoints << expansionSamples
-    << expansionSampleType << anisoDimPref << cubIntOrder << collocationRatio
+  s << respScalingFlag << vbdOrder << covarianceControl << rngName
+    << refinementType << refinementControl << nestingOverride << growthOverride
+    << expansionType << piecewiseBasis << expansionBasisType
+    << quadratureOrderSeq << sparseGridLevelSeq << expansionOrderSeq
+    << collocationPointsSeq << expansionSamplesSeq << quadratureOrder
+    << sparseGridLevel << expansionOrder << collocationPoints
+    << expansionSamples //<< expansionSampleType
+    << anisoDimPref << cubIntOrder << collocationRatio
     << collocRatioTermsOrder << regressionType << lsRegressionType
     << regressionNoiseTol << regressionL2Penalty << crossValidation
     << crossValidNoiseOnly //<< adaptedBasisInitLevel
     << adaptedBasisAdvancements << normalizedCoeffs << pointReuse
-    << tensorGridFlag << tensorGridOrder << multilevDiscrepEmulation
+    << tensorGridFlag << tensorGridOrder
     << importExpansionFile << exportExpansionFile << sampleType << dOptimal
-    << numCandidateDesigns << reliabilitySearchType << reliabilityIntegration
-    << integrationRefine << refineSamples << pilotSamples
-    << mlmfAllocControl << multilevEstimatorRate
-    << finalMomentsType << distributionType
+    << numCandidateDesigns //<< reliabilitySearchType
+    << reliabilityIntegration << integrationRefine << refineSamples
+    << pilotSamples << ensembleSampSolnMode << truthPilotConstraint
+    << multilevAllocControl << multilevEstimatorRate
+    << multilevDiscrepEmulation << finalMomentsType << distributionType
     << responseLevelTarget << responseLevelTargetReduce << responseLevels
     << probabilityLevels << reliabilityLevels << genReliabilityLevels
     << chainSamples << buildSamples << samplesOnEmulator << emulatorOrder
@@ -299,25 +322,29 @@ void DataMethodRep::write(MPIPackBuffer& s) const
     << adaptPosteriorRefine << logitTransform << gpmsaNormalize
     << posteriorStatsKL << posteriorStatsMutual << posteriorStatsKDE
     << chainDiagnostics << chainDiagnosticsCI
-    << modelEvidence << modelEvidLaplace << modelEvidMC 
-    << preSolveMethod << proposalCovType << priorPropCovMult
+    << modelEvidence << modelEvidLaplace << modelEvidMC
+    << optSubProbSolver << proposalCovType << priorPropCovMult
     << proposalCovUpdatePeriod
     << proposalCovInputType << proposalCovData << proposalCovFile
     << advancedOptionsFilename << quesoOptionsFilename << fitnessMetricType
-    << batchSelectionType << lipschitzType << calibrateErrorMode << hyperPriorAlphas
-    << hyperPriorBetas << burnInSamples << subSamplingPeriod << evidenceSamples
+    << batchSelectionType << lipschitzType << calibrateErrorMode
+    << hyperPriorAlphas << hyperPriorBetas
+    << burnInSamples << subSamplingPeriod << evidenceSamples
     << calModelDiscrepancy << numPredConfigs << predictionConfigList
     << importPredConfigs << importPredConfigFormat << modelDiscrepancyType
-    << approxCorrectionOrder << exportCorrModelFile << exportCorrModelFormat
+    << polynomialOrder << exportCorrModelFile << exportCorrModelFormat
     << exportCorrVarFile << exportCorrVarFormat << exportDiscrepFile
     << exportDiscrepFormat << adaptExpDesign << importCandPtsFile
-    << importCandFormat << numCandidates << maxHifiEvals << batchSize
+    << importCandFormat << numCandidates << maxHifiEvals
+    << batchSize << batchSizeExplore
     << mutualInfoKSG2 << numChains << numCR << crossoverChainPairs
     << grThreshold << jumpStep << numPushforwardSamples
     << dataDistType << dataDistCovInputType << dataDistMeans
     << dataDistCovariance << dataDistFile << posteriorDensityExportFilename
     << posteriorSamplesExportFilename << posteriorSamplesImportFilename
-    << generatePosteriorSamples << evaluatePosteriorDensity;
+    << generatePosteriorSamples << evaluatePosteriorDensity << qoiAggregation 
+    << allocationTarget << convergenceToleranceType << useTargetVarianceOptimizationFlag
+    << scalarizationRespCoeffs;
 
   // Parameter Study
   s << finalPoint << stepVector << numSteps << stepsPerVariable << listOfPoints
@@ -339,10 +366,11 @@ void DataMethodRep::read(MPIUnpackBuffer& s)
 {
   s >> idMethod >> modelPointer >> lowFidModelPointer >> methodOutput
     >> maxIterations >> maxRefineIterations >> maxSolverIterations
-    >> maxFunctionEvaluations >> speculativeFlag >> methodUseDerivsFlag
-    >> convergenceTolerance >> constraintTolerance >> methodScaling
-    >> numFinalSolutions >> methodName >> subMethod >> subMethodName
-    >> subModelPointer >> subMethodPointer;
+    >> maxFunctionEvals >> speculativeFlag >> methodUseDerivsFlag
+    >> constraintTolerance >> methodScaling >> numFinalSolutions
+    >> convergenceTolerance >> relativeConvMetric >> statsMetricMode
+    >> methodName >> subMethod >> subMethodName >> subModelPointer
+    >> subMethodPointer;
 
   // Meta-iterators
   s >> iteratorServers >> procsPerIterator >> iteratorScheduling
@@ -406,22 +434,28 @@ void DataMethodRep::read(MPIUnpackBuffer& s)
   s >> initializationType >> flatFile >> logFile >> populationSize
     >> printPopFlag;
 
-  // NCSU 
+  // NCSU
   s >> volBoxSize;
 
   // DDACE
   s >> numSymbols >> mainEffectsFlag;
 
-  // FSUDace 
+  // FSUDace
   s >> latinizeFlag >> volQualityFlag >> sequenceStart >> sequenceLeap
     >> primeBase >> numTrials >> trialType;
 
   // COLINY, NonD, DACE, & JEGA
-  s >> randomSeed;
+  s >> randomSeed >> randomSeedSeq;
 
   // MADS
   s >> initMeshSize >> minMeshSize >> historyFile >> displayFormat >> vns
     >> neighborOrder >> showAllEval >> useSurrogate;
+
+  // C3 FT
+  s >> maxCrossIterations >> solverTol >> solverRoundingTol >> statsRoundingTol
+    >> startOrder >> kickOrder >> maxOrder >> adaptOrder
+    >> startRank  >> kickRank  >> maxRank  >> adaptRank >> maxCVRankCandidates
+    >> maxCVOrderCandidates >> c3AdvanceType >> startOrderSeq >> startRankSeq;
 
   // NonD & DACE
   s >> numSamples >> fixedSeedFlag >> fixedSequenceFlag
@@ -430,23 +464,25 @@ void DataMethodRep::read(MPIUnpackBuffer& s)
     >> wilksConfidenceLevel >> wilksSidedInterval;
 
   // NonD
-  s >> vbdOrder >> covarianceControl >> rngName >> refinementType
-    >> refinementControl >> nestingOverride >> growthOverride >> expansionType
-    >> piecewiseBasis >> expansionBasisType >> quadratureOrderSeq
-    >> sparseGridLevelSeq >> expansionOrderSeq >> collocationPointsSeq
-    >> expansionSamplesSeq >> quadratureOrder >> sparseGridLevel
-    >> expansionOrder >> collocationPoints >> expansionSamples
-    >> expansionSampleType >> anisoDimPref >> cubIntOrder >> collocationRatio
+  s >> respScalingFlag >> vbdOrder >> covarianceControl >> rngName
+    >> refinementType >> refinementControl >> nestingOverride >> growthOverride
+    >> expansionType >> piecewiseBasis >> expansionBasisType
+    >> quadratureOrderSeq >> sparseGridLevelSeq >> expansionOrderSeq
+    >> collocationPointsSeq >> expansionSamplesSeq >> quadratureOrder
+    >> sparseGridLevel >> expansionOrder >> collocationPoints
+    >> expansionSamples //>> expansionSampleType
+    >> anisoDimPref >> cubIntOrder >> collocationRatio
     >> collocRatioTermsOrder >> regressionType >> lsRegressionType
     >> regressionNoiseTol >> regressionL2Penalty >> crossValidation
     >> crossValidNoiseOnly //>> adaptedBasisInitLevel
     >> adaptedBasisAdvancements >> normalizedCoeffs >> pointReuse
-    >> tensorGridFlag >> tensorGridOrder >> multilevDiscrepEmulation
+    >> tensorGridFlag >> tensorGridOrder
     >> importExpansionFile >> exportExpansionFile >> sampleType >> dOptimal
-    >> numCandidateDesigns >> reliabilitySearchType >> reliabilityIntegration
-    >> integrationRefine >> refineSamples >> pilotSamples
-    >> mlmfAllocControl >> multilevEstimatorRate
-    >> finalMomentsType >> distributionType
+    >> numCandidateDesigns //>> reliabilitySearchType
+    >> reliabilityIntegration >> integrationRefine >> refineSamples
+    >> pilotSamples >> ensembleSampSolnMode >> truthPilotConstraint
+    >> multilevAllocControl >> multilevEstimatorRate
+    >> multilevDiscrepEmulation >> finalMomentsType >> distributionType
     >> responseLevelTarget >> responseLevelTargetReduce >> responseLevels
     >> probabilityLevels >> reliabilityLevels >> genReliabilityLevels
     >> chainSamples >> buildSamples >> samplesOnEmulator >> emulatorOrder
@@ -454,25 +490,29 @@ void DataMethodRep::read(MPIUnpackBuffer& s)
     >> adaptPosteriorRefine >> logitTransform >> gpmsaNormalize
     >> posteriorStatsKL >> posteriorStatsMutual >> posteriorStatsKDE
     >> chainDiagnostics >> chainDiagnosticsCI
-    >> modelEvidence >> modelEvidLaplace >> modelEvidMC 
-    >> preSolveMethod >> proposalCovType >> priorPropCovMult
+    >> modelEvidence >> modelEvidLaplace >> modelEvidMC
+    >> optSubProbSolver >> proposalCovType >> priorPropCovMult
     >> proposalCovUpdatePeriod
     >> proposalCovInputType >> proposalCovData >> proposalCovFile
     >> advancedOptionsFilename >> quesoOptionsFilename >> fitnessMetricType
-    >> batchSelectionType >> lipschitzType >> calibrateErrorMode >> hyperPriorAlphas
-    >> hyperPriorBetas >> burnInSamples >> subSamplingPeriod >> evidenceSamples
+    >> batchSelectionType >> lipschitzType >> calibrateErrorMode
+    >> hyperPriorAlphas >> hyperPriorBetas
+    >> burnInSamples >> subSamplingPeriod >> evidenceSamples
     >> calModelDiscrepancy >> numPredConfigs >> predictionConfigList
     >> importPredConfigs >> importPredConfigFormat >> modelDiscrepancyType
-    >> approxCorrectionOrder >> exportCorrModelFile >> exportCorrModelFormat
+    >> polynomialOrder >> exportCorrModelFile >> exportCorrModelFormat
     >> exportCorrVarFile >> exportCorrVarFormat >> exportDiscrepFile
     >> exportDiscrepFormat >> adaptExpDesign >> importCandPtsFile
-    >> importCandFormat >> numCandidates >> maxHifiEvals >> batchSize
+    >> importCandFormat >> numCandidates >> maxHifiEvals
+    >> batchSize >> batchSizeExplore
     >> mutualInfoKSG2 >> numChains >> numCR >> crossoverChainPairs
     >> grThreshold >> jumpStep >> numPushforwardSamples
     >> dataDistType >> dataDistCovInputType >> dataDistMeans
     >> dataDistCovariance >> dataDistFile >> posteriorDensityExportFilename
     >> posteriorSamplesExportFilename >> posteriorSamplesImportFilename
-    >> generatePosteriorSamples >> evaluatePosteriorDensity;
+    >> generatePosteriorSamples >> evaluatePosteriorDensity >> qoiAggregation 
+    >> allocationTarget >> convergenceToleranceType >> useTargetVarianceOptimizationFlag
+    >> scalarizationRespCoeffs;
 
   // Parameter Study
   s >> finalPoint >> stepVector >> numSteps >> stepsPerVariable >> listOfPoints
@@ -494,10 +534,11 @@ void DataMethodRep::write(std::ostream& s) const
 {
   s << idMethod << modelPointer << lowFidModelPointer << methodOutput
     << maxIterations << maxRefineIterations << maxSolverIterations
-    << maxFunctionEvaluations << speculativeFlag << methodUseDerivsFlag
-    << convergenceTolerance << constraintTolerance << methodScaling
-    << numFinalSolutions << methodName << subMethod << subMethodName
-    << subModelPointer << subMethodPointer;
+    << maxFunctionEvals << speculativeFlag << methodUseDerivsFlag
+    << constraintTolerance << methodScaling << numFinalSolutions
+    << convergenceTolerance << relativeConvMetric << statsMetricMode
+    << methodName << subMethod << subMethodName << subModelPointer
+    << subMethodPointer;
 
   // Meta-iterators
   s << iteratorServers << procsPerIterator << iteratorScheduling
@@ -561,22 +602,28 @@ void DataMethodRep::write(std::ostream& s) const
   s << initializationType << flatFile << logFile << populationSize
     << printPopFlag;
 
-  // NCSU 
+  // NCSU
   s << volBoxSize;
 
   // DDACE
   s << numSymbols << mainEffectsFlag;
 
-  // FSUDace 
+  // FSUDace
   s << latinizeFlag << volQualityFlag << sequenceStart << sequenceLeap
     << primeBase << numTrials << trialType;
 
   // COLINY, NonD, DACE, & JEGA
-  s << randomSeed;
+  s << randomSeed << randomSeedSeq;
 
   // MADS
   s << initMeshSize << minMeshSize << historyFile << displayFormat << vns
     << neighborOrder << showAllEval << useSurrogate;
+
+  // C3 FT
+  s << maxCrossIterations << solverTol << solverRoundingTol << statsRoundingTol
+    << startOrder << kickOrder << maxOrder << adaptOrder
+    << startRank  << kickRank  << maxRank  << adaptRank << maxCVRankCandidates
+    << maxCVOrderCandidates << c3AdvanceType << startOrderSeq << startRankSeq;
 
   // NonD & DACE
   s << numSamples << fixedSeedFlag << fixedSequenceFlag
@@ -585,23 +632,25 @@ void DataMethodRep::write(std::ostream& s) const
     << wilksConfidenceLevel << wilksSidedInterval;
 
   // NonD
-  s << vbdOrder << covarianceControl << rngName << refinementType
-    << refinementControl << nestingOverride << growthOverride << expansionType
-    << piecewiseBasis << expansionBasisType << quadratureOrderSeq
-    << sparseGridLevelSeq << expansionOrderSeq << collocationPointsSeq
-    << expansionSamplesSeq << quadratureOrder << sparseGridLevel
-    << expansionOrder << collocationPoints << expansionSamples
-    << expansionSampleType << anisoDimPref << cubIntOrder << collocationRatio
+  s << respScalingFlag << vbdOrder << covarianceControl << rngName
+    << refinementType << refinementControl << nestingOverride << growthOverride
+    << expansionType << piecewiseBasis << expansionBasisType
+    << quadratureOrderSeq << sparseGridLevelSeq << expansionOrderSeq
+    << collocationPointsSeq << expansionSamplesSeq << quadratureOrder
+    << sparseGridLevel << expansionOrder << collocationPoints
+    << expansionSamples //<< expansionSampleType
+    << anisoDimPref << cubIntOrder << collocationRatio
     << collocRatioTermsOrder << regressionType << lsRegressionType
     << regressionNoiseTol << regressionL2Penalty << crossValidation
     << crossValidNoiseOnly //<< adaptedBasisInitLevel
     << adaptedBasisAdvancements << normalizedCoeffs << pointReuse
-    << tensorGridFlag << tensorGridOrder << multilevDiscrepEmulation
+    << tensorGridFlag << tensorGridOrder
     << importExpansionFile << exportExpansionFile << sampleType << dOptimal
-    << numCandidateDesigns << reliabilitySearchType << reliabilityIntegration
-    << integrationRefine << refineSamples << pilotSamples
-    << mlmfAllocControl << multilevEstimatorRate
-    << finalMomentsType << distributionType
+    << numCandidateDesigns //<< reliabilitySearchType
+    << reliabilityIntegration << integrationRefine << refineSamples
+    << pilotSamples << ensembleSampSolnMode << truthPilotConstraint
+    << multilevAllocControl << multilevEstimatorRate
+    << multilevDiscrepEmulation << finalMomentsType << distributionType
     << responseLevelTarget << responseLevelTargetReduce << responseLevels
     << probabilityLevels << reliabilityLevels << genReliabilityLevels
     << chainSamples << buildSamples << samplesOnEmulator << emulatorOrder
@@ -609,25 +658,28 @@ void DataMethodRep::write(std::ostream& s) const
     << adaptPosteriorRefine << logitTransform << gpmsaNormalize
     << posteriorStatsKL << posteriorStatsMutual << posteriorStatsKDE
     << chainDiagnostics << chainDiagnosticsCI
-    << modelEvidence << modelEvidLaplace << modelEvidMC 
-    << preSolveMethod << proposalCovType << priorPropCovMult
+    << modelEvidence << modelEvidLaplace << modelEvidMC
+    << optSubProbSolver << proposalCovType << priorPropCovMult
     << proposalCovUpdatePeriod
     << proposalCovInputType << proposalCovData << proposalCovFile
     << advancedOptionsFilename << quesoOptionsFilename << fitnessMetricType
-    << batchSelectionType << lipschitzType << calibrateErrorMode << hyperPriorAlphas
-    << hyperPriorBetas << burnInSamples << subSamplingPeriod << evidenceSamples
+    << batchSelectionType << lipschitzType << calibrateErrorMode
+    << hyperPriorAlphas << hyperPriorBetas
+    << burnInSamples << subSamplingPeriod << evidenceSamples
     << calModelDiscrepancy << numPredConfigs << predictionConfigList
     << importPredConfigs << importPredConfigFormat << modelDiscrepancyType
-    << approxCorrectionOrder << exportCorrModelFile << exportCorrModelFormat
+    << polynomialOrder << exportCorrModelFile << exportCorrModelFormat
     << exportCorrVarFile << exportCorrVarFormat << exportDiscrepFile
     << exportDiscrepFormat << adaptExpDesign << importCandPtsFile
-    << importCandFormat << numCandidates << maxHifiEvals << batchSize
+    << importCandFormat << numCandidates << maxHifiEvals
+    << batchSize << batchSizeExplore
     << mutualInfoKSG2 << numChains << numCR << crossoverChainPairs
     << grThreshold << jumpStep << numPushforwardSamples
     << dataDistType << dataDistCovInputType << dataDistMeans
     << dataDistCovariance << dataDistFile << posteriorDensityExportFilename
     << posteriorSamplesExportFilename << posteriorSamplesImportFilename
-    << generatePosteriorSamples << evaluatePosteriorDensity;
+    << generatePosteriorSamples << evaluatePosteriorDensity << qoiAggregation 
+    << allocationTarget << useTargetVarianceOptimizationFlag << scalarizationRespCoeffs;
 
   // Parameter Study
   s << finalPoint << stepVector << numSteps << stepsPerVariable << listOfPoints
@@ -646,71 +698,22 @@ void DataMethodRep::write(std::ostream& s) const
 
 
 DataMethod::DataMethod(): dataMethodRep(new DataMethodRep())
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "DataMethod::DataMethod(), dataMethodRep referenceCount = "
-       << dataMethodRep->referenceCount << std::endl;
-#endif
-}
+{ /* empty ctor */ }
 
 
-DataMethod::DataMethod(const DataMethod& data_method)
-{
-  // Increment new (no old to decrement)
-  dataMethodRep = data_method.dataMethodRep;
-  if (dataMethodRep) // Check for an assignment of NULL
-    ++dataMethodRep->referenceCount;
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "DataMethod::DataMethod(DataMethod&)" << std::endl;
-  if (dataMethodRep)
-    Cout << "dataMethodRep referenceCount = " << dataMethodRep->referenceCount
-	 << std::endl;
-#endif
-}
+DataMethod::DataMethod(const DataMethod& data_method):
+  dataMethodRep(data_method.dataMethodRep)
+{ /* empty ctor */ }
 
 
 DataMethod& DataMethod::operator=(const DataMethod& data_method)
 {
-  if (dataMethodRep != data_method.dataMethodRep) { // normal case: old != new
-    // Decrement old
-    if (dataMethodRep) // Check for NULL
-      if ( --dataMethodRep->referenceCount == 0 ) 
-	delete dataMethodRep;
-    // Assign and increment new
-    dataMethodRep = data_method.dataMethodRep;
-    if (dataMethodRep) // Check for NULL
-      ++dataMethodRep->referenceCount;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "DataMethod::operator=(DataMethod&)" << std::endl;
-  if (dataMethodRep)
-    Cout << "dataMethodRep referenceCount = " << dataMethodRep->referenceCount
-	 << std::endl;
-#endif
-
+  dataMethodRep = data_method.dataMethodRep;
   return *this;
 }
 
 
 DataMethod::~DataMethod()
-{
-  if (dataMethodRep) { // Check for NULL
-    --dataMethodRep->referenceCount; // decrement
-#ifdef REFCOUNT_DEBUG
-    Cout << "dataMethodRep referenceCount decremented to "
-         << dataMethodRep->referenceCount << std::endl;
-#endif
-    if (dataMethodRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      Cout << "deleting dataMethodRep" << std::endl;
-#endif
-      delete dataMethodRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 } // namespace Dakota

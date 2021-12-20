@@ -1045,7 +1045,7 @@ public:
   // Each list in the hash table is sorted in increasing hashValue
   // order.
 
-  typedef GenericHeap<solution,Reverse<GenericHeapCompare<solution> > >
+  typedef GenericHeap<solution,utilib::Reverse<GenericHeapCompare<solution> > >
     reposSolHeap;
 
  protected:

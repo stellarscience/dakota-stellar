@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -11,7 +12,7 @@
 //-               implementations
 //- Owner:        Mike Eldred
 
-#include <boost/system/system_error.hpp>
+#include <system_error>
 #include <boost/math/constants/constants.hpp>
 #include "dakota_global_defs.hpp"
 #include "ParamResponsePair.hpp"
@@ -22,6 +23,10 @@
 #include "ProblemDescDB.hpp"
 #include "ResultsManager.hpp"
 #include "EvaluationStore.hpp"
+
+#ifdef DAKOTA_DISABLE_FPE_TRAPS
+#include <fenv.h>
+#endif
 
 // Toggle for MPI debug hold
 //#define MPI_DEBUG
@@ -114,7 +119,7 @@ void abort_handler(int code)
 }
 
 
-/** Throw a Boost system_error or call std::exit, with (256 +
+/** Throw a system_error or call std::exit, with (256 +
     dakota_code), where dakota_code < 0
 
     RATIONALE:
@@ -130,10 +135,10 @@ void abort_throw_or_exit(int dakota_code)
 {
   int os_code = 256 + dakota_code;
   if (abort_mode == ABORT_THROWS) {
-    // throw a Boost exception that inherits from std::runtime_error, but
-    // embeds the error code (since system_error is C++11 and newer)
-    boost::system::error_code ecode(os_code, boost::system::generic_category());
-    throw(boost::system::system_error(ecode, "Dakota aborted"));
+    // throw an error that inherits from std::runtime_error and embeds
+    // the error code
+    std::error_code ecode(os_code, std::generic_category());
+    throw(std::system_error(ecode, "Dakota aborted"));
   }
   else
     std::exit(os_code); // or std::exit(EXIT_FAILURE) from /usr/include/stdlib.h
@@ -151,6 +156,11 @@ void register_signal_handlers()
 #endif
   std::signal(SIGTERM,  Dakota::abort_handler);
   std::signal(SIGINT,   Dakota::abort_handler);
+
+#ifdef DAKOTA_DISABLE_FPE_TRAPS
+  // some platforms raise SIGFPE instead of allowing flow to IEEE NaN/Inf
+  fedisableexcept(FE_ALL_EXCEPT);
+#endif
 }
 
 

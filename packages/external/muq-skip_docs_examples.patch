@@ -1,0 +1,27 @@
+commit 9de00012a033d330b37dd102f3a94c9700699b49
+Author: Brian M. Adams <briadam@sandia.gov>
+Date:   Mon Sep 21 12:19:12 2020 -0600
+
+    MUQ: disable build of docs, examples
+
+diff --git a/muq2/CMakeLists.txt b/muq2/CMakeLists.txt
+index 4e73b98..9fd5cce 100644
+--- a/muq2/CMakeLists.txt
++++ b/muq2/CMakeLists.txt
+@@ -137,6 +137,8 @@ MESSAGE("${MUQ_LOG_SUMMARY}")
+ ###############################################
+ # Add a target to build documentation
+ ###############################################
++option(MUQ_ENABLE_DOCS "MUQ: Whether to build Doxygen docs" OFF)
++if(MUQ_ENABLE_DOCS)
+ # add a target to generate API documentation with Doxygen
+ find_package(Doxygen)
+ if(DOXYGEN_FOUND)
+@@ -157,5 +159,6 @@ if(DOXYGEN_FOUND)
+ 
+ 
+ endif(DOXYGEN_FOUND)
++endif()
+ 
+-add_subdirectory(examples EXCLUDE_FROM_ALL)
++#add_subdirectory(examples EXCLUDE_FROM_ALL)

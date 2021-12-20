@@ -331,7 +331,7 @@ Real RangeVariable<T>::dz_ds_factor(short u_type, Real x, Real z) const
 
 template <>
 inline Real RangeVariable<Real>::pdf(Real x) const
-{ return UniformRandomVariable::pdf(lowerBnd, upperBnd); }
+{ return UniformRandomVariable::pdf(x, lowerBnd, upperBnd); }
 
 
 template <>

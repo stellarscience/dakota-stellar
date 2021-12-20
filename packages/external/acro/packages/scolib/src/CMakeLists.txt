@@ -17,7 +17,6 @@ add_library(scolib
   libs/StateMachineLS.cpp
 )
 target_link_libraries(scolib
-  ${Boost_LIBRARIES}
   utilib
   pebbl
 )
@@ -44,7 +43,6 @@ target_link_libraries(scolib_driver
   scolib
   utilib
   pebbl
-  ${Boost_LIBRARIES}
   tinyxml
 )
 

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -9,6 +10,7 @@
 
 #include "ExperimentData.hpp"
 #include "dakota_data_io.hpp"
+#include "DakotaVariables.hpp"
 
 #include <string>
 
@@ -25,6 +27,16 @@ namespace {
   const size_t  NUM_FIELDS       = 1;
   const size_t  NUM_FIELD_VALUES = 401;
   const int     FIELD_DIM        = 1;
+
+  // Variables object with NUM_CONFIG_VARS continuous state vars...
+  Variables gen_mock_vars() {
+    std::pair<short,short> mock_vars_view(MIXED_DESIGN, MIXED_STATE);
+    SizetArray mock_vars_comps_totals(NUM_VC_TOTALS, 0);
+    mock_vars_comps_totals[TOTAL_CSV] = NUM_CONFIG_VARS;
+    SharedVariablesData mock_svd(mock_vars_view, mock_vars_comps_totals);
+    Variables mock_vars(mock_svd);
+    return mock_vars;
+  }
 
   ActiveSet mock_as(0); // arg specifies num scalar values
   SharedResponseData mock_srd(mock_as);
@@ -54,11 +66,11 @@ TEUCHOS_UNIT_TEST(expt_data, basic)
 			   mock_srd, variance_types, 0 /* SILENT_OUTPUT */);
 
   //  const std::string config_vars_basename = base_name;
-  expt_data.load_data("expt_data unit test call");
+  expt_data.load_data("expt_data unit test call", gen_mock_vars());
 
   // Test general correctness
   TEST_EQUALITY( expt_data.num_experiments(), NUM_EXPTS );
-  TEST_EQUALITY( expt_data.num_scalars(), 0 );
+  TEST_EQUALITY( expt_data.num_scalar_primary(), 0 );
   TEST_EQUALITY( expt_data.num_fields(), NUM_FIELDS );
 
   // Test data correctness
@@ -81,7 +93,9 @@ TEUCHOS_UNIT_TEST(expt_data, basic)
       TEST_FLOATING_EQUALITY( gold_coords(i,j), field_coords_view(i,j), 1.e-14 );
 
   // Test config vars correctness
-  const RealVector& config_vars = expt_data.config_vars()[0];
+  // BMA TODO: Need a stronger test here across variable types
+  const RealVector& config_vars =
+    expt_data.configuration_variables()[0].inactive_continuous_variables();
   TEST_EQUALITY( config_vars.length(), NUM_CONFIG_VARS );
 
   // Test covariance correctness
@@ -120,11 +134,11 @@ TEUCHOS_UNIT_TEST(expt_data, twofield)
 			   mock_srd, variance_types, 0 /* SILENT_OUTPUT */);
 
   //  const std::string config_vars_basename = first_base_name;
-  expt_data.load_data("expt_data unit test call");
+  expt_data.load_data("expt_data unit test call", gen_mock_vars());
 
   // Test general correctness
   TEST_EQUALITY( expt_data.num_experiments(), NUM_EXPTS );
-  TEST_EQUALITY( expt_data.num_scalars(), 0 );
+  TEST_EQUALITY( expt_data.num_scalar_primary(), 0 );
   TEST_EQUALITY( expt_data.num_fields(), NUM_FIELDS+1 );
 
   // Test data correctness
@@ -162,9 +176,11 @@ TEUCHOS_UNIT_TEST(expt_data, twofield)
       TEST_FLOATING_EQUALITY( gold_coords2(i,j), field_coords_view2(i,j), 1.e-14 );
 
   // Test config vars correctness
-  const RealVector& config_vars = expt_data.config_vars()[0];
+  // BMA TODO: Need a stronger test here across variable types
+  const RealVector& config_vars =
+    expt_data.configuration_variables()[0].inactive_continuous_variables();
   TEST_EQUALITY( config_vars.length(), NUM_CONFIG_VARS );
-  //
+
   // Test covariance correctness
   RealVector resid_vals(voltage_vals_view.length() + pressure_vals_view.length());
   resid_vals = 1.0;
@@ -183,7 +199,9 @@ TEUCHOS_UNIT_TEST(expt_data, allowNoConfigFile)
   const std::string working_dir = "no_such_dir";
   ExperimentData expt_data(NUM_EXPTS, NUM_CONFIG_VARS, working_dir, 
 			   mock_srd, variance_types, 0 /* SILENT_OUTPUT */);
+  Dakota::abort_mode = ABORT_THROWS;
   TEST_THROW( 
-      expt_data.load_data("expt_data unit test call"),
+      expt_data.load_data("expt_data unit test call", gen_mock_vars()),
       std::runtime_error );
+  Dakota::abort_mode = ABORT_EXITS;
 }

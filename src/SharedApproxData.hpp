@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -15,6 +16,7 @@
 #define SHARED_APPROX_DATA_H
 
 #include "dakota_data_util.hpp"
+#include "ActiveKey.hpp"
 
 namespace Pecos {
 class MultivariateDistribution;
@@ -57,6 +59,11 @@ class SharedApproxData
 #ifdef HAVE_SURFPACK
   friend class SurfpackApproximation;
 #endif // HAVE_SURFPACK
+#ifdef HAVE_DAKOTA_SURROGATES
+  friend class SurrogatesGPApprox;
+  friend class SurrogatesBaseApprox;
+  friend class SurrogatesPolyApprox;
+#endif // HAVE_DAKOTA_SURROGATES
 
 public:
 
@@ -85,24 +92,19 @@ public:
   //
 
   /// activate an approximation state based on its multi-index key
-  virtual void active_model_key(const UShortArray& mi_key);
-  /// return active multi-index key
-  virtual const UShortArray& active_model_key() const;
+  virtual void active_model_key(const Pecos::ActiveKey& key);
   /// reset initial state by clearing all model keys for an approximation
   virtual void clear_model_keys();
 
-  /// define data keys and active data index for aggregated response data
-  /// (SharedPecosApproxData)
-  virtual void link_multilevel_surrogate_data();
+  // define data keys and active data index for aggregated response data
+  // (SharedPecosApproxData)
+  //virtual void link_multilevel_surrogate_data();
 
-  /// update approxDataKeys[activeDataIndex] with trailing surrogate key
-  virtual void surrogate_model_key(const UShortArray& key);
-  /// return trailing surrogate key from approxDataKeys[activeDataIndex]
-  virtual const UShortArray& surrogate_model_key() const;
-  /// update approxDataKeys[activeDataIndex] with leading truth key
-  virtual void truth_model_key(const UShortArray& key);
-  /// return leading truth key from approxDataKeys[activeDataIndex]
-  virtual const UShortArray& truth_model_key() const;
+  /// set integration driver for structured grid approximations
+  virtual void integration_iterator(const Iterator& iterator);
+
+  /// return the discrepancy type for approximations that support MLMF
+  virtual short discrepancy_reduction() const;
 
   /// builds the shared approximation data from scratch
   virtual void build();
@@ -114,13 +116,13 @@ public:
   /// queries availability of pushing data associated with a trial set
   virtual bool push_available();
   /// return index for restoring trial set within stored data sets
-  virtual size_t push_index(const UShortArray& key);
+  virtual size_t push_index(const Pecos::ActiveKey& key);
   /// push a previous state of the shared approximation data 
   virtual void pre_push();
   /// clean up popped bookkeeping following push 
   virtual void post_push();
   /// return index of i-th trial set within restorable bookkeeping sets
-  virtual size_t finalize_index(size_t i, const UShortArray& key);
+  virtual size_t finalize_index(size_t i, const Pecos::ActiveKey& key);
   /// finalize the shared approximation data following a set of increments
   virtual void pre_finalize();
   /// clean up popped bookkeeping following aggregation
@@ -136,6 +138,16 @@ public:
   /// promote aggregated data sets to active state
   virtual void combined_to_active(bool clear_combined = true);
 
+  /// queries availability of advancing the approximation resolution
+  virtual bool advancement_available();
+
+  /// increments polynomial expansion order (PCE, FT)
+  virtual void increment_order();
+  /// decrements polynomial expansion order (PCE, FT)
+  virtual void decrement_order();
+
+  /// construct the shared basis for an expansion-based approximation
+  virtual void construct_basis(const Pecos::MultivariateDistribution& mv_dist);
   /// propagate updates to random variable distribution parameters to a
   /// polynomial basis
   virtual void update_basis_distribution_parameters(
@@ -155,8 +167,8 @@ public:
   /// treated as random for statistical purposes (e.g. expectation)
   virtual void random_variables_key(const BitArray& random_vars_key);
 
-  /// assign statistics mode: {ACTIVE,COMBINED}_EXPANSION_STATS
-  virtual void refinement_statistics_type(short stats_type);
+  /// assign mode for statistics roll-up: {ACTIVE,COMBINED}_EXPANSION_STATS
+  virtual void refinement_statistics_mode(short stats_mode);
 
   /// return set of Sobol indices that have been requested (e.g., as constrained
   /// by throttling) and are computable by a (sparse) expansion of limited order
@@ -169,8 +181,13 @@ public:
   // return the number of variables used in the approximation
   //int num_variables() const;
 
-  /// set activeDataIndex
-  void surrogate_data_index(size_t d_index);
+  /// return active multi-index key
+  const Pecos::ActiveKey& active_model_key() const;
+
+  /// query whether the form of an approximation has been updated
+  bool formulation_updated() const;
+  /// assign the status of approximation formulation updates
+  void formulation_updated(bool update);
 
   /// set approximation lower and upper bounds (currently only used by graphics)
   void set_bounds(const RealVector&  c_l_bnds, const RealVector&  c_u_bnds,
@@ -179,7 +196,7 @@ public:
 
   /// returns dataRep for access to derived class member functions
   /// that are not mapped to the top SharedApproxData level
-  SharedApproxData* data_rep() const;
+  std::shared_ptr<SharedApproxData> data_rep() const;
 
 protected:
 
@@ -222,11 +239,11 @@ protected:
   /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   short outputLevel;
 
-  /// index of active approxData instance 
-  size_t activeDataIndex;
-  /// set of multi-index model keys (#surrData x #numKeys) to enumerate
-  /// when updating SurrogateData instances within each Approximation
-  UShort3DArray approxDataKeys;
+  /// key indicating the active model or model-pair used for approximation data
+  Pecos::ActiveKey activeKey;
+  // set of multi-index model keys to enumerate when updating the
+  // SurrogateData for each Approximation
+  //UShort2DArray approxDataKeys;
 
   /// Prefix for model export files
   String modelExportPrefix;
@@ -248,6 +265,10 @@ protected:
   /// approximation continuous upper bounds
   RealVector approxDRUpperBnds;
 
+  /// tracker for changes in order,rank configuration since last build
+  /// (used by DataFitSurrModel::rebuild_approximation())
+  std::map<Pecos::ActiveKey, bool> formUpdated;
+
 private:
 
   //
@@ -256,23 +277,21 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// dataRep to the appropriate derived type.
-  SharedApproxData* get_shared_data(ProblemDescDB& problem_db, size_t num_vars);
+  std::shared_ptr<SharedApproxData>
+  get_shared_data(ProblemDescDB& problem_db, size_t num_vars);
 
   /// Used only by the alternate envelope constructor to initialize
   /// dataRep to the appropriate derived type.
-  SharedApproxData* get_shared_data(const String& approx_type,
-				    const UShortArray& approx_order,
-				    size_t num_vars, short data_order,
-				    short output_level);
+  std::shared_ptr<SharedApproxData>
+  get_shared_data(const String& approx_type, const UShortArray& approx_order,
+		  size_t num_vars, short data_order, short output_level);
 
   //
   //- Heading: Data
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  SharedApproxData* dataRep;
-  /// number of objects sharing dataRep
-  int referenceCount;
+  std::shared_ptr<SharedApproxData> dataRep;
 };
 
 
@@ -280,19 +299,8 @@ private:
 //{ return (dataRep) ? dataRep->numVars : numVars; }
 
 
-inline void SharedApproxData::surrogate_data_index(size_t d_index)
-{
-  if (dataRep)
-    dataRep->surrogate_data_index(d_index);
-  else { // not virtual: all derived classes use following definition
-    //if (d_index >= approxData.size()) {
-    //  Cerr << "Error: index out of range in SharedApproxData::"
-    //       << "surrogate_data_index()." << std::endl;
-    //  abort_handler(APPROX_ERROR);
-    //}
-    activeDataIndex = d_index;
-  }
-}
+inline const Pecos::ActiveKey& SharedApproxData::active_model_key() const
+{ return (dataRep) ? dataRep->activeKey : activeKey; }
 
 
 inline void SharedApproxData::
@@ -320,7 +328,7 @@ set_bounds(const RealVector&  c_l_bnds, const RealVector&  c_u_bnds,
 }
 
 
-inline SharedApproxData* SharedApproxData::data_rep() const
+inline std::shared_ptr<SharedApproxData> SharedApproxData::data_rep() const
 { return dataRep; }
 
 } // namespace Dakota

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -55,11 +56,8 @@ protected:
 				const ShortArray& dr_target2);
 
   bool resize();
-  void pre_run();
+  //void pre_run();
   void post_run(std::ostream& s);
-
-  /// initialize graphics customized for reliability methods
-  void initialize_graphics(int iterator_server_id = 1);
 
   const Model& algorithm_space_model() const;
 
@@ -75,8 +73,9 @@ protected:
   /// Iterator which optimizes the mppModel
   Iterator mppOptimizer;
 
-  /// the MPP search type selection: MV, x/u-space AMV, x/u-space AMV+,
-  /// x/u-space TANA, x/u-space EGO, or NO_APPROX
+  /// the MPP search type selection:
+  /// Local: MV, x/u-space {AMV,AMV+,TANA,QMEA} or NO_APPROX
+  /// Global x/u-space EGRA
   unsigned short mppSearchType;
 
   /// importance sampling instance used to compute/refine probabilities

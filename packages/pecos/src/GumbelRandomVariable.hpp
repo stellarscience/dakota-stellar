@@ -108,13 +108,14 @@ protected:
   RealRealPair expLimits;
 
   // pointer to the Boost weibull_distribution instance
-  //extreme_value_dist* gumbelDist;
+  //std::unique_ptr<extreme_value_dist> gumbelDist;
 };
 
 
 inline GumbelRandomVariable::GumbelRandomVariable():
   RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(0.),
-  expLimits(std::log(DBL_MAX),std::log(DBL_MIN))//, gumbelDist(NULL)
+  expLimits(std::log(DBL_MAX),std::log(DBL_MIN))
+  //gumbelDist(new extreme_value_dist(betaStat, 1./alphaStat)) // locn, scale
 { ranVarType = GUMBEL; }
 
 
@@ -126,9 +127,7 @@ inline GumbelRandomVariable::GumbelRandomVariable(Real alpha, Real beta):
 
 
 inline GumbelRandomVariable::~GumbelRandomVariable()
-{
-  //if (gumbelDist) delete gumbelDist;
-}
+{ }
 
 
 inline Real GumbelRandomVariable::cdf(Real x) const
@@ -362,8 +361,7 @@ inline void GumbelRandomVariable::update(Real alpha, Real beta)
 {
   //if (!gumbelDist || alphaStat != alpha || betaStat != beta) {
     alphaStat = alpha; betaStat = beta;
-    //if (gumbelDist) delete gumbelDist;
-    //gumbelDist = new extreme_value_dist(beta, 1./alpha); // location, scale
+    //gumbelDist.reset(new extreme_value_dist(beta, 1./alpha)); // location, scale
   //}
 }
 

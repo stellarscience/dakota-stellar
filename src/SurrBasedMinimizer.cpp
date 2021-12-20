@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -13,7 +14,6 @@
 
 #include "SurrBasedMinimizer.hpp"
 #include "SurrBasedLevelData.hpp"
-#include "DakotaGraphics.hpp"
 #include "ProblemDescDB.hpp"
 #include "ParallelLibrary.hpp"
 #include "ParamResponsePair.hpp"
@@ -131,8 +131,6 @@ void SurrBasedMinimizer::derived_init_communicators(ParLevLIter pl_iter)
 
 void SurrBasedMinimizer::derived_set_communicators(ParLevLIter pl_iter)
 {
-  // Virtual destructor handles referenceCount at Strategy level.
-
   miPLIndex = methodPCIter->mi_parallel_level_index(pl_iter);
 
   // iteratedModel is evaluated to add truth data (single evaluate())
@@ -145,46 +143,11 @@ void SurrBasedMinimizer::derived_set_communicators(ParLevLIter pl_iter)
 
 void SurrBasedMinimizer::derived_free_communicators(ParLevLIter pl_iter)
 {
-  // Virtual destructor handles referenceCount at Strategy level.
-
   // free communicators for approxSubProbModel/iteratedModel
   approxSubProbMinimizer.free_communicators(pl_iter);
 
   // iteratedModel is evaluated to add truth data (single evaluate())
   iteratedModel.free_communicators(pl_iter, maxEvalConcurrency);
-}
-
-
-void SurrBasedMinimizer::initialize_graphics(int iterator_server_id)
-{
-  // may want to replace customized graphics w/ std graphics for use in
-  // Hybrid & Concurrent Strategies
-  //if (!strategyFlag) {
-
-  Model& truth_model = (methodName == SURROGATE_BASED_LOCAL ||
-                        methodName == SURROGATE_BASED_GLOBAL) ?
-    iteratedModel.truth_model() : iteratedModel;
-  OutputManager& mgr = parallelLib.output_manager();
-  Graphics& dakota_graphics = mgr.graphics();
-  const Variables& vars = truth_model.current_variables();
-  const Response&  resp = truth_model.current_response();
-
-  // For graphics, limit (currently) to server id 1, for both ded master
-  // (parent partition rank 1) and peer partitions (parent partition rank 0)
-  if (mgr.graph2DFlag && iterator_server_id == 1) { // initialize the 2D plots
-    mgr.graphics_counter(0); // starting point is iteration 0
-    dakota_graphics.create_plots_2d(vars, resp);
-    dakota_graphics.set_x_labels2d("Surr-Based Iteration No.");
-  }
-
-  // For output/restart/tabular data, all Iterator masters stream output
-  if (mgr.tabularDataFlag) { // initialize data tabulation
-    mgr.graphics_counter(0); // starting point is iteration 0
-    mgr.tabular_counter_label("iter_no");
-    mgr.create_tabular_datastream(vars, resp);
-  }
-
-  //}
 }
 
 
@@ -243,20 +206,20 @@ update_lagrange_multipliers(const RealVector& fn_vals,
       Real c_var = c_vars[i], l_bnd = lower_bnds[i], u_bnd = upper_bnds[i];
       // Determine if the calculated gradient component dg/dx_i is directed into
       // an active bound constraint.
-	   Cout << "c_var=" << c_var << "\n";
+      //Cout << "c_var=" << c_var << "\n";
       bool active_lower_bnd = ( (l_bnd == 0.0 && std::fabs(c_var) < 1.e-10) ||
         (l_bnd != 0.0 && std::fabs(1.0 - c_var/l_bnd) < 1.e-10) );
       bool active_upper_bnd = ( (u_bnd == 0.0 && std::fabs(c_var) < 1.e-10) ||
         (u_bnd != 0.0 && std::fabs(1.0 - c_var/u_bnd) < 1.e-10) );
       if ( !( (active_lower_bnd && m_grad_f[i] > 0.0) ||
-	           (active_upper_bnd && m_grad_f[i] < 0.0) ) ) {
-		  Cout << "active variable, i=" << i << ", n=" << n << "\n";
+	      (active_upper_bnd && m_grad_f[i] < 0.0) ) ) {
+	//Cout << "active variable, i=" << i << ", n=" << n << "\n";
         for (j=0, iter=active_lag_ineq.begin(); j<num_active_lag_ineq; j++, iter++){
           int ineq_id = *iter;
           size_t index = numUserPrimaryFns + std::abs(ineq_id) - 1;
           const Real* grad_g = fn_grads[index];
           // form [A]
-          Cout << "constraint, j=" << j << "\n";
+          //Cout << "constraint, j=" << j << "\n";
           A[j+n*num_active_lag] = (ineq_id > 0) ? grad_g[i] : -grad_g[i];
         }
         for (j=0; j<numNonlinearEqConstraints; j++) {
@@ -270,8 +233,8 @@ update_lagrange_multipliers(const RealVector& fn_vals,
     }
     num_free_continuous_vars = n;
 #ifdef DEBUG
-	 Cout << "number of free variables, n = " << num_free_continuous_vars << "\n";
-    Cout << "[A]:\n" << A << "-{grad_f}:\n" << m_grad_f;
+    Cout << "number of free variables, n = " << num_free_continuous_vars
+	 << "\n[A]:\n" << A << "-{grad_f}:\n" << m_grad_f;
 #endif
 
     // solve bound-constrained least squares using Lawson & Hanson routines:
@@ -312,7 +275,7 @@ update_lagrange_multipliers(const RealVector& fn_vals,
 	abort_handler(-1);
       }
     }
-//  Cout << "{lambda}:\n" << lambda << "res_norm: " << res_norm << '\n';
+    //Cout << "{lambda}:\n" << lambda << "res_norm: " << res_norm << '\n';
 
     // update lagrangeMult from least squares solution
     cntr = 0;

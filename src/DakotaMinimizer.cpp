@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -60,8 +61,10 @@ Minimizer::Minimizer(ProblemDescDB& problem_db, Model& model, std::shared_ptr<Tr
   update_from_model(iteratedModel); // variable/response counts & checks
 
   // Re-assign Iterator defaults specialized to Minimizer branch
-  if (maxIterations < 0) // DataMethod default set to -1
-    maxIterations = 100;
+  // DataMethod defaults are assigned a special value of SZ_MAX, for
+  // reassignment in different contexts
+  if (maxIterations    == SZ_MAX)    maxIterations =  100;
+  if (maxFunctionEvals == SZ_MAX) maxFunctionEvals = 1000;
   // Minimizer default number of final solution is 1, unless a
   // multi-objective frontier-based method
   if (!numFinalSolutions && methodName != MOGA)
@@ -356,15 +359,13 @@ void Minimizer::finalize_run()
   // Finalize an initialized mapping.  This will correspond to the first
   // finalize_run() with an uninitialized mapping, such as the inner-iterator
   // in a recursion.
-  if (iteratedModel.mapping_initialized()) {
+  if (!iteratedModel.is_null() && iteratedModel.mapping_initialized()) {
     // paired to matching call to Model.initialize_mapping() in
     // initialize_run() above
     bool var_size_changed = iteratedModel.finalize_mapping();
     if (var_size_changed)
       /*bool reinit_comms =*/ resize(); // ignore return value
   }
-
-  Iterator::finalize_run(); // included for completeness
 }
 
 
@@ -396,10 +397,10 @@ void Minimizer::data_transform_model()
       abort_handler(-1);
   }
   // TODO: verify: we don't want to weight by missing sigma: all = 1.0
-  expData.load_data("Least Squares");
+  expData.load_data("Least Squares", iteratedModel.current_variables());
 
   iteratedModel.
-    assign_rep(new DataTransformModel(iteratedModel, expData), false);
+    assign_rep(std::make_shared<DataTransformModel>(iteratedModel, expData));
   ++myModelLayers;
   dataTransformModel = iteratedModel;
 
@@ -439,7 +440,7 @@ void Minimizer::data_transform_model()
 void Minimizer::scale_model()
 {
   // iteratedModel becomes the sub-model of a RecastModel:
-  iteratedModel.assign_rep(new ScalingModel(iteratedModel), false);
+  iteratedModel.assign_rep(std::make_shared<ScalingModel>(iteratedModel));
   scalingModel = iteratedModel;
   ++myModelLayers;
 
@@ -1078,7 +1079,9 @@ void Minimizer::archive_best_results() {
     archive_best_residuals();
     archive_best_variables();
   } else { //calibration with data
-    DataTransformModel* dt_model_rep = static_cast<DataTransformModel*>(dataTransformModel.model_rep());
+    std::shared_ptr<DataTransformModel> dt_model_rep =
+      std::static_pointer_cast<DataTransformModel>
+      (dataTransformModel.model_rep());
     if(dt_model_rep->num_config_vars())
       archive_best_variables(true);
     else

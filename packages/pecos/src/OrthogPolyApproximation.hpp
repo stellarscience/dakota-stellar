@@ -50,6 +50,11 @@ public:
   /// variable dimension using linear least squares in semilog space
   virtual const RealVector& dimension_decay_rates();
 
+  /// unscale the expansion coefficients following computation using scaled
+  /// response data
+  virtual void unscale_coefficients(RealVector& exp_coeffs,
+				    RealMatrix& exp_coeff_grads);
+
   /// evaluate all pce basis functions at a single point
   static void basis_value(const RealVector& x,
 			  std::vector<BasisPolynomial> &polynomial_basis,
@@ -115,15 +120,18 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x, const UShortArray& key);
+  Real stored_value(const RealVector& x, const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-    const UShortArray& key);
+    const ActiveKey& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-    const SizetArray& dvv, const UShortArray& key);
+    const SizetArray& dvv, const ActiveKey& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
-    const UShortArray& key);
+    const ActiveKey& key);
   const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
-    const UShortArray& key);
+    const ActiveKey& key);
+
+  const RealVector& expansion_moments() const;
+  const RealVector& numerical_integration_moments() const;
 
   Real mean();
   Real mean(const RealVector& x);
@@ -142,18 +150,12 @@ protected:
   Real combined_covariance(const RealVector& x,
 			   PolynomialApproximation* poly_approx_2);
 
-  /// compute expansion moments to order 2
-  void compute_moments(bool full_stats = true, bool combined_stats = false);
-  /// compute expansion moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x, bool full_stats = true,
-		       bool combined_stats = false);
-
   //
   //- Heading: Member functions
   //
 
   /// update expCoeff{s,Grads}Iter for new activeKey from sharedDataRep
-  bool update_active_iterators(const UShortArray& key);
+  bool update_active_iterators(const ActiveKey& key);
 
   /// size expansion{Coeffs,CoeffGrads} based on the shared multiIndex
   void size_expansion();
@@ -215,9 +217,9 @@ protected:
   //
 
   /// the coefficients of the expansion
-  std::map<UShortArray, RealVector> expansionCoeffs;
+  std::map<ActiveKey, RealVector> expansionCoeffs;
   /// iterator pointing to active node in expansionCoeffs
-  std::map<UShortArray, RealVector>::iterator expCoeffsIter;
+  std::map<ActiveKey, RealVector>::iterator expCoeffsIter;
 
   /// the gradients of the expansion coefficients
   /** may be interpreted as either the gradients of the expansion
@@ -226,9 +228,9 @@ protected:
       needed with respect to variables that do not appear in the
       expansion (e.g., with respect to design or epistemic variables
       for an expansion only over probabilistic variables). */
-  std::map<UShortArray, RealMatrix> expansionCoeffGrads;
+  std::map<ActiveKey, RealMatrix> expansionCoeffGrads;
   /// iterator pointing to active node in expansionCoeffGrads
-  std::map<UShortArray, RealMatrix>::iterator expCoeffGradsIter;
+  std::map<ActiveKey, RealMatrix>::iterator expCoeffGradsIter;
 
   /*
   /// copies of expansionCoeffs stored in store_coefficients() for use
@@ -288,88 +290,69 @@ inline OrthogPolyApproximation::~OrthogPolyApproximation()
 
 
 inline bool OrthogPolyApproximation::
-update_active_iterators(const UShortArray& key)
+update_active_iterators(const ActiveKey& key)
 {
   // Test for change
   if (expCoeffsIter != expansionCoeffs.end() && expCoeffsIter->first == key)
     return false;
 
-  expCoeffsIter = expansionCoeffs.find(key);
+  expCoeffsIter     = expansionCoeffs.find(key);
+  expCoeffGradsIter = expansionCoeffGrads.find(key);
+
+  // share 1 deep copy of current active key
+  ActiveKey key_copy;
+  if (expCoeffsIter     == expansionCoeffs.end() ||
+      expCoeffGradsIter == expansionCoeffGrads.end())
+    key_copy = key.copy();
+
   if (expCoeffsIter == expansionCoeffs.end()) {
-    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    std::pair<ActiveKey, RealVector> rv_pair(key_copy, RealVector());
     expCoeffsIter = expansionCoeffs.insert(rv_pair).first;
   }
-  expCoeffGradsIter = expansionCoeffGrads.find(key);
   if (expCoeffGradsIter == expansionCoeffGrads.end()) {
-    std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
+    std::pair<ActiveKey, RealMatrix> rm_pair(key_copy, RealMatrix());
     expCoeffGradsIter = expansionCoeffGrads.insert(rm_pair).first;
   }
 
   surrData.active_key(key);
-  if (!modSurrData.is_null())
-    modSurrData.active_key(key);
 
   PolynomialApproximation::update_active_iterators(key);
   return true;
 }
 
 
-inline void OrthogPolyApproximation::
-compute_moments(bool full_stats, bool combined_stats)
-{
-  // standard variables mode supports two expansion moments by default
-  // (specialized by ProjectOrthogPolyApprox)
-
-  RealVector& exp_mom = expMomentsIter->second;
-  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
-  if (combined_stats)
-    { combined_mean(); combined_variance(); } // for combinedExpCoeffs
-  else {
-    mean(); variance(); // updates first two expansionMoments
-    //standardize_moments(exp_mom);
-  }
-}
+inline const RealVector& OrthogPolyApproximation::expansion_moments() const
+{ return primaryMomIter->second; }
 
 
-inline void OrthogPolyApproximation::
-compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
-{
-  // all variables mode currently two expansion moments by default
-
-  RealVector& exp_mom = expMomentsIter->second;
-  if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
-  if (combined_stats)
-    { combined_mean(x); combined_variance(x); } // for combinedExpCoeffs
-  else {
-    mean(x); variance(x); // updates first two expansionMoments
-    //standardize_moments(exp_mom);
-  }
-}
+inline const RealVector& OrthogPolyApproximation::
+numerical_integration_moments() const
+{ return secondaryMoments; }
 
 
 /** default implementation if no sparsity (overridden in
     RegressOrthogPolyApproximation for CS) */
 inline size_t OrthogPolyApproximation::expansion_terms() const
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return data_rep->expansion_terms();
 }
 
 
 inline Real OrthogPolyApproximation::value(const RealVector& x)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return value(x, data_rep->multi_index(), expCoeffsIter->second);
 }
 
 
 inline Real OrthogPolyApproximation::
-stored_value(const RealVector& x, const UShortArray& key)
+stored_value(const RealVector& x, const ActiveKey& key)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return value(x, data_rep->multi_index(key), expansionCoeffs[key]);
 }
 
@@ -377,18 +360,18 @@ stored_value(const RealVector& x, const UShortArray& key)
 inline const RealVector& OrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return gradient_basis_variables(x, data_rep->multi_index(),
 				  expCoeffsIter->second);
 }
 
 
 inline const RealVector& OrthogPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_basis_variables(const RealVector& x, const ActiveKey& key)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return gradient_basis_variables(x, data_rep->multi_index(key),
 				  expansionCoeffs[key]);
 }
@@ -397,8 +380,8 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 inline const RealVector& OrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return gradient_basis_variables(x, dvv, data_rep->multi_index(),
 				  expCoeffsIter->second);
 }
@@ -406,10 +389,10 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 
 inline const RealVector& OrthogPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
-				const UShortArray& key)
+				const ActiveKey& key)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return gradient_basis_variables(x, dvv, data_rep->multi_index(key),
 				  expansionCoeffs[key]);
 }
@@ -418,18 +401,18 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 inline const RealVector& OrthogPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return gradient_nonbasis_variables(x, data_rep->multi_index(),
 				     expCoeffGradsIter->second);
 }
 
 
 inline const RealVector& OrthogPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
+stored_gradient_nonbasis_variables(const RealVector& x, const ActiveKey& key)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return gradient_nonbasis_variables(x, data_rep->multi_index(key),
 				     expansionCoeffGrads[key]);
 }
@@ -438,18 +421,18 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 inline const RealSymMatrix& OrthogPolyApproximation::
 hessian_basis_variables(const RealVector& x)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return hessian_basis_variables(x, data_rep->multi_index(),
 				 expCoeffsIter->second);
 }
 
 
 inline const RealSymMatrix& OrthogPolyApproximation::
-stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
+stored_hessian_basis_variables(const RealVector& x, const ActiveKey& key)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   return hessian_basis_variables(x, data_rep->multi_index(key),
 				 expansionCoeffs[key]);
 }
@@ -458,8 +441,8 @@ stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
 inline void OrthogPolyApproximation::
 normalize(const RealVector& std_coeffs, RealVector& normalized_coeffs) const
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   size_t i, num_mi = mi.size();
   if (normalized_coeffs.length() != num_mi)
@@ -474,8 +457,8 @@ normalize(const RealVector& std_coeffs, RealVector& normalized_coeffs) const
 inline void OrthogPolyApproximation::
 denormalize(const RealVector& normalized_coeffs, RealVector& std_coeffs) const
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   size_t i, num_mi = mi.size();
   if (std_coeffs.length() != num_mi)
@@ -503,8 +486,8 @@ approximation_coefficients(bool normalized) const
 inline void OrthogPolyApproximation::
 approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey);
 
   if (normalized) denormalize(approx_coeffs, expCoeffsIter->second);
@@ -514,7 +497,7 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
   // allocate_arrays() except for redundant size_expansion())
   allocate_total_sobol();
   allocate_component_sobol();
-  RealVector& exp_mom = expMomentsIter->second;
+  RealVector& exp_mom = primaryMomIter->second;
   if (exp_mom.length() != 2) exp_mom.sizeUninitialized(2);
 }
 
@@ -522,8 +505,8 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 inline void OrthogPolyApproximation::
 print_coefficients(std::ostream& s, bool normalized)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   print_coefficients(s, data_rep->multi_index(), expCoeffsIter->second,
 		     normalized);
 }
@@ -540,14 +523,14 @@ inline void OrthogPolyApproximation::
 size_expansion(size_t num_exp_terms, RealVector& exp_coeffs,
 	       RealMatrix& exp_coeff_grads)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   if (expansionCoeffFlag) {
     if (exp_coeffs.length() != num_exp_terms)
       exp_coeffs.sizeUninitialized(num_exp_terms);
   }
   if (expansionCoeffGradFlag) {
-    size_t num_deriv_vars = modSurrData.num_derivative_variables();
+    size_t num_deriv_vars = surrData.num_derivative_variables();
     if (exp_coeff_grads.numRows() != num_deriv_vars ||
 	exp_coeff_grads.numCols() != num_exp_terms)
       exp_coeff_grads.shapeUninitialized(num_deriv_vars, num_exp_terms);
@@ -566,8 +549,8 @@ inline void OrthogPolyApproximation::
 resize_expansion(size_t num_exp_terms, RealVector& exp_coeffs,
 		 RealMatrix& exp_coeff_grads)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedOrthogPolyApproxData>(sharedDataRep);
   if (expansionCoeffFlag)
     exp_coeffs.resize(num_exp_terms); // new terms initialized to 0
   if (expansionCoeffGradFlag) {
@@ -581,7 +564,7 @@ inline void OrthogPolyApproximation::
 fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 	      bool& add_val, bool& add_grad)
 {
-  if (fit != modSurrData.failed_response_data().end() && fit->first == j) {
+  if (fit != surrData.failed_response_data().end() && fit->first == j) {
     short fail_bits = fit->second;
     if (fail_bits & 1) add_val  = false;
     if (fail_bits & 2) add_grad = false;

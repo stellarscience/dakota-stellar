@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -52,9 +53,9 @@ NonDSparseGrid::NonDSparseGrid(ProblemDescDB& problem_db, Model& model):
 
   // initialize the numerical integration driver
   numIntDriver = Pecos::IntegrationDriver(ssgDriverType);
-  ssgDriver = (Pecos::SparseGridDriver*)numIntDriver.driver_rep();
+  ssgDriver = std::static_pointer_cast<Pecos::SparseGridDriver>
+    (numIntDriver.driver_rep());
 
-  // initialize_random_variables() called in NonDIntegration ctor
   //check_variables(x_dist.random_variables());
   // TO DO: create a ProbabilityTransformModel, if needed
   const Pecos::MultivariateDistribution& u_dist
@@ -71,8 +72,8 @@ NonDSparseGrid::NonDSparseGrid(ProblemDescDB& problem_db, Model& model):
     outputLevel, probDescDB.get_bool("method.variance_based_decomp"),
     probDescDB.get_ushort("method.nond.vbd_interaction_order"), //refine_type,
     refine_control, refine_metric, refine_stats,
-    probDescDB.get_int("method.nond.max_refinement_iterations"),
-    probDescDB.get_int("method.nond.max_solver_iterations"), convergenceTol,
+    probDescDB.get_sizet("method.nond.max_refinement_iterations"),
+    probDescDB.get_sizet("method.nond.max_solver_iterations"), convergenceTol,
     probDescDB.get_ushort("method.sofmake NonDSt_convergence_limit"));
 
   // define BasisConfigOptions
@@ -109,21 +110,21 @@ NonDSparseGrid::NonDSparseGrid(ProblemDescDB& problem_db, Model& model):
   switch (ssgDriverType) {
   case Pecos::COMBINED_SPARSE_GRID: {
     bool track_colloc = false, track_uniq_prod_wts = false; // defaults
-    ((Pecos::CombinedSparseGridDriver*)ssgDriver)->
+    std::static_pointer_cast<Pecos::CombinedSparseGridDriver>(ssgDriver)->
       initialize_grid(ssgLevelSpec, dimPrefSpec, u_dist, ec_options, bc_options,
 		      growth_rate, track_colloc, track_uniq_prod_wts);
     break;
   }
   case Pecos::INCREMENTAL_SPARSE_GRID: {
     bool track_uniq_prod_wts = false; // default
-    ((Pecos::IncrementalSparseGridDriver*)ssgDriver)->
+    std::static_pointer_cast<Pecos::IncrementalSparseGridDriver>(ssgDriver)->
       initialize_grid(ssgLevelSpec, dimPrefSpec, u_dist, ec_options, bc_options,
 		      growth_rate, track_uniq_prod_wts);
     break;
   }
   case Pecos::HIERARCHICAL_SPARSE_GRID: {
     bool track_colloc = false; // non-default
-    ((Pecos::HierarchSparseGridDriver*)ssgDriver)->
+    std::static_pointer_cast<Pecos::HierarchSparseGridDriver>(ssgDriver)->
       initialize_grid(ssgLevelSpec, dimPrefSpec, u_dist, ec_options, bc_options,
 		      growth_rate, track_colloc);
     break;
@@ -151,7 +152,8 @@ NonDSparseGrid(Model& model, unsigned short ssg_level,
 {
   // initialize the numerical integration driver
   numIntDriver = Pecos::IntegrationDriver(ssgDriverType);
-  ssgDriver = (Pecos::SparseGridDriver*)numIntDriver.driver_rep();
+  ssgDriver = std::static_pointer_cast<Pecos::SparseGridDriver>
+    (numIntDriver.driver_rep());
 
   // propagate general settings (not inferrable from the basis of polynomials)
   // prior to initialize_grid()
@@ -162,19 +164,19 @@ NonDSparseGrid(Model& model, unsigned short ssg_level,
   ssgDriver->refinement_control(refine_control);
   switch (ssgDriverType) {
   case Pecos::COMBINED_SPARSE_GRID: {
-    Pecos::CombinedSparseGridDriver* csg_driver
-      = (Pecos::CombinedSparseGridDriver*)ssgDriver;
+    std::shared_ptr<Pecos::CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<Pecos::CombinedSparseGridDriver>(ssgDriver);
     csg_driver->track_collocation_details(true); // SC & sparse-grid PCE (SPAM)
     csg_driver->track_unique_product_weights(track_uniq_prod_wts);
     break;
   }
   case Pecos::INCREMENTAL_SPARSE_GRID:
-    ((Pecos::IncrementalSparseGridDriver*)ssgDriver)->
+    std::static_pointer_cast<Pecos::IncrementalSparseGridDriver>(ssgDriver)->
       track_unique_product_weights(track_uniq_prod_wts);
     break;
   case Pecos::HIERARCHICAL_SPARSE_GRID:
     if (refine_control == Pecos::DIMENSION_ADAPTIVE_CONTROL_GENERALIZED)
-      ((Pecos::HierarchSparseGridDriver*)ssgDriver)->
+      std::static_pointer_cast<Pecos::HierarchSparseGridDriver>(ssgDriver)->
 	track_collocation_indices(true);
     break;
   }
@@ -184,12 +186,18 @@ NonDSparseGrid(Model& model, unsigned short ssg_level,
 void NonDSparseGrid::
 initialize_grid(const std::vector<Pecos::BasisPolynomial>& poly_basis)
 {
-  numIntDriver.initialize_grid(poly_basis);
-  numIntDriver.initialize_grid_parameters(
-    iteratedModel.multivariate_distribution());
+  // called at construct time from NonDExpansion::initialize_u_space_grid()
+
+  numIntDriver.initialize_grid(poly_basis);     // sets basis, numVars
 
   ssgDriver->level(ssgLevelSpec);
-  ssgDriver->dimension_preference(dimPrefSpec);
+  ssgDriver->dimension_preference(dimPrefSpec); // requires numVars
+
+  // this data may be replaced on first execution by a top-level iterator,
+  // but it is still needed for certain construct time initializations
+  // (e.g., max concurrency below):
+  numIntDriver.initialize_grid_parameters(
+    iteratedModel.multivariate_distribution()); // 1D pts/wts use level
 
   maxEvalConcurrency *= ssgDriver->grid_size(); // requires grid parameters
 }
@@ -202,7 +210,9 @@ NonDSparseGrid::~NonDSparseGrid()
 void NonDSparseGrid::get_parameter_sets(Model& model)
 {
   // capture any run-time updates to distribution parameters
-  if (subIteratorFlag)
+  // > Note: top-level Iterator + NestedModel may change params between
+  //   initialize_grid() and 1st execution, so always perform this step
+  if (subIteratorFlag) //&& numIntegrations)
     ssgDriver->initialize_grid_parameters(model.multivariate_distribution());
 
   // Precompute quadrature rules (e.g., by defining maximal order for
@@ -276,20 +286,14 @@ void NonDSparseGrid::increment_grid()
 }
 
 
-void NonDSparseGrid::decrement_grid()
-{
-  // adaptive increment logic is not reversible, so use ssgLevelPrev
-  // (assumes no change in active key between increment-decrement pairs)
-  ssgDriver->level(ssgLevelPrev);
-}
-
-
 void NonDSparseGrid::increment_grid_weights(const RealVector& aniso_wts)
 {
   // Pecos::SparseGridDriver manages active keys; pull current level from Driver
   size_t ssg_lev = ssgDriver->level();
   int orig_size  = ssgDriver->grid_size();
-  ssgDriver->update_axis_lower_bounds();
+  ssgLevelPrev   = ssg_lev; // for restoration in decrement_grid()
+
+  ssgDriver->update_axis_lower_bounds(); // defined pre-increment
   // initial increment and anisotropy update
   ssgDriver->level(++ssg_lev);
   ssgDriver->anisotropic_weights(aniso_wts); // enforce axis LB's --> wt UB's
@@ -300,6 +304,14 @@ void NonDSparseGrid::increment_grid_weights(const RealVector& aniso_wts)
     ssgDriver->level(++ssg_lev);
     ssgDriver->anisotropic_weights(aniso_wts); // re-enforce LB's for new level
   }
+}
+
+
+void NonDSparseGrid::decrement_grid()
+{
+  // adaptive increment logic is not reversible, so use ssgLevelPrev
+  // (assumes no change in active key between increment-decrement pairs)
+  ssgDriver->level(ssgLevelPrev);
 }
 
 } // namespace Dakota

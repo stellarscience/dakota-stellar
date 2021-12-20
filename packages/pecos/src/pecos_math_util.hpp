@@ -11,8 +11,75 @@
 
 #include "pecos_data_types.hpp"
 
-
 namespace Pecos {
+ 
+
+/** Converts a scalar order specification and a vector anisotropic
+    dimension preference into an anisotropic order vector.  It is used
+    for initialization and does not enforce a reference lower bound. */
+inline void
+dimension_preference_to_anisotropic_order(unsigned short scalar_order,
+					  const RealVector& dim_pref,
+					  size_t num_v,
+					  UShortArray& aniso_order)
+{
+  // Note: this fn is the inverse of anisotropic_order_to_dimension_preference()
+
+  if (dim_pref.empty())
+    { aniso_order.assign(num_v, scalar_order); return; }
+
+  Real max_dim_pref = dim_pref[0];
+  size_t i, max_dim_pref_index = 0;
+  for (i=1; i<num_v; ++i)
+    if (dim_pref[i] > max_dim_pref)
+      { max_dim_pref = dim_pref[i]; max_dim_pref_index = i; }
+
+  aniso_order.resize(num_v);
+  for (i=0; i<num_v; ++i)
+    aniso_order[i] = (i == max_dim_pref_index) ? scalar_order :
+      (unsigned short)(scalar_order * dim_pref[i] / max_dim_pref);
+      // truncates fractional order
+}
+
+
+/** Converts a vector anisotropic order into a scalar order and vector
+    anisotropic dimension preference. */
+inline void
+anisotropic_order_to_dimension_preference(const UShortArray& aniso_order,
+					  unsigned short& scalar_order,
+					  RealVector& dim_pref,
+					  bool normalize = false)
+{
+  // Note: this fn is the inverse of dimension_preference_to_anisotropic_order()
+
+  size_t i, num_v = aniso_order.size(); bool anisotropic = false;
+  if (num_v) {
+    scalar_order = aniso_order[0];
+    for (i=1; i<num_v; ++i) {
+      unsigned short ao = aniso_order[i];
+      if (ao != scalar_order) {
+	anisotropic = true;
+	if (ao > scalar_order)
+	  scalar_order = ao;
+      }
+    }
+  }
+  else
+    scalar_order = USHRT_MAX; // undefined
+
+  if (anisotropic) {
+    dim_pref.sizeUninitialized(num_v);
+    if (normalize)
+      for (i=0; i<num_v; ++i)
+	dim_pref[i] = (Real)aniso_order[i] / (Real)scalar_order;
+    else // just preserve ratios
+      for (i=0; i<num_v; ++i)
+	dim_pref[i] = (Real)aniso_order[i];
+  }
+  else
+    dim_pref.sizeUninitialized(0);
+}
+
 
 /** Append to combined_mi based on append_mi. */
 inline void append_multi_index(const UShort2DArray& append_mi,
@@ -257,9 +324,8 @@ inline void append_multi_index(const UShort2DArray& ref_mi,
 
 
 // assess whether pareto array is dominated by combined_pareto
-bool SharedOrthogPolyApproxData::
-assess_dominance(const UShort2DArray& pareto,
-		 const UShort2DArray& combined_pareto)
+bool assess_dominance(const UShort2DArray& pareto,
+		      const UShort2DArray& combined_pareto)
 {
   bool new_dominated = true, i_dominated, j_dominated;
   size_t i, j, num_p = pareto.size(),

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -20,6 +21,7 @@
 #ifdef HAVE_SURFPACK
 #include "SharedSurfpackApproxData.hpp"
 #endif // HAVE_SURFPACK
+#include "ActiveKey.hpp"
 
 //#define DEBUG
 
@@ -37,14 +39,12 @@ SharedApproxData::
 SharedApproxData(BaseConstructor, ProblemDescDB& problem_db, size_t num_vars):
   // See base constructor in DakotaIterator.cpp for full discussion of output
   // verbosity.  For approximations, verbose adds quad poly coeff reporting.
-  outputLevel(problem_db.get_short("method.output")),
   numVars(num_vars), approxType(problem_db.get_string("model.surrogate.type")),
-  buildDataOrder(1), activeDataIndex(0), 
+  buildDataOrder(1), outputLevel(problem_db.get_short("method.output")),
   modelExportPrefix(
     problem_db.get_string("model.surrogate.model_export_prefix")),
   modelExportFormat(
-    problem_db.get_ushort("model.surrogate.model_export_format")),
-  dataRep(NULL), referenceCount(1)
+    problem_db.get_ushort("model.surrogate.model_export_format"))
 {
   // increment the buildDataOrder based on derivative usage and response
   // gradient/Hessian specifications and approximation type support.  The
@@ -87,14 +87,6 @@ SharedApproxData(BaseConstructor, ProblemDescDB& problem_db, size_t num_vars):
     // restore the specification
     problem_db.set_db_model_nodes(model_index);
   }
-
-  // initialize sequence of one empty key for first Approximation::approxData
-  approxDataKeys.resize(1);  approxDataKeys[0].resize(1);
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedApproxData::SharedApproxData(BaseConstructor) called to build "
-       << "base class for letter." << std::endl;
-#endif
 }
 
 
@@ -109,8 +101,7 @@ SharedApproxData::
 SharedApproxData(NoDBBaseConstructor, const String& approx_type,
 		 size_t num_vars, short data_order, short output_level):
   numVars(num_vars), approxType(approx_type), outputLevel(output_level),
-  activeDataIndex(0), modelExportFormat(NO_MODEL_FORMAT), modelExportPrefix(""),
-  dataRep(NULL), referenceCount(1)
+  modelExportFormat(NO_MODEL_FORMAT), modelExportPrefix("")
 {
   bool global_approx = strbegins(approxType, "global_");
   buildDataOrder = 1;
@@ -136,45 +127,23 @@ SharedApproxData(NoDBBaseConstructor, const String& approx_type,
       Cerr << "Warning: use_derivatives is not currently supported by "
 	   << approxType << " for Hessian incorporation.\n\n";
   }
-
-  // initialize sequence of one empty key for first Approximation::approxData
-  approxDataKeys.resize(1);  approxDataKeys[0].resize(1);
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedApproxData::SharedApproxData(NoDBBaseConstructor) called to "
-       << "build base class for letter." << std::endl;
-#endif
 }
 
 
-/** For the default constructor, dataRep is NULL.  This makes it
-    necessary to check for NULL in the copy constructor, assignment
-    operator, and destructor. */
-SharedApproxData::SharedApproxData():
+/** For the default constructor, dataRep is NULL. */
+SharedApproxData::SharedApproxData() //:
   //buildDataOrder(1), outputLevel(NORMAL_OUTPUT),
   //modelExportFormat(NO_MODEL_FORMAT), modelExportPrefix(""),
-  dataRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedApproxData::SharedApproxData() called to build empty "
-       << "approximation object." << std::endl;
-#endif
-}
+{ /* empty ctor */}
 
 
 /** Envelope constructor only needs to extract enough data to properly
     execute get_shared_data, since SharedApproxData(BaseConstructor, problem_db)
     builds the actual base class data for the derived approximations. */
 SharedApproxData::SharedApproxData(ProblemDescDB& problem_db, size_t num_vars):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedApproxData::SharedApproxData(ProblemDescDB&) called to "
-       << "instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  dataRep = get_shared_data(problem_db, num_vars);
+  dataRep(get_shared_data(problem_db, num_vars))
+{
   if ( !dataRep ) // bad type or insufficient memory
     abort_handler(APPROX_ERROR);
 }
@@ -182,14 +151,9 @@ SharedApproxData::SharedApproxData(ProblemDescDB& problem_db, size_t num_vars):
 
 /** Used only by the envelope constructor to initialize dataRep to the 
     appropriate derived type. */
-SharedApproxData* SharedApproxData::
+std::shared_ptr<SharedApproxData> SharedApproxData::
 get_shared_data(ProblemDescDB& problem_db, size_t num_vars)
 {
-#ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_shared_data(ProblemDescDB&)."
-       << std::endl;
-#endif
-
   const String& approx_type = problem_db.get_string("model.surrogate.type");
   //if (approx_type == "local_taylor")
   //  return new SharedTaylorApproxData(problem_db, num_vars);
@@ -197,10 +161,10 @@ get_shared_data(ProblemDescDB& problem_db, size_t num_vars)
   //  return new SharedTANA3ApproxData(problem_db, num_vars);
   if (strends(approx_type, "_orthogonal_polynomial") ||
       strends(approx_type, "_interpolation_polynomial"))
-    return new SharedPecosApproxData(problem_db, num_vars);
+    return std::make_shared<SharedPecosApproxData>(problem_db, num_vars);
 #ifdef HAVE_C3
   else if (approx_type == "global_function_train")
-    return new SharedC3ApproxData(problem_db,num_vars);
+    return std::make_shared<SharedC3ApproxData>(problem_db, num_vars);
 #endif
   //else if (approx_type == "global_gaussian")
   //  return new SharedGaussProcApproxData(problem_db, num_vars);
@@ -210,14 +174,18 @@ get_shared_data(ProblemDescDB& problem_db, size_t num_vars)
 	   approx_type == "global_neural_network" || // TO DO: Two ANN's ?
 	   approx_type == "global_radial_basis"   ||
 	   approx_type == "global_mars"           ||
-	   approx_type == "global_moving_least_squares")
-    return new SharedSurfpackApproxData(problem_db, num_vars);
+	   approx_type == "global_moving_least_squares" ||
+	   // Overloading use of SharedSurfpackApproxData for now:
+	   approx_type == "global_exp_gauss_proc" ||
+	   approx_type == "global_exp_poly")
+    return std::make_shared<SharedSurfpackApproxData>(problem_db, num_vars);
 #endif // HAVE_SURFPACK
   else {
     //Cerr << "Error: SharedApproxData type " << approx_type
     //     << " not available." << std::endl;
     //return NULL;
-    return new SharedApproxData(BaseConstructor(), problem_db, num_vars);
+    return std::shared_ptr<SharedApproxData>
+      (new SharedApproxData(BaseConstructor(), problem_db, num_vars));
   }
 }
 
@@ -228,16 +196,10 @@ get_shared_data(ProblemDescDB& problem_db, size_t num_vars)
 SharedApproxData::
 SharedApproxData(const String& approx_type, const UShortArray& approx_order,
 		 size_t num_vars, short data_order, short output_level):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedApproxData::SharedApproxData(String&) called to instantiate "
-       << "envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  dataRep = get_shared_data(approx_type, approx_order, num_vars,
-			    data_order, output_level);
+  dataRep(get_shared_data(approx_type, approx_order, num_vars,
+			  data_order, output_level))
+{
   if ( !dataRep ) // bad type or insufficient memory
     abort_handler(APPROX_ERROR);
 }
@@ -245,28 +207,22 @@ SharedApproxData(const String& approx_type, const UShortArray& approx_order,
 
 /** Used only by the envelope constructor to initialize dataRep to the 
     appropriate derived type. */
-SharedApproxData* SharedApproxData::
+std::shared_ptr<SharedApproxData> SharedApproxData::
 get_shared_data(const String& approx_type, const UShortArray& approx_order, 
 		size_t num_vars, short data_order, short output_level)
 {
-#ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_shared_data(String&)."
-       << std::endl;
-#endif
-
-  SharedApproxData* approx;
   //if (approx_type == "local_taylor")
   //  approx = new SharedTaylorApproxData(num_vars, data_order, output_level);
   //else if (approx_type == "multipoint_tana")
   //  approx = new SharedTANA3ApproxData(num_vars, data_order, output_level);
   if (strends(approx_type, "_orthogonal_polynomial") ||
       strends(approx_type, "_interpolation_polynomial"))
-    approx = new SharedPecosApproxData(approx_type, approx_order, num_vars,
-				       data_order, output_level);
+    return std::make_shared<SharedPecosApproxData>
+      (approx_type, approx_order, num_vars, data_order, output_level);
 #ifdef HAVE_C3
   else if (approx_type == "global_function_train")
-    approx = new SharedC3ApproxData(approx_type, approx_order, num_vars,
-				    data_order, output_level);
+    return std::make_shared<SharedC3ApproxData>
+      (approx_type, approx_order, num_vars, data_order, output_level);
 #endif
   //else if (approx_type == "global_gaussian")
   //  approx = new SharedGaussProcApproxData(num_vars, data_order,output_level);
@@ -277,211 +233,118 @@ get_shared_data(const String& approx_type, const UShortArray& approx_order,
 	   approx_type == "global_radial_basis"   ||
 	   approx_type == "global_mars"           ||
 	   approx_type == "global_moving_least_squares" ||
-       approx_type == "global_voronoi_surrogate"
+	   approx_type == "global_voronoi_surrogate" ||
+	   // Overloading use of SharedSurfpackApproxData for now:
+	   approx_type == "global_exp_gauss_proc" ||
+	   approx_type == "global_exp_poly"
            )
-    approx = new SharedSurfpackApproxData(approx_type, approx_order, num_vars,
-					  data_order, output_level);
+    return std::make_shared<SharedSurfpackApproxData>
+      (approx_type, approx_order, num_vars, data_order, output_level);
 #endif // HAVE_SURFPACK
   else {
     //Cerr << "Error: ApproxData type " << approx_type << " not available."
     //     << std::endl;
     //approx = NULL;
-    approx = new SharedApproxData(NoDBBaseConstructor(), approx_type, num_vars,
-				  data_order, output_level);
+    return std::shared_ptr<SharedApproxData>
+      (new SharedApproxData(NoDBBaseConstructor(), approx_type, num_vars,
+			    data_order, output_level));
   }
-  return approx;
+  return std::shared_ptr<SharedApproxData>();
 }
 
 
-/** Copy constructor manages sharing of dataRep and incrementing
-    of referenceCount. */
-SharedApproxData::SharedApproxData(const SharedApproxData& shared_data)
-{
-  // Increment new (no old to decrement)
-  dataRep = shared_data.dataRep;
-  if (dataRep) // Check for an assignment of NULL
-    ++dataRep->referenceCount;
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedApproxData::SharedApproxData(SharedApproxData&)" << std::endl;
-  if (dataRep)
-    Cout << "dataRep referenceCount = " << dataRep->referenceCount
-	 << std::endl;
-#endif
-}
+/** Copy constructor manages sharing of dataRep. */
+SharedApproxData::SharedApproxData(const SharedApproxData& shared_data):
+  dataRep(shared_data.dataRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old dataRep, assigns
-    new dataRep, and increments referenceCount for new dataRep. */
 SharedApproxData SharedApproxData::
 operator=(const SharedApproxData& shared_data)
 {
-  if (dataRep != shared_data.dataRep) { // normal case: old != new
-    // Decrement old
-    if (dataRep) // Check for NULL
-      if ( --dataRep->referenceCount == 0 ) 
-	delete dataRep;
-    // Assign and increment new
-    dataRep = shared_data.dataRep;
-    if (dataRep) // Check for NULL
-      ++dataRep->referenceCount;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  Cout << "SharedApproxData::operator=(SharedApproxData&)" << std::endl;
-  if (dataRep)
-    Cout << "dataRep referenceCount = " << dataRep->referenceCount
-	 << std::endl;
-#endif
-
+  dataRep = shared_data.dataRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes dataRep
-    when referenceCount reaches zero. */
 SharedApproxData::~SharedApproxData()
-{ 
-  // Check for NULL pointer 
-  if (dataRep) {
-    --dataRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    Cout << "dataRep referenceCount decremented to " 
-	 << dataRep->referenceCount << std::endl;
-#endif
-    if (dataRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      Cout << "deleting dataRep" << std::endl;
-#endif
-      delete dataRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
-void SharedApproxData::active_model_key(const UShortArray& mi_key)
+void SharedApproxData::active_model_key(const Pecos::ActiveKey& key)
 {
-  if (dataRep)
-    dataRep->active_model_key(mi_key);
-  //else no-op (implementation not required for shared data)
-}
+  // > AGGREGATED_MODELS uses {HF,LF} order, as does ApproxInterface::*_add()
+  // > When managing distinct sets of paired truth,surrogate data (e.g., one set
+  //   of data for Q_l - Q_lm1 and another for Q_lm1 - Q_lm2, it is important to
+  //   identify the lm1 data with a specific pairing --> data group index
+  //   pre-pend in {truth,surrogate,combined} keys.
 
-
-const UShortArray& SharedApproxData::active_model_key() const
-{
-  if (!dataRep) { // virtual fn: no default, error if not supplied by derived
-    Cerr << "Error: active_model_key() not available for this approximation "
-	 << "type." << std::endl;
-    abort_handler(APPROX_ERROR);
-  }
-
-  return dataRep->active_model_key();
+  if (dataRep) dataRep->active_model_key(key);
+  else activeKey = key;//.copy();
 }
 
 
 void SharedApproxData::clear_model_keys()
 {
-  if (dataRep)
-    dataRep->clear_model_keys();
-  //else no-op (implementation not required for shared data)
+  if (dataRep) dataRep->clear_model_keys();
+  else activeKey.clear();
 }
 
 
+/*
 void SharedApproxData::link_multilevel_surrogate_data()
 {
-  if (dataRep)
-    dataRep->link_multilevel_surrogate_data();
-  else {
-    Cerr << "Error: link_multilevel_surrogate_data() not available for this "
+  if (dataRep) dataRep->link_multilevel_surrogate_data();
+  //else no-op (no linkage required for derived SharedApproxData)
+
+  //else
+  //  switch (discrepancy_reduction()) {
+  //  case Pecos::DISTINCT_DISCREPANCY: case Pecos::RECURSIVE_DISCREPANCY:
+  //    approxDataKeys.resize(3); // HF, LF, discrep
+  //    break;
+  //  default: // default ctor linkages are sufficient
+  //    break;
+  //  }
+}
+*/
+
+
+void SharedApproxData::integration_iterator(const Iterator& iterator)
+{
+  if (dataRep) dataRep->integration_iterator(iterator);
+  else { // virtual fn: no default, error if not supplied by derived
+    Cerr << "Error: integration_iterator() not available for this "
 	 << "approximation type." << std::endl;
     abort_handler(APPROX_ERROR);
   }
 }
 
 
-void SharedApproxData::surrogate_model_key(const UShortArray& key)
+short SharedApproxData::discrepancy_reduction() const
 {
-  if (dataRep)
-    dataRep->surrogate_model_key(key);
-  else { // default implementation: no key augmentation
-    UShort2DArray& data_keys = approxDataKeys[activeDataIndex];
-    // AGGREGATED_MODELS mode uses {HF,LF} order, as does
-    // ApproximationInterface::*_add()
-    if (key.empty()) // prune second entry, if present, from approxDataKeys
-      data_keys.resize(1);
-    else {
-      data_keys.resize(2);
-      data_keys[1] = key; // assign incoming LF key
-    }
-  }
-}
-
-
-void SharedApproxData::truth_model_key(const UShortArray& key)
-{
-  if (dataRep)
-    dataRep->truth_model_key(key);
-  else { // default implementation: no key augmentation
-    UShort2DArray& data_keys = approxDataKeys[activeDataIndex];
-    // approxDataKeys size can remain 1 if no {truth,surrogate} aggregation
-    switch  (data_keys.size()) {
-    case 0:  data_keys.push_back(key); break;
-    default: data_keys[0] = key;       break;
-    }
-  }
-}
-
-
-const UShortArray& SharedApproxData::surrogate_model_key() const
-{
-  if (dataRep)
-    return dataRep->surrogate_model_key();
-  else { // default implementation
-    const UShort2DArray& data_keys = approxDataKeys[activeDataIndex];
-    if (data_keys.size() < 2) {
-      Cerr << "Error: no key defined in SharedApproxData::surrogate_model_key()"
-	   << std::endl;
-      abort_handler(APPROX_ERROR);
-      // or could return empty key by value
-    }
-    return data_keys.back();
-  }
-}
-
-
-const UShortArray& SharedApproxData::truth_model_key() const
-{
-  if (dataRep)
-    return dataRep->truth_model_key();
-  else // default implementation
-    return approxDataKeys[activeDataIndex].front();
+  if (dataRep) return dataRep->discrepancy_reduction();
+  else         return Pecos::NO_DISCREPANCY; // this enum is 0
 }
 
 
 void SharedApproxData::build()
 {
-  if (dataRep)
-    dataRep->build();
+  if (dataRep) dataRep->build();
   //else no-op (implementation not required for shared data)
 }
 
 
 void SharedApproxData::rebuild()
 {
-  if (dataRep)
-    dataRep->rebuild();
-  else // if incremental rebuild not defined, fall back to full build
-    build();
+  if (dataRep) dataRep->rebuild();
+  else         build();// if incremental not defined, fall back to full build
 }
 
 
 void SharedApproxData::pop(bool save_surr_data)
 {
-  if (dataRep)
-    dataRep->pop(save_surr_data);
-  //else no-op (implementation not required for shared data)
+  if (dataRep) dataRep->pop(save_surr_data);
+  //else no-op (derived implementation not required)
 }
 
 
@@ -497,7 +360,7 @@ bool SharedApproxData::push_available()
 }
 
 
-size_t SharedApproxData::push_index(const UShortArray& key)
+size_t SharedApproxData::push_index(const Pecos::ActiveKey& key)
 {
   if (!dataRep) { // virtual fn: no default, error if not supplied by derived
     Cerr << "Error: push_index() not available for this approximation type."
@@ -513,11 +376,7 @@ void SharedApproxData::pre_push()
 {
   if (dataRep)
     dataRep->pre_push();
-  else {
-    Cerr << "\nError: pre_push() not defined for this shared approximation "
-	 << "type." << std::endl;
-    abort_handler(APPROX_ERROR);
-  }
+  //else no-op (derived implementation not required)
 }
 
 
@@ -525,15 +384,11 @@ void SharedApproxData::post_push()
 {
   if (dataRep)
     dataRep->post_push();
-  else {
-    Cerr << "\nError: post_push() not defined for this shared approximation "
-	 << "type." << std::endl;
-    abort_handler(APPROX_ERROR);
-  }
+  //else no-op (derived implementation not required)
 }
 
 
-size_t SharedApproxData::finalize_index(size_t i, const UShortArray& key)
+size_t SharedApproxData::finalize_index(size_t i, const Pecos::ActiveKey& key)
 {
   if (!dataRep) { // virtual fn: no default, error if not supplied by derived
     Cerr << "Error: finalize_index() not available for this approximation type."
@@ -549,11 +404,7 @@ void SharedApproxData::pre_finalize()
 {
   if (dataRep)
     dataRep->pre_finalize();
-  else {
-    Cerr << "\nError: pre_finalize() not defined for this shared approximation "
-	 << "type." << std::endl;
-    abort_handler(APPROX_ERROR);
-  }
+  //else no-op (derived implementation not required)
 }
 
 
@@ -561,11 +412,7 @@ void SharedApproxData::post_finalize()
 {
   if (dataRep)
     dataRep->post_finalize();
-  else {
-    Cerr << "\nError: post_finalize() not defined for this shared "
-	 << "approximation type." << std::endl;
-    abort_handler(APPROX_ERROR);
-  }
+  //else no-op (derived implementation not required)
 }
 
 
@@ -582,11 +429,7 @@ void SharedApproxData::pre_combine()
 {
   if (dataRep)
     dataRep->pre_combine();
-  else {
-    Cerr << "\nError: pre_combine() not defined for this shared approximation "
-	 << "type." << std::endl;
-    abort_handler(APPROX_ERROR);
-  }
+  //else no-op (derived implementation not required)
 }
 
 
@@ -594,8 +437,7 @@ void SharedApproxData::post_combine()
 {
   if (dataRep)
     dataRep->post_combine();
-  //else
-  //  default: no post combine required
+  //else no-op (derived implementation not required)
 }
 
 
@@ -603,8 +445,50 @@ void SharedApproxData::combined_to_active(bool clear_combined)
 {
   if (dataRep)
     dataRep->combined_to_active(clear_combined);
-  //else
-  //  default: no op
+  //else no-op (derived implementation not required)
+}
+
+
+bool SharedApproxData::advancement_available()
+{
+  if (dataRep) return dataRep->advancement_available();
+  else         return true; // only a few cases throttle advancements
+}
+
+
+void SharedApproxData::increment_order()
+{
+  if (dataRep)
+    dataRep->increment_order();
+  else { // virtual fn: no default, error if not supplied by derived
+    Cerr << "Error: increment_order() not available for this approximation "
+	 << "type." << std::endl;
+    abort_handler(APPROX_ERROR);
+  }
+}
+
+
+void SharedApproxData::decrement_order()
+{
+  if (dataRep)
+    dataRep->decrement_order();
+  else { // virtual fn: no default, error if not supplied by derived
+    Cerr << "Error: decrement_order() not available for this approximation "
+	 << "type." << std::endl;
+    abort_handler(APPROX_ERROR);
+  }
+}
+
+
+void SharedApproxData::
+construct_basis(const Pecos::MultivariateDistribution& mv_dist)
+{
+  if (dataRep) dataRep->construct_basis(mv_dist);
+  else { // virtual fn: no default, error if not supplied by derived
+    Cerr << "Error: construct_basis() not available for this approximation "
+	 << "type." << std::endl;
+    abort_handler(APPROX_ERROR);
+  }
 }
 
 
@@ -613,8 +497,25 @@ update_basis_distribution_parameters(const Pecos::MultivariateDistribution& mvd)
 {
   if (dataRep)
     dataRep->update_basis_distribution_parameters(mvd);
-  //else
-  //  default: no op
+  //else no-op (derived implementation not required)
+}
+
+
+bool SharedApproxData::formulation_updated() const
+{
+  if (dataRep) return dataRep->formulation_updated();
+  else { // not virtual
+    std::map<Pecos::ActiveKey, bool>::const_iterator cit
+      = formUpdated.find(activeKey);
+    return (cit == formUpdated.end()) ? false : cit->second;
+  }
+}
+
+
+void SharedApproxData::formulation_updated(bool update)
+{
+  if (dataRep) dataRep->formulation_updated(update);
+  else         formUpdated[activeKey] = update;
 }
 
 
@@ -623,8 +524,7 @@ configuration_options(const Pecos::ExpansionConfigOptions& ec_options)
 {
   if (dataRep)
     dataRep->configuration_options(ec_options);
-  //else
-  //  default: no op
+  //else no-op (derived implementation not required)
 }
 
 
@@ -633,8 +533,7 @@ configuration_options(const Pecos::BasisConfigOptions& bc_options)
 {
   if (dataRep)
     dataRep->configuration_options(bc_options);
-  //else
-  //  default: no op
+  //else no-op (derived implementation not required)
 }
 
 
@@ -643,8 +542,7 @@ configuration_options(const Pecos::RegressionConfigOptions& rc_options)
 {
   if (dataRep)
     dataRep->configuration_options(rc_options);
-  //else
-  //  default: no op
+  //else no-op (derived implementation not required)
 }
 
 
@@ -652,17 +550,15 @@ void SharedApproxData::random_variables_key(const BitArray& random_vars_key)
 {
   if (dataRep)
     dataRep->random_variables_key(random_vars_key);
-  //else
-  //  default: no op
+  //else no-op (derived implementation not required)
 }
 
 
-void SharedApproxData::refinement_statistics_type(short stats_type)
+void SharedApproxData::refinement_statistics_mode(short stats_mode)
 {
   if (dataRep)
-    dataRep->refinement_statistics_type(stats_type);
-  //else
-  //  default: no op
+    dataRep->refinement_statistics_mode(stats_mode);
+  //else no-op (derived implementation not required)
 }
 
 

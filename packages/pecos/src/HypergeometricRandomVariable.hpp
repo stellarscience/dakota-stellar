@@ -108,13 +108,14 @@ protected:
   unsigned int numDrawn;
 
   /// pointer to the Boost hypergeometric_distribution instance
-  hypergeometric_dist* hypergeomDist;
+  std::unique_ptr<hypergeometric_dist> hypergeomDist;
 };
 
 
 inline HypergeometricRandomVariable::HypergeometricRandomVariable():
-  RandomVariable(BaseConstructor()), numTotalPop(1), numSelectPop(1),
-  numDrawn(1), hypergeomDist(NULL)
+  RandomVariable(BaseConstructor()),
+  numTotalPop(1), numSelectPop(1), numDrawn(1),
+  hypergeomDist(new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop))
 { ranVarType = HYPERGEOMETRIC; }
 
 
@@ -123,12 +124,12 @@ HypergeometricRandomVariable(unsigned int num_total_pop,
 			     unsigned int num_sel_pop, unsigned int num_drawn):
   RandomVariable(BaseConstructor()), numTotalPop(num_total_pop),
   numSelectPop(num_sel_pop), numDrawn(num_drawn),
-  hypergeomDist(new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop))
+  hypergeomDist(new hypergeometric_dist(num_drawn, num_sel_pop, num_total_pop))
 { ranVarType = HYPERGEOMETRIC; }
 
 
 inline HypergeometricRandomVariable::~HypergeometricRandomVariable()
-{ if (hypergeomDist) delete hypergeomDist; }
+{ }
 
 
 inline Real HypergeometricRandomVariable::cdf(Real x) const
@@ -225,19 +226,19 @@ inline RealRealPair HypergeometricRandomVariable::distribution_bounds() const
 
 inline void HypergeometricRandomVariable::update_boost()
 {
-  if (hypergeomDist) delete hypergeomDist;
-  hypergeomDist = new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop);
+  hypergeomDist.reset
+    (new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop));
 }
 
 
 inline void HypergeometricRandomVariable::update_boost_conditionally()
 {
   // old is now invalid
-  if (hypergeomDist) { delete hypergeomDist; hypergeomDist = NULL; }
+  if (hypergeomDist) hypergeomDist.reset();
   // new may not be valid as of yet
   if (numDrawn <= numTotalPop && numSelectPop <= numTotalPop)
-    hypergeomDist
-      = new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop);
+    hypergeomDist.reset
+      (new hypergeometric_dist(numDrawn, numSelectPop, numTotalPop));
   // else wait for pending param updates
 }
 

@@ -29,7 +29,7 @@
 #include <string.h>
 #endif
 
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "TOLS.h"
 
 using namespace std;

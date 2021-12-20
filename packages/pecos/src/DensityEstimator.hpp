@@ -79,20 +79,19 @@ namespace Pecos {
 			    DensityEstimator& estimator);
 
     String getType();
+    // BMA: Is this needed? Also, seems misnamed
     DensityEstimator* getEnvelope();
-    bool is_null();
+    // BMA: Removed as unused
+    //    bool is_null();
 
   protected:
     String density_estimator_type;
 
   private:
-    static DensityEstimator* get_density_estimator(
-						   const String& density_estimator_type);
+    static std::shared_ptr<DensityEstimator>
+    get_density_estimator(const String& density_estimator_type);
 
-    DensityEstimator* densityEstimator;
-
-    /// number of objects sharing samples
-    int referenceCount;
+    std::shared_ptr<DensityEstimator> densityEstimator;
   };
 
 } /* namespace Pecos */

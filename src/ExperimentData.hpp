@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -88,8 +89,12 @@ public:
                  short output_level,
                  std::string scalarDataFilename = "");
  
-  ExperimentData(size_t num_experiments, const SharedResponseData& srd,
-                 const RealMatrix& configVars, 
+  /// Bayesian experimental design constructor. Passed SVD has
+  /// calibration parameters as active and config vars as inactive
+  /// variables. Passed configVars have config vars as active.
+  ExperimentData(size_t num_experiments, const SharedVariablesData& svd,
+		 const SharedResponseData& srd,
+                 const VariablesArray& configVars, 
                  const IntResponseMap& all_responses, short output_level); 
 
   //ExperimentData(const ExperimentData&);            ///< copy constructor
@@ -101,9 +106,14 @@ public:
   //
  
   /// Load experiments from data files (simple scalar or field)
-  void load_data(const std::string& context_message);
-  /// Add one data point to the experimental data set
-  void add_data(const RealVector& one_configvars, const Response& one_response);
+  void load_data(const std::string& context_message,
+		 const Variables& vars_with_state_as_config);
+  /// Add one data point to the experimental data set. Used for
+  /// Bayesian experimental design. Passed SVD has calibration
+  /// parameters as active and config vars as inactive
+  /// variables. Passed configVars have config vars as active.
+  void add_data(const SharedVariablesData& svd,
+		const Variables& one_configvars, const Response& one_response);
 
   /// retrieve the number of experiments
   size_t num_experiments() const
@@ -114,16 +124,19 @@ public:
   size_t num_total_exppoints() const;
 
   /// retrieve the number of scalars (applies to all experiments)
-  size_t num_scalars() const;
+  size_t num_scalar_primary() const;
 
   /// retrieve the number of fields (applies to all experiments)
   size_t num_fields() const;
 
-  /// number of onfiguration variables
+  /// number of configuration variables
   size_t num_config_vars() const;
 
   /// values of the configuration variables, 1 RealVector per experiment
-  const std::vector<RealVector>& config_vars() const;
+  /// omits string variables as historically used in NonDBayes
+  std::vector<RealVector> config_vars_as_real() const;
+
+  const std::vector<Variables>& configuration_variables() const;
 
   /// return contiguous vector of all data (scalar, followed by field)
   /// for the specified experiment
@@ -150,6 +163,9 @@ public:
   /// retrieve a view of the field data coordinates for the given response, for the given
   /// experiment 
   RealMatrix field_coords_view(size_t response, size_t experiment) const;
+
+  /// populate the passed array with num_total_exppoints labels
+  void fill_primary_function_labels(StringArray& expanded_labels) const;
 
   /// whether the specified variance type (enum value) is present and active
   bool variance_type_active(short variance_type) const;
@@ -367,6 +383,10 @@ private:
   /// parse user-provided sigma type strings and populate enums
   void parse_sigma_types(const StringArray& sigma_types);
 
+  /// After constructing or adding data, update properties like
+  /// experiment lengths, determinant, etc.
+  void update_data_properties();
+
   // data loading helpers
 
   /// Load a single experiment exp_index into exp_resp
@@ -459,10 +479,10 @@ private:
   /// observed data and error (sigma/covariance) for each experiment.
   std::vector<Response> allExperiments;
   
-  // TODO: migrate this to a vector of Variables?
   /// Vector of numExperiments configurations at which data were
-  /// gathered; empty if no configurations specified.
-  std::vector<RealVector> allConfigVars;
+  /// gathered; empty if no configurations specified. The inactive
+  /// state variables are used to store the configuration settings.
+  std::vector<Variables> allConfigVars;
 
   /// Length of each experiment
   IntVector experimentLengths;

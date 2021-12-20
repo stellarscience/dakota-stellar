@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -51,6 +52,7 @@ public:
   void derived_set_communicators(ParLevLIter pl_iter);
   void derived_free_communicators(ParLevLIter pl_iter);
 
+  void pre_run();
   void core_run();
   void print_results(std::ostream& s, short results_state = FINAL_RESULTS);
 
@@ -150,14 +152,14 @@ private:
 
 inline void NonDGlobalReliability::x_truth_evaluation(short mode)
 {
-  uSpaceModel.component_parallel_mode(TRUTH_MODEL);      // Recast forwards
+  uSpaceModel.component_parallel_mode(TRUTH_MODEL_MODE); // Recast forwards
 
   ActiveSet set = iteratedModel.current_response().active_set();
   set.request_values(0); set.request_value(mode, respFnCount);
   iteratedModel.evaluate(set);
 
   // Not currently necessary as surrogate mode does not employ parallelism:
-  //uSpaceModel.component_parallel_mode(SURROGATE_MODEL); // restore
+  //uSpaceModel.component_parallel_mode(SURROGATE_MODEL_MODE); // restore
 }
 
 
@@ -175,7 +177,7 @@ x_truth_evaluation(const RealVector& c_vars_u, short mode)
 inline void NonDGlobalReliability::
 u_truth_evaluation(const RealVector& c_vars_u, short mode)
 {
-  uSpaceModel.component_parallel_mode(TRUTH_MODEL);      // Recast forwards
+  uSpaceModel.component_parallel_mode(TRUTH_MODEL_MODE); // Recast forwards
   uSpaceModel.surrogate_response_mode(BYPASS_SURROGATE); // Recast forwards
 
   uSpaceModel.continuous_variables(c_vars_u);
@@ -185,7 +187,7 @@ u_truth_evaluation(const RealVector& c_vars_u, short mode)
 
   uSpaceModel.surrogate_response_mode(UNCORRECTED_SURROGATE); // restore
   // Not currently necessary as surrogate mode does not employ parallelism:
-  //uSpaceModel.component_parallel_mode(SURROGATE_MODEL); // restore
+  //uSpaceModel.component_parallel_mode(SURROGATE_MODEL_MODE); // restore
 }
 
 

@@ -56,11 +56,14 @@ public:
   /// set ranVarTypes[i]
   void random_variable_type(short rv_type, size_t i);
 
+  // BMA TODO: Review why these don't follow typical letter/envelope
+  // pattern. Left them for now...
+
   /// pull non-standardized distribution parameters from pull_mvd
   void pull_distribution_parameters(const MultivariateDistribution& pull_mvd);
   /// pull non-standardized distribution parameters from pull_mvd_rep
-  void pull_distribution_parameters(
-    const MultivariateDistribution* pull_mvd_rep);
+  void pull_distribution_parameters
+  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep);
 
   /// pull non-standardized distribution parameters from pull_mvd, aligning
   /// variables based on label lookups
@@ -68,9 +71,9 @@ public:
     const StringArray& pull_labels, const StringArray& push_labels);
   /// pull non-standardized distribution parameters from pull_mvd_rep, aligning
   /// variables based on label lookups
-  void pull_distribution_parameters(
-    const MultivariateDistribution* pull_mvd_rep,
-    const StringArray& pull_labels, const StringArray& push_labels);
+  void pull_distribution_parameters
+  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+   const StringArray& pull_labels, const StringArray& push_labels);
 
   /// pull non-standardized distribution parameters for a particular
   /// random variable from pull_mvd
@@ -78,14 +81,18 @@ public:
 				    size_t pull_index, size_t push_index);
   /// pull non-standardized distribution parameters for a particular
   /// random variable from pull_mvd_rep
-  void pull_distribution_parameters(
-    const MultivariateDistribution* pull_mvd_rep,
-    size_t pull_index, size_t push_index);
+  void pull_distribution_parameters
+  (const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+   size_t pull_index, size_t push_index);
 
   /// return activeVars
   const BitArray& active_variables() const;
+  /// set activeVars
+  void active_variables(const BitArray& );
   /// return activeCorr
   const BitArray& active_correlations() const;
+  /// set activeCorr
+  void active_correlations(const BitArray& );
 
   /// return corrMatrix
   const RealSymMatrix& correlation_matrix() const;
@@ -113,19 +120,29 @@ public:
 
   bool global_bounds() const;
 
+  /// check incoming vec for length equal to number of active random variables
+  template <typename OrdinalType, typename ScalarType>
+  void check_active_length(
+    const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& vec,
+    const BitArray& mask) const;
+
   /// set real lower bounds for variable ranges
-  void lower_bounds(const RealVector& l_bnds,const BitArray& mask = BitArray());
+  void lower_bounds(const RealVector& l_bnds,
+		    const BitArray& mask = BitArray());
   /// set integer lower bounds for variable ranges
-  void lower_bounds(const IntVector& l_bnds, const BitArray& mask = BitArray());
+  void lower_bounds(const IntVector& l_bnds,
+		    const BitArray& mask = BitArray());
   /// set real lower bound for a variable range
   void lower_bound(Real l_bnd, size_t rv_index);
   /// set int lower bound for a variable range
   void lower_bound(int  l_bnd, size_t rv_index);
 
   /// set real upper bounds for variable ranges
-  void upper_bounds(const RealVector& u_bnds,const BitArray& mask = BitArray());
+  void upper_bounds(const RealVector& u_bnds,
+		    const BitArray& mask = BitArray());
   /// set int  upper bounds for variable ranges
-  void upper_bounds(const IntVector& u_bnds, const BitArray& mask = BitArray());
+  void upper_bounds(const IntVector& u_bnds,
+		    const BitArray& mask = BitArray());
   /// set real upper bound for a variable range
   void upper_bound(Real u_bnd, size_t rv_index);
   /// set int  upper bound for a variable range
@@ -154,9 +171,11 @@ public:
   /// set ranVarTypes and initialize randomVars
   void initialize_types(const ShortArray& rv_types,
 			const BitArray& active_vars = BitArray());
-  /// initializes corrMatrix and correlationFlag
+  /// assigns corrMatrix and activeCorr; invokes initialize_correlations()
   void initialize_correlations(const RealSymMatrix& corr,
 			       const BitArray& active_corr = BitArray());
+  /// initializes correlationFlag and performs sanity checks
+  void initialize_correlations();
 
   /// update a scalar distribution parameter within randomVars[v]
   template <typename ValueType>
@@ -251,7 +270,7 @@ protected:
   Real log_pdf_hessian(Real val, size_t rv_index) const;
 
   /// copy marginals + correlation data between representations
-  void copy_rep(MultivariateDistribution* mvd_rep);
+  void copy_rep(std::shared_ptr<MultivariateDistribution> mvd_rep);
 
   //
   //- Heading: Data
@@ -382,8 +401,18 @@ inline const BitArray& MarginalsCorrDistribution::active_variables() const
 { return activeVars; }
 
 
+inline void MarginalsCorrDistribution::
+active_variables(const BitArray& active_vars)
+{ activeVars = active_vars; }
+
+
 inline const BitArray& MarginalsCorrDistribution::active_correlations() const
 { return activeCorr; }
+
+
+inline void MarginalsCorrDistribution::
+active_correlations(const BitArray& active_corr)
+{ activeCorr = active_corr; }
 
 
 inline const RealSymMatrix& MarginalsCorrDistribution::
@@ -393,7 +422,7 @@ correlation_matrix() const
 
 inline void MarginalsCorrDistribution::
 correlation_matrix(const RealSymMatrix& corr)
-{ initialize_correlations(corr); } // Note: default active_corr = BitArray()
+{ corrMatrix = corr; }
 
 
 //inline const RealMatrix& MarginalsCorrDistribution::correlation_factor() const
@@ -402,7 +431,8 @@ correlation_matrix(const RealSymMatrix& corr)
 
 /** For consistent random variable ordering. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep)
+pull_distribution_parameters
+(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep)
 {
   size_t v, num_rv = ranVarTypes.size();
   for (v=0; v<num_rv; ++v)
@@ -418,9 +448,9 @@ pull_distribution_parameters(const MultivariateDistribution& pull_mvd)
 /** For potentially inconsistent random variable ordering that requires
     a lookup. */
 inline void MarginalsCorrDistribution::
-pull_distribution_parameters(const MultivariateDistribution* pull_mvd_rep,
-			     const StringArray& pull_labels,
-			     const StringArray& push_labels)
+pull_distribution_parameters
+(const std::shared_ptr<MultivariateDistribution> pull_mvd_rep,
+ const StringArray& pull_labels, const StringArray& push_labels)
 {
   size_t v, num_rv = ranVarTypes.size();
   for (v=0; v<num_rv; ++v) {
@@ -771,9 +801,25 @@ inline bool MarginalsCorrDistribution::global_bounds() const
 { return globalBndsFlag; }
 
 
+template <typename OrdinalType, typename ScalarType> 
+void MarginalsCorrDistribution::check_active_length(
+  const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& vec,
+  const BitArray& mask) const
+{
+  size_t vec_len = vec.length(),
+      expect_len = (mask.empty()) ? randomVars.size() : mask.count();
+  if (vec_len != expect_len) {
+    PCerr << "Error: bad active vector length (" << vec_len << "); "
+	  << expect_len << "expected." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 inline void MarginalsCorrDistribution::
 lower_bounds(const RealVector& l_bnds, const BitArray& mask)
 {
+  check_active_length(l_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -790,6 +836,7 @@ lower_bounds(const RealVector& l_bnds, const BitArray& mask)
 inline void MarginalsCorrDistribution::
 lower_bounds(const IntVector& l_bnds, const BitArray& mask)
 {
+  check_active_length(l_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -830,6 +877,7 @@ inline void MarginalsCorrDistribution::lower_bound(int l_bnd, size_t rv_index)
 inline void MarginalsCorrDistribution::
 upper_bounds(const RealVector& u_bnds, const BitArray& mask)
 {
+  check_active_length(u_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -846,6 +894,7 @@ upper_bounds(const RealVector& u_bnds, const BitArray& mask)
 inline void MarginalsCorrDistribution::
 upper_bounds(const IntVector& u_bnds, const BitArray& mask)
 {
+  check_active_length(u_bnds, mask);
   size_t v, num_v = randomVars.size();
   if (mask.empty())
     for (v=0; v<num_v; ++v)
@@ -913,46 +962,52 @@ log_pdf_hessian(Real val, size_t rv_index) const
 
 inline Real MarginalsCorrDistribution::pdf(const RealVector& pt) const
 {
-  // TO DO: add support for evaluation of correlated MVN density
+  // correlated density handled via upstream transform to standardized space
   if (correlationFlag) {
     PCerr << "Error: MarginalsCorrDistribution::pdf() currently uses a "
 	  << "product of marginal densities\n       and can only be used for "
 	  << "independent random variables." << std::endl;
     abort_handler(-1);
   }
+
+  check_active_length(pt, activeVars);
   size_t v, num_v = randomVars.size();
   Real density = 1.;
   if (activeVars.empty())
     for (v=0; v<num_v; ++v)
       density *= pdf(pt[v], v);
-  else
+  else {
+    size_t av_cntr = 0;
     for (v=0; v<num_v; ++v)
       if (activeVars[v])
-	density *= pdf(pt[v], v);
-
+	density *= pdf(pt[av_cntr++], v);
+  }
   return density;
 }
 
 
 inline Real MarginalsCorrDistribution::log_pdf(const RealVector& pt) const
 {
-  // TO DO: add support for evaluation of correlated MVN density
+  // correlated density handled via upstream transform to standardized space
   if (correlationFlag) {
     PCerr << "Error: MarginalsCorrDistribution::log_pdf() currently uses a "
 	  << "sum of log marginal densities\n       and can only be used for "
 	  << "independent random variables." << std::endl;
     abort_handler(-1);
   }
+
+  check_active_length(pt, activeVars);
   size_t v, num_v = randomVars.size();
   Real log_density = 0.;
   if (activeVars.empty())
     for (v=0; v<num_v; ++v)
       log_density += log_pdf(pt[v], v);
-  else
+  else {
+    size_t av_cntr = 0;
     for (v=0; v<num_v; ++v)
       if (activeVars[v])
-	log_density += log_pdf(pt[v], v);
-
+	log_density += log_pdf(pt[av_cntr++], v);
+  }
   return log_density;
 }
 

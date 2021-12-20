@@ -39,7 +39,8 @@ public:
   /// default constructor
   RegressionConfigOptions();
   /// constructor
-  RegressionConfigOptions(bool cv, bool cv_noise_only, int seed,
+  RegressionConfigOptions(bool cv, bool cv_noise_only,
+			  unsigned short max_cv_order, bool scaling, int seed,
 			  const RealVector& noise_tols, Real l2_penalty,
 			  bool normalize_cv, unsigned short init_lev,
 			  unsigned short growth_fact,
@@ -57,6 +58,10 @@ public:
   /// flag to restrict cross-validation to only estimate the noise
   /// tolerance in order to manage computational cost
   bool crossValidNoiseOnly;
+  /// maximum number of order candidates for cross-validation
+  unsigned short maxCVOrderCandidates;
+  /// scale range of response data to [0,1] to align with regression tols
+  bool respScaling;
 
   /// random seed for data fold definition within cross validation
   int randomSeed;
@@ -93,19 +98,21 @@ public:
 
 
 inline RegressionConfigOptions::RegressionConfigOptions():
-  crossValidation(false), crossValidNoiseOnly(false), randomSeed(0),
+  crossValidation(false), crossValidNoiseOnly(false),
+  maxCVOrderCandidates(USHRT_MAX), respScaling(false), randomSeed(0),
   l2Penalty(0.), normalizeCV(false), initSGLevel(0), multiIndexGrowthFactor(2),
   numAdvancements(3), advanceByFrontier(false)
 { }
 
 
 inline RegressionConfigOptions::
-RegressionConfigOptions(bool cv, bool cv_noise_only, int seed,
-			const RealVector& noise_tols,
-			Real l2_penalty, bool normalize_cv,
-			unsigned short init_lev, unsigned short growth_fact,
-			unsigned short num_advance):
-  crossValidation(cv), crossValidNoiseOnly(cv_noise_only), randomSeed(seed),
+RegressionConfigOptions(bool cv, bool cv_noise_only,
+			unsigned short max_cv_order, bool scaling, int seed,
+			const RealVector& noise_tols, Real l2_penalty,
+			bool normalize_cv, unsigned short init_lev,
+			unsigned short growth_fact, unsigned short num_advance):
+  crossValidation(cv), crossValidNoiseOnly(cv_noise_only),
+  maxCVOrderCandidates(max_cv_order), respScaling(scaling), randomSeed(seed),
   noiseTols(noise_tols), l2Penalty(l2_penalty), normalizeCV(normalize_cv),
   initSGLevel(init_lev), multiIndexGrowthFactor(growth_fact),
   numAdvancements(num_advance), advanceByFrontier(false)
@@ -116,6 +123,8 @@ inline RegressionConfigOptions::
 RegressionConfigOptions(const RegressionConfigOptions& rc_options):
   crossValidation(rc_options.crossValidation),
   crossValidNoiseOnly(rc_options.crossValidNoiseOnly),
+  maxCVOrderCandidates(rc_options.maxCVOrderCandidates),
+  respScaling(rc_options.respScaling),
   randomSeed(rc_options.randomSeed), noiseTols(rc_options.noiseTols),
   l2Penalty(rc_options.l2Penalty), normalizeCV(rc_options.normalizeCV),
   initSGLevel(rc_options.initSGLevel),
@@ -203,6 +212,8 @@ protected:
   //void pre_finalize_data();
   //void post_finalize_data();
 
+  bool advancement_available();
+
   //
   //- Heading: Member functions
   //
@@ -239,6 +250,11 @@ private:
 			    bool add_grad, double* pack_grad, size_t& pg_cntr);
   /// pack response contributions to RHS for regression
   void pack_response_data(const SurrogateDataResp& sdr,
+			  bool add_val,  double* pack_val,  size_t& pv_cntr,
+			  bool add_grad, double* pack_grad, size_t& pg_cntr);
+  /// pack scaled response contributions to RHS for regression
+  void pack_response_data(const SurrogateDataResp& sdr,
+			  const RealRealPair& factors,
 			  bool add_val,  double* pack_val,  size_t& pv_cntr,
 			  bool add_grad, double* pack_grad, size_t& pg_cntr);
 
@@ -296,6 +312,15 @@ inline SharedRegressOrthogPolyApproxData::~SharedRegressOrthogPolyApproxData()
 inline void SharedRegressOrthogPolyApproxData::
 configuration_options(const RegressionConfigOptions& rc_options)
 { regressConfigOptions = rc_options; }
+
+
+inline bool SharedRegressOrthogPolyApproxData::advancement_available()
+{
+  // if CV saturation is possible, delegate test down to individual QoI in
+  // RegressOrthogPolyApproximation::advancement_available()
+  return ( regressConfigOptions.crossValidation &&
+	  !regressConfigOptions.crossValidNoiseOnly ) ? false : true;
+}
 
 
 inline void SharedRegressOrthogPolyApproxData::clear_adapted()

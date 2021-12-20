@@ -1,5 +1,13 @@
+#  _______________________________________________________________________
+#
+#  DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
+#  Copyright 2014-2020
+#  National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Dakota directory.
+#  _______________________________________________________________________
+
 include(DakotaUnitTest)
-#include(FindBoost)
 
 # List of test files to copy into this directory
 set(dakota_unit_test_copied_files)
@@ -16,14 +24,6 @@ include_directories(${Dakota_INCLUDE_DIRS}/src) # include tpl directories
 # Needed when linking with QUESO
 link_directories(${Dakota_LIBRARY_DIRS})
 
-# --- Boost dependencies
-include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
-# TODO: Understand leveraging BOOST_DISABLE_ASSERTS wrt to Unit Testing
-option(BOOST_DISABLE_ASSERTS "Toggle BoostAssert, default is AssertDisabled" ON)
-if (BOOST_DISABLE_ASSERTS)
-  add_definitions("-DBOOST_DISABLE_ASSERTS")
-endif(BOOST_DISABLE_ASSERTS)
-
 # ---
 # Unit test targets
 # ---
@@ -31,7 +31,7 @@ endif(BOOST_DISABLE_ASSERTS)
 # Unit test: minimal Dakota unit test example using header-only Boost.Test
 dakota_add_unit_test(NAME min_unit_test SOURCES min_unit_test.cpp
   LINK_DAKOTA_LIBS)
-
+target_link_libraries(min_unit_test Boost::boost)
 
 # Unit test: work directory utilities
 # Copy workdir unit_test helper script into the build tree at build time
@@ -49,7 +49,7 @@ dakota_copy_test_file(${CMAKE_CURRENT_SOURCE_DIR}/${ut_helper_script}
 
 dakota_add_unit_test(NAME test_workdir_utils
   SOURCES test_workdir_utils.cpp LINK_DAKOTA_LIBS)
-
+target_link_libraries(test_workdir_utils Boost::boost)
 
 # Unit test: try BOOST_AUTO_TEST_CASE
 dakota_add_unit_test(NAME auto_unit_test
@@ -58,48 +58,43 @@ dakota_add_unit_test(NAME auto_unit_test
   # need team buy-in for Boost.Test library deps
   #LINK_LIBS boost_unit_test_framework
   )
+target_link_libraries(auto_unit_test Boost::boost)
 
 dakota_add_unit_test(NAME bootstrap_util_test
   SOURCES bootstrap_util_test.cpp
   LINK_DAKOTA_LIBS
   )
-
+target_link_libraries(bootstrap_util_test Boost::boost)
 
 # Unit test: experiment data covariance utilities
 dakota_add_unit_test(NAME test_field_covariance_utils
   SOURCES test_field_covariance_utils.cpp
   LINK_DAKOTA_LIBS
   )
+target_link_libraries(test_field_covariance_utils Boost::boost)
 
 # Unit test: Leja sampling
 dakota_add_unit_test(NAME leja_sampling
   SOURCES leja_sampling.cpp
   LINK_DAKOTA_LIBS
   )
+target_link_libraries(leja_sampling Boost::boost)
 
 # Unit test: h5py_hdf5
-if(DAKOTA_HAVE_HDF5 AND PYTHONINTERP_FOUND AND PYTHON_VERSION_STRING VERSION_GREATER 2.6)
-	execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import h5py" RESULT_VARIABLE missing_h5py
-	  OUTPUT_QUIET ERROR_QUIET)
-  if(NOT missing_h5py)
-    # Module to extract Dakota console output -- used by all h5py unit tests
-    dakota_copy_test_file(${CMAKE_CURRENT_SOURCE_DIR}/h5py_console_extract.py
-      ${CMAKE_CURRENT_BINARY_DIR}/h5py_console_extract.py dakota_unit_test_copied_files)
-
-    # tests
-    dakota_add_h5py_test(mixed_sampling)
-    dakota_add_h5py_test(incremental_sampling)
-    if(HAVE_NPSOL)
-      dakota_add_h5py_test(simple_calibration)
-    endif()
-    dakota_add_h5py_test(surrogate_sens)
-    dakota_add_h5py_test(discrete_vps)
-    dakota_add_h5py_test(multistart)
-    dakota_add_h5py_test(pareto)
-    dakota_add_h5py_test(dist_params)
-    #dakota_add_h5py_test(calibration_with_data)
-    #dakota_add_h5py_test(mutlisolution_opt)
+if(DAKOTA_H5PY_FOUND)
+  dakota_add_h5py_test(mixed_sampling)
+  dakota_add_h5py_test(incremental_sampling)
+  if(HAVE_NPSOL)
+    dakota_add_h5py_test(simple_calibration)
   endif()
+  dakota_add_h5py_test(surrogate_sens)
+  dakota_add_h5py_test(discrete_vps)
+  dakota_add_h5py_test(multistart)
+  dakota_add_h5py_test(pareto)
+  dakota_add_h5py_test(dist_params)
+  dakota_add_h5py_test(mlmc)
+  #dakota_add_h5py_test(calibration_with_data)
+  #dakota_add_h5py_test(mutlisolution_opt)
 endif()
 
 
@@ -128,6 +123,7 @@ if(DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS)
 
   set(dakota_surrogate_unit_tests
     reduced_basis.cpp
+    gauss_proc_test.cpp
     )
 
   set(dakota_sampling_unit_tests
@@ -139,11 +135,16 @@ if(DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS)
     opt_tpl_adapters.cpp
     opt_tpl_api.cpp
     opt_api_traits.cpp
-    rol_adapters.cpp
-    rol_integration.cpp
-    opt_tpl_rol_test_textbook.cpp
-    opt_tpl_rol_test_rol_pbs.cpp
     )
+  if (DAKOTA_HAVE_ROL)
+    list(APPEND 
+      rol_adapters.cpp
+      rol_integration.cpp
+      opt_tpl_rol_test_textbook.cpp
+      opt_tpl_rol_test_rol_pbs.cpp
+      )
+  endif(DAKOTA_HAVE_ROL)
+
   if (DAKOTA_HAVE_MPI)
     list(REMOVE_ITEM dakota_opt_unit_tests opt_tpl_api.cpp opt_tpl_test.cpp)
   endif(DAKOTA_HAVE_MPI)
@@ -152,10 +153,19 @@ if(DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS)
     SOURCES teuchos_unit_test_driver.cpp ${dakota_utils_unit_tests}
     LINK_DAKOTA_LIBS
     )
-  dakota_add_unit_test(NAME surrogate_unit_tests
-    SOURCES teuchos_unit_test_driver.cpp ${dakota_surrogate_unit_tests}
-    LINK_DAKOTA_LIBS
+  target_link_libraries(utils_unit_tests Boost::boost)
+  if (DAKOTA_MODULE_SURROGATES)
+    dakota_add_unit_test(NAME surrogate_unit_tests
+      SOURCES teuchos_unit_test_driver.cpp ${dakota_surrogate_unit_tests}
+      LINK_DAKOTA_LIBS
+      )
+    target_link_libraries(surrogate_unit_tests
+      dakota_surrogates)
+    dakota_copy_test_file("${CMAKE_CURRENT_SOURCE_DIR}/gauss_proc_test_files"
+      "${CMAKE_CURRENT_BINARY_DIR}/gauss_proc_test_files"
+      dakota_unit_test_copied_files
     )
+  endif()
   dakota_add_unit_test(NAME sampling_unit_tests
     SOURCES teuchos_unit_test_driver.cpp ${dakota_sampling_unit_tests}
     LINK_DAKOTA_LIBS
@@ -164,6 +174,13 @@ if(DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS)
     SOURCES teuchos_unit_test_driver.cpp ${dakota_opt_unit_tests}
     LINK_DAKOTA_LIBS
     )
+  if (DAKOTA_HAVE_MUQ)
+    dakota_add_unit_test(NAME muq_mcmc
+      SOURCES teuchos_unit_test_driver.cpp muq_mcmc.cpp
+      LINK_DAKOTA_LIBS
+      )
+    target_link_libraries(muq_mcmc Boost::boost)
+  endif()
   dakota_copy_test_file("${CMAKE_CURRENT_SOURCE_DIR}/expt_data_test_files"
     "${CMAKE_CURRENT_BINARY_DIR}/expt_data_test_files"
     dakota_unit_test_copied_files
@@ -188,12 +205,14 @@ if(DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS)
     dakota_add_unit_test(NAME hdf5_tests SOURCES teuchos_unit_test_driver hdf5_test_serial.cpp hdf5_utils.cpp ResultsDBHDF5_Test.cpp
       LINK_DAKOTA_LIBS
       )
+    target_link_libraries(hdf5_tests Boost::boost)
   endif() # DAKOTA_HAVE_HDF5
 
 
   if(DAKOTA_TEST_PREPROC)
     dakota_add_unit_test(NAME preproc_tests SOURCES test_preproc.cpp
       LINK_DAKOTA_LIBS)
+    target_link_libraries(preproc_tests Boost::filesystem Boost::boost)
     dakota_copy_test_file("${CMAKE_CURRENT_SOURCE_DIR}/preproc_dakota.tmpl"
       "${CMAKE_CURRENT_BINARY_DIR}/preproc_dakota.tmpl"
       dakota_unit_test_copied_files
@@ -205,6 +224,20 @@ if(DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS)
   endif()
 
 endif() # DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS
+
+
+# Test top-level dakota.dakota module
+if(DAKOTA_PYBIND11)
+  dakota_copy_test_file("${CMAKE_CURRENT_SOURCE_DIR}/test_dakota.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/test_dakota.in"
+    dakota_unit_test_copied_files
+    )
+  add_test(NAME dakota_python
+    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_dakota.py
+    $<TARGET_FILE_DIR:environment>
+    )
+  set_property(TEST dakota_python PROPERTY LABELS UnitTest)
+endif()
 
 
 

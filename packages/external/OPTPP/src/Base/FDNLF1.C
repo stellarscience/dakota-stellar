@@ -8,7 +8,7 @@
 #include "NLF.h"
 #include "TOLS.h"
 #include "ioformat.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 using namespace std;
 using Teuchos::SerialDenseVector;

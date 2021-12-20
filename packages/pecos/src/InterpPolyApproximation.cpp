@@ -29,18 +29,29 @@ int InterpPolyApproximation::min_coefficients() const
 
 void InterpPolyApproximation::allocate_arrays()
 {
-  SharedInterpPolyApproxData* data_rep
-    = (SharedInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedInterpPolyApproxData>(sharedDataRep);
   update_active_iterators(data_rep->activeKey);
 
   allocate_total_sobol();
   allocate_component_sobol();
 
-  RealVector& numer_mom = numMomentsIter->second;
-  if (numer_mom.empty()) {
-    size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
-    numer_mom.sizeUninitialized(num_moments);
-  }
+  size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
+  RealVector& num_int_mom = primaryMomIter->second;
+  if (num_int_mom.length() != num_moments)
+    num_int_mom.sizeUninitialized(num_moments);
+}
+
+
+void InterpPolyApproximation::combined_to_active(bool clear_combined)
+{
+  // emulate new surrogate data following promotion of combined expansion
+  // coeffs to active: simplifies stats computation for FINAL_RESULTS
+  // (integration, VBD, etc.) for the combined-now-active coeffs
+  synthetic_surrogate_data(surrData); // overwrite data for activeKey
+
+  // migrate current moments
+  PolynomialApproximation::combined_to_active(clear_combined);
 }
 
 
@@ -50,13 +61,14 @@ void InterpPolyApproximation::test_interpolation()
   // SSG with fully nested rules, but will exhibit interpolation error
   // for SSG with other rules.
   if (expansionCoeffFlag) {
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
     bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
-    const SDVArray& sdv_array = modSurrData.variables_data();
-    const SDRArray& sdr_array = modSurrData.response_data();
+    const SDVArray& sdv_array = surrData.variables_data();
+    const SDRArray& sdr_array = surrData.response_data();
 
-    size_t i, index = 0, num_colloc_pts = modSurrData.points(),
+    size_t i, index = 0, num_colloc_pts = surrData.points(),
       num_v = sharedDataRep->numVars, w7 = WRITE_PRECISION+7;
     Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
       val_rmse = 0., grad_rmse = 0.;
@@ -120,8 +132,8 @@ void InterpPolyApproximation::compute_component_sobol()
     // 0th term gets subtracted as child in compute_partial_variance()
     partialVariance[0] = total_mean * total_mean;
     // compute the partial variances corresponding to Sobol' indices
-    SharedInterpPolyApproxData* data_rep
-      = (SharedInterpPolyApproxData*)sharedDataRep;
+    std::shared_ptr<SharedInterpPolyApproxData> data_rep =
+      std::static_pointer_cast<SharedInterpPolyApproxData>(sharedDataRep);
     const BitArrayULongMap& index_map = data_rep->sobolIndexMap;
     for (BAULMCIter cit=index_map.begin(); cit!=index_map.end(); ++cit) {
       unsigned long index = cit->second;
@@ -144,8 +156,8 @@ void InterpPolyApproximation::compute_total_sobol()
 {
   totalSobolIndices = 0.; // init total indices
 
-  SharedInterpPolyApproxData* data_rep
-    = (SharedInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedInterpPolyApproxData>(sharedDataRep);
   if (data_rep->expConfigOptions.vbdOrderLimit)
     // all component indices may not be available, so compute total indices
     // independently.  This approach parallels partial_variance_integral()
@@ -188,8 +200,8 @@ compute_partial_variance(const BitArray& set_value)
   BitArraySet children;
   proper_subsets(set_value, children);
 
-  SharedInterpPolyApproxData* data_rep
-    = (SharedInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedInterpPolyApproxData>(sharedDataRep);
   BitArrayULongMap& index_map = data_rep->sobolIndexMap;
 
   // index of parent set within sobolIndices and partialVariance

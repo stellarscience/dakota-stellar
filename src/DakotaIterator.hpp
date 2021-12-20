@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -50,8 +51,9 @@ public:
 
   /// default constructor
   Iterator( std::shared_ptr<TraitsBase> traits = std::shared_ptr<TraitsBase>(new TraitsBase()) );
+  // BMA: Disabled unused ctor when deploying shared_ptr for iteratorRep
   /// alternate envelope constructor that assigns a representation pointer
-  Iterator(Iterator* iterator_rep, bool ref_count_incr = true, std::shared_ptr<TraitsBase> traits = std::shared_ptr<TraitsBase>(new TraitsBase()));
+  //  Iterator(std::shared_ptr<Iterator> iterator_rep, std::shared_ptr<TraitsBase> traits = std::shared_ptr<TraitsBase>(new TraitsBase()));
   /// standard envelope constructor, which constructs its own model(s)
   Iterator(ProblemDescDB& problem_db, std::shared_ptr<TraitsBase> traits = std::shared_ptr<TraitsBase>(new TraitsBase()));
   /// alternate envelope constructor which uses the ProblemDescDB but
@@ -122,6 +124,11 @@ public:
 					const ShortArray& ds_target2,
 					const ShortArray& dr_target2);
 
+  /// set primaryResponseCoefficients, secondaryResponseCoefficients
+  /// within derived Iterators; Necessary for scalarization case in 
+  /// MLMC NonDMultilevelSampling to map scalarization in nested context
+  virtual void nested_response_mappings(const RealMatrix& primary_coeffs, const RealMatrix& secondary_coeffs);
+
   /// used by IteratorScheduler to set the starting data for a run
   virtual void initialize_iterator(int job_index);
   /// used by IteratorScheduler to pack starting data for an iterator run
@@ -167,9 +174,32 @@ public:
   /// return is false.  Override to return true if appropriate.
   virtual bool returns_multiple_points() const;
 
+  /// sets the initial point for this iterator (user-functions mode
+  /// for which Model updating is not used)
+  virtual void initial_point(const Variables& pt);
+  /// sets the initial point (active continuous variables) for this iterator
+  /// (user-functions mode for which Model updating is not used)
+  virtual void initial_point(const RealVector& pt);
   /// sets the multiple initial points for this iterator.  This should
   /// only be used if accepts_multiple_points() returns true.
   virtual void initial_points(const VariablesArray& pts);
+
+  /// assign nonlinear inequality and equality constraint allowables for this
+  /// iterator (user-functions mode for which Model updating is not used)
+  virtual void variable_bounds(const RealVector& cv_lower_bnds,
+			       const RealVector& cv_upper_bnds);
+  /// assign linear inequality and linear equality constraints for this
+  /// iterator (user-functions mode for which Model updating is not used)
+  virtual void linear_constraints(const RealMatrix& lin_ineq_coeffs,
+				  const RealVector& lin_ineq_lb,
+				  const RealVector& lin_ineq_ub,
+				  const RealMatrix& lin_eq_coeffs,
+				  const RealVector& lin_eq_tgt);
+  /// assign nonlinear inequality and equality constraint allowables for this
+  /// iterator (user-functions mode for which Model updating is not used)
+  virtual void nonlinear_constraints(const RealVector& nln_ineq_lb,
+				     const RealVector& nln_ineq_ub,
+				     const RealVector& nln_eq_tgt);
 
   /// initialize the 2D graphics window and the tabular graphics data
   virtual void initialize_graphics(int iterator_server_id = 1);
@@ -204,6 +234,8 @@ public:
 
   /// increment to next in sequence of refinement samples
   virtual void sampling_increment();
+  /// set randomSeed, if present
+  virtual void random_seed(int seed);
 
   /// return sampling name
   virtual unsigned short sampling_scheme() const;
@@ -246,7 +278,7 @@ public:
   void run();
 
   /// replaces existing letter with a new one
-  void assign_rep(Iterator* iterator_rep, bool ref_count_incr = true);
+  void assign_rep(std::shared_ptr<Iterator> iterator_rep);
 
   /// set the iteratedModel (iterators and meta-iterators using a single
   /// model instance)
@@ -285,9 +317,9 @@ public:
   void maximum_evaluation_concurrency(int max_conc);
 
   /// return the maximum iterations for this iterator
-  int maximum_iterations() const;
+  size_t maximum_iterations() const;
   /// set the maximum iterations for this iterator
-  void maximum_iterations(int max_iter);
+  void maximum_iterations(size_t max_iter);
 
   /// set the method convergence tolerance (convergenceTol)
   void convergence_tolerance(Real conv_tol);
@@ -330,7 +362,7 @@ public:
 
   /// returns iteratorRep for access to derived class member functions
   /// that are not mapped to the top Iterator level
-  Iterator* iterator_rep() const;
+  std::shared_ptr<Iterator> iterator_rep() const;
 
   /// set the hierarchical eval ID tag prefix
   virtual void eval_tag_prefix(const String& eval_id_str);
@@ -402,6 +434,13 @@ protected:
 				 const ActiveSet& recast_set,
 				 ActiveSet& sub_model_set);
 
+  /// helper function that encapsulates initialization operations,
+  /// modular on incoming Model instance
+  void initialize_model_graphics(Model& model, int iterator_server_id);
+
+  /// export final surrogates generated, e.g., GP in EGO and friends
+  void export_final_surrogates(Model& data_fit_surr_model);
+
   //
   //- Heading: Data
   //
@@ -431,8 +470,8 @@ protected:
   unsigned short methodName; ///< name of the iterator (the user's method spec)
 
   Real convergenceTol;  ///< iteration convergence tolerance
-  int maxIterations;    ///< maximum number of iterations for the iterator
-  int maxFunctionEvals; ///< maximum number of fn evaluations for the iterator
+  size_t maxIterations;    ///< maximum number of iterations for the method
+  size_t maxFunctionEvals; ///< maximum number of fn evaluations for the method
 
   /// maximum number of concurrent model evaluations
   /** This is important for parallel configuration init/set/free and may be
@@ -482,7 +521,15 @@ protected:
   /// Whether this is the top level iterator
   bool topLevel;
 
-  
+  /// whether to export final surrogates
+  bool exportSurrogate = false;
+
+  /// base filename for exported surrogates
+  String surrExportPrefix;
+
+  /// (bitwise) format(s) to export
+  unsigned short surrExportFormat = NO_MODEL_FORMAT;
+
 private:
 
   //
@@ -490,11 +537,14 @@ private:
   //
 
   /// Used by the envelope to instantiate the correct letter class
-  Iterator* get_iterator(ProblemDescDB& problem_db);
+  std::shared_ptr<Iterator>
+  get_iterator(ProblemDescDB& problem_db);
   /// Used by the envelope to instantiate the correct letter class
-  Iterator* get_iterator(ProblemDescDB& problem_db, Model& model);
+  std::shared_ptr<Iterator>
+  get_iterator(ProblemDescDB& problem_db, Model& model);
   /// Used by the envelope to instantiate the correct letter class
-  Iterator* get_iterator(const String& method_string, Model& model);
+  std::shared_ptr<Iterator>
+  get_iterator(const String& method_string, Model& model);
 
   /// return the next available method ID for no-ID user methods
   static String user_auto_id();
@@ -528,9 +578,8 @@ private:
   std::map<size_t, ParConfigLIter> methodPCIterMap;
 
   /// pointer to the letter (initialized only for the envelope)
-  Iterator* iteratorRep;
-  /// number of objects sharing iteratorRep
-  int referenceCount;
+  std::shared_ptr<Iterator> iteratorRep;
+
 };
 
 inline std::shared_ptr<TraitsBase> Iterator::traits() const
@@ -607,14 +656,17 @@ inline void Iterator::maximum_evaluation_concurrency(int max_conc)
   else             maxEvalConcurrency = max_conc;
 }
 
-inline int Iterator::maximum_iterations() const
+
+inline size_t Iterator::maximum_iterations() const
 { return (iteratorRep) ? iteratorRep->maxIterations : maxIterations; }
 
-inline void Iterator::maximum_iterations(int max_iter)
+
+inline void Iterator::maximum_iterations(size_t max_iter)
 {
   if (iteratorRep) iteratorRep->maxIterations = max_iter;
   else             maxIterations = max_iter;
 }
+
 
 inline void Iterator::convergence_tolerance(Real conv_tol)
 {
@@ -692,7 +744,7 @@ inline bool Iterator::is_null() const
 { return (iteratorRep) ? false : true; }
 
 
-inline Iterator* Iterator::iterator_rep() const
+inline std::shared_ptr<Iterator> Iterator::iterator_rep() const
 { return iteratorRep; }
 
 

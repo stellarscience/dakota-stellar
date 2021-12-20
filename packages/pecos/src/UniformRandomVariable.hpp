@@ -88,19 +88,22 @@ public:
   //- Heading: Static member functions (global utilities)
   //
 
-  static Real pdf(Real lwr, Real upr);
+  static Real pdf(Real x, Real lwr, Real upr);
   static Real cdf(Real x, Real lwr, Real upr);
   static Real ccdf(Real x, Real lwr, Real upr);
   static Real inverse_cdf(Real p_cdf, Real lwr, Real upr);
   static Real inverse_ccdf(Real p_ccdf, Real lwr, Real upr);
 
-  static Real std_pdf();
-  static Real log_std_pdf();
-  static Real log_std_pdf_gradient();
-  static Real log_std_pdf_hessian();
+  // default z value can be used when appropriate (e.g., bounds checking not
+  // required when processing a known variable transformation)
 
-  static Real std_cdf(Real beta);
-  static Real std_ccdf(Real beta);
+  static Real std_pdf(Real z);
+  static Real log_std_pdf(Real z);
+  static Real log_std_pdf_gradient(Real z);
+  static Real log_std_pdf_hessian(Real z);
+
+  static Real std_cdf(Real z);
+  static Real std_ccdf(Real z);
   static Real inverse_std_cdf(Real p_cdf);
   static Real inverse_std_ccdf(Real p_ccdf);
 
@@ -142,35 +145,38 @@ inline UniformRandomVariable::~UniformRandomVariable()
 { }
 
 
-inline Real UniformRandomVariable::std_pdf()
-{ return 0.5; } // equal probability on [-1,1]
-
-
-inline Real UniformRandomVariable::log_std_pdf()
-{ return std::log(std_pdf()); }
-
-
-inline Real UniformRandomVariable::log_std_pdf_gradient()
-{ return 0.; }
-
-
-inline Real UniformRandomVariable::log_std_pdf_hessian()
-{ return 0.; }
-
-
-inline Real UniformRandomVariable::std_cdf(Real x)
+inline Real UniformRandomVariable::std_pdf(Real z)
 {
-  if      (x >=  1.) return 1.;
-  else if (x <= -1.) return 0.;
-  else               return (x + 1.)/2.; // linear x \in [-1,1] -> p \in [0,1]
+  if (z > 1. || z < -1.) return 0.;
+  else return 0.5; // equal probability on [-1,1]
 }
 
 
-inline Real UniformRandomVariable::std_ccdf(Real x)
+inline Real UniformRandomVariable::log_std_pdf(Real z)
+{ return std::log(std_pdf(z)); } // returns -inf if outside [-1,1]
+
+
+inline Real UniformRandomVariable::log_std_pdf_gradient(Real z)
+{ return 0.; } // don't bother with infinite grad at -1,1 bounds
+
+
+inline Real UniformRandomVariable::log_std_pdf_hessian(Real z)
+{ return 0.; }
+
+
+inline Real UniformRandomVariable::std_cdf(Real z)
 {
-  if      (x >=  1.) return 0.;
-  else if (x <= -1.) return 1.;
-  else               return (1. - x)/2.; // linear x \in [-1,1] -> p \in [1,0]
+  if      (z >=  1.) return 1.;
+  else if (z <= -1.) return 0.;
+  else               return (z + 1.)/2.; // linear z \in [-1,1] -> p \in [0,1]
+}
+
+
+inline Real UniformRandomVariable::std_ccdf(Real z)
+{
+  if      (z >=  1.) return 0.;
+  else if (z <= -1.) return 1.;
+  else               return (1. - z)/2.; // linear z \in [-1,1] -> p \in [1,0]
 }
 
 
@@ -178,7 +184,7 @@ inline Real UniformRandomVariable::inverse_std_cdf(Real p_cdf)
 {
   if      (p_cdf >= 1.) return  1.;
   else if (p_cdf <= 0.) return -1.;
-  else return 2.*p_cdf - 1.; // linear p \in [0,1] -> x \in [-1,1]
+  else return 2.*p_cdf - 1.; // linear p \in [0,1] -> z \in [-1,1]
 }
 
 
@@ -186,12 +192,15 @@ inline Real UniformRandomVariable::inverse_std_ccdf(Real p_ccdf)
 {
   if      (p_ccdf >= 1.) return -1.;
   else if (p_ccdf <= 0.) return  1.;
-  else return 1. - 2.*p_ccdf; // linear p \in [1,0] -> x \in [-1,1]
+  else return 1. - 2.*p_ccdf; // linear p \in [1,0] -> z \in [-1,1]
 }
 
 
-inline Real UniformRandomVariable::pdf(Real lwr, Real upr)
-{ return 1./(upr - lwr); } // equal probability on [lwr,upr]
+inline Real UniformRandomVariable::pdf(Real x, Real lwr, Real upr)
+{
+  if (x > upr || x < lwr) return 0.;
+  else return 1./(upr - lwr); // equal probability on [lwr,upr]
+}
 
 
 inline Real UniformRandomVariable::cdf(Real x, Real lwr, Real upr)
@@ -243,11 +252,11 @@ inline Real UniformRandomVariable::inverse_ccdf(Real p_ccdf) const
 
 
 inline Real UniformRandomVariable::pdf(Real x) const
-{ return pdf(lowerBnd, upperBnd); }
+{ return pdf(x, lowerBnd, upperBnd); }
 
 
 inline Real UniformRandomVariable::pdf_gradient(Real x) const
-{ return 0.; }
+{ return 0.; } // don't bother with infinite grad at lwr,upr bound
 
 
 inline Real UniformRandomVariable::pdf_hessian(Real x) const
@@ -267,14 +276,14 @@ inline Real UniformRandomVariable::inverse_standard_cdf(Real p_cdf) const
 
 
 inline Real UniformRandomVariable::standard_pdf(Real z) const
-{ return std_pdf(); }
+{ return std_pdf(z); }
 
 
-inline Real UniformRandomVariable::log_standard_pdf_gradient(Real x) const
+inline Real UniformRandomVariable::log_standard_pdf_gradient(Real z) const
 { return 0.; }
 
 
-inline Real UniformRandomVariable::log_standard_pdf_hessian(Real x) const
+inline Real UniformRandomVariable::log_standard_pdf_hessian(Real z) const
 { return 0.; }
 
 
@@ -490,7 +499,7 @@ dz_ds_fact(short u_type, Real range, Real x, Real z)
   case STD_NORMAL:
     return range *  NormalRandomVariable::std_pdf(z); break;
   case STD_UNIFORM:
-    return range * UniformRandomVariable::std_pdf();  break;
+    return range * UniformRandomVariable::std_pdf(z); break;
   default:
     PCerr << "Error: unsupported u-space type " << u_type
 	  << " in UniformRandomVariable::dz_ds_fact()." << std::endl;

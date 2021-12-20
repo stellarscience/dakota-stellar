@@ -163,7 +163,7 @@ public:
 
   /// returns ranVarRep for access to derived class member functions
   /// that are not mapped to the base level
-  MultivariateDistribution* multivar_dist_rep() const;
+  std::shared_ptr<MultivariateDistribution> multivar_dist_rep() const;
   /// function to check modelRep (does this envelope contain a letter)
   bool is_null() const;
 
@@ -186,7 +186,7 @@ protected:
   //
 
   /// copy the data from mvd_rep to the current representation
-  virtual void copy_rep(MultivariateDistribution* mvd_rep);
+  virtual void copy_rep(std::shared_ptr<MultivariateDistribution> mvd_rep);
 
   //
   //- Heading: Data members
@@ -206,16 +206,15 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// mvDistRep to the appropriate derived type.
-  MultivariateDistribution* get_distribution(short mv_dist_type) const;
+  std::shared_ptr<MultivariateDistribution>
+  get_distribution(short mv_dist_type) const;
 
   //
   //- Heading: Data members
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  MultivariateDistribution* mvDistRep;
-  /// number of objects sharing mvDistRep
-  int referenceCount;
+  std::shared_ptr<MultivariateDistribution> mvDistRep;
 };
 
 
@@ -227,8 +226,8 @@ inline bool MultivariateDistribution::correlation() const
 { return (mvDistRep) ? mvDistRep->correlationFlag : correlationFlag; }
 
 
-inline MultivariateDistribution* MultivariateDistribution::
-multivar_dist_rep() const
+inline std::shared_ptr<MultivariateDistribution>
+MultivariateDistribution::multivar_dist_rep() const
 { return mvDistRep; }
 
 

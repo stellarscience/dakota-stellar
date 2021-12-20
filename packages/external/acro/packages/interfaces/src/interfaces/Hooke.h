@@ -16,7 +16,7 @@
  */
 
 #ifndef interfaces_Hooke_h
-#define intefaces_Hooke_h
+#define interfaces_Hooke_h
 
 #include <acro_config.h>
 #ifdef ACRO_USING_THREEPO

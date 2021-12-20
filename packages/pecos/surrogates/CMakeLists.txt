@@ -22,7 +22,6 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 #find_package(teuchos)
 
 include_directories(
-  #${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
   ${Teuchos_INCLUDE_DIRS}
   ${Pecos_SOURCE_DIR}/util/src
   )

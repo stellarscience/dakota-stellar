@@ -79,7 +79,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void active_key(const UShortArray& key);
+  void active_key(const ActiveKey& key);
   void clear_keys();
 
   void allocate_data();
@@ -159,7 +159,7 @@ protected:
   //- Heading: Member functions
   //
 
-  /// update {multiIndex,approxOrd}Iter from activeKey
+  /// initialize a pushAvail entry for activeKey
   void update_active_iterators();
 
   /// return value of type 1 interpolation polynomial using all dimensions
@@ -329,7 +329,7 @@ protected:
 
   /// flag indicating availability of pushing (restoring) a previous
   /// grid increment
-  std::map<UShortArray, bool> pushAvail;
+  std::map<ActiveKey, bool> pushAvail;
 
 private:
 
@@ -343,7 +343,11 @@ private:
   /// update polynomialBasis after a change in quadrature order
   void update_tensor_interpolation_basis(const UShortArray& lev_index);
   /// update polynomialBasis after a change in sparse grid level
-  void update_sparse_interpolation_basis(unsigned short max_level);
+  void update_sparse_interpolation_basis(unsigned short start_level,
+					 unsigned short   max_level);
+  /// update polynomialBasis for all existing levels for any dimensions
+  /// with distribution parameter updates
+  void update_interpolation_basis(const BitArray& param_updates);
   /// update polynomialBasis for a variable index after an update in level
   void update_interpolation_basis(unsigned short lev_index, size_t var_index);
   /// for a particular level, find index of basis v2 that matches basis v1
@@ -419,8 +423,13 @@ inline SharedInterpPolyApproxData::~SharedInterpPolyApproxData()
 
 inline void SharedInterpPolyApproxData::update_active_iterators()
 {
-  if (pushAvail.find(activeKey) == pushAvail.end())
-    pushAvail[activeKey] = false; // initialize
+  std::map<ActiveKey, bool>::iterator it = pushAvail.find(activeKey);
+  if (it == pushAvail.end()) {
+    // So long as we only create new keys and avoid modifying existing ones,
+    // this deep copy is not needed.
+    std::pair<ActiveKey, bool> b_pair(activeKey/*.copy()*/, false);
+    pushAvail.insert(b_pair);
+  }
 }
 
 

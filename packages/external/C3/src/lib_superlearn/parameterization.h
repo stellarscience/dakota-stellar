@@ -87,6 +87,7 @@ struct FTparam *
 ft_param_alloc(size_t,struct MultiApproxOpts *,
                double *, size_t *);
 void ft_param_free(struct FTparam *);
+struct FTparam * ft_param_copy(struct FTparam * ftp);
 double ft_param_get_param(const struct FTparam *, size_t);
 size_t ft_param_get_nparams(const struct FTparam *);
 size_t ft_param_get_nparams_restrict(const struct FTparam *, const size_t *);
@@ -95,7 +96,7 @@ struct FunctionTrain * ft_param_get_ft(const struct FTparam *);
 void ft_param_create_constant(struct FTparam *, double, double);
 void ft_param_create_from_lin_ls(struct FTparam *, size_t,
                                  const double *, const double *,
-                                 double);
+                                 double, const unsigned int *);
 
 void ft_param_update_params(struct FTparam *, const double *);
 void ft_param_update_restricted_ranks(struct FTparam *, const double *,const size_t *);

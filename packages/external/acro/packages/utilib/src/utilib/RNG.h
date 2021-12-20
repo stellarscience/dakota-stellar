@@ -81,8 +81,6 @@ float  ans = (float) asDouble();
 return ans;
 }
 
-} // namespace utilib
-
 /// Write a RNG object state
 inline std::ostream& operator << (std::ostream& output, const utilib::RNG& rng)
 {
@@ -96,5 +94,7 @@ inline std::istream& operator >> (std::istream& input, utilib::RNG& rng)
 rng.read(input);
 return(input);
 }
+
+} // namespace utilib
 
 #endif

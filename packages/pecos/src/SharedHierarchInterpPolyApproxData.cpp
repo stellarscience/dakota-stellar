@@ -37,8 +37,8 @@ void SharedHierarchInterpPolyApproxData::allocate_component_sobol()
       // multi-index, the presence of non-zero's still indicates multi-point
       // interpolation and the presence of dimension effects.
       sobolIndexMap.clear();
-      HierarchSparseGridDriver* hsg_driver
-	= (HierarchSparseGridDriver*)driverRep;
+      std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+	std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
       const UShort4DArray& key = hsg_driver->collocation_key();
       size_t lev, num_lev = key.size(), set, num_sets;
       for (lev=0; lev<num_lev; ++lev) {
@@ -68,7 +68,8 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
     // return existing sobolIndexMap values to interaction counts
     reset_sobol_index_map_values();
 
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+      std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
     const UShort4DArray&      key        = hsg_driver->collocation_key();
     switch (expConfigOptions.refineControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
@@ -122,7 +123,8 @@ size_t SharedHierarchInterpPolyApproxData::
 barycentric_exact_index(const UShortArray& basis_index)
 {
   size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   for (j=0; j<numVars; ++j) {
     bi_j = basis_index[j];
     // Note: if bi_j == 0, then constant interp with 1 point: we can replace
@@ -147,7 +149,8 @@ barycentric_exact_index(const UShortArray& basis_index,
 {
   size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
   SizetList::const_iterator cit;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit; bi_j = basis_index[j];
     // Note: if bi_j == 0, then constant interp with 1 point: we can replace

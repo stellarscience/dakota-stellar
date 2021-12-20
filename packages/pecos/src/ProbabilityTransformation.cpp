@@ -19,29 +19,14 @@ namespace Pecos {
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_prob_trans() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~ProbabilityTransformation). */
-ProbabilityTransformation::ProbabilityTransformation(BaseConstructor):
-  probTransRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "ProbabilityTransformation::ProbabilityTransformation(Base"
-        << "Constructor) called to build base class for letter." << std::endl;
-#endif
-}
+    letter IS the representation, its rep pointer is set to NULL. */
+ProbabilityTransformation::ProbabilityTransformation(BaseConstructor)
+{ /* empty ctor */ }
 
 
-/** The default constructor: probTransRep is NULL in this case.  This
-    makes it necessary to check for NULL in the copy constructor,
-    assignment operator, and destructor. */
-ProbabilityTransformation::ProbabilityTransformation():
-  probTransRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "ProbabilityTransformation::ProbabilityTransformation() called to "
-        << "build empty envelope." << std::endl;
-#endif
-}
+/** The default constructor: probTransRep is NULL in this case. */
+ProbabilityTransformation::ProbabilityTransformation()
+{ /* empty ctor */}
 
 
 /** Envelope constructor only needs to extract enough data to properly
@@ -49,15 +34,9 @@ ProbabilityTransformation::ProbabilityTransformation():
     builds the actual base class data for the derived transformations. */
 ProbabilityTransformation::
 ProbabilityTransformation(const String& prob_trans_type):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "ProbabilityTransformation::ProbabilityTransformation(string&) "
-        << "called to instantiate envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  probTransRep = get_prob_trans(prob_trans_type);
+  probTransRep(get_prob_trans(prob_trans_type))
+{
   if ( !probTransRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -65,8 +44,8 @@ ProbabilityTransformation(const String& prob_trans_type):
 
 /** Used only by the envelope constructor to initialize probTransRep to the 
     appropriate derived type. */
-ProbabilityTransformation* ProbabilityTransformation::
-get_prob_trans(const String& prob_trans_type)
+std::shared_ptr<ProbabilityTransformation>
+ProbabilityTransformation::get_prob_trans(const String& prob_trans_type)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_prob_trans(string&)."
@@ -74,84 +53,32 @@ get_prob_trans(const String& prob_trans_type)
 #endif
 
   if (prob_trans_type == "nataf")
-    return new NatafTransformation();
+    return std::make_shared<NatafTransformation>();
   else {
     PCerr << "Error: ProbabilityTransformation type " << prob_trans_type
 	  << " not available." << std::endl;
-    return NULL;
+    return std::shared_ptr<ProbabilityTransformation>();
   }
 }
 
 
-/** Copy constructor manages sharing of probTransRep and incrementing
-    of referenceCount. */
+/** Copy constructor manages sharing of probTransRep. */
 ProbabilityTransformation::
-ProbabilityTransformation(const ProbabilityTransformation& prob_trans)
-{
-  // Increment new (no old to decrement)
-  probTransRep = prob_trans.probTransRep;
-  if (probTransRep) // Check for an assignment of NULL
-    probTransRep->referenceCount++;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "ProbabilityTransformation::ProbabilityTransformation("
-        << "ProbabilityTransformation&)" << std::endl;
-  if (probTransRep)
-    PCout << "probTransRep referenceCount = " << probTransRep->referenceCount
-	  << std::endl;
-#endif
-}
+ProbabilityTransformation(const ProbabilityTransformation& prob_trans):
+  probTransRep(prob_trans.probTransRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old probTransRep, assigns
-    new probTransRep, and increments referenceCount for new probTransRep. */
 ProbabilityTransformation ProbabilityTransformation::
 operator=(const ProbabilityTransformation& prob_trans)
 {
-  if (probTransRep != prob_trans.probTransRep) { // normal case: old != new
-    // Decrement old
-    if (probTransRep) // Check for null pointer
-      if (--probTransRep->referenceCount == 0) 
-	delete probTransRep;
-    // Assign and increment new
-    probTransRep = prob_trans.probTransRep;
-    if (probTransRep) // Check for an assignment of NULL
-      probTransRep->referenceCount++;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "ProbabilityTransformation::operator=(ProbabilityTransformation&)"
-        << std::endl;
-  if (probTransRep)
-    PCout << "probTransRep referenceCount = " << probTransRep->referenceCount
-	  << std::endl;
-#endif
-
+  probTransRep = prob_trans.probTransRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes probTransRep
-    when referenceCount reaches zero. */
 ProbabilityTransformation::~ProbabilityTransformation()
-{ 
-  // Check for NULL pointer 
-  if (probTransRep) {
-    --probTransRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "probTransRep referenceCount decremented to " 
-	  << probTransRep->referenceCount << std::endl;
-#endif
-    if (probTransRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting probTransRep" << std::endl;
-#endif
-      delete probTransRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 /** This function provides a deep copy (the copy constructor supports

@@ -122,25 +122,26 @@ protected:
   Real betaStat;
 
   /// pointer to the Boost beta_distribution instance
-  beta_dist* betaDist;
+  std::unique_ptr<beta_dist> betaDist;
 };
 
 
 inline BetaRandomVariable::BetaRandomVariable():
-  UniformRandomVariable(), alphaStat(1.), betaStat(1.), betaDist(NULL)
+  UniformRandomVariable(), alphaStat(1.), betaStat(1.),
+  betaDist(new beta_dist(alphaStat, betaStat))
 { ranVarType = STD_BETA; }
 
 
 inline BetaRandomVariable::
 BetaRandomVariable(Real alpha, Real beta, Real lwr, Real upr):
   UniformRandomVariable(lwr, upr), alphaStat(alpha), betaStat(beta),
-  betaDist(new beta_dist(alphaStat, betaStat))
+  betaDist(new beta_dist(alpha, beta))
 { ranVarType = (lwr == -1. && upr == 1.) ? STD_BETA : BETA; }
 // std distribution defined by scale params, while shape params may vary
 
 
 inline BetaRandomVariable::~BetaRandomVariable()
-{ if (betaDist) delete betaDist; }
+{ }
 
 
 inline Real BetaRandomVariable::cdf(Real x) const
@@ -521,8 +522,7 @@ inline Real BetaRandomVariable::dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void BetaRandomVariable::update_boost()
 {
-  if (betaDist) delete betaDist;
-  betaDist = new beta_dist(alphaStat, betaStat);
+  betaDist.reset(new beta_dist(alphaStat, betaStat));
 }
 
 

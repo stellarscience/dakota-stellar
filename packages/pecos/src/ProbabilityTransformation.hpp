@@ -163,7 +163,11 @@ public:
   /// set uDist
   void u_distribution(const MultivariateDistribution& dist);
 
-  /// function to check modelRep (does this envelope contain a letter)
+  /// returns approxRep for access to derived class member functions
+  /// that are not mapped to the top Approximation level
+  std::shared_ptr<ProbabilityTransformation> transform_rep() const;
+
+  /// function to check probTransRep (does this envelope contain a letter)
   bool is_null() const;
 
 protected:
@@ -210,17 +214,15 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// probTransRep to the appropriate derived type.
-  static ProbabilityTransformation*
-    get_prob_trans(const String& prob_trans_type);
+  static std::shared_ptr<ProbabilityTransformation>
+  get_prob_trans(const String& prob_trans_type);
 
   //
   //- Heading: Data members
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  ProbabilityTransformation* probTransRep;
-  /// number of objects sharing probTransRep
-  int referenceCount;
+  std::shared_ptr<ProbabilityTransformation> probTransRep;
 };
 
 
@@ -248,6 +250,11 @@ u_distribution(const MultivariateDistribution& dist)
   if (probTransRep) probTransRep->uDist = dist;
   else                            uDist = dist;
 }
+
+
+inline std::shared_ptr<ProbabilityTransformation>
+ProbabilityTransformation::transform_rep() const
+{ return probTransRep; }
 
 
 inline bool ProbabilityTransformation::is_null() const

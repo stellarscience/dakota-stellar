@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -14,10 +15,7 @@
 #include "dakota_data_util.hpp"  // for strcontains
 #include "dakota_global_defs.hpp"
 #include <boost/array.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
-#include <boost/foreach.hpp>
-#include <boost/version.hpp>
 #include <cassert>
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -37,17 +35,6 @@
   #define DAK_SLASH '/'
 
 #endif // _WIN32 or _WIN64
-
-// BMA TODO: Boost versions <= 1.49 do not include these mappings,
-// perhaps due to conflicts with v2?
-#if BOOST_VERSION / 100 % 1000 < 50
-namespace boost {
-  namespace filesystem {
-    using filesystem3::copy;
-    using filesystem3::copy_directory;
-  }
-}
-#endif
 
 
 namespace Dakota {
@@ -165,14 +152,11 @@ std::string WorkdirHelper::init_startup_path()
 {
   char* env_path = std::getenv(DAK_PATH_ENV_NAME);
 
-  if (!env_path) {
-    Cerr << "\nERROR: "
-         << "getenv(\"" DAK_PATH_ENV_NAME "\") failed in init_startup_path().\n"
-         << std::endl;
-    abort_handler(-1);
+  if (env_path) {
+    return std::string(env_path);
+  } else {
+    return std::string();
   }
-
-  return std::string(env_path);
 }
 
 
@@ -204,7 +188,7 @@ WorkdirHelper::tokenize_env_path(const std::string& env_path)
 
 #if defined(DEBUG)
   Cout << "Search " << env_path << '\n';
-  BOOST_FOREACH(const std::string& d, dirs)
+  for (const std::string& d : dirs)
     Cout << "\tDir = " << d << '\n';
   Cout << std::endl;
 #endif
@@ -256,7 +240,7 @@ bfs::path WorkdirHelper::which(const std::string& driver_name)
   // always check these as a fallback
   extensions.push_back(".com"); extensions.push_back(".exe");
 
-  BOOST_FOREACH(const std::string& e, extensions) {
+  for(const std::string& e : extensions) {
 
     // check with extension as given (potentially mixed case), lower, and upper
     // don't bother checking all possible case variants
@@ -382,7 +366,7 @@ bfs::path WorkdirHelper::po_which(const std::string& driver_name)
     std::vector<std::string> search_dirs =
       tokenize_env_path(dakPreferredEnvPath);
 
-    BOOST_FOREACH(const std::string& d, search_dirs) {
+    for(const std::string& d : search_dirs) {
       boost::filesystem::path complete_path_to_driver;
       boost::filesystem::path search_dir_path(d);
 
@@ -907,15 +891,15 @@ bool WorkdirHelper::find_file(const bfs::path& src_path,
   return false;
 }
 
-// TODO: Boost 1.50 and newer support concat (+=) on paths, remove
-// this function when we allow that version
+
+/** NOTE: Could remove this function and use += at call sites, but
+    seems convenient to keep (since path doesn't have operator+) */
 bfs::path WorkdirHelper::concat_path(const bfs::path& p_in, const String& tag)
 {
-  // explicit template argument to avoid conversion ambiguity
-  bfs::path::string_type p_in_str = p_in.generic_string<bfs::path::string_type>();
-  // may need to convert from string to wstring
-  bfs::path::string_type tag_str(tag.begin(), tag.end());
-  return (p_in_str + tag_str);
+  bfs::path p_out(p_in);
+  // TODO: review whether ever need to convert from string to wstring
+  p_out += tag;
+  return p_out;
 }
 
 

@@ -1,3 +1,12 @@
+#  _______________________________________________________________________
+#
+#  DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
+#  Copyright 2014-2020
+#  National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Dakota directory.
+#  _______________________________________________________________________
+
 # TODO: make documentation build cross-platform
 # TODO: dep for latex_modify
 
@@ -22,7 +31,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/DakotaDefs.tex.cmake.in
                ${CMAKE_CURRENT_BINARY_DIR}/DakotaDefs.tex)
 
 # Doxygen reference dependencies
-file(GLOB ref_kw_md RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "KeywordMetadata/*")
+
+# BMA: Changed this to an absolute glob as relative was causing
+# DakotaKeywords.dox to depend on src/environment target
+file(GLOB ref_kw_md "KeywordMetadata/*")
 list_filter_emacs_backups(ref_kw_md)
 file(GLOB ref_topic_md RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "TopicMetadata/*")
 list_filter_emacs_backups(ref_topic_md)
@@ -194,8 +206,9 @@ function(pdf2sand manual sourcePDFname)
 
 endfunction(pdf2sand)
 
-pdf2sand(dev refman)
-pdf2sand(ref refman)
+# Developer, Reference manuals now part of code docs; not building SAND
+#pdf2sand(dev refman)
+#pdf2sand(ref refman)
 add_subdirectory(latex-theory)
 pdf2sand(theory Theory_Main)
 if(DAKOTA_ENABLE_TESTS)
@@ -222,7 +235,8 @@ endif()
 
 # Generate SAND versions of all
 add_custom_target(docs-sand)
-add_dependencies(docs-sand docs-sand-dev docs-sand-ref docs-sand-theory)
+#add_dependencies(docs-sand docs-sand-dev docs-sand-ref docs-sand-theory)
+add_dependencies(docs-sand docs-sand-theory)
 if(DAKOTA_ENABLE_TESTS)
   add_dependencies(docs-sand docs-sand-user)
 endif()
@@ -245,7 +259,7 @@ add_custom_target(package_docs
   COMMAND ${CMAKE_COMMAND} -E copy
     latex-theory/Theory_Main.pdf Theory-${Dakota_VERSION_STRING}.pdf
   COMMAND ${CMAKE_COMMAND} -E
-    tar czf dakota-${Dakota_VERSION_STRING}.docs.tar.gz
+    tar czf dakota-${Dakota_FINAL_PACKAGE_LABEL}-docs.tar.gz
       html-ref html-ref-${Dakota_VERSION_STRING}.tar.gz
       html-dev html-dev-${Dakota_VERSION_STRING}.tar.gz
       Developers-${Dakota_VERSION_STRING}.pdf

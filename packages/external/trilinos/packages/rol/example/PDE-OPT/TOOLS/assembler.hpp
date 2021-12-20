@@ -121,6 +121,10 @@ namespace ROL {
     ROL::Ptr<Teuchos::Time> AssembleQOIHessVec31        = Teuchos::TimeMonitor::getNewCounter("ROL::PDEOPT: Assemble QOI HessVec31");
     ROL::Ptr<Teuchos::Time> AssembleQOIHessVec32        = Teuchos::TimeMonitor::getNewCounter("ROL::PDEOPT: Assemble QOI HessVec32");
     ROL::Ptr<Teuchos::Time> AssembleQOIHessVec33        = Teuchos::TimeMonitor::getNewCounter("ROL::PDEOPT: Assemble QOI HessVec33");
+    ROL::Ptr<Teuchos::Time> AssembleQOIHessian11        = Teuchos::TimeMonitor::getNewCounter("ROL::PDEOPT: Assemble QOI Hessian11");
+    ROL::Ptr<Teuchos::Time> AssembleQOIHessian12        = Teuchos::TimeMonitor::getNewCounter("ROL::PDEOPT: Assemble QOI Hessian12");
+    ROL::Ptr<Teuchos::Time> AssembleQOIHessian21        = Teuchos::TimeMonitor::getNewCounter("ROL::PDEOPT: Assemble QOI Hessian21");
+    ROL::Ptr<Teuchos::Time> AssembleQOIHessian22        = Teuchos::TimeMonitor::getNewCounter("ROL::PDEOPT: Assemble QOI Hessian22");
   }
 }
 #endif
@@ -158,16 +162,16 @@ private:
   int myRank_, numProcs_;
 
   // Set in SetBasis.
-  std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> basisPtrs_;
+  std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> basisPtrs1_, basisPtrs2_;
 
   // Set in SetDiscretization.
   ROL::Ptr<MeshManager<Real>> meshMgr_;
-  ROL::Ptr<DofManager<Real>>  dofMgr_;
+  ROL::Ptr<DofManager<Real>>  dofMgr1_, dofMgr2_;
 
   // Set in SetParallelStructure.
   int numCells_;
-  Teuchos::Array<int> myCellIds_;
-  Teuchos::Array<int> cellOffsets_;
+  Teuchos::Array<GO> myCellIds_;
+  Teuchos::Array<GO> cellOffsets_;
   ROL::Ptr<const Tpetra::Map<>> myOverlapStateMap_;
   ROL::Ptr<const Tpetra::Map<>> myUniqueStateMap_;
   ROL::Ptr<const Tpetra::Map<>> myOverlapControlMap_;
@@ -212,7 +216,8 @@ private:
                        Teuchos::ParameterList &parlist,
                        std::ostream &outStream = std::cout);
   void setBasis(
-         const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs,
+         const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs1,
+         const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs2,
          Teuchos::ParameterList &parlist,
          std::ostream &outStream = std::cout);
   void setDiscretization(Teuchos::ParameterList &parlist,
@@ -233,16 +238,24 @@ private:
   Real assembleScalar(ROL::Ptr<Intrepid::FieldContainer<Real>> &val);
   void assembleFieldVector(ROL::Ptr<Tpetra::MultiVector<>> &v,
                            ROL::Ptr<Intrepid::FieldContainer<Real>> &val,
-                           ROL::Ptr<Tpetra::MultiVector<>> &vecOverlap);
+                           ROL::Ptr<Tpetra::MultiVector<>> &vecOverlap,
+                           const ROL::Ptr<DofManager<Real>> &dofMgr);
   void assembleParamVector(ROL::Ptr<std::vector<Real>> &v,
                            std::vector<ROL::Ptr<Intrepid::FieldContainer<Real>>> &val);
   void assembleFieldMatrix(ROL::Ptr<Tpetra::CrsMatrix<>> &M,
-                           ROL::Ptr<Intrepid::FieldContainer<Real>> &val);
+                           ROL::Ptr<Intrepid::FieldContainer<Real>> &val,
+                           const ROL::Ptr<DofManager<Real>> &dofMgr1,
+                           const ROL::Ptr<DofManager<Real>> &dofMgr2);
   void assembleParamFieldMatrix(ROL::Ptr<Tpetra::MultiVector<>> &M,
                                 std::vector<ROL::Ptr<Intrepid::FieldContainer<Real>>> &val,
-                                ROL::Ptr<Tpetra::MultiVector<>> &matOverlap);
+                                ROL::Ptr<Tpetra::MultiVector<>> &matOverlap,
+                                const ROL::Ptr<DofManager<Real>> &dofMgr);
   void assembleParamMatrix(ROL::Ptr<std::vector<std::vector<Real>>> &M,
-                           std::vector<std::vector<ROL::Ptr<Intrepid::FieldContainer<Real>>>> &val);
+                           std::vector<std::vector<ROL::Ptr<Intrepid::FieldContainer<Real>>>> &val,
+                           const ROL::Ptr<DofManager<Real>> &dofMgr);
+  void transformToFieldPattern(const ROL::Ptr<Intrepid::FieldContainer<Real>> &array,
+                               const ROL::Ptr<DofManager<Real>> &dofMgr1,
+                               const ROL::Ptr<DofManager<Real>> &dofMgr2 = ROL::nullPtr) const;
 
 public:
   // destructor
@@ -254,6 +267,19 @@ public:
           std::ostream &outStream = std::cout);
   // Constructor: Discretization set from MeshManager input
   Assembler(const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs,
+          const ROL::Ptr<MeshManager<Real>> &meshMgr,
+          const ROL::Ptr<const Teuchos::Comm<int>> &comm,
+          Teuchos::ParameterList &parlist,
+          std::ostream &outStream = std::cout);
+  // Constuctor: Discretization set from ParameterList
+  Assembler(const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs1,
+          const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs2,
+          const ROL::Ptr<const Teuchos::Comm<int>> &comm,
+          Teuchos::ParameterList &parlist,
+          std::ostream &outStream = std::cout);
+  // Constructor: Discretization set from MeshManager input
+  Assembler(const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs1,
+          const std::vector<ROL::Ptr<Intrepid::Basis<Real, Intrepid::FieldContainer<Real>>>> &basisPtrs2,
           const ROL::Ptr<MeshManager<Real>> &meshMgr,
           const ROL::Ptr<const Teuchos::Comm<int>> &comm,
           Teuchos::ParameterList &parlist,
@@ -588,6 +614,26 @@ public:
                             const ROL::Ptr<const Tpetra::MultiVector<>> &u,
                             const ROL::Ptr<const Tpetra::MultiVector<>> &z = ROL::nullPtr,
                             const ROL::Ptr<const std::vector<Real>> &z_param = ROL::nullPtr);
+  void assembleQoIHessian11(ROL::Ptr<Tpetra::CrsMatrix<>> &H11,
+                            const ROL::Ptr<QoI<Real>> &qoi,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &u,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &z = ROL::nullPtr,
+                            const ROL::Ptr<const std::vector<Real>> & z_param = ROL::nullPtr);
+  void assembleQoIHessian12(ROL::Ptr<Tpetra::CrsMatrix<>> &H12,
+                            const ROL::Ptr<QoI<Real>> &qoi,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &u,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &z = ROL::nullPtr,
+                            const ROL::Ptr<const std::vector<Real>> & z_param = ROL::nullPtr);
+  void assembleQoIHessian21(ROL::Ptr<Tpetra::CrsMatrix<>> &H21,
+                            const ROL::Ptr<QoI<Real>> &qoi,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &u,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &z = ROL::nullPtr,
+                            const ROL::Ptr<const std::vector<Real>> & z_param = ROL::nullPtr);
+  void assembleQoIHessian22(ROL::Ptr<Tpetra::CrsMatrix<>> &H22,
+                            const ROL::Ptr<QoI<Real>> &qoi,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &u,
+                            const ROL::Ptr<const Tpetra::MultiVector<>> &z = ROL::nullPtr,
+                            const ROL::Ptr<const std::vector<Real>> & z_param = ROL::nullPtr);
   /***************************************************************************/
   /* End QoI assembly routines                                               */
   /***************************************************************************/
@@ -663,7 +709,8 @@ public:
   /* Accessor routines.                                                      */
   /***************************************************************************/
   const ROL::Ptr<DofManager<Real>> getDofManager(void) const;
-  Teuchos::Array<int> getCellIds(void) const;
+  const ROL::Ptr<DofManager<Real>> getDofManager2(void) const;
+  Teuchos::Array<GO> getCellIds(void) const;
   /***************************************************************************/
   /* End of accessor routines.                                               */
   /***************************************************************************/

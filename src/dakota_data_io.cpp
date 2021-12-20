@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -9,9 +10,9 @@
 #include "dakota_data_io.hpp"
 #include "dakota_data_util.hpp"
 #include "dakota_tabular_io.hpp"
+#include "DakotaVariables.hpp"
 
 #include <boost/tokenizer.hpp>
-#include <boost/foreach.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "boost/filesystem/path.hpp"
 
@@ -93,9 +94,8 @@ read_unsized_data(std::istream& s,
   boost::char_separator<char> sep(", \t"); // allow comma and tab delimited too
   boost::tokenizer< boost::char_separator<char> > tokens(first_line, sep);
   int num_tokens = 0;
-  BOOST_FOREACH (const std::string& t, tokens) {
+  for(const std::string& t : tokens)
     num_tokens++;
-  }
 
   // Rewind input stream 
   s.seekg(0);
@@ -106,21 +106,30 @@ read_unsized_data(std::istream& s,
 
 // This version uses multiple configuration files
 void 
-read_config_vars_multifile(const std::string& basename, int num_expts, int ncv, RealVectorArray& config_vars){
-
-  config_vars.resize(num_expts);
-
+read_config_vars_multifile(const std::string& basename, int num_expts, int ncv,
+			   std::vector<Variables>& config_vars){
+  assert(num_expts == config_vars.size());
   for( int i = 0; i < num_expts; ++i ) {
+    std::string filename = basename + "." + std::to_string(i+1) + ".config";
+    if( !boost::filesystem::exists(filename) ) {
+      Cerr << "Could not find expected experiment config file '"
+	   << filename << "'.\n";
+      abort_handler(IO_ERROR);
+    }
+
     std::ifstream s;
-    std::string filename = basename + "." + convert_to_string(i+1) + ".config";
-    boost::filesystem::path filepath = basename + "." + convert_to_string(i+1) + ".config";
-    if( !boost::filesystem::exists(filepath) )
-      throw std::runtime_error("Could not find expected experiment config file \""
-          + filepath.string() + "\".");
     TabularIO::open_file(s, filename, "read_config_vars_multifile");
-    RealVector & var = config_vars[i];
-    var.sizeUninitialized(ncv);
-    read_data_tabular(s, var);
+    try {
+      config_vars[i].read_tabular(s, INACTIVE_VARS);
+    }
+    catch (const std::exception& e) {
+      // could catch TabularDataTruncated, but message would be the same
+      Cerr << "\nError: Could not read configuration (state) variable values "
+	   << "for experiment " << i + 1 << "\nfrom file '"
+	   << filename << "'; details:\n" << e.what()
+	   << std::endl;
+      abort_handler(IO_ERROR);
+    }
   }
 }
 
@@ -128,12 +137,31 @@ read_config_vars_multifile(const std::string& basename, int num_expts, int ncv, 
 
 // This version uses a single configuration file adhering to an expected num_expts X ncv format
 void 
-read_config_vars_singlefile(const std::string& basename, int num_expts, int ncv, RealVectorArray& config_vars){
+read_config_vars_singlefile(const std::string& basename, int num_expts, int ncv,
+			    std::vector<Variables>& config_vars){
+  assert(num_expts == config_vars.size());
+  std::string filename = basename + ".config";
+  if( !boost::filesystem::exists(filename) ) {
+    Cerr << "Could not find expected experiment config file '" << filename
+	 << "'.\n";
+    abort_handler(IO_ERROR);
+  }
 
   std::ifstream s;
-  std::string filename = basename + ".config";
   TabularIO::open_file(s, filename, "read_config_vars_singlefile");
-  read_sized_data(s, config_vars, num_expts, ncv);
+  for( int i = 0; i < num_expts; ++i ) {
+    try {
+      config_vars[i].read_tabular(s, INACTIVE_VARS);
+    }
+    catch (const std::exception& e) {
+      // could catch TabularDataTruncated, but message would be the same
+      Cerr << "\nError: Could not read configuration (state) variable values "
+	   << "for experiment " << i + 1 << "\nfrom file '"
+	   << filename << "'; details:\n" << e.what()
+	   << std::endl;
+      abort_handler(IO_ERROR);
+    }
+  }
 }
 
 //----------------------------------------------------------------

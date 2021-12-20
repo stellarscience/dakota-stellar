@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -103,6 +104,12 @@ public:
   /// return the mean of the expansion for a given parameter vector,
   /// where a subset of the active variables are random
   Real mean(const Pecos::RealVector& x);
+  /// return the mean of the combined expansion, treating all variables
+  /// as random
+  Real combined_mean();
+  /// return the mean of the combined expansion for a given parameter vector,
+  /// where a subset of the active variables are treated as random
+  Real combined_mean(const Pecos::RealVector& x);
   /// return the gradient of the expansion mean for a given parameter
   /// vector, where all active variables are random
   const Pecos::RealVector& mean_gradient();
@@ -237,18 +244,24 @@ public:
   /// by the Pecos polynomial approximation
   void compute_moments(const Pecos::RealVector& x, bool full_stats = true,
 		       bool combined_stats = false);
-  /// return Pecos::PolynomialApproximation::moments()
+
+  /// return primary moments using Pecos::PolynomialApproximation::moments()
   const RealVector& moments() const;
-  /// set Pecos::PolynomialApproximation::moments()
-  void moments(const RealVector& mom);
-  /// return Pecos::PolynomialApproximation::moment(i)
-  Real moment(size_t i) const;
-  /// set Pecos::PolynomialApproximation::moment(i)
-  void moment(Real mom, size_t i);
-  /// return Pecos::PolynomialApproximation::expansionMoments
+  /// return expansion moments from Pecos::PolynomialApproximation
   const RealVector& expansion_moments() const;
-  /// return Pecos::PolynomialApproximation::numericalMoments
+  /// return numerical moments from Pecos::PolynomialApproximation
   const RealVector& numerical_integration_moments() const;
+  /// return combined moments from multilevel-muktifidelity expansion roll-up
+  const RealVector& combined_moments() const;
+
+  /// return primary moment using Pecos::PolynomialApproximation::moment(i)
+  Real moment(size_t i) const;
+  /// set primary moment using Pecos::PolynomialApproximation::moment(i)
+  void moment(Real mom, size_t i);
+  /// return Pecos::PolynomialApproximation::combinedMoments[i]
+  Real combined_moment(size_t i) const;
+  /// set Pecos::PolynomialApproximation::combinedMoments[i]
+  void combined_moment(Real mom, size_t i);
 
   /// clear tracking of computed moments, due to a change that invalidates
   /// previous results
@@ -269,8 +282,11 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
-  
+
   // redocumenting these since they use Pecos:: qualification
+
+  /// assign active key in approxData and update_active_iterators()
+  void active_model_key(const Pecos::ActiveKey& key);
 
   /// retrieve the approximate function value for a given parameter vector
   Real                        value(const Variables& vars);
@@ -291,6 +307,8 @@ protected:
   void combined_to_active_coefficients(bool clear_combined = true);
   void clear_inactive_coefficients();
 
+  bool advancement_available();
+
   void print_coefficients(std::ostream& s, bool normalized);
 
   /// return expansion coefficients in a form consistent with the
@@ -301,7 +319,7 @@ protected:
   void approximation_coefficients(const RealVector& approx_coeffs,
 				  bool normalized);
 
-  void link_multilevel_surrogate_data();
+  //void link_multilevel_surrogate_data();
 
   void coefficient_labels(std::vector<std::string>& coeff_labels) const;
 
@@ -326,20 +344,35 @@ private:
   /// polynomial approximations
   Pecos::BasisApproximation pecosBasisApprox;
   /// convenience pointer to representation of Pecos polynomial approximation
-  Pecos::PolynomialApproximation* polyApproxRep;
+  std::shared_ptr<Pecos::PolynomialApproximation> polyApproxRep;
 
   // convenience pointer to shared data representation
   //SharedPecosApproxData* sharedPecosDataRep;
 };
 
 
-inline PecosApproximation::PecosApproximation():
-  polyApproxRep(NULL) //, sharedPecosDataRep(NULL)
+inline PecosApproximation::PecosApproximation()
 { }
 
 
 inline PecosApproximation::~PecosApproximation()
 { }
+
+
+inline void PecosApproximation::active_model_key(const Pecos::ActiveKey& key)
+{
+  // sets approxData keys
+  Approximation::active_model_key(key);
+
+  // Almost all approximation operations can simply update active iterators
+  // using the shared data active key when computing/updating coeffs, but a few
+  // operations (NonDExpansion::reduce_{total_sobol,decay_rate}_sets()) access
+  // a previous state prior to computing a new one, such that updating iterators
+  // in allocate_arrays() is not early enough.  Therefore, ensure all iterators
+  // are updated at initial key assignment.
+  // *** TO DO: retire other redundant calls to update_active_iterators()
+  polyApproxRep->update_active_iterators(key);
+}
 
 
 inline void PecosApproximation::expansion_coefficient_flag(bool coeff_flag)
@@ -389,8 +422,8 @@ inline Pecos::ULongULongMap PecosApproximation::sparse_sobol_index_map() const
 inline const Pecos::RealVector& PecosApproximation::
 dimension_decay_rates() const
 {
-  return ((Pecos::OrthogPolyApproximation*)polyApproxRep)->
-    dimension_decay_rates();
+  return std::static_pointer_cast<Pecos::OrthogPolyApproximation>
+    (polyApproxRep)->dimension_decay_rates();
 }
 
 
@@ -400,8 +433,9 @@ inline void PecosApproximation::allocate_arrays()
 
 inline void PecosApproximation::initialize_covariance(Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  polyApproxRep->initialize_covariance(pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  polyApproxRep->initialize_covariance(pa_2->polyApproxRep.get());
 }
 
 
@@ -423,6 +457,14 @@ inline Real PecosApproximation::mean()
 
 inline Real PecosApproximation::mean(const Pecos::RealVector& x)
 { return polyApproxRep->mean(x); }
+
+
+inline Real PecosApproximation::combined_mean()
+{ return polyApproxRep->combined_mean(); }
+
+
+inline Real PecosApproximation::combined_mean(const Pecos::RealVector& x)
+{ return polyApproxRep->combined_mean(x); }
 
 
 inline const Pecos::RealVector& PecosApproximation::mean_gradient()
@@ -453,31 +495,35 @@ variance_gradient(const Pecos::RealVector& x, const Pecos::SizetArray& dvv)
 
 inline Real PecosApproximation::covariance(Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->covariance(pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  return polyApproxRep->covariance(pa_2->polyApproxRep.get());
 }
 
 
 inline Real PecosApproximation::
 covariance(const Pecos::RealVector& x, Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->covariance(x, pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  return polyApproxRep->covariance(x, pa_2->polyApproxRep.get());
 }
 
 
 inline Real PecosApproximation::combined_covariance(Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->combined_covariance(pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  return polyApproxRep->combined_covariance(pa_2->polyApproxRep.get());
 }
 
 
 inline Real PecosApproximation::
 combined_covariance(const Pecos::RealVector& x, Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->combined_covariance(x, pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  return polyApproxRep->combined_covariance(x, pa_2->polyApproxRep.get());
 }
 
 
@@ -550,32 +596,36 @@ inline Real PecosApproximation::delta_combined_variance(const RealVector& x)
 
 inline Real PecosApproximation::delta_covariance(Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->delta_covariance(pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  return polyApproxRep->delta_covariance(pa_2->polyApproxRep.get());
 }
 
 
 inline Real PecosApproximation::
 delta_covariance(const Pecos::RealVector& x, Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->delta_covariance(x, pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  return polyApproxRep->delta_covariance(x, pa_2->polyApproxRep.get());
 }
 
 
 inline Real PecosApproximation::
 delta_combined_covariance(Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->delta_combined_covariance(pa_2->polyApproxRep);
+std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+ return polyApproxRep->delta_combined_covariance(pa_2->polyApproxRep.get());
 }
 
 
 inline Real PecosApproximation::
 delta_combined_covariance(const Pecos::RealVector& x, Approximation& approx_2)
 {
-  PecosApproximation* pa_2 = (PecosApproximation*)approx_2.approx_rep();
-  return polyApproxRep->delta_combined_covariance(x, pa_2->polyApproxRep);
+  std::shared_ptr<PecosApproximation> pa_2 =
+    std::static_pointer_cast<PecosApproximation>(approx_2.approx_rep());
+  return polyApproxRep->delta_combined_covariance(x, pa_2->polyApproxRep.get());
 }
 
 
@@ -630,8 +680,17 @@ inline const RealVector& PecosApproximation::moments() const
 { return polyApproxRep->moments(); }
 
 
-inline void PecosApproximation::moments(const RealVector& mom)
-{ polyApproxRep->moments(mom); }
+inline const RealVector& PecosApproximation::expansion_moments() const
+{ return polyApproxRep->expansion_moments(); }
+
+
+inline const RealVector& PecosApproximation::
+numerical_integration_moments() const
+{ return polyApproxRep->numerical_integration_moments(); }
+
+
+inline const RealVector& PecosApproximation::combined_moments() const
+{ return polyApproxRep->combined_moments(); }
 
 
 inline Real PecosApproximation::moment(size_t i) const
@@ -642,20 +701,19 @@ inline void PecosApproximation::moment(Real mom, size_t i)
 { polyApproxRep->moment(mom, i); }
 
 
-inline const RealVector& PecosApproximation::expansion_moments() const
-{ return polyApproxRep->expansion_moments(); }
+inline Real PecosApproximation::combined_moment(size_t i) const
+{ return polyApproxRep->combined_moment(i); }
 
 
-inline const RealVector& PecosApproximation::
-numerical_integration_moments() const
-{ return polyApproxRep->numerical_integration_moments(); }
+inline void PecosApproximation::combined_moment(Real mom, size_t i)
+{ polyApproxRep->combined_moment(mom, i); }
 
 
 inline void PecosApproximation::
 build_linear_system(RealMatrix& A, const UShort2DArray& multi_index)
 {
-  ((Pecos::RegressOrthogPolyApproximation*)polyApproxRep)->
-    build_linear_system(A, multi_index);
+  std::static_pointer_cast<Pecos::RegressOrthogPolyApproximation>
+    (polyApproxRep)->build_linear_system(A, multi_index);
 }
 
 
@@ -663,8 +721,8 @@ inline void PecosApproximation::
 augment_linear_system(const RealVectorArray& samples, RealMatrix& A,
 		      const UShort2DArray& multi_index)
 {
-  ((Pecos::RegressOrthogPolyApproximation*)polyApproxRep)->
-    augment_linear_system(samples, A, multi_index);
+  std::static_pointer_cast<Pecos::RegressOrthogPolyApproximation>
+    (polyApproxRep)->augment_linear_system(samples, A, multi_index);
 }
 
 
@@ -703,9 +761,7 @@ inline int PecosApproximation::min_coefficients() const
 inline void PecosApproximation::build()
 {
   // base class implementation checks data set against min required
-  //Approximation::build();
-  // For simplicity, ignore approxData[1] since it may or may not be active
-  check_points(approxData[0].points());
+  Approximation::build();
 
   // map to Pecos::BasisApproximation
   pecosBasisApprox.compute_coefficients();
@@ -719,7 +775,7 @@ inline void PecosApproximation::rebuild()
   // support of both update and append, need a mechanism to detect
   // the +/- direction of discrepancy between data and coefficients.
 
-  //size_t curr_pts  = approxData[activeDataIndex].points(),
+  //size_t curr_pts  = data_rep->surrogate_data().points(),
   //  curr_pecos_pts = polyApproxRep->data_size();
   //if (curr_pts > curr_pecos_pts)
     pecosBasisApprox.increment_coefficients();
@@ -756,6 +812,10 @@ inline void PecosApproximation::clear_computed_bits()
 
 inline void PecosApproximation::clear_inactive_coefficients()
 { pecosBasisApprox.clear_inactive(); }
+
+
+inline bool PecosApproximation::advancement_available()
+{ return pecosBasisApprox.advancement_available(); }
 
 
 inline void PecosApproximation::

@@ -46,7 +46,7 @@ if(NOT DEFINED BLAS_LIBS OR NOT DEFINED LAPACK_LIBS)
   endif()
 endif()
 
-FortranCInterface_HEADER(include/cblas_config.h MACRO_NAMESPACE OPTPP_)
+FortranCInterface_HEADER(include/optpp_blas_config.h MACRO_NAMESPACE OPTPP_)
 
 
 # OPT++ Teuchos management; 3 cases to consider:

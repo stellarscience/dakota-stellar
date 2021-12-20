@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -15,17 +16,9 @@
 #include "DakotaResponse.hpp"
 #include "DakotaMinimizer.hpp"
 #include "DataMethod.hpp"
-#include <boost/lexical_cast.hpp>
 #include <sstream>
 
 static const char rcsId[]="@(#) $Id: SOLBase.cpp 7004 2010-10-04 17:55:00Z wjbohnh $";
-
-
-// BMA (20160315): Changed to use Fortran 2003 ISO C bindings.
-// The Fortran symbol will be lowercase with same name as if in C
-//#define NPOPTN2_F77 F77_FUNC(npoptn2,NPOPTN2)
-#define NPOPTN2_F77 npoptn2
-extern "C" void NPOPTN2_F77( const char* option_string );
 
 
 namespace Dakota {
@@ -34,7 +27,9 @@ SOLBase*   SOLBase::solInstance(NULL);
 Minimizer* SOLBase::optLSqInstance(NULL);
 
 
-SOLBase::SOLBase(Model& model)
+SOLBase::SOLBase(Model& model):
+  boundsArraySize(0), linConstraintMatrixF77(NULL),
+  upperFactorHessianF77(NULL), constraintJacMatrixF77(NULL)
 {
   // Prevent nesting of an instance of a Fortran iterator within another
   // instance of the same iterator (which would result in data clashes since
@@ -72,9 +67,8 @@ SOLBase::SOLBase(Model& model)
 
 
 void SOLBase::
-allocate_arrays(int num_cv, size_t num_nln_con,
-		const RealMatrix& lin_ineq_coeffs,
-		const RealMatrix& lin_eq_coeffs)
+allocate_linear_arrays(int num_cv, const RealMatrix& lin_ineq_coeffs,
+		       const RealMatrix& lin_eq_coeffs)
 {
   // NPSOL directly handles equality constraints and 1- or 2-sided inequalities
   size_t num_lin_ineq_con = lin_ineq_coeffs.numRows(),
@@ -83,13 +77,11 @@ allocate_arrays(int num_cv, size_t num_nln_con,
 
   // The Fortran optimizers' need for a nonzero array size is handled with 
   // nlnConstraintArraySize & linConstraintArraySize.
-  nlnConstraintArraySize = (num_nln_con) ? num_nln_con : 1;
   linConstraintArraySize = (num_lin_con) ? num_lin_con : 1;
 
   // Matrix memory passed to Fortran must be contiguous
+  if (linConstraintMatrixF77) delete [] linConstraintMatrixF77;
   linConstraintMatrixF77 = new double[linConstraintArraySize * num_cv];
-  upperFactorHessianF77  = new double[num_cv * num_cv];
-  constraintJacMatrixF77 = new double[nlnConstraintArraySize * num_cv];
 
   // Populate linConstraintMatrixF77 with linear coefficients from PDDB. Loop
   // order is reversed (j, then i) since Fortran matrix ordering is reversed 
@@ -102,19 +94,45 @@ allocate_arrays(int num_cv, size_t num_nln_con,
     for (i=0; i<num_lin_eq_con; i++) // loop over equality rows
       linConstraintMatrixF77[cntr++] = lin_eq_coeffs(i,j);
   }
+}
 
-  boundsArraySize = num_cv + num_lin_con + num_nln_con;
-  cLambda.resize(boundsArraySize);          // clambda[bnd_size]
-  constraintState.resize(boundsArraySize);  // istate[bnd_size]
+
+void SOLBase::
+allocate_nonlinear_arrays(int num_cv, size_t num_nln_con)
+{
+  // The Fortran optimizers' need for a nonzero array size is handled with 
+  // nlnConstraintArraySize & linConstraintArraySize.
+  nlnConstraintArraySize = (num_nln_con) ? num_nln_con : 1;
+
+  // Matrix memory passed to Fortran must be contiguous
+  if (constraintJacMatrixF77) delete [] constraintJacMatrixF77;
+  constraintJacMatrixF77 = new double[nlnConstraintArraySize * num_cv];
+}
+
+
+void SOLBase::
+allocate_arrays(int num_cv, size_t num_nln_con,
+		const RealMatrix& lin_ineq_coeffs,
+		const RealMatrix& lin_eq_coeffs)
+{
+  allocate_linear_arrays(num_cv, lin_ineq_coeffs, lin_eq_coeffs);
+  allocate_nonlinear_arrays(num_cv, num_nln_con);
+
+  // Matrix memory passed to Fortran must be contiguous
+  if (upperFactorHessianF77)  delete [] upperFactorHessianF77;
+  upperFactorHessianF77  = new double[num_cv * num_cv];
+
+  size_bounds_array(num_cv + lin_ineq_coeffs.numRows() +
+		    lin_eq_coeffs.numRows() + num_nln_con);
 }
 
 
 void SOLBase::deallocate_arrays()
 {
   // Delete double* matrix allocations
-  delete [] linConstraintMatrixF77;
-  delete [] upperFactorHessianF77;
-  delete [] constraintJacMatrixF77;
+  delete [] linConstraintMatrixF77;  linConstraintMatrixF77 = NULL;
+  delete [] upperFactorHessianF77;   upperFactorHessianF77  = NULL;
+  delete [] constraintJacMatrixF77;  constraintJacMatrixF77 = NULL;
 }
 
 
@@ -149,17 +167,12 @@ void SOLBase::allocate_workspace(int num_cv, int num_nln_con,
 
 void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag, 
                           short output_lev, int verify_lev, Real fn_prec,
-			  Real linesrch_tol, int max_iter, Real constr_tol,
+			  Real linesrch_tol, size_t max_iter, Real constr_tol,
                           Real conv_tol, const std::string& grad_type,
                           const RealVector& fdss)
 {
   // Set NPSOL options (see "Optional Input Parameters" section of NPSOL manual)
 
-  // The subroutine npoptn2 in file npoptn_wrapper.f accepts a string of 
-  // length 72 (the max that NPSOL accepts) which is then passed along to
-  // the npoptn routine in NPSOL. Therefore, strings passed to npoptn2 need
-  // to be of length 72 (thus, the use of data() rather than c_str()).
- 
   // Each of NPSOL's settings is an optional parameter in dakota.input.nspec, 
   // but always assigning them is OK since they are always defined, either from
   // dakota.in or from the default specified in the DataMethod constructor.
@@ -183,9 +196,8 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
   // for compilers that have problems with ios formatting (e.g., janus, Linux).
   // NOTE: returned buffers from std::string::data() are NOT Null terminated!
   std::string verify_s("Verify Level                = ");
-  verify_s += boost::lexical_cast<std::string>(verify_lev);
-  verify_s.resize(72, ' ');
-  NPOPTN2_F77( verify_s.data() );
+  verify_s += std::to_string(verify_lev);
+  send_sol_option(verify_s);
 
   // Default NPSOL function precision is frequently tighter than DAKOTA's 
   // 11-digit precision.  Scaling back NPSOL's precision prevents wasted fn. 
@@ -199,35 +211,30 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
   fnprec_stream << "Function Precision          = "
                 << std::setiosflags(std::ios::left) << std::setw(26) << fn_prec;
   std::string fnprec_s( fnprec_stream.str() );
-  fnprec_s.resize(72, ' ');
-  NPOPTN2_F77( fnprec_s.data() );
+  send_sol_option(fnprec_s);
 
   std::ostringstream lstol_stream;
   lstol_stream << "Linesearch Tolerance        = "
                << std::setiosflags(std::ios::left)
                << std::setw(26) << linesrch_tol;
   std::string lstol_s( lstol_stream.str() );
-  lstol_s.resize(72, ' ');
-  NPOPTN2_F77( lstol_s.data() );
+  send_sol_option(lstol_s);
 
   std::string maxiter_s("Major Iteration Limit       = ");
-  maxiter_s += boost::lexical_cast<std::string>(max_iter);
-  maxiter_s.resize(72, ' ');
-  NPOPTN2_F77( maxiter_s.data() );
+  maxiter_s += std::to_string(max_iter);
+  send_sol_option(maxiter_s);
 
   if (output_lev > NORMAL_OUTPUT) {
     std::string plevel_s("Major Print Level           = 20");
-    plevel_s.resize(72, ' ');
-    NPOPTN2_F77( plevel_s.data() );
+    send_sol_option(plevel_s);
     Cout << "\nNPSOL option settings:\n----------------------\n" 
-         << verify_s.c_str() << '\n' << "Major Print Level           = 20\n" 
-         << fnprec_s.c_str() << '\n' << lstol_s.c_str() << '\n'
-	 << maxiter_s.c_str() << '\n';
+         << verify_s << '\n' << "Major Print Level           = 20\n" 
+         << fnprec_s << '\n' << lstol_s << '\n'
+	 << maxiter_s << '\n';
   }
   else {
     std::string plevel_s("Major Print Level           = 10");
-    plevel_s.resize(72, ' ');
-    NPOPTN2_F77( plevel_s.data() );
+    send_sol_option(plevel_s);
   }
 
   // assign a nondefault linear/nonlinear constraint tolerance if a valid
@@ -238,10 +245,9 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
                   << std::setiosflags(std::ios::left)
                   << std::setw(26) << constr_tol;
     std::string ct_tol_s( ct_tol_stream.str() );
-    ct_tol_s.resize(72, ' ');
-    NPOPTN2_F77( ct_tol_s.data() );
+    send_sol_option(ct_tol_s);
     if (output_lev > NORMAL_OUTPUT)
-      Cout << ct_tol_s.c_str() << '\n';
+      Cout << ct_tol_s << '\n';
   }
 
   // conv_tol is an optional parameter in dakota.input.nspec, but
@@ -252,10 +258,9 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
   ctol_stream << "Optimality Tolerance        = "
               << std::setiosflags(std::ios::left) << std::setw(26) << conv_tol;
   std::string ctol_s( ctol_stream.str() );
-  ctol_s.resize(72, ' ');
-  NPOPTN2_F77( ctol_s.data() );
+  send_sol_option(ctol_s);
   if (output_lev > NORMAL_OUTPUT)
-    Cout << ctol_s.c_str() << "\nNOTE: NPSOL's convergence tolerance is not a "
+    Cout << ctol_s << "\nNOTE: NPSOL's convergence tolerance is not a "
 	 << "relative tolerance.\n      See \"Optimality tolerance\" in "
          << "Optional Input Parameters section of \n      NPSOL manual for "
          << "description.\n";
@@ -270,8 +275,7 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
        ( grad_type == "numerical" && !vendor_num_grad_flag ) ) {
     // user-supplied gradients: Derivative Level = 3
     std::string dlevel_s("Derivative Level            = 3");
-    dlevel_s.resize(72, ' ');
-    NPOPTN2_F77( dlevel_s.data() );
+    send_sol_option(dlevel_s);
     if (output_lev > NORMAL_OUTPUT)
       Cout << "Derivative Level            = 3\n";
   }
@@ -284,8 +288,7 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
   else { // vendor numerical gradients: Derivative Level = 0. No forward/central
          // interval type control, since NPSOL switches automatically.
     std::string dlevel_s("Derivative Level            = 0");
-    dlevel_s.resize(72, ' ');
-    NPOPTN2_F77( dlevel_s.data() );
+    send_sol_option(dlevel_s);
 
     std::ostringstream fdss_stream;
     Real fd_step_size = fdss[0]; // first entry
@@ -293,8 +296,7 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
                 << std::setiosflags(std::ios::left) << std::setw(26)
 		<< fd_step_size;
     std::string fdss_s( fdss_stream.str() );
-    fdss_s.resize(72, ' ');
-    NPOPTN2_F77( fdss_s.data() );
+    send_sol_option(fdss_s);
   
     // Set "Central Difference Interval" to fdss as well.
     // It may be desirable to set central FDSS to fdss/2. (?)
@@ -303,12 +305,11 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
                  << std::setiosflags(std::ios::left) << std::setw(26)
 		 << fd_step_size;
     std::string cfdss_s( cfdss_stream.str() );
-    cfdss_s.resize(72, ' ');
-    NPOPTN2_F77( cfdss_s.data() );
+    send_sol_option(cfdss_s);
   
     if (output_lev > NORMAL_OUTPUT)
-      Cout << "Derivative Level            = 0\n" << fdss_s.c_str() << '\n'
-	   << cfdss_s.c_str() << "\nNOTE: NPSOL's finite difference interval "
+      Cout << "Derivative Level            = 0\n" << fdss_s << '\n'
+	   << cfdss_s << "\nNOTE: NPSOL's finite difference interval "
 	   << "uses a unit offset to remove the\n      need for a minimum step "
 	   << "specification (see \"Difference interval\" in\n      Optional "
            << "Input Parameters section of NPSOL manual).\n"
@@ -319,7 +320,7 @@ void SOLBase::set_options(bool speculative_flag, bool vendor_num_grad_flag,
 
 
 void SOLBase::
-augment_bounds(RealVector& augmented_l_bnds, RealVector& augmented_u_bnds,
+augment_bounds(RealVector& aggregate_l_bnds, RealVector& aggregate_u_bnds,
 	       const RealVector& lin_ineq_l_bnds,
 	       const RealVector& lin_ineq_u_bnds,
 	       const RealVector& lin_eq_targets,
@@ -327,10 +328,10 @@ augment_bounds(RealVector& augmented_l_bnds, RealVector& augmented_u_bnds,
 	       const RealVector& nln_ineq_u_bnds,
 	       const RealVector& nln_eq_targets)
 {
-  // Construct augmented_l_bnds & augmented_u_bnds from variable bounds,
+  // Construct aggregate_l_bnds & aggregate_u_bnds from variable bounds,
   // linear inequality bounds and equality targets, and nonlinear inequality
   // bounds and equality targets.  Arrays passed in are assumed to already 
-  // contain the variable bounds and are augmented with linear and nonlinear
+  // contain the variable bounds and are aggregated with linear and nonlinear
   // constraint bounds.  Note: bounds above or below NPSOL's "Infinite bound
   // size" (see bl/bu in "Subroutine npsol" section and Infinite bound size in
   // "Optional Input Parameters" section of NPSOL manual) are ignored. 
@@ -338,7 +339,7 @@ augment_bounds(RealVector& augmented_l_bnds, RealVector& augmented_u_bnds,
   // ProblemDescDB::responses_kwhandler for nonlinear constraints and in
   // Constraints::manage_linear_constraints for linear constraints.
 
-  size_t num_cv       = augmented_l_bnds.length(),
+  size_t num_cv       = aggregate_l_bnds.length(),
          num_lin_ineq = lin_ineq_l_bnds.length(),
          num_lin_eq   = lin_eq_targets.length(),
          num_nln_ineq = nln_ineq_l_bnds.length(),
@@ -350,20 +351,116 @@ augment_bounds(RealVector& augmented_l_bnds, RealVector& augmented_u_bnds,
     abort_handler(-1);
   }
 
-  augmented_l_bnds.resize(boundsArraySize); // retains variables data
-  augmented_u_bnds.resize(boundsArraySize); // retains variables data
-  size_t i, cntr = num_cv;
-  copy_data_partial(lin_ineq_l_bnds, 0, augmented_l_bnds, cntr, num_lin_ineq );
-  copy_data_partial(lin_ineq_u_bnds, 0, augmented_u_bnds, cntr, num_lin_ineq );
+  aggregate_l_bnds.resize(boundsArraySize); // retains variables data
+  aggregate_u_bnds.resize(boundsArraySize); // retains variables data
+  size_t cntr = num_cv;
+  copy_data_partial(lin_ineq_l_bnds, 0, aggregate_l_bnds, cntr, num_lin_ineq );
+  copy_data_partial(lin_ineq_u_bnds, 0, aggregate_u_bnds, cntr, num_lin_ineq );
   cntr += num_lin_ineq;
-  copy_data_partial(lin_eq_targets, 0, augmented_l_bnds, cntr, num_lin_eq );
-  copy_data_partial(lin_eq_targets, 0, augmented_u_bnds, cntr, num_lin_eq );
+  copy_data_partial(lin_eq_targets, 0, aggregate_l_bnds, cntr, num_lin_eq );
+  copy_data_partial(lin_eq_targets, 0, aggregate_u_bnds, cntr, num_lin_eq );
   cntr += num_lin_eq;
-  copy_data_partial(nln_ineq_l_bnds, 0, augmented_l_bnds, cntr, num_nln_ineq );
-  copy_data_partial(nln_ineq_u_bnds, 0, augmented_u_bnds, cntr, num_nln_ineq );
+  copy_data_partial(nln_ineq_l_bnds, 0, aggregate_l_bnds, cntr, num_nln_ineq );
+  copy_data_partial(nln_ineq_u_bnds, 0, aggregate_u_bnds, cntr, num_nln_ineq );
   cntr += num_nln_ineq;
-  copy_data_partial(nln_eq_targets, 0, augmented_l_bnds, cntr, num_nln_eq );
-  copy_data_partial(nln_eq_targets, 0, augmented_u_bnds, cntr, num_nln_eq );
+  copy_data_partial(nln_eq_targets, 0, aggregate_l_bnds, cntr, num_nln_eq );
+  copy_data_partial(nln_eq_targets, 0, aggregate_u_bnds, cntr, num_nln_eq );
+}
+
+
+void SOLBase::
+replace_variable_bounds(size_t num_lin_con, size_t num_nln_con,
+			RealVector& aggregate_l_bnds,
+			RealVector& aggregate_u_bnds,
+			const RealVector& cv_lower_bnds,
+			const RealVector& cv_upper_bnds)
+{
+  size_t num_cv = cv_lower_bnds.length(), old_cv,
+    num_con = num_lin_con + num_nln_con, new_bnds_size = num_cv + num_con;
+
+  if (boundsArraySize != new_bnds_size) {
+    size_bounds_array(new_bnds_size);
+
+    RealVector old_l_bnds(aggregate_l_bnds), old_u_bnds(aggregate_u_bnds);
+    aggregate_l_bnds.resize(new_bnds_size);
+    aggregate_u_bnds.resize(new_bnds_size);
+    // migrate linear/nonlinear bnds/targets:
+    old_cv = old_l_bnds.length() - num_con;
+    copy_data_partial(old_l_bnds, old_cv, aggregate_l_bnds, num_cv, num_con);
+    copy_data_partial(old_u_bnds, old_cv, aggregate_u_bnds, num_cv, num_con);
+  }
+  // assign new variable bnds:
+  copy_data_partial(cv_lower_bnds, 0, aggregate_l_bnds, 0, num_cv);
+  copy_data_partial(cv_upper_bnds, 0, aggregate_u_bnds, 0, num_cv);
+}
+
+
+void SOLBase::
+replace_linear_bounds(size_t num_cv, size_t num_nln_con,
+		      RealVector& aggregate_l_bnds,
+		      RealVector& aggregate_u_bnds,
+		      const RealVector& lin_ineq_l_bnds,
+		      const RealVector& lin_ineq_u_bnds,
+		      const RealVector& lin_eq_targets)
+{
+  size_t num_lin_ineq  = lin_ineq_l_bnds.length(),
+         num_lin_eq    = lin_eq_targets.length(),
+         num_lin_con   = num_lin_ineq + num_lin_eq, new_offset, old_offset,
+         new_bnds_size = num_cv + num_lin_con + num_nln_con;
+
+  if (boundsArraySize != new_bnds_size) {
+    size_bounds_array(new_bnds_size);
+
+    RealVector old_l_bnds(aggregate_l_bnds), old_u_bnds(aggregate_u_bnds);
+    aggregate_l_bnds.resize(new_bnds_size); // retains variables data
+    aggregate_u_bnds.resize(new_bnds_size); // retains variables data
+    // migrate nonlinear bnds/targets:
+    old_offset = old_l_bnds.length() - num_nln_con;
+    new_offset = num_cv + num_lin_con;
+    copy_data_partial(old_l_bnds, old_offset, aggregate_l_bnds,
+		      new_offset, num_nln_con);
+    copy_data_partial(old_u_bnds, old_offset, aggregate_u_bnds,
+		      new_offset, num_nln_con);
+  }
+  // assign new linear bnds/targets:
+  new_offset = num_cv;
+  copy_data_partial(lin_ineq_l_bnds, 0, aggregate_l_bnds,
+		    new_offset, num_lin_ineq);
+  copy_data_partial(lin_ineq_u_bnds, 0, aggregate_u_bnds,
+		    new_offset, num_lin_ineq);
+  new_offset += num_lin_ineq;
+  copy_data_partial(lin_eq_targets, 0, aggregate_l_bnds,
+		    new_offset, num_lin_eq);
+  copy_data_partial(lin_eq_targets, 0, aggregate_u_bnds,
+		    new_offset, num_lin_eq);
+}
+
+
+void SOLBase::
+replace_nonlinear_bounds(size_t num_cv, size_t num_lin_con,
+			 RealVector& aggregate_l_bnds,
+			 RealVector& aggregate_u_bnds,
+			 const RealVector& nln_ineq_l_bnds,
+			 const RealVector& nln_ineq_u_bnds,
+			 const RealVector& nln_eq_targets)
+{
+  size_t num_nln_ineq  = nln_ineq_l_bnds.length(),
+         num_nln_eq    = nln_eq_targets.length(),
+         num_nln_con   = num_nln_ineq + num_nln_eq, offset,
+         new_bnds_size = num_cv + num_lin_con + num_nln_con;
+
+  if (boundsArraySize != new_bnds_size) {
+    size_bounds_array(new_bnds_size);
+    aggregate_l_bnds.resize(new_bnds_size); // retains vars, lin cons data
+    aggregate_u_bnds.resize(new_bnds_size); // retains vars, lin cons data
+  }
+  // assign new nonlinear bnds/targets:
+  offset = num_cv + num_lin_con;
+  copy_data_partial(nln_ineq_l_bnds, 0, aggregate_l_bnds, offset, num_nln_ineq);
+  copy_data_partial(nln_ineq_u_bnds, 0, aggregate_u_bnds, offset, num_nln_ineq);
+  offset += num_nln_ineq;
+  copy_data_partial(nln_eq_targets,  0, aggregate_l_bnds, offset, num_nln_eq);
+  copy_data_partial(nln_eq_targets,  0, aggregate_u_bnds, offset, num_nln_eq);
 }
 
 

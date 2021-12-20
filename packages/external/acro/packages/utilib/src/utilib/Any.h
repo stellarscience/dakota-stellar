@@ -1866,7 +1866,6 @@ template<typename T, typename U>
 class Any::Printer<std::multimap<T,U> > 
    : public STL_Any_AuxFcns::SequencePrinter<std::multimap<T,U> > {};
 
-} // namespace ::utilib
 
 
 
@@ -1887,6 +1886,10 @@ utilib::PackBuffer& operator<<(utilib::PackBuffer& os,
 /// Provide generic output streaming for the Any class and Any derivatives
 utilib::UnPackBuffer& operator>>( utilib::UnPackBuffer& os, 
                                   utilib::AnyAntiCoercionWrapper any );
+
+
+} // namespace ::utilib
+
 
 // WEH - where should we put STL packer declarations???
 namespace utilib {  // :: utilib

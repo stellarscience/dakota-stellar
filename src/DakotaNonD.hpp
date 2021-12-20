@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -127,18 +128,29 @@ protected:
   //
 
   /// concatenate computed{Resp,Prob,Rel,GenRel}Levels into level_maps
-  void pull_level_mappings(RealVector& level_maps);
+  void pull_level_mappings(RealVector& level_maps, size_t offset);
   /// update computed{Resp,Prob,Rel,GenRel}Levels from level_maps
-  void push_level_mappings(const RealVector& level_maps);
+  void push_level_mappings(const RealVector& level_maps, size_t offset);
 
-  /// distribute pilot sample specification across model levels
-  void load_pilot_sample(const SizetArray& pilot_spec, SizetArray& delta_N_l);
+  /// configure fidelity/level counts from model hierarchy
+  void configure_sequence(size_t& num_steps, size_t& fixed_index,
+			  short& seq_type);
+  /// extract cost estimates from model hierarchy (forms or resolutions)
+  void configure_cost(unsigned short num_steps, bool multilevel,
+		      RealVector& cost);
+  /// extract cost estimates from model hierarchy, if available
+  bool query_cost(unsigned short num_steps, bool multilevel, RealVector& cost);
+
   /// distribute pilot sample specification across model forms or levels
-  void load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
+  void load_pilot_sample(const SizetArray& pilot_spec, size_t num_steps,
 			 SizetArray& delta_N_l);
   /// distribute pilot sample specification across model forms and levels
   void load_pilot_sample(const SizetArray& pilot_spec, const Sizet3DArray& N_l,
 			 Sizet2DArray& delta_N_l);
+  /// update the relevant slice of N_l_3D from the final 2D multilevel
+  /// or 2D multifidelity sample profile
+  void inflate_final_samples(const Sizet2DArray& N_l_2D, bool multilev,
+			     size_t fixed_index, Sizet3DArray& N_l_3D);
 
   /// resizes finalStatistics::functionGradients based on finalStatistics ASV
   void resize_final_statistics_gradients();
@@ -174,7 +186,8 @@ protected:
 					   const Sizet2DArray& N_samp);
   /// print evaluation summary for multilevel sampling across 3D profile
   void print_multilevel_evaluation_summary(std::ostream& s,
-					   const Sizet3DArray& N_samp);
+					   const Sizet3DArray& N_samp,
+					   String type = "Final");
 
   /// assign a NonDLHSSampling instance within u_space_sampler
   void construct_lhs(Iterator& u_space_sampler, Model& u_model,
@@ -182,9 +195,20 @@ protected:
 		     const String& rng, bool vary_pattern,
 		     short sampling_vars_mode = ACTIVE);
 
+  /// utility for vetting sub-method request against optimizers within
+  /// the package configuration
+  unsigned short sub_optimizer_select(unsigned short requested_sub_method,
+    unsigned short default_sub_method = SUBMETHOD_SQP);
+
   /// compute a one-sided sample increment for multilevel methods to
   /// move current sampling level to a new target
   size_t one_sided_delta(Real current, Real target);
+  /// compute a one-sided sample increment for multilevel methods to
+  /// move current sampling level to a new target
+  size_t one_sided_delta(const SizetArray& current, const RealVector& targets,
+			 size_t power);
+  //size_t one_sided_delta(const Sizet2DArray& current,
+  //			   const RealMatrix& targets, size_t power);
 
   /// allocate results array storage for distribution mappings
   void archive_allocate_mappings();
@@ -197,6 +221,8 @@ protected:
   void archive_allocate_pdf();
   /// archive a single pdf histogram for specified function
   void archive_pdf(size_t fn_index, size_t inc_id = 0);
+  /// archive the equivalent number of HF evals (used by ML/MF methods)
+  void archive_equiv_hf_evals(const Real equiv_hf_evals);
 
   //
   //- Heading: Data members
@@ -315,6 +341,18 @@ inline NonD::~NonD()
 { }
 
 
+inline void NonD::
+configure_cost(unsigned short num_steps, bool multilevel, RealVector& cost)
+{
+  bool cost_defined = query_cost(num_steps, multilevel, cost);
+  if (!cost_defined) {
+    Cerr << "Error: missing required simulation cost data in NonD::"
+	 << "configure_cost()." << std::endl;
+    abort_handler(METHOD_ERROR);
+  }
+}
+
+
 inline bool NonD::pdf_output() const
 { return pdfOutput; }
 
@@ -376,6 +414,92 @@ inline bool NonD::homogeneous(const SizetArray& N_l) const
 
 inline size_t NonD::one_sided_delta(Real current, Real target)
 { return (target > current) ? (size_t)std::floor(target - current + .5) : 0; }
+
+
+inline size_t NonD::
+one_sided_delta(const SizetArray& current, const RealVector& targets,
+		size_t power)
+{
+  size_t i, len = current.size();
+  Real diff, pow_mean = 0.;
+  switch (power) {
+  case 1: // average difference same as difference of averages
+    for (i=0; i<len; ++i)
+      pow_mean += targets[i] - (Real)current[i]; // Note: not one-sided 
+    pow_mean /= len;
+    break;
+  case SZ_MAX: // find max difference
+    for (i=0; i<len; ++i) {
+      diff = targets[i] - (Real)current[i];
+      if (diff > pow_mean) pow_mean = diff;
+    }
+    break;
+  default:
+    Cerr << "Error: power " << power << " not supported in NonD::"
+	 << "one_sided_delta()." << std::endl;
+    abort_handler(METHOD_ERROR);
+    break;
+  }
+  /*
+  case 2: // RMS: norm of diff != difference of norms (use latter)
+    for (i=0; i<len; ++i) {
+      norm_t += targets[i] * targets[i];
+      norm_c += current[i] * current[i];
+    }
+    pow_mean = std::sqrt(norm_t / len) - std::sqrt(norm_c / len);
+    break;
+  default: {
+    for (i=0; i<len; ++i) {
+      norm_t += std::pow(targets[i], (Real)power);
+      norm_c += std::pow(current[i], (Real)power);
+    }
+    Real inv_p = 1./(Real)power;
+    pow_mean = std::pow(norm_t / len, inv_p) - std::pow(norm_c / len, inv_p);
+    break;
+  }
+  }
+  */
+
+  return (pow_mean > 0.) ? (size_t)std::floor(pow_mean + .5) : 0; // round
+}
+
+
+/*
+inline size_t NonD::
+one_sided_delta(const Sizet2DArray& current, const RealMatrix& targets,
+		size_t power)
+{
+  size_t r, c, rows = targets.numRows(), cols = targets.numCols();
+  Real diff, pow_mean = 0.;
+  switch (power) {
+  case 1: // average difference same as difference of averages
+    for (r=0; r<rows; ++r) {
+      const SizetArray& curr_r = current[r];
+      for (c=0; c<cols; ++c)
+	pow_mean += targets(r,c) - curr_r[c];
+    }
+    pow_mean /= rows * cols;
+    break;
+  case SZ_MAX: // find one-sided max difference
+    for (r=0; r<rows; ++r) {
+      const SizetArray& curr_r = current[r];
+      for (c=0; c<cols; ++c) {
+	diff = targets(r,c) - curr_r[c];
+	if (diff > pow_mean) pow_mean = diff;
+      }
+    }
+    break;
+  default:
+    Cerr << "Error: power " << power << " not supported in NonD::"
+	 << "one_sided_delta()." << std::endl;
+    abort_handler(METHOD_ERROR);
+    break;
+  }
+  // see notes on other finite norms above
+
+  return (pow_mean > 0.) ? (size_t)std::floor(pow_mean + .5) : 0; // round
+}
+*/
 
 } // namespace Dakota
 

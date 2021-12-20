@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -44,6 +45,8 @@ public:
   // alternate constructor for instantiations "on the fly"
   NonDCubature(Model& model, unsigned short cub_int_order);
 
+  ~NonDCubature();                                       ///< destructor
+
   //
   //- Heading: Member functions
   //
@@ -58,7 +61,6 @@ protected:
   //
 
   NonDCubature(ProblemDescDB& problem_db, Model& model); ///< constructor
-  ~NonDCubature();                                       ///< destructor
 
   //
   //- Heading: Virtual function redefinitions
@@ -74,6 +76,8 @@ protected:
   void increment_grid_preference(const RealVector& dim_pref);
   void increment_grid_preference();
   void decrement_grid();
+
+  void reset();
 
   int num_samples() const;
 
@@ -91,7 +95,7 @@ private:
   //
 
   /// convenience pointer to the numIntDriver representation
-  Pecos::CubatureDriver* cubDriver;
+  std::shared_ptr<Pecos::CubatureDriver> cubDriver;
 
   // the user specification for the number of Gauss points per dimension
   //UShortArray cubIntOrderSpec;
@@ -102,6 +106,15 @@ private:
   /// the isotropic cubature integration rule
   unsigned short cubIntRule;
 };
+
+
+inline void NonDCubature::reset()
+{
+  // reset dimensional quadrature order to specification
+  //cubIntOrderRef = cubIntOrderSpec;
+  // clear dist param update trackers
+  cubDriver->reset();
+}
 
 
 inline unsigned short NonDCubature::integrand_order() const

@@ -71,11 +71,11 @@ public:
   //
 
   /// assign letter or replace existing letter with a new one
-  void assign_rep(SharedBasisApproxData* data_rep, bool ref_count_incr);
+  void assign_rep(std::shared_ptr<SharedBasisApproxData> data_rep);
 
   /// returns dataRep for access to derived class member functions
   /// that are not mapped to the top Approximation level
-  SharedBasisApproxData* data_rep() const;
+  std::shared_ptr<SharedBasisApproxData> data_rep() const;
 
 protected:
 
@@ -106,29 +106,28 @@ private:
 
   /// used by the standard envelope constructor to initialize dataRep
   /// to the appropriate derived type
-  SharedBasisApproxData*
-    get_shared_data(short basis_type, const UShortArray& approx_order,
-		    size_t num_vars);
+  std::shared_ptr<SharedBasisApproxData>
+  get_shared_data(short basis_type, const UShortArray& approx_order,
+		  size_t num_vars);
   /// used by the alternate envelope constructor to initialize dataRep
   /// to the appropriate derived type
-  SharedBasisApproxData*
-    get_shared_data(short basis_type, const UShortArray& approx_order,
-		    size_t num_vars, const ExpansionConfigOptions& ec_options,
-		    const BasisConfigOptions& bc_options,
-		    const RegressionConfigOptions& rc_options);
+  std::shared_ptr<SharedBasisApproxData>
+  get_shared_data(short basis_type, const UShortArray& approx_order,
+		  size_t num_vars, const ExpansionConfigOptions& ec_options,
+		  const BasisConfigOptions& bc_options,
+		  const RegressionConfigOptions& rc_options);
 
   //
   //- Heading: Data members
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  SharedBasisApproxData* dataRep;
-  /// number of objects sharing dataRep
-  int referenceCount;
+  std::shared_ptr<SharedBasisApproxData> dataRep;
 };
 
 
-inline SharedBasisApproxData* SharedBasisApproxData::data_rep() const
+inline std::shared_ptr<SharedBasisApproxData>
+SharedBasisApproxData::data_rep() const
 { return dataRep; }
 
 } // namespace Pecos

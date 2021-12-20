@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -426,7 +427,9 @@ void ROLOptimizer::set_rol_parameters()
 	);
   optSolverParams.sublist("Status Test").
     set("Step Tolerance", probDescDB.get_real("method.variable_tolerance"));
-  optSolverParams.sublist("Status Test").set("Iteration Limit", maxIterations);
+  // ROL enforces an int; cast is Ok since SZ_MAX default removed at Minimizer
+  optSolverParams.sublist("Status Test").
+    set("Iteration Limit", (int)maxIterations);
 
   // PRECEDENCE 3: power-user advanced options
 

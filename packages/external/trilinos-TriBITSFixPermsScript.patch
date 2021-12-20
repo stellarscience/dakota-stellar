@@ -1,0 +1,27 @@
+diff --git a/cmake/tribits/core/installation/set_installed_group_and_permissions.cmake.in b/cmake/tribits/core/installation/set_installed_group_and_permissions.cmake.in
+index 4e54447..c34b2f4 100644
+--- a/cmake/tribits/core/installation/set_installed_group_and_permissions.cmake.in
++++ b/cmake/tribits/core/installation/set_installed_group_and_permissions.cmake.in
+@@ -77,7 +77,7 @@ IF (EXISTS "${projectInstallBaseDir}")
+   SET(dirPath "${projectInstallBaseDir}")
+   IF (numSubDirs EQUAL 0)
+     # The base dir is CMAKE_INSTALL_PREFIX
+-    SET(CMAKE_INSTALL_PREFIX "${dirPath}")
++    SET(sigap_CMAKE_INSTALL_PREFIX "${dirPath}")
+   ELSE()
+     # Non-recursive set of the group and permissions
+     SET_DIR_OWNER_AND_PERMS("${dirPath}" "")
+@@ -87,11 +87,11 @@ IF (EXISTS "${projectInstallBaseDir}")
+     ENDFOREACH()
+     # Append last subdir which gives CMAKE_INSTALL_PREFIX
+     LIST(GET projectSubdirPathsArray -1 lastSubdir)
+-    SET(CMAKE_INSTALL_PREFIX "${dirPath}/${lastSubdir}")
++    SET(sigap_CMAKE_INSTALL_PREFIX "${dirPath}/${lastSubdir}")
+  ENDIF()
+ 
+   # Recursive set of group and permsisions on CMAKE_INSTALL_PREFIX
+-  SET_DIR_OWNER_AND_PERMS("${CMAKE_INSTALL_PREFIX}" "-R")
++  SET_DIR_OWNER_AND_PERMS("${sigap_CMAKE_INSTALL_PREFIX}" "-R")
+ 
+ ELSE()
+ 

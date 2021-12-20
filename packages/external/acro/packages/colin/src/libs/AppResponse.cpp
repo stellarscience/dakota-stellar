@@ -368,8 +368,6 @@ void AppResponse::write(std::ostream& os) const
 }
 */
 
-} // namespace colin
-
 
 std::ostream& operator<<(std::ostream& os, const colin::AppResponse& r)
 {
@@ -398,3 +396,6 @@ std::ostream& operator<<(std::ostream& os, const colin::AppResponse& r)
    }
    return os;
 }
+
+
+} // namespace colin

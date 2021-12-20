@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -41,13 +42,8 @@ NonDIntegration::NonDIntegration(ProblemDescDB& problem_db, Model& model):
 	 << "NonDIntegration." << std::endl;
     abort_handler(-1);
   }
-
-  initialize_random_variable_transformation();
-  initialize_random_variable_types(EXTENDED_U);
-  // Note: initialize_random_variable_parameters() is performed at run time
-  initialize_random_variable_correlations();
-  verify_correlation_support(EXTENDED_U);
   */
+
   initialize_final_statistics(); // default statistics set
 }
 
@@ -93,9 +89,7 @@ bool NonDIntegration::resize()
 
 void NonDIntegration::core_run()
 {
-  //if (standAloneMode)
-  //  initialize_random_variable_parameters(); // capture any dist param updates
-  //else
+  //if (!standAloneMode)
   //  check_variables(x_dist.random_variables());//deferred from alt ctors
 
   // generate integration points
@@ -210,62 +204,6 @@ void NonDIntegration::update_reference()
 }
 
 
-/** Converts a scalar order specification and a vector anisotropic
-    dimension preference into an anisotropic order vector.  It is used
-    for initialization and does not enforce a reference lower bound
-    (see also NonDQuadrature::update_anisotropic_order()). */
-void NonDIntegration::
-dimension_preference_to_anisotropic_order(unsigned short scalar_order_spec,
-					  const RealVector& dim_pref_spec,
-					  size_t num_v,
-					  UShortArray& aniso_order)
-{
-  // Note: this fn is the inverse of anisotropic_order_to_dimension_preference()
-
-  if (dim_pref_spec.empty()) {
-    aniso_order.assign(num_v, scalar_order_spec);
-    return;
-  }
-
-  Real max_dim_pref = dim_pref_spec[0];
-  size_t i, max_dim_pref_index = 0;
-  for (i=1; i<num_v; ++i)
-    if (dim_pref_spec[i] > max_dim_pref)
-      { max_dim_pref = dim_pref_spec[i]; max_dim_pref_index = i; }
-
-  aniso_order.resize(num_v);
-  for (i=0; i<num_v; ++i)
-    aniso_order[i] = (i == max_dim_pref_index) ? scalar_order_spec :
-      (unsigned short)(scalar_order_spec * dim_pref_spec[i] / max_dim_pref);
-      // truncates fractional order
-}
-
-
-/** Converts a vector anisotropic order into a scalar order and vector
-    anisotropic dimension preference. */
-void NonDIntegration::
-anisotropic_order_to_dimension_preference(const UShortArray& aniso_order,
-					  unsigned short& scalar_order,
-					  RealVector& dim_pref)
-{
-  // Note: this fn is the inverse of dimension_preference_to_anisotropic_order()
-
-  scalar_order = aniso_order[0];
-  size_t i, num_v = aniso_order.size(); bool anisotropic = false;
-  for (i=1; i<num_v; ++i)
-    if (aniso_order[i] > scalar_order)
-      { scalar_order = aniso_order[i]; anisotropic = true; }
-
-  if (anisotropic) { // preserve ratios; normalization not required
-    dim_pref.sizeUninitialized(num_v);
-    for (i=0; i<num_v; ++i)
-      dim_pref[i] = (Real)aniso_order[i];
-  }
-  else
-    dim_pref.sizeUninitialized(0);
-}
-
-
 void NonDIntegration::increment_grid_preference(const RealVector& dim_pref)
 {
   // derived classes must provide at least one of increment_grid_preference()
@@ -277,7 +215,7 @@ void NonDIntegration::increment_grid_preference(const RealVector& dim_pref)
   RealVector aniso_wts(num_pref);
   for (i=0; i<num_pref; ++i)
     aniso_wts[i] = 1./dim_pref[i];
-  increment_grid_weights(aniso_wts);
+  increment_grid_weights(aniso_wts); // this virtual fn must be redefined
 }
 
 
@@ -288,7 +226,7 @@ void NonDIntegration::increment_grid_preference()
   // default base class implementation of increment_grid_preference(pref) is
   // to convert pref to wts and invoke increment_grid_weights(wts)
 
-  increment_grid_weights();
+  increment_grid_weights(); // this virtual fn must be redefined
 }
 
 
@@ -296,14 +234,14 @@ void NonDIntegration::increment_grid_weights(const RealVector& aniso_wts)
 {
   // derived classes must provide at least one of increment_grid_preference()
   // or increment_grid_weights(), but need not provide both.  Therefore, the
-  // default base class implementation of increment_grid_weights(wts) is to
-  // convert wts to pref and invoke increment_grid_preference(pref)
+  // default base class implementation of increment_grid_weights() is to
+  // invoke increment_grid_preference()
 
   size_t i, num_wts = aniso_wts.length();
   RealVector dim_pref(num_wts);
   for (i=0; i<num_wts; ++i)
     dim_pref[i] = 1./aniso_wts[i];
-  increment_grid_preference(dim_pref);
+  increment_grid_preference(dim_pref); // this virtual fn must be redefined
 }
 
 
@@ -311,10 +249,10 @@ void NonDIntegration::increment_grid_weights()
 {
   // derived classes must provide at least one of increment_grid_preference()
   // or increment_grid_weights(), but need not provide both.  Therefore, the
-  // default base class implementation of increment_grid_weights(wts) is to
-  // convert wts to pref and invoke increment_grid_preference(pref)
+  // default base class implementation of increment_grid_weights() is to
+  // invoke increment_grid_preference()
 
-  increment_grid_preference();
+  increment_grid_preference(); // this virtual fn must be redefined
 }
 
 } // namespace Dakota

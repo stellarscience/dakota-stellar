@@ -207,7 +207,7 @@ void least_angle_regression( RealMatrix &A,
 			     int solver,
 			     Real delta,
 			     int max_num_iterations,
-			     int verbosity );
+			     int verbosity );//, IntVector &ordering );
 //@}
 
 int loo_step_lsq_cross_validation( RealMatrix &A, RealVector &b, 

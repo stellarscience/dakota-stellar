@@ -16,6 +16,7 @@
 #include "SparseGridDriver.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 #include "DiscrepancyCalculator.hpp"
+#include "ActiveKey.hpp"
 
 //#define DEBUG
 
@@ -32,18 +33,18 @@ void PolynomialApproximation::compute_coefficients()
     return;
   }
 
-  // update modSurrData from surrData
+  // update surrData (if active aggregation key)
   synchronize_surrogate_data();
 
   // For testing of anchor point logic:
-  //modSurrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
+  //surrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
 
   // anchor point, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
   //   SAMPLING:   treat it as another data point
   //   QUADRATURE/CUBATURE/*_SPARSE_GRID: error
   //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  if (!modSurrData.points()) {
+  if (!surrData.points()) {
     PCerr << "Error: nonzero number of sample points required in Polynomial"
 	  << "Approximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
@@ -53,240 +54,197 @@ void PolynomialApproximation::compute_coefficients()
 
 void PolynomialApproximation::synchronize_surrogate_data()
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  switch (data_rep->expConfigOptions.discrepancyType) {
-  case RECURSIVE_DISCREP:
-    response_data_to_surplus_data();     break;
-  case DISTINCT_DISCREP:
-    response_data_to_discrepancy_data(); break;
-  default: // allow use of approxData or modSurrData, even if no modifications
-    // depending on ctor for modSurrData, may be NULL or just empty
-    if (modSurrData.is_null()) // shared rep (linking once is sufficient)
-      modSurrData = surrData;
-    else if (modSurrData.points() == 0) // retain independence: shallow data cp
-      modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
-    break;
-  }
-}
-
-
-/** When using a recursive approximation, subtract current polynomial approx
-    prediction from the modSurrData so that we form expansion on the surplus */
-void PolynomialApproximation::response_data_to_surplus_data()
-{
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
-  else                       modSurrData.active_key(key);
-  if (key != surrData.active_key()) {
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
+  const ActiveKey& active_key = data_rep->activeKey;
+  if (active_key != surrData.active_key()) {
     PCerr << "Error: active key mismatch in PolynomialApproximation::"
-	  << "response_data_to_surplus_data()." << std::endl;
+	  << "synchronize_surrogate_data()." << std::endl;
     abort_handler(-1);
   }
 
-  // Keep surrData and modSurrData distinct (don't share reps since copy() will
-  // not restore independence when it is needed).  Rather use distinct arrays
-  // with shallow copies of SDV,SDR instances when they will not be modified.
-  // > level 0: both SDVs and SDRs can be shallow copies
-  // > shallow copies of popped arrays support replicated pops on modSurrData
-  //   (applied to distinct arrays of shared instances)
-  const std::map<UShortArray, SDRArray>& resp_data_map
-    = surrData.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator r_cit = resp_data_map.begin();
-  if (key == r_cit->first) { // first entry -> no discrepancy/surplus
-    modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
+  // level 0: surrData non-aggregated key stores raw data
+  short discrepancy  = data_rep->expConfigOptions.discrepReduction,
+        combine_type = data_rep->expConfigOptions.combineType;
+  if (!discrepancy || !active_key.aggregated() ||
+      !active_key.raw_with_reduction_data())
     return;
+
+  switch (discrepancy) {
+  case RECURSIVE_DISCREPANCY:
+    // When using a recursive discrepancy with additive/multiplicative corr,
+    // we will subtract/divide the current polynomial approx prediction from
+    // the new surrData so that we form an expansion on the surplus.  Prior
+    // to using compute() to form the surplus, LF-hat must be generated and
+    // will be stored within surrData in a format that compute() can utilize.
+    generate_synthetic_data(surrData, active_key, combine_type);
+    break;
+  //case DISTINCT_DISCREPANCY:
+    // When using a distinct discrepancy with additive/multiplicative corr,
+    // we will subtract/divide the HF,LF pairs.  In this case, the data is
+    // already provided within surrData and specific pairings are identified
+    // by data groups.
   }
+  // now compute the discrepancy between {HF,LF} or {HF,LF-hat} datasets
+  DiscrepancyCalculator::compute(surrData, active_key, combine_type);
+}
 
-  // levels 1 -- L: modSurrData computes hierarchical surplus between level l
-  // data (approxData[0] from Dakota::PecosApproximation) and the level l-1
-  // approximation.
-  // > SDR and popped SDR instances are distinct; only pop counts are copied
-  modSurrData.copy_active_sdv(surrData, SHALLOW_COPY);
-  modSurrData.size_active_sdr(surrData);
-  modSurrData.anchor_index(surrData.anchor_index());
-  modSurrData.pop_count_stack(surrData.pop_count_stack());
-  // TO DO: do this more incrementally as data sets evolve across levels
 
-  // More efficient to roll up contributions from each level expansion than
-  // to combine expansions and then eval once.  Approaches are equivalent for
-  // additive roll up.
-  size_t i, num_pts = surrData.points();
-  const SDVArray&   sdv_array =    surrData.variables_data();
-  const SDRArray&   sdr_array =    surrData.response_data();
-  SDRArray& surplus_sdr_array = modSurrData.response_data();
-  Real delta_val; RealVector delta_grad;
-  switch (data_rep->expConfigOptions.combineType) {
+/** Compute the combined expansion prediction that corresponds to new surrData,
+    prior to forming an expansion on the difference (surplus). */
+void PolynomialApproximation::
+generate_synthetic_data(SurrogateData& surr_data, const ActiveKey& active_key,
+			short combine_type)
+{
+  // generate synthetic low-fidelity data at the high-fidelity points
+  // and store within surr_data[lf_hat_key] where lf_hat_key is the trailing
+  // portion of active_key.  This synthetic data then enables the computation
+  // and emulation of a recursive discrepancy from hf - lf_hat differences
+  // (surpluses) at the high-fidelity points
+  ActiveKey hf_key, lf_hat_key; // LF-hat in surplus case
+  active_key.extract_keys(hf_key, lf_hat_key);
+  ActiveKey lf0_key = surr_data.filtered_key(SINGLETON_FILTER, 0); // *** Note: ActiveKey first sorts on group id
+
+  // initialize surr_data[lf_hat_key]
+  surr_data.active_key(lf_hat_key); // active key restored at fn end
+  surr_data.variables_data(surr_data.variables_data(hf_key)); // shallow copies
+  surr_data.anchor_index(surr_data.anchor_index(hf_key));
+  surr_data.pop_count_stack(surr_data.pop_count_stack(hf_key));
+
+  const SDRArray& hf_sdr_array = surr_data.response_data(hf_key);
+  surr_data.size_active_sdr(hf_sdr_array); // size lf_hat_sdr_array
+  const SDVArray&  sdv_array = surr_data.variables_data();
+  SDRArray& lf_hat_sdr_array = surr_data.response_data();
+
+  // extract all discrepancy data sets (which have expansions supporting
+  // stored_{value,gradient} evaluations)
+  const std::map<ActiveKey, SDRArray>& discrep_resp_map
+    = surr_data.filtered_response_data_map(RAW_WITH_REDUCTION_DATA_FILTER);
+  std::map<ActiveKey, SDRArray>::const_iterator cit;
+  size_t i, num_pts = hf_sdr_array.size();
+  switch (combine_type) {
   case MULT_COMBINE: {
-    Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
-    RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
-    size_t j, k, num_deriv_vars = modSurrData.num_derivative_variables();
-    std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
+    Real stored_val, fn_val_j, fn_val_jm1;
+    RealVector fn_grad_j, fn_grad_jm1;
+    size_t j, k, num_deriv_vars = surr_data.num_derivative_variables();
     for (i=0; i<num_pts; ++i) {
-      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
-      const SurrogateDataResp& orig_sdr  = sdr_array[i];
-      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
-      short                 surplus_bits = surplus_sdr.active_bits();
-      delta_val = orig_fn_val = orig_sdr.response_function();
-      if (surplus_bits & 2)
-	copy_data(orig_sdr.response_gradient(), orig_fn_grad);
-      for (r_cit=resp_data_map.begin(), j=0; r_cit->first!=key; ++r_cit, ++j) {
-	stored_val = stored_value(c_vars, r_cit->first);
-	delta_val /= stored_val;
-	if (surplus_bits & 2) { // recurse using levels j and j-1
-	  const RealVector& stored_grad
-	    = stored_gradient_nonbasis_variables(c_vars, r_cit->first);
-	  if (j == 0)
-	    { fn_val_j = stored_val; fn_grad_j = stored_grad; }
-	  else {
-	    fn_val_j = fn_val_jm1 * stored_val;
-	    for (k=0; k<num_deriv_vars; ++k)
-	      fn_grad_j[k]  = ( fn_grad_jm1[k] * stored_val +
-				fn_val_jm1 * stored_grad[j] );
-	  }
-	  look_ahead_cit = r_cit; ++look_ahead_cit;
-	  if (look_ahead_cit->first == key)
-	    for (k=0; k<num_deriv_vars; ++k)
-	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
-	                    / fn_val_j;
-	  else
-	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
+      const RealVector&       c_vars = sdv_array[i].continuous_variables();
+      SurrogateDataResp& lf_hat_sdr  = lf_hat_sdr_array[i];
+      short              lf_hat_bits = lf_hat_sdr.active_bits();
+      // start from emulation of lowest fidelity QoI (LF-hat)
+      fn_val_j = stored_value(c_vars, lf0_key); // coarsest fn
+      if (lf_hat_bits & 2)                      // coarsest grad
+	fn_grad_j = stored_gradient_nonbasis_variables(c_vars, lf0_key);
+      // augment w/ emulation of discrepancies (Delta-hat) preceding active_key
+      for (cit = discrep_resp_map.begin(), j=0;
+	   cit->first != active_key; ++cit, ++j) {
+	stored_val = stored_value(c_vars, cit->first); // Delta-hat
+	if (lf_hat_bits & 2) { // recurse using levels j and j-1
+	  const RealVector& stored_grad   // discrepancy gradient-hat
+	    = stored_gradient_nonbasis_variables(c_vars, cit->first);
+	  fn_val_jm1 = fn_val_j;  fn_grad_jm1 = fn_grad_j;
+	  for (k=0; k<num_deriv_vars; ++k) // grad corrected to level j
+	    fn_grad_j[k] = ( fn_grad_jm1[k] * stored_val +
+			     fn_val_jm1 * stored_grad[k] );
 	}
+	fn_val_j *= stored_val; // fn corrected to level j
       }
-      if (surplus_bits & 1)
-	surplus_sdr.response_function(delta_val);
-      if (surplus_bits & 2)
-	surplus_sdr.response_gradient(delta_grad);
+      if (lf_hat_bits & 1)
+	lf_hat_sdr.response_function(fn_val_j);
+      if (lf_hat_bits & 2)
+	lf_hat_sdr.response_gradient(fn_grad_j);
     }
     break;
   }
-  default: //case ADD_COMBINE: (correction specification not required)
+  default: { //case ADD_COMBINE: (correction specification not required)
+    Real sum_val;  RealVector sum_grad;
     for (i=0; i<num_pts; ++i) {
-      const RealVector&          c_vars  = sdv_array[i].continuous_variables();
-      const SurrogateDataResp& orig_sdr  = sdr_array[i];
-      SurrogateDataResp&    surplus_sdr  = surplus_sdr_array[i];
-      short                 surplus_bits = surplus_sdr.active_bits();
-      if (surplus_bits & 1) {
-	delta_val = orig_sdr.response_function();
-	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
-	  delta_val -= stored_value(c_vars, r_cit->first);
-	surplus_sdr.response_function(delta_val);
+      const RealVector&      c_vars  = sdv_array[i].continuous_variables();
+      SurrogateDataResp& lf_hat_sdr  = lf_hat_sdr_array[i];
+      short              lf_hat_bits = lf_hat_sdr.active_bits();
+      if (lf_hat_bits & 1) {
+	sum_val = stored_value(c_vars, lf0_key);
+	for (cit = discrep_resp_map.begin(); cit->first != active_key; ++cit)
+	  sum_val += stored_value(c_vars, cit->first);
+	lf_hat_sdr.response_function(sum_val);
       }
-      if (surplus_bits & 2) {
-	copy_data(orig_sdr.response_gradient(), delta_grad);
-	for (r_cit = resp_data_map.begin(); r_cit->first != key; ++r_cit)
-	  delta_grad -=
-	    stored_gradient_nonbasis_variables(c_vars, r_cit->first);
-	surplus_sdr.response_gradient(delta_grad);
+      if (lf_hat_bits & 2) {
+	sum_grad = stored_gradient_nonbasis_variables(c_vars, lf0_key);
+	for (cit = discrep_resp_map.begin(); cit->first != active_key; ++cit)
+	  sum_grad += stored_gradient_nonbasis_variables(c_vars, cit->first);
+	lf_hat_sdr.response_gradient(sum_grad);
       }
     }
     break;
+  }
+  }
+
+  surr_data.active_key(active_key); // restore
+}
+
+
+void PolynomialApproximation::combined_to_active(bool clear_combined)
+{
+  allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
+
+  // migrate moments
+  primaryMeanIter->second = combinedMeanBits;
+  primaryVarIter->second  = combinedVarBits;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
+  if (!data_rep->nonRandomIndices.empty()) {
+    const ActiveKey& key = data_rep->activeKey;
+    xPrevMean[key] = xPrevCombMean;
+    xPrevVar[key]  = xPrevCombVar;
+  }
+  if (clear_combined) {
+    primaryMomIter->second.swap(combinedMoments);
+    combinedMoments.resize(0);
+    clear_combined_bits();
+  }
+  else
+    primaryMomIter->second = combinedMoments; // deep copy
+}
+
+
+void PolynomialApproximation::
+compute_moments(bool full_stats, bool combined_stats)
+{
+  // default for standard variables mode (2 moments for both full and
+  // intermediate stats) is specialized by {Interp,ProjectOrthog}PolyApprox
+
+  if (combined_stats) {
+    if (combinedMoments.length() != 2) combinedMoments.resize(2);
+    combined_mean(); combined_variance();
+  }
+  else {
+    RealVector& mom1 = primaryMomIter->second;
+    if (mom1.length() != 2) mom1.sizeUninitialized(2);
+    mean(); variance();
+    //standardize_moments(mom1);
+
+    if (!full_stats && !secondaryMoments.empty()) secondaryMoments.resize(0);
   }
 }
 
 
-void PolynomialApproximation::response_data_to_discrepancy_data()
+void PolynomialApproximation::
+compute_moments(const RealVector& x, bool full_stats, bool combined_stats)
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  if (modSurrData.is_null()) modSurrData = SurrogateData(key);
-  else                       modSurrData.active_key(key);
-  if (key != surrData.active_key()) {
-    PCerr << "Error: active key mismatch in PolynomialApproximation::"
-	  << "response_data_to_discrepancy_data()." << std::endl;
-    abort_handler(-1);
+  // default for all variables mode (2 moments) is specialized by ...
+
+  if (combined_stats) {
+    if (combinedMoments.length() != 2) combinedMoments.resize(2);
+    combined_mean(x); combined_variance(x);
   }
+  else {
+    RealVector& mom1 = primaryMomIter->second;
+    if (mom1.length() != 2)            mom1.sizeUninitialized(2);
+    mean(x);          variance(x);
+    //standardize_moments(mom1);
 
-  const std::map<UShortArray, SDRArray>& resp_data_map
-    = surrData.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator r_cit = resp_data_map.begin();
-
-  // Keep surrData and modSurrData distinct (don't share reps since copy() will
-  // not restore independence when it is needed).  Rather use distinct arrays
-  // with shallow copies of SDV,SDR instances when they will not be modified.
-  // > level 0 mode is BYPASS_SURROGATE: both SDVs & SDRs can be shallow copies
-  // > shallow copies of popped arrays support replicated pops on modSurrData
-  //   (applied to distinct arrays of shared instances)
-  if (key == r_cit->first) { // first entry -> no discrepancy/surplus
-    modSurrData.copy_active(surrData, SHALLOW_COPY, SHALLOW_COPY);
-    return;
+    if (!full_stats && !secondaryMoments.empty()) secondaryMoments.resize(0);
   }
-
-  // levels 1 -- L use AGGREGATED_MODELS mode: modSurrData computes discrepancy
-  // between LF data (approxData[0] from Dakota::PecosApproximation; receives
-  // level l-1 data) and HF data (approxData[1] from Dakota::PecosApproximation;
-  // receives level l data).
-  // > SDR and popped SDR instances are distinct; only pop counts are copied
-  modSurrData.copy_active_sdv(surrData, SHALLOW_COPY);
-  modSurrData.size_active_sdr(surrData);
-  modSurrData.anchor_index(surrData.anchor_index());
-  modSurrData.pop_count_stack(surrData.pop_count_stack());
-  // TO DO: do this more incrementally as data sets evolve across levels
-
-  // More efficient to roll up contributions from each level expansion than
-  // to combine expansions and then eval once.  Approaches are equivalent for
-  // additive roll up.
-  size_t i, num_pts = surrData.points();
-  const SDVArray&    sdv_array = surrData.variables_data();
-  const SDRArray& hf_sdr_array = surrData.response_data();
-
-  // ***************************************************************************
-  // TO DO: improve encapsulation by passing surrogate key
-  // (currently replicates logic in NonDExpansion::configure_indices())
-  UShortArray lf_key;  paired_lf_key(key, lf_key);
-  r_cit = resp_data_map.find(lf_key);
-  const SDRArray& lf_sdr_array = r_cit->second;
-  // ***************************************************************************
-
-  DiscrepancyCalculator discrepCalc;
-  SDRArray& delta_sdr_array = modSurrData.response_data();
-  switch (data_rep->expConfigOptions.combineType) {
-  case MULT_COMBINE: {
-    size_t num_deriv_vars = surrData.num_derivative_variables();
-    for (i=0; i<num_pts; ++i) {
-      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
-      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
-      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
-      short                 delta_bits = delta_sdr.active_bits();
-      short                 corr_order = (delta_bits & 2) ? 1 : 0;
-      if (discrepCalc.check_multiplicative(hf_sdr.response_function(),
-					   lf_sdr.response_function(),
-					   corr_order)) {
-	PCerr << "Error: numerical FPE in computing multiplicative discrepancy."
-	      << "\n       Please change to additive discrepancy." << std::endl;
-	abort_handler(-1);
-      }
-      if (delta_bits & 1)
-	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
-	  lf_sdr.response_function(), delta_sdr.response_function_view());
-      if (delta_bits & 2) {
-	RealVector delta_grad(delta_sdr.response_gradient_view());	
-	discrepCalc.compute_multiplicative(hf_sdr.response_function(),
-	  hf_sdr.response_gradient(), lf_sdr.response_function(),
-	  lf_sdr.response_gradient(), delta_grad);
-      }
-    }
-    break;
-  }
-  default: //case ADD_COMBINE: (correction specification not required)
-    for (i=0; i<num_pts; ++i) {
-      const SurrogateDataResp& lf_sdr  =    lf_sdr_array[i];
-      const SurrogateDataResp& hf_sdr  =    hf_sdr_array[i];
-      SurrogateDataResp&    delta_sdr  = delta_sdr_array[i];
-      short                 delta_bits = delta_sdr.active_bits();
-      if (delta_bits & 1)
-	discrepCalc.compute_additive(hf_sdr.response_function(),
-	  lf_sdr.response_function(), delta_sdr.response_function_view());
-      if (delta_bits & 2) {
-	RealVector delta_grad(delta_sdr.response_gradient_view());
-	discrepCalc.compute_additive(hf_sdr.response_gradient(),
-	  lf_sdr.response_gradient(), delta_grad);
-      }
-    }
-    break;
-  }
-
-  modSurrData.data_checks(); // from scratch (aggregate LF,HF failures)
 }
 
 
@@ -443,7 +401,8 @@ standardize_moments(const RealVector& central_moments, RealVector& std_moments)
 
 void PolynomialApproximation::allocate_component_sobol()
 {
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   size_t sobol_len = data_rep->sobolIndexMap.size();
   if (sobolIndices.length() != sobol_len)
     sobolIndices.sizeUninitialized(sobol_len);
@@ -453,7 +412,8 @@ void PolynomialApproximation::allocate_component_sobol()
 void PolynomialApproximation::allocate_total_sobol()
 {
   // number of total indices independent of number of component indices
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
   if (totalSobolIndices.empty() && expansionCoeffFlag &&
       data_rep->expConfigOptions.vbdFlag)
     totalSobolIndices.sizeUninitialized(sharedDataRep->numVars);

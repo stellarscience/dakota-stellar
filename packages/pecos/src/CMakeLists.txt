@@ -8,8 +8,7 @@
 
 # CMakeLists.txt for pecos source (WJB: Note the source file GLOB below)
 
-include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
-  ${Teuchos_INCLUDE_DIRS})
+include_directories(${Teuchos_INCLUDE_DIRS})
 
 # TODO: when configuring each package, do we want to add to
 # include_directories, or be explicit in each package?
@@ -51,7 +50,8 @@ file(GLOB Pecos_src *.cpp)
 file(GLOB Pecos_hdr *.hpp)
 
 add_library(pecos_src ${Pecos_src})
-target_link_libraries(pecos_src pecos_util ${Pecos_PKG_LIBS} ${Pecos_TPL_LIBS})
+target_link_libraries(pecos_src pecos_util ${Pecos_PKG_LIBS} ${Pecos_TPL_LIBS}
+		      Boost::boost)
 if (HAVE_FFTW)
   add_dependencies(pecos_src fftw)
 endif()

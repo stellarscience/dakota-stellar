@@ -25,7 +25,9 @@ namespace Pecos {
 const double PI = boost::math::constants::pi<double>();
 
 /// special value returned by index() when entry not found
-const size_t _NPOS = ~(size_t)0; // one's complement
+//const size_t _NPOS  = ~(size_t)0; // one's complement
+const size_t SZ_MAX = std::numeric_limits<size_t>::max();
+const size_t _NPOS  = SZ_MAX; // alias old definition
 
 /// used in ostream data output functions
 const int WRITE_PRECISION = 10;
@@ -49,6 +51,9 @@ enum { SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT,
 // define special values for multivariate distribution types
 enum { NO_DIST=0, MARGINALS_CORRELATIONS, MULTIVARIATE_NORMAL, JOINT_KDE };
      //GAUSSIAN_COPULA, ...
+
+// define special values for type of moment results
+enum { NO_MOMENTS=0, STANDARD_MOMENTS, CENTRAL_MOMENTS };
 
 // define special values for univariate RandomVariable types
 enum { NO_TYPE=0,
@@ -141,13 +146,16 @@ enum { NO_GROWTH_OVERRIDE=0, RESTRICTED, UNRESTRICTED };
 /// options for ExpansionConfigOptions::refineType (inactive)
 enum { NO_REFINEMENT=0, P_REFINEMENT, H_REFINEMENT };
 /// options for ExpansionConfigOptions::refineControl
+// Note: C3 augments UNIFORM_CONTROL with a c3AdvancementType;
+//       could consider a similar breakout for DIMENSION_ADAPTIVE_CONTROL
 enum { NO_CONTROL=0, UNIFORM_CONTROL, LOCAL_ADAPTIVE_CONTROL,
        DIMENSION_ADAPTIVE_CONTROL_SOBOL, DIMENSION_ADAPTIVE_CONTROL_DECAY,
        DIMENSION_ADAPTIVE_CONTROL_GENERALIZED };
 /// options for ExpansionConfigOptions::refineMetric
 enum { NO_METRIC=0, COVARIANCE_METRIC, LEVEL_STATS_METRIC, MIXED_STATS_METRIC };
 /// options for ExpansionConfigOptions::refineStatsType
-enum { NO_EXPANSION_STATS=0, ACTIVE_EXPANSION_STATS, COMBINED_EXPANSION_STATS };
+enum { NO_EXPANSION_STATS=0, DEFAULT_EXPANSION_STATS, ACTIVE_EXPANSION_STATS,
+       COMBINED_EXPANSION_STATS };
 
 /// options for expansion basis type
 enum { DEFAULT_BASIS=0, TENSOR_PRODUCT_BASIS, TOTAL_ORDER_BASIS,
@@ -168,9 +176,22 @@ enum { INTERPOLATION_OF_PRODUCTS, REINTERPOLATION_OF_PRODUCTS,
 /// special values for polynomial expansion combination
 enum { NO_COMBINE=0, ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
 
-/// special values for discrepancy emulation
-enum { NO_DISCREP=0, DISTINCT_DISCREP, RECURSIVE_DISCREP };
+/// special values for type of sequence across a set of model forms/resolutions
+enum { NO_SEQUENCE=0, MODEL_FORM_SEQUENCE, RESOLUTION_LEVEL_SEQUENCE };
 
+/// special values for type of discrepancy emulation
+enum { NO_DISCREPANCY=0, DISTINCT_DISCREPANCY, RECURSIVE_DISCREPANCY };
+
+/// special values for key type indicating augmentation of single data sets
+/// with reduction data (e.g., for augmenting raw data with discrepancy data);
+/// these are arranged to allow bit detection (raw = 1, reduction = 2, both = 3)
+enum { NO_DATA=0, RAW_DATA, SINGLE_REDUCTION, RAW_WITH_REDUCTION };
+       //, MULTIPLE_REDUCTION = 4 bit, ...
+
+/// special values for filtering keyed SurrogateData maps
+enum { NO_FILTER = 0, SINGLETON_FILTER, AGGREGATED_FILTER, RAW_DATA_FILTER,
+       REDUCTION_DATA_FILTER, RAW_WITH_REDUCTION_DATA_FILTER };
+       //, SINGLE_REDUCTION_DATA_FILTER, MULTIPLE_REDUCTION_DATA_FILTER, ...
 
 // ----------------
 // Standard streams

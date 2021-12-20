@@ -23,7 +23,7 @@
 #endif
 
 #include "OptConstrFDNewton.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 using Teuchos::SerialSymDenseMatrix;
 

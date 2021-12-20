@@ -21,7 +21,7 @@
 #include "OptDHNIPS.h"
 #include <float.h>
 #include "OptppArray.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "ioformat.h"
 #include "Teuchos_LAPACK.hpp"
 

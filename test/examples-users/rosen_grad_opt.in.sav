@@ -1,0 +1,36 @@
+
+# Dakota Input File: rosen_grad_opt.in
+# Usage:
+#   dakota -i rosen_grad_opt.in -o rosen_grad_opt.out > rosen_grad_opt.stdout
+
+environment
+  tabular_data
+    tabular_data_file = 'rosen_grad_opt.dat'
+
+method
+  conmin_frcg
+    convergence_tolerance = 1e-4
+    max_iterations = 100
+
+model
+  single
+
+variables
+  continuous_design = 2
+    initial_point    -1.2      1.0
+    lower_bounds     -2.0     -2.0
+    upper_bounds      2.0      2.0
+    descriptors       'x1'     "x2"
+
+interface
+  analysis_drivers = 'rosenbrock'
+    direct
+
+responses
+  objective_functions = 1
+#  analytic_gradients
+  numerical_gradients
+    method_source dakota
+    interval_type forward
+    fd_step_size = 1.e-5
+  no_hessians

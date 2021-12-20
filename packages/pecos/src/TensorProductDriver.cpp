@@ -50,10 +50,10 @@ void TensorProductDriver::precompute_rules()
 
 void TensorProductDriver::clear_inactive()
 {
-  std::map<UShortArray, UShortArray>::iterator   li_it = levelIndex.begin();
-  std::map<UShortArray, UShort2DArray>::iterator ck_it =  collocKey.begin();
-  std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
-  std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  std::map<ActiveKey, UShortArray>::iterator   li_it = levelIndex.begin();
+  std::map<ActiveKey, UShort2DArray>::iterator ck_it = collocKey.begin();
+  std::map<ActiveKey, RealVector>::iterator    t1_it = type1WeightSets.begin();
+  std::map<ActiveKey, RealMatrix>::iterator    t2_it = type2WeightSets.begin();
   while (li_it != levelIndex.end())
     if (li_it == levelIndIter) // preserve active
       { ++li_it, ++ck_it, ++t1_it, ++t2_it; }
@@ -64,9 +64,9 @@ void TensorProductDriver::clear_inactive()
 }
 
 
-const UShortArray& TensorProductDriver::maximal_grid()
+const ActiveKey& TensorProductDriver::maximal_grid()
 {
-  std::map<UShortArray, RealVector>::const_iterator
+  std::map<ActiveKey, RealVector>::const_iterator
     w_cit = type1WeightSets.begin(), max_cit = w_cit;
   size_t num_wts, max_wts = w_cit->second.length(); ++w_cit;
   for (; w_cit!=type1WeightSets.end(); ++w_cit) {
@@ -82,7 +82,7 @@ const UShortArray& TensorProductDriver::maximal_grid()
 
 void TensorProductDriver::combine_grid()
 {
-  std::map<UShortArray, UShortArray>::const_iterator
+  std::map<ActiveKey, UShortArray>::const_iterator
     li_cit = levelIndex.begin();
   combinedLevelIndex = li_cit->second; ++li_cit;
   for (; li_cit!=levelIndex.end(); ++li_cit) {
@@ -93,7 +93,7 @@ void TensorProductDriver::combine_grid()
   }
 
   UShortArray comb_order;
-  update_quadrature_order_from_level_index(combinedLevelIndex, comb_order);
+  level_to_order(combinedLevelIndex, comb_order);
   compute_tensor_grid(comb_order, combinedLevelIndex, combinedVarSets,
 		      combinedT1WeightSets, combinedT2WeightSets,
 		      combinedCollocKey);
@@ -127,7 +127,37 @@ void TensorProductDriver::combined_to_active(bool clear_combined)
     t2WtIter->second       = combinedT2WeightSets;
   }
 
-  update_quadrature_order_from_level_index();
+  level_to_order();
+}
+
+
+void TensorProductDriver::
+enforce_constraints(const UShortArray& ref_quad_order)
+{
+  // enforce constraints: ref_quad_order -> quadOrder
+  size_t i, len = ref_quad_order.size();
+  if (quadOrder.size()            != len)            quadOrder.resize(len);
+  if (levelIndIter->second.size() != len) levelIndIter->second.resize(len);
+  unsigned short nested_order;
+  for (i=0; i<len; ++i) {
+    // synchronize on number of points: Lagrange poly order = #pts - 1
+    if (driverMode == INTERPOLATION_MODE)
+      quadrature_goal_to_nested_quadrature_order(i, ref_quad_order[i],
+						 nested_order);
+    else // {INTEGRATION,DEFAULT}_MODE: ref_quad_order is non-nested so use
+         // non-nested Gauss integrand goal = 2m-1
+      integrand_goal_to_nested_quadrature_order(i, 2 * ref_quad_order[i] - 1,
+						nested_order);
+
+    // update quadOrder / levelIndex
+    if (nested_order == USHRT_MAX) { // required order not available
+      PCerr << "Error: order goal could not be attained in TensorProductDriver"
+	    << "::enforce_constraints()" << std::endl;
+      abort_handler(-1);
+    }
+    else
+      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+  }
 }
 
 

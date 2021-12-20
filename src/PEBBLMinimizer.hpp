@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -62,7 +63,8 @@ public:
 	    @param max_iter Maximum number of iterations
 	    @param max_eval Maximum number of Black Box Evaluations
 	    */
-	 PebbldMinimizer(Model &model, int random_seed, int max_iter, int max_eval);
+	 PebbldMinimizer(Model &model, int random_seed,
+			 size_t max_iter, size_t max_eval);
 	 /// Destructor
          ~PebbldMinimizer()
          { if (branchAndBound) delete branchAndBound; }

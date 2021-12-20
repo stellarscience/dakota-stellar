@@ -21,7 +21,7 @@
 
 #include <float.h>
 #include "OptNewton.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "ioformat.h"
 #include "globals.h"
 

@@ -84,20 +84,23 @@ studies.
 The vector and centered parameter studies use the initial values of
 the variables from the \texttt{variables} keyword block as the
 starting point and the central point of the parameter studies,
-respectively. In the case of design variables, the
-\texttt{initial\_point} is used, and in the case of state variables, 
-the \texttt{initial\_state} is used (see the Dakota Reference
-Manual~\cite{RefMan} for default values when \texttt{initial\_point} or
-\texttt{initial\_state} are unspecified). In the case of uncertain
-variables, initial values are inferred from the distribution
+respectively. These parameter study starting values for design,
+uncertain, and state variables are referenced in the following
+sections using the identifier ``Initial Values.''
+
+In the case of design variables, the \dakotakw{initial_point} is used,
+and in the case of state variables, the \dakotakw{initial_state} is
+used. In the case of uncertain variables, initial values not specified
+by an \dakotakw{initial_point} are inferred from the distribution
 specification: all uncertain initial values are set to their means,
-where mean values for bounded normal and bounded lognormal are
-repaired of needed to satisfy the specified distribution bounds, mean
-values for discrete integer range distributions are rounded down to
-the nearest integer, and mean values for discrete set distributions
-are rounded to the nearest set value.  These parameter study starting
-values for design, uncertain, and state variables are referenced in
-the following sections using the identifier ``Initial Values.''
+correcting as needed.  For example, mean values for bounded normal and
+bounded lognormal are repaired as needed to satisfy the specified
+distribution bounds, mean values for discrete integer range
+distributions are rounded down to the nearest integer, and mean values
+for discrete set distributions are rounded to the nearest set
+value. See the \dakotakw{variables}, \dakotakw{initial_point}, and
+\dakotakw{initial_state} keywords in the Dakota Reference
+Manual~\cite{RefMan} for additional details on default values.
 
 \subsection{Bounds}\label{ps:overview:bounds}
 
@@ -260,8 +263,8 @@ as in the second example in Section~\ref{ps:vector} would be:
 \end{small}
 
 For convenience, the points for evaluation in a list parameter study
-may instead be specified via the {\tt import\_points\_file}
-specification, e.g., {\tt 'import\_points\_file listpstudy.dat'},
+may instead be specified via the \dakotakw{import_points_file}
+specification, e.g., {\tt import\_points\_file 'listpstudy.dat'},
 where the file \path{listpstudy.dat} may be in freeform or annotated
 format~\ref{input:tabularformat}.  The ordering of the points is in
 input specification order, with both active and inactive variables by
@@ -455,7 +458,7 @@ taken between the initial and final points in the parameter study.
   \centering
   \begin{bigbox}
     \begin{small}
-      \verbatimtabinput[8]{rosen_ps_vector.in}
+      \verbatimtabinput[8]{../../test/examples-users/rosen_ps_vector.in}
     \end{small}
   \end{bigbox}
   \caption{Rosenbrock vector parameter study example: the Dakota input

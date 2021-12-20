@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -18,6 +19,7 @@
 #include "NonDLHSSampling.hpp"
 #include "DakotaModel.hpp"
 #include "DakotaIterator.hpp"
+#include "DakotaSurrogatesGP.hpp"
 #include "RecastModel.hpp"
 #include "DataFitSurrModel.hpp"
 #include "ProblemDescDB.hpp"
@@ -86,9 +88,11 @@ NonDGlobalInterval::NonDGlobalInterval(ProblemDescDB& problem_db, Model& model):
       numDiscSetIntUncVars + numDiscreteRealVars;
     if (!numSamples) // use a default of #terms in a quadratic polynomial
       numSamples = (num_uv+1)*(num_uv+2)/2;
-    String approx_type = 
-      (probDescDB.get_short("method.nond.emulator") == GP_EMULATOR) ?
-      "global_gaussian" : "global_kriging";
+    String approx_type = "global_kriging";
+    if (probDescDB.get_short("method.nond.emulator") == GP_EMULATOR)
+      approx_type = "global_gaussian";
+    else if (probDescDB.get_short("method.nond.emulator") == EXPGP_EMULATOR)
+      approx_type = "global_exp_gauss_proc";
     unsigned short sample_type = SUBMETHOD_DEFAULT;
     String sample_reuse = "none";
     if (probDescDB.get_bool("method.derivative_usage")) {
@@ -110,8 +114,9 @@ NonDGlobalInterval::NonDGlobalInterval(ProblemDescDB& problem_db, Model& model):
 
     // The following uses on the fly derived ctor:
     short mode = (eifFlag) ? ACTIVE_UNIFORM : ACTIVE;
-    daceIterator.assign_rep(new NonDLHSSampling(iteratedModel, sample_type,
-      numSamples, seedSpec, rngName, false, mode), false);
+    daceIterator.assign_rep(std::make_shared<NonDLHSSampling>
+			    (iteratedModel, sample_type, numSamples, seedSpec,
+			     rngName, false, mode));
     // only use derivatives if the user requested and they are available
     daceIterator.active_set_request_values(dataOrder);
 
@@ -126,13 +131,21 @@ NonDGlobalInterval::NonDGlobalInterval(ProblemDescDB& problem_db, Model& model):
     //const Variables& curr_vars = iteratedModel.current_variables();
     ActiveSet gp_set = iteratedModel.current_response().active_set(); // copy
     gp_set.request_values(1);// no surr deriv evals, but GP may be grad-enhanced
-    fHatModel.assign_rep(new DataFitSurrModel(daceIterator, iteratedModel,
-      gp_set, approx_type, approx_order, corr_type, corr_order, dataOrder,
-      outputLevel, sample_reuse, import_pts_file,
-      probDescDB.get_ushort("method.import_build_format"),
-      probDescDB.get_bool("method.import_build_active_only"),
-      probDescDB.get_string("method.export_approx_points_file"),
-      probDescDB.get_ushort("method.export_approx_format")), false);
+    fHatModel.assign_rep(std::make_shared<DataFitSurrModel>
+      (daceIterator, iteratedModel,
+       gp_set, approx_type, approx_order, corr_type, corr_order, dataOrder,
+       outputLevel, sample_reuse, import_pts_file,
+       probDescDB.get_ushort("method.import_build_format"),
+       probDescDB.get_bool("method.import_build_active_only"),
+       probDescDB.get_string("method.export_approx_points_file"),
+       probDescDB.get_ushort("method.export_approx_format")));
+
+    if (approx_type == "global_exp_gauss_proc") {
+      String advanced_options_file
+          = problem_db.get_string("method.advanced_options_file");
+      if (!advanced_options_file.empty())
+        set_model_gp_options(fHatModel, advanced_options_file);
+    }
 
     // Following this ctor, IteratorScheduler::init_iterator() initializes the
     // parallel configuration for NonDGlobalInterval + iteratedModel using
@@ -160,9 +173,9 @@ NonDGlobalInterval::NonDGlobalInterval(ProblemDescDB& problem_db, Model& model):
   SizetArray recast_vars_comps_total;  // default: empty; no change in size
   BitArray all_relax_di, all_relax_dr; // default: empty; no discrete relaxation
   short recast_resp_order = 1; // nongradient-based optimizers
-  intervalOptModel.assign_rep(
-    new RecastModel(fHatModel, recast_vars_comps_total, all_relax_di,
-		    all_relax_dr, 1, 0, 0, recast_resp_order), false);
+  intervalOptModel.assign_rep(std::make_shared<RecastModel>
+			      (fHatModel, recast_vars_comps_total, all_relax_di,
+			       all_relax_dr, 1, 0, 0, recast_resp_order));
 
   // Instantiate the optimizer used on the GP.
   // TO DO: add support for discrete EGO
@@ -171,16 +184,16 @@ NonDGlobalInterval::NonDGlobalInterval(ProblemDescDB& problem_db, Model& model):
     // preserve these EGO settings for now, but eventually map through
     // from spec (and update test baselines)
     convergenceTol = 1.e-12; distanceTol = 1.e-8;
-    if (maxIterations < 0) 
+    if (maxIterations == SZ_MAX) // default value
       maxIterations  = 25*numContinuousVars;
     
     double min_box_size = 1.e-15, vol_box_size = 1.e-15;
-    int max_direct_iter = 1000, max_direct_eval = 10000; // 10*defaults
-#ifdef HAVE_NCSU  
+    size_t max_direct_iter = 1000, max_direct_eval = 10000; // 10*defaults
+#ifdef HAVE_NCSU
     // EGO with DIRECT (exploits GP variance)
-    intervalOptimizer.assign_rep(new
-      NCSUOptimizer(intervalOptModel, max_direct_iter, max_direct_eval,
-		    min_box_size, vol_box_size), false);
+    intervalOptimizer.assign_rep(std::make_shared<NCSUOptimizer>
+				 (intervalOptModel, max_direct_iter,
+				  max_direct_eval, min_box_size, vol_box_size));
 #else
     Cerr << "NCSU DIRECT Optimizer is not available to use to find the" 
 	 << " interval bounds from the GP model." << std::endl;
@@ -188,17 +201,19 @@ NonDGlobalInterval::NonDGlobalInterval(ProblemDescDB& problem_db, Model& model):
 #endif // HAVE_NCSU
   }
   else { // EAminlp, with or without GP emulation
-    int max_ea_iter, max_ea_eval;
+    size_t max_ea_iter, max_ea_eval;
     if (gpModelFlag) // SBGO controls from user spec; EA controls hard-wired
       { max_ea_iter = 50; max_ea_eval = 5000; } // default EA pop_size = 100
-    else // EA controls from user spec
-      { max_ea_iter = maxIterations; max_ea_eval = maxFunctionEvals; }
+    else { // EA controls from user spec
+      max_ea_iter = (maxIterations    == SZ_MAX) ? 100  : maxIterations;
+      max_ea_eval = (maxFunctionEvals == SZ_MAX) ? 1000 : maxFunctionEvals;
+    }
 
 #ifdef HAVE_ACRO
     // mixed EA (ignores GP variance)
-    intervalOptimizer.assign_rep(new
-      COLINOptimizer("coliny_ea", intervalOptModel, seedSpec, max_ea_iter,
-		     max_ea_eval), false);
+    intervalOptimizer.assign_rep(std::make_shared<COLINOptimizer>
+				 ("coliny_ea", intervalOptModel, seedSpec,
+				  max_ea_iter, max_ea_eval));
 //#elif HAVE_JEGA
 //    intervalOptimizer.assign_rep(new
 //      JEGAOptimizer(intervalOptModel, max_iter, max_eval, min_box_size,
@@ -265,7 +280,13 @@ void NonDGlobalInterval::core_run()
   NonDGlobalInterval* prev_instance = nondGIInstance;
   nondGIInstance = this;
 
-  intervalOptModel.update_from_subordinate_model();
+  // now that vars/labels/bounds/targets have flowed down at run-time from
+  // any higher level recursions, propagate them up local Model recursions
+  // so that they are correct when they propagate back down.  There is no
+  // need to recur below iteratedModel.
+  size_t layers = (gpModelFlag) ? 2 : 1;
+  intervalOptModel.update_from_subordinate_model(layers-1);
+
   // Build initial GP once for all response functions
   if (gpModelFlag)
     fHatModel.build_approximation();
@@ -275,7 +296,8 @@ void NonDGlobalInterval::core_run()
   BoolDequeArray nonlinear_resp_map(1);
   nonlinear_resp_map[0] = BoolDeque(numFunctions, false);
   BoolDeque max_sense(1);
-  RecastModel* int_opt_model_rep = (RecastModel*)intervalOptModel.model_rep();
+  std::shared_ptr<RecastModel> int_opt_model_rep =
+    std::static_pointer_cast<RecastModel>(intervalOptModel.model_rep());
 
   initialize(); // virtual fn
 
@@ -366,6 +388,10 @@ void NonDGlobalInterval::core_run()
     nonlinear_resp_map[0][respFnCntr] = false; // reset
   }
   post_process_final_results(); // virtual fn: final post-processing
+
+  // (conditionally) export final surrogates
+  if (gpModelFlag)
+    export_final_surrogates(fHatModel);
 
   // restore in case of recursion
   nondGIInstance = prev_instance;
@@ -468,7 +494,7 @@ void NonDGlobalInterval::post_process_run_results(bool maximize)
 
 void NonDGlobalInterval::evaluate_response_star_truth()
 {
-  //fHatModel.component_parallel_mode(TRUTH_MODEL);
+  //fHatModel.component_parallel_mode(TRUTH_MODEL_MODE);
   const Variables& vars_star = intervalOptimizer.variables_results();
   iteratedModel.active_variables(vars_star);
   ActiveSet set = iteratedModel.current_response().active_set();

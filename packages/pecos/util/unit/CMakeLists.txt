@@ -20,7 +20,8 @@ add_executable(pecos_util_unit_tests
   )
 
 add_executable(options_unit_tests  options.cpp)
-target_link_libraries(options_unit_tests pecos_util ${Teuchos_LIBRARIES})
+target_link_libraries(options_unit_tests pecos_util ${Teuchos_LIBRARIES}
+  Boost::boost)
 add_test(options_unit_tests options_unit_tests)
 
 target_link_libraries(pecos_util_unit_tests pecos_util ${Teuchos_LIBRARIES})

@@ -292,8 +292,6 @@ protected: // representation
 
 };
    
-} // namespace utilib
-
 
 /// Out-stream operator for AnyRNG objects
 inline std::ostream& operator << (std::ostream& output, const utilib::AnyRNG& rng)
@@ -309,5 +307,9 @@ inline std::istream& operator >> (std::istream& input, utilib::AnyRNG& rng)
 rng.read(input);
 return input;
 }
+
+
+} // namespace utilib
+
 
 #endif

@@ -37,17 +37,17 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
   OrthogPolyApproximation::allocate_arrays();
 
   // integration-specific allocations:
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case INCREMENTAL_SPARSE_GRID:
     //if (data_rep->expConfigOptions.refineControl) {
-      IncrementalSparseGridDriver* isg_driver
-	= (IncrementalSparseGridDriver*)data_rep->driver();
-      size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
-      const UShortArray& key = data_rep->activeKey;
-      tpExpansionCoeffs[key].resize(num_smolyak_indices);
-      tpExpansionCoeffGrads[key].resize(num_smolyak_indices);
+    std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+      std::static_pointer_cast<IncrementalSparseGridDriver>(data_rep->driver());
+    size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
+    const ActiveKey& key = data_rep->activeKey;
+    tpExpansionCoeffs[key].resize(num_smolyak_indices);
+    tpExpansionCoeffGrads[key].resize(num_smolyak_indices);
     //}
     break;
   }
@@ -56,20 +56,21 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 
 void ProjectOrthogPolyApproximation::integration_checks()
 {
-  if (modSurrData.anchor()) {
+  if (surrData.anchor()) {
     PCerr << "Error: anchor point not supported for numerical integration in "
 	  << "ProjectOrthogPolyApproximation." << std::endl;
     abort_handler(-1);
   }
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  IntegrationDriver*  driver_rep = data_rep->driverRep;
+  std::shared_ptr<SharedPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedPolyApproxData>(sharedDataRep);
+  std::shared_ptr<IntegrationDriver> driver_rep = data_rep->driverRep;
 
   if (!driver_rep) {
     PCerr << "Error: pointer to integration driver required in "
 	  << "ProjectOrthogPolyApproximation." << std::endl;
     abort_handler(-1);
   }
-  size_t num_data_pts = modSurrData.points(),
+  size_t num_data_pts = surrData.points(),
          num_grid_pts = driver_rep->grid_size();
   if (num_data_pts != num_grid_pts) {
     PCerr << "Error: number of current points (" << num_data_pts << ") is "
@@ -87,8 +88,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
 
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
 #ifdef DEBUG
   data_rep->gradient_check();
 #endif // DEBUG
@@ -100,8 +101,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: // single expansion integration
     integration_checks();
-    integrate_expansion(data_rep->multi_index(), modSurrData.variables_data(),
-			modSurrData.response_data(),
+    integrate_expansion(data_rep->multi_index(), surrData.variables_data(),
+			surrData.response_data(),
 			data_rep->driver()->type1_weight_sets(),
 			expCoeffsIter->second, expCoeffGradsIter->second);
     break;
@@ -112,10 +113,10 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     // multiple tensor expansion integrations
     if (expansionCoeffFlag)     exp_coeffs      = 0.;
     if (expansionCoeffGradFlag) exp_coeff_grads = 0.;
-    CombinedSparseGridDriver* csg_driver
-      = (CombinedSparseGridDriver*)data_rep->driver();
+    std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+      std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
     const IntArray&      sm_coeffs = csg_driver->smolyak_coefficients();
-    const UShortArray&   key       = data_rep->activeKey;
+    const ActiveKey&   key       = data_rep->activeKey;
     const UShort3DArray& tp_mi     = data_rep->tpMultiIndex[key];
     const Sizet2DArray&  tp_mi_map = data_rep->tpMultiIndexMap[key];
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
@@ -150,7 +151,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     break;
   }
   case SAMPLING:
-    modSurrData.data_checks(); // defines failed resp map
+    surrData.data_checks(); // defines failed resp map
     expectation();
     break;
   default:
@@ -169,9 +170,9 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // TO DO: partial sync of new TP data set, e.g. update_surrogate_data() ?
   synchronize_surrogate_data();
 
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
+  const ActiveKey& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -227,8 +228,8 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   }
   case QUADRATURE: case CUBATURE:
     integration_checks();
-    integrate_expansion(data_rep->multi_index(), modSurrData.variables_data(),
-			modSurrData.response_data(),
+    integrate_expansion(data_rep->multi_index(), surrData.variables_data(),
+			surrData.response_data(),
 			data_rep->driver()->type1_weight_sets(),
 			expCoeffsIter->second, expCoeffGradsIter->second);
     break;
@@ -240,9 +241,9 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
 
 void ProjectOrthogPolyApproximation::pop_coefficients(bool save_data)
 {
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
+  const ActiveKey& key = data_rep->activeKey;
 
   // likely overkill, but multilevel roll up after increment modifies and
   // then restores active key
@@ -290,15 +291,15 @@ void ProjectOrthogPolyApproximation::pop_coefficients(bool save_data)
   expCoeffGradsIter->second = prevExpCoeffGrads;
   // don't update Sobol' array sizes for decrement, push, or finalize
 
-  clear_computed_bits();
+  clear_computed_bits(); // previous moments are not stored
 }
 
 
 void ProjectOrthogPolyApproximation::push_coefficients()
 {
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
+  const ActiveKey& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -358,9 +359,9 @@ void ProjectOrthogPolyApproximation::push_coefficients()
 
 void ProjectOrthogPolyApproximation::finalize_coefficients()
 {
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
+  const ActiveKey& key = data_rep->activeKey;
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(key);
@@ -417,10 +418,10 @@ append_tensor_expansions(size_t start_tp_index)
 
   // update expansion{Coeffs,CoeffGrads} using an incremental update
   // rather than building from scratch
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  IncrementalSparseGridDriver* isg_driver
-    = (IncrementalSparseGridDriver*)data_rep->driver();
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
+  std::shared_ptr<IncrementalSparseGridDriver> isg_driver =
+    std::static_pointer_cast<IncrementalSparseGridDriver>(data_rep->driver());
   const IntArray&     sm_coeffs = isg_driver->smolyak_coefficients();
   const IntArray& sm_coeffs_ref = isg_driver->smolyak_coefficients_reference();
 #ifdef DEBUG
@@ -428,7 +429,7 @@ append_tensor_expansions(size_t start_tp_index)
 	<< "start index " << start_tp_index << "\nsm_coeffs:\n" << sm_coeffs
 	<< "sm_coeffs_ref:\n" << sm_coeffs_ref << std::endl;
 #endif // DEBUG
-  const UShortArray&  key       = data_rep->activeKey;
+  const ActiveKey&  key       = data_rep->activeKey;
   const Sizet2DArray& tp_mi_map = data_rep->tpMultiIndexMap[key];
   RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
   RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
@@ -471,18 +472,18 @@ void ProjectOrthogPolyApproximation::
 integration_data(size_t tp_index, SDVArray& tp_data_vars,
 		 SDRArray& tp_data_resp, RealVector& tp_weights)
 {
-  // extract tensor vars/resp from modSurrData and tensor wts from
+  // extract tensor vars/resp from surrData and tensor wts from
   // type1CollocWts1D
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  CombinedSparseGridDriver* csg_driver
-    = (CombinedSparseGridDriver*)data_rep->driver();
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
+  std::shared_ptr<CombinedSparseGridDriver> csg_driver =
+    std::static_pointer_cast<CombinedSparseGridDriver>(data_rep->driver());
   const UShortArray&    sm_index = csg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&       key = csg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = csg_driver->collocation_indices()[tp_index];
   const Real3DArray& colloc_wts_1d = csg_driver->type1_collocation_weights_1d();
-  const SDVArray& data_vars = modSurrData.variables_data();
-  const SDRArray& data_resp = modSurrData.response_data();
+  const SDVArray& data_vars = surrData.variables_data();
+  const SDRArray& data_resp = surrData.response_data();
   size_t i, j, index, num_tp_pts = colloc_index.size(),
     num_v = sharedDataRep->numVars;
   tp_data_vars.resize(num_tp_pts); tp_data_resp.resize(num_tp_pts);
@@ -518,8 +519,8 @@ integrate_expansion(const UShort2DArray& multi_index,
 		    const RealVector& wt_sets, RealVector& exp_coeffs,
 		    RealMatrix& exp_coeff_grads)
 {
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
 
   // Perform numerical integration via tensor-product quadrature/cubature/
   // Smolyak sparse grids.  Quadrature/cubature use a single application of
@@ -614,21 +615,21 @@ void ProjectOrthogPolyApproximation::expectation()
   RealVector& exp_coeffs      = expCoeffsIter->second;
   RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
 
-  const SDVArray& sdv_array   = modSurrData.variables_data();
-  const SDRArray& sdr_array   = modSurrData.response_data();
+  const SDVArray& sdv_array   = surrData.variables_data();
+  const SDRArray& sdr_array   = surrData.response_data();
 
   // "lhs" or "random", no weights needed
   size_t i, j, k, num_deriv_vars = exp_coeff_grads.numRows(),
-    num_surr_data_pts = modSurrData.points(), num_failed_surr_fn = 0,
+    num_surr_data_pts = surrData.points(), num_failed_surr_fn = 0,
     num_failed_surr_grad = 0;
   SizetShortMap::const_iterator fit;
-  const SizetShortMap& failed_resp_data = modSurrData.failed_response_data();
+  const SizetShortMap& failed_resp_data = surrData.failed_response_data();
   for (fit=failed_resp_data.begin(); fit!=failed_resp_data.end(); ++fit) {
     if (fit->second & 1) ++num_failed_surr_fn;
     if (fit->second & 2) ++num_failed_surr_grad;
   }
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
   const UShort2DArray& mi = data_rep->multi_index();
   size_t num_data_pts_fn = num_surr_data_pts - num_failed_surr_fn,
     num_data_pts_grad    = num_surr_data_pts - num_failed_surr_grad,
@@ -735,8 +736,8 @@ synthetic_surrogate_data(SurrogateData& surr_data)
   // Update the active key of surr_data with synthetic data based on the
   // active grid from csg_driver
 
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
 
   // CombinedSparseGridDriver::combined_to_active() transfers all data except
   // collocation indices, which are invalidated by the combination.  In support
@@ -766,26 +767,26 @@ synthetic_surrogate_data(SurrogateData& surr_data)
 void ProjectOrthogPolyApproximation::
 integrate_response_moments(size_t num_moments)//, bool combined_stats)
 {
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
 
-  // use modSurrData: original single-level or synthetic combined
-  const SDRArray& sdr_array = modSurrData.response_data();
+  // use surrData: original single-level or synthetic combined
+  const SDRArray& sdr_array = surrData.response_data();
   size_t i, num_pts = sdr_array.size();
   RealVector data_fns(num_pts);
   for (i=0; i<num_pts; ++i)
     data_fns[i] = sdr_array[i].response_function();
 
   /*
-  // For MLMF, augment modSurrData using evaluations from stored expansions.
+  // For MLMF, augment surrData using evaluations from stored expansions.
   // This fn is used in final expansion post-processing so combined_to_active()
   // has been applied.
   //
   // Note: this is a mixed implementation --> mixes direct response integration
-  // (using modSurrData for maximal grid / active expansion, ignoring combined
+  // (using surrData for maximal grid / active expansion, ignoring combined
   // coefficients) with surrogate integration (prior to clear_inactive(),
   // interpolate uncombined/non-active expansions onto maximal grid since
-  // these response data aren't available for non-maximal modSurrData keys).
+  // these response data aren't available for non-maximal surrData keys).
   // > similar to NodalInterpPolyApproximation::combine_coefficients(), which
   //   is then used in NIPA::integrate_response_moments()
   // > consider deactivating response moment integration for ML expansions
@@ -801,12 +802,12 @@ integrate_response_moments(size_t num_moments)//, bool combined_stats)
   // > the only rigorous way to do this would be to roll up the numerical
   //   quadrature contributions at each level --> perhaps NIPA could be
   //   (improved and) leveraged for this in the future.
-  const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
+  const std::map<ActiveKey, UShort2DArray>& mi = data_rep->multiIndex;
   if (mi.size() > 1) { //if (combined_stats) {
-    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-    std::map<UShortArray, RealVector>::const_iterator ec_cit;
+    std::map<ActiveKey, UShort2DArray>::const_iterator mi_cit = mi.begin();
+    std::map<ActiveKey, RealVector>::const_iterator ec_cit;
     short combine_type = data_rep->expConfigOptions.combineType;
-    const SDVArray& sdv_array = modSurrData.variables_data();
+    const SDVArray& sdv_array = surrData.variables_data();
     for (ec_cit = expansionCoeffs.begin(); ec_cit != expansionCoeffs.end();
 	 ++ec_cit, ++mi_cit)
       if (ec_cit != expCoeffsIter) {
@@ -828,12 +829,11 @@ integrate_response_moments(size_t num_moments)//, bool combined_stats)
   }
   */
 
-  // update numericalMoments based on data_fns
-  RealVector& numer_mom = numMomentsIter->second;
-  if (numer_mom.length() != num_moments)
-    numer_mom.sizeUninitialized(num_moments);
+  // update numerical moments (secondaryMoments) based on data_fns
+  if (secondaryMoments.length() != num_moments)
+    secondaryMoments.sizeUninitialized(num_moments);
   integrate_moments(data_fns, data_rep->driverRep->type1_weight_sets(),
-		    numer_mom);
+		    secondaryMoments);
 }
 
 
@@ -841,8 +841,8 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 {
   // sum expansion to get response value prediction
 
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     if (data_rep->expConfigOptions.combineType) // not guaranteed to use
@@ -903,12 +903,12 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 
 
 Real ProjectOrthogPolyApproximation::
-stored_value(const RealVector& x, const UShortArray& key)
+stored_value(const RealVector& x, const ActiveKey& key)
 {
   // sum expansion to get response value prediction
 
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedProjectOrthogPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedProjectOrthogPolyApproxData>(sharedDataRep);
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: { // Horner's rule approach
     // Note: requires tensor indexing in each multiIndex

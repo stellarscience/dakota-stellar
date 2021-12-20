@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -95,36 +96,40 @@ protected:
   const IntResponseMap& derived_synchronize();
   const IntResponseMap& derived_synchronize_nowait();
 
+  void create_tabular_datastream();
+  void derived_auto_graphics(const Variables& vars, const Response& resp);
+
+  bool multifidelity() const;
+  bool multilevel() const;
+  bool multilevel_multifidelity() const;
+
+  bool multifidelity_precedence() const;
+  void multifidelity_precedence(bool mf_prec, bool update_default = false);
+
   /// return the active low fidelity model
-  Model& surrogate_model();
-  /// set the key identifying the active low fidelity model
-  void surrogate_model_key(unsigned short lf_model_index,
-			   unsigned short lf_soln_lev_index = USHRT_MAX);
-  /// set the index pair identifying the active low fidelity model
-  void surrogate_model_key(const UShortArray& lf_key);
+  Model& surrogate_model(size_t i = _NPOS);
+  /// return the active low fidelity model
+  const Model& surrogate_model(size_t i = _NPOS) const;
 
   /// return the active high fidelity model
   Model& truth_model();
-  /// set the key identifying the active high fidelity model
-  void truth_model_key(unsigned short hf_model_index,
-		       unsigned short hf_soln_lev_index = USHRT_MAX);
-  /// set the index pair identifying the active high fidelity model
-  void truth_model_key(const UShortArray& hf_key);
+  /// return the active high fidelity model
+  const Model& truth_model() const;
 
-  /// return pair of active low fidelity and high fidelity model keys
-  UShortArrayPair fidelity_keys();
+  /// define the active model key and associated {truth,surr}ModelKey pairing
+  void active_model_key(const Pecos::ActiveKey& key);
+  /// remove keys for any approximations underlying orderedModels
+  void clear_model_keys();
 
   /// return orderedModels and, optionally, their sub-model recursions
   void derived_subordinate_models(ModelList& ml, bool recurse_flag);
 
   /// resize currentResponse if needed when one of the subordinate
   /// models has been resized
-  void resize_from_subordinate_model(size_t depth =
-				     std::numeric_limits<size_t>::max());
+  void resize_from_subordinate_model(size_t depth = SZ_MAX);
   /// update currentVariables using non-active data from the passed model
   /// (one of the ordered models)
-  void update_from_subordinate_model(size_t depth =
-				     std::numeric_limits<size_t>::max());
+  void update_from_subordinate_model(size_t depth = SZ_MAX);
 
   /// set the relative weightings for multiple objective functions or least
   /// squares terms and optionally recurses into LF/HF models
@@ -136,7 +141,7 @@ protected:
   void surrogate_response_mode(short mode);
 
   /// (re)set the surrogate index set in SurrogateModel::surrogateFnIndices
-  void surrogate_function_indices(const IntSet& surr_fn_indices);
+  void surrogate_function_indices(const SizetSet& surr_fn_indices);
 
   /// use the high fidelity model to compute the truth values needed for
   /// correction of the low fidelity model results
@@ -202,24 +207,38 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// define default {truth,surr,active}ModelKey
+  void assign_default_keys();
+
+  /// synchronize the HF model's solution level control with truthModelKey
+  void assign_truth_key();
+  /// synchronize the LF model's solution level control with surrModelKey
+  void assign_surrogate_key();
+
+  /// define truth and surrogate keys from incoming active key.  In case of
+  /// singleton, use responseMode to disambiguate.
+  void extract_model_keys(const Pecos::ActiveKey& active_key,
+			  Pecos::ActiveKey& truth_key,
+			  Pecos::ActiveKey& surr_key);
+  /// define truth and surrogate keys from incoming active key.  In case of
+  /// singleton, use component parallel mode to disambiguate.
+  void extract_model_keys(const Pecos::ActiveKey& active_key,
+			  Pecos::ActiveKey& truth_key,
+			  Pecos::ActiveKey& surr_key, short parallel_mode);
+
+  /// helper to select among Variables::all_discrete_{int,string,real}_
+  /// variable_labels() for exporting a solution control variable label
+  const String& solution_control_label();
+  /// helper to select among Model::solution_level_{int,string,real}_value()
+  /// for exporting a scalar solution level value
+  void add_tabular_solution_level_value(Model& model);
+
   /// utility for propagating new key values
   void key_updates(unsigned short model_index, unsigned short soln_lev_index);
 
   /// update sameInterfaceInstance based on interface ids for models
   /// identified by current {low,high}FidelityKey
   void check_model_interface_instance();
-
-  /// update the passed model (one of the ordered models) with data that could
-  /// change once per set of evaluations (e.g., an outer iterator execution),
-  /// including active variable labels, inactive variable values/bounds/labels,
-  /// and linear/nonlinear constraint coeffs/bounds
-  void init_model(Model& model);
-  /// update the passed model (one of the ordered models) with data that could
-  /// change per function evaluation (active variable values/bounds)
-  void update_model(Model& model);
-  /// update currentVariables using non-active data from the passed model
-  /// (one of the ordered models)
-  void update_from_model(Model& model);
 
   /// called from derived_synchronize() and derived_synchronize_nowait() to
   /// extract and rekey response maps using blocking or nonblocking
@@ -247,10 +266,10 @@ private:
   /// for computing a correction and applying it to lf_resp_map
   void compute_apply_delta(IntResponseMap& lf_resp_map);
 
-  /// helper function for applying a single deltaCorr correction
-  /// corresponding to key
+  /// helper function for applying a single response correction corresponding
+  /// to deltaCorr[paired_key]
   void single_apply(const Variables& vars, Response& resp,
-		    const UShortArrayPair& keys);
+		    const Pecos::ActiveKey& paired_key);
   /// helper function for applying a correction across a sequence of
   /// model forms or discretization levels
   void recursive_apply(const Variables& vars, Response& resp);
@@ -266,19 +285,19 @@ private:
   /// manages construction and application of correction functions that
   /// are applied to a surrogate model (DataFitSurr or HierarchSurr) in
   /// order to reproduce high fidelity data.
-  DiscrepCorrMap deltaCorr;
+  std::map<Pecos::ActiveKey, DiscrepancyCorrection> deltaCorr;
   /// order of correction: 0, 1, or 2
   short corrOrder;
 
   unsigned short correctionMode;
 
-  /// vector to specify a sequence of discrepancy corrections to apply in
-  /// AUTO_CORRECTED_SURROGATE mode
-  std::vector<UShortArrayPair> corrSequence;
+  // sequence of discrepancy corrections to apply in SEQUENCE_CORRECTION mode
+  //std::vector<Pecos::ActiveKey> corrSequence;
 
   /// Ordered sequence (low to high) of model fidelities.  Models are of
   /// arbitrary type and supports recursions.
   ModelArray orderedModels;
+
   /// flag indicating that the {low,high}FidelityKey correspond to the
   /// same model instance, requiring modifications to updating and evaluation
   /// scheduling processes
@@ -287,22 +306,48 @@ private:
   /// employ the same interface instance, requiring modifications to evaluation
   /// scheduling processes
   bool sameInterfaceInstance;
+  /// tie breaker for type of model hierarchy when forms and levels are present
+  bool mfPrecedence;
 
   /// store {LF,HF} model key that is active in component_parallel_mode()
-  UShortArray componentParallelKey;
+  Pecos::ActiveKey componentParallelKey;
+  /// size of MPI buffer containing responseMode and an aggregated activeKey
+  int modeKeyBufferSize;
 
-  /// map of reference truth (high fidelity) responses computed in
-  /// build_approximation() and used for calculating corrections
-  std::map<UShortArray, Response> truthResponseRef;
+  /// array of indices that identify the truth (e.g., high fidelity) model
+  /// (leading portion of activeKey, if aggregated models)
+  Pecos::ActiveKey truthModelKey;
+  /// array of indices that identify the surrogate (e.g., low fidelity) model
+  /// (trailing portion of activeKey, if aggregated models)
+  Pecos::ActiveKey surrModelKey;
+
+  /// map from truth model evaluation ids to HierarchSurrModel ids
+  IntIntMap truthIdMap;
+  /// map from approximation model evaluation ids to HierarchSurrModel ids
+  IntIntMap surrIdMap;
+
+  /// map of approximate responses retrieved in derived_synchronize_nowait()
+  /// that could not be returned since corresponding truth model response
+  /// portions were still pending.
+  IntResponseMap cachedApproxRespMap;
   /// map of truth (high-fidelity) responses retrieved in
   /// derived_synchronize_nowait() that could not be returned since
   /// corresponding low-fidelity response portions were still pending
   IntResponseMap cachedTruthRespMap;
+
+  /// map of raw continuous variables used by apply_correction().
+  /// Model::varsList cannot be used for this purpose since it does
+  /// not contain lower level variables sets from finite differencing.
+  IntVariablesMap rawVarsMap;
+
+  /// map of reference truth (high fidelity) responses computed in
+  /// build_approximation() and used for calculating corrections
+  std::map<Pecos::ActiveKey, Response> truthResponseRef;
 };
 
 
 inline HierarchSurrModel::~HierarchSurrModel()
-{ } // Virtual destructor handles referenceCount at Strategy level.
+{ }
 
 
 inline void HierarchSurrModel::
@@ -325,18 +370,15 @@ nested_variable_mappings(const SizetArray& c_index1,
 
 
 inline const SizetArray& HierarchSurrModel::nested_acv1_indices() const
-{ return orderedModels[truthModelKey.front()].nested_acv1_indices(); }
+{ return truth_model().nested_acv1_indices(); }
 
 
 inline const ShortArray& HierarchSurrModel::nested_acv2_targets() const
-{ return orderedModels[truthModelKey.front()].nested_acv2_targets(); }
+{ return truth_model().nested_acv2_targets(); }
 
 
 inline short HierarchSurrModel::query_distribution_parameter_derivatives() const
-{
-  return orderedModels[truthModelKey.front()].
-    query_distribution_parameter_derivatives();
-}
+{ return truth_model().query_distribution_parameter_derivatives(); }
 
 
 inline size_t HierarchSurrModel::qoi() const
@@ -344,36 +386,31 @@ inline size_t HierarchSurrModel::qoi() const
   switch (responseMode) {
   // Note: resize_response() aggregates {truth,surrogate}_model().num_fns(),
   //       such that code below is a bit more general that currResp num_fns/2
-  case AGGREGATED_MODELS:
-    return orderedModels[truthModelKey.front()].qoi();  break;
-  default:
-    return response_size();                             break;
+  case AGGREGATED_MODELS:  return truth_model().qoi();  break;
+  default:                 return response_size();      break;
   }
 }
 
 
 inline void HierarchSurrModel::check_model_interface_instance()
 {
-  if (surrModelKey.empty() || truthModelKey.empty())
-    sameModelInstance = sameInterfaceInstance = false; // even if both empty
-  else {
-    sameModelInstance = (surrModelKey.front() == truthModelKey.front());
+  unsigned short lf_form =  surrModelKey.retrieve_model_form(),
+                 hf_form = truthModelKey.retrieve_model_form();
 
+  if (hf_form == USHRT_MAX || lf_form == USHRT_MAX)
+    sameModelInstance = sameInterfaceInstance = false; // including both undef
+  else {
+    sameModelInstance = (lf_form == hf_form);
     if (sameModelInstance) sameInterfaceInstance = true;
     else
       sameInterfaceInstance
-	= (orderedModels[ surrModelKey.front()].interface_id() ==
-	   orderedModels[truthModelKey.front()].interface_id());
+	= (surrogate_model().interface_id() == truth_model().interface_id());
   }
 }
 
 
-inline Model& HierarchSurrModel::surrogate_model()
-{ return orderedModels[surrModelKey.front()]; }
-
-
 inline DiscrepancyCorrection& HierarchSurrModel::discrepancy_correction()
-{ return deltaCorr[fidelity_keys()]; }
+{ return deltaCorr[activeKey]; }
 
 
 inline short HierarchSurrModel::correction_type()
@@ -382,91 +419,223 @@ inline short HierarchSurrModel::correction_type()
 
 inline void HierarchSurrModel::correction_type(short corr_type)
 {
-  for (DiscrepCorrMap::iterator it=deltaCorr.begin(); it!=deltaCorr.end(); ++it)
+  std::map<Pecos::ActiveKey, DiscrepancyCorrection>::iterator it;
+  for (it=deltaCorr.begin(); it!=deltaCorr.end(); ++it)
     it->second.correction_type(corr_type);
 }
 
 
-inline void HierarchSurrModel::
-key_updates(unsigned short model_index, unsigned short soln_lev_index)
+inline Model& HierarchSurrModel::surrogate_model(size_t i)
 {
-  if (soln_lev_index != USHRT_MAX) {
-    // Activate variable value for solution control within LF model
-    orderedModels[model_index].solution_level_index(soln_lev_index);
+  if (i == _NPOS) { // retrieve active surrogate, else indexed one
+    unsigned short lf_form = surrModelKey.retrieve_model_form();
+    i = (lf_form == USHRT_MAX) // empty key or undefined model form
+      ? 0 : lf_form;
+  }
+  if (i >= orderedModels.size()) {
+    Cerr << "Error: model index (" << i << ") out of range in "
+	 << "HierarchSurrModel::surrogate_model()" << std::endl;
+    abort_handler(MODEL_ERROR);
+  }
+  return orderedModels[i];
+}
+
+
+inline const Model& HierarchSurrModel::surrogate_model(size_t i) const
+{
+  if (i == _NPOS) { // retrieve active surrogate, else indexed one
+    unsigned short lf_form = surrModelKey.retrieve_model_form();
+    i = (lf_form == USHRT_MAX) // empty key or undefined model form
+      ? 0 : lf_form;
+  }
+  if (i >= orderedModels.size()) {
+    Cerr << "Error: model index (" << i << ") out of range in "
+	 << "HierarchSurrModel::surrogate_model()" << std::endl;
+    abort_handler(MODEL_ERROR);
+  }
+  return orderedModels[i];
+}
+
+
+inline Model& HierarchSurrModel::truth_model()
+{
+  unsigned short hf_form = truthModelKey.retrieve_model_form();
+  if (hf_form == USHRT_MAX) // either empty key or undefined model form
+    return orderedModels.back();
+  else {
+    if (hf_form >= orderedModels.size()) {
+      Cerr << "Error: model index (" << hf_form << ") out of range in "
+	   << "HierarchSurrModel::truth_model()" << std::endl;
+      abort_handler(MODEL_ERROR);
+    }
+    return orderedModels[hf_form];
+  }
+}
+
+
+inline const Model& HierarchSurrModel::truth_model() const
+{
+  unsigned short hf_form = truthModelKey.retrieve_model_form();
+  if (hf_form == USHRT_MAX) // either empty key or undefined model form
+    return orderedModels.back();
+  else {
+    if (hf_form >= orderedModels.size()) {
+      Cerr << "Error: model form (" << hf_form << ") out of range in "
+	   << "HierarchSurrModel::truth_model()" << std::endl;
+      abort_handler(MODEL_ERROR);
+    }
+    return orderedModels[hf_form];
+  }
+}
+
+
+inline void HierarchSurrModel::assign_truth_key()
+{
+  unsigned short hf_form = truthModelKey.retrieve_model_form();
+  if (hf_form != USHRT_MAX)
+    orderedModels[hf_form].solution_level_cost_index(
+      truthModelKey.retrieve_resolution_level());
+}
+
+
+inline void HierarchSurrModel::assign_surrogate_key()
+{
+  unsigned short lf_form = surrModelKey.retrieve_model_form();
+  if (lf_form != USHRT_MAX)
+    orderedModels[lf_form].solution_level_cost_index(
+      surrModelKey.retrieve_resolution_level());
+}
+
+
+inline void HierarchSurrModel::
+extract_model_keys(const Pecos::ActiveKey& active_key,
+		   Pecos::ActiveKey& truth_key, Pecos::ActiveKey& surr_key)
+{
+  if (active_key.aggregated()) // AGGREGATED_MODELS, MODEL_DISCREPANCY
+    active_key.extract_keys(truth_key, surr_key);
+  else// single key: this version assigns to truth | surr based on responseMode
+    switch (responseMode) {
+    case UNCORRECTED_SURROGATE: case AUTO_CORRECTED_SURROGATE:
+      surr_key  = active_key;  truth_key.clear();  break;
+    default: // {BYPASS,NO}_SURROGATE
+      truth_key = active_key;   surr_key.clear();  break;
+    }
+}
+
+
+inline void HierarchSurrModel::
+extract_model_keys(const Pecos::ActiveKey& active_key,
+		   Pecos::ActiveKey& truth_key, Pecos::ActiveKey& surr_key,
+		   short parallel_mode)
+{
+  if (active_key.aggregated())
+    active_key.extract_keys(truth_key, surr_key);
+  else// single key: this version assigns to truth | surr based on parallel mode
+    switch (parallel_mode) {
+    case SURROGATE_MODEL_MODE:
+      surr_key  = active_key;  truth_key.clear();  break;
+    case TRUTH_MODEL_MODE:
+      truth_key = active_key;   surr_key.clear();  break;
+    }
+}
+
+
+inline void HierarchSurrModel::active_model_key(const Pecos::ActiveKey& key)
+{
+  // assign activeKey
+  SurrogateModel::active_model_key(key);
+  // update {truth,surr}ModelKey
+  extract_model_keys(key, truthModelKey, surrModelKey);
+  // assign same{Model,Interface}Instance
+  check_model_interface_instance();
+
+  // If model forms are distinct (multifidelity case), can activate soln level
+  // indices now and will persist; else (multilevel case) soln level is managed
+  // for LF & HF contributions in derived_evaluate().
+  if (!sameModelInstance) {
+    assign_truth_key();
+    assign_surrogate_key();
+
     // Pull inactive variable change up into top-level currentVariables,
     // so that data flows correctly within Model recursions?  No, current
     // design is that forward pushes are automated, but inverse pulls are 
     // generally special case invocations from Iterator code (e.g., with
     // locally-managed Model recursions).
-    //update_from_model(orderedModels[model_index]);
+    //update_from_model(orderedModels[hf_form]);
   }
+  // Special case: multilevel data import in DataFitSurrModel::consistent()
+  // requires correct state prior to evaluations in order to find level data.
+  else
+    switch (responseMode) {
+    case BYPASS_SURROGATE:      case NO_SURROGATE:
+      assign_truth_key();     break;
+    case UNCORRECTED_SURROGATE: case AUTO_CORRECTED_SURROGATE:
+      assign_surrogate_key(); break;
+    }
 
-  // assign same{Model,Interface}Instance
-  check_model_interface_instance();
-
-  // *** TO DO: move this to another location, once both keys updated ***
-  DiscrepancyCorrection& delta_corr = deltaCorr[fidelity_keys()];
-  if (!delta_corr.initialized())
-    delta_corr.initialize(surrogate_model(), surrogateFnIndices, corrType,
-			  corrOrder);
-
-  // TO DO:
-  //deltaCorr.surrogate_model(orderedModels[lf_model_index]);
-  //deltaCorr.clear();
+  switch (responseMode) {
+  case MODEL_DISCREPANCY: case AUTO_CORRECTED_SURROGATE: {
+    unsigned short lf_form = surrModelKey.retrieve_model_form();
+    if (lf_form != USHRT_MAX) {// LF form def'd
+      DiscrepancyCorrection& delta_corr = deltaCorr[key]; // per data group
+      if (!delta_corr.initialized())
+	delta_corr.initialize(surrogate_model(), surrogateFnIndices,
+			      corrType, corrOrder);
+    }
+    break;
+  }
+  }
 }
+
+
+inline void HierarchSurrModel::clear_model_keys()
+{
+  size_t i, num_models = orderedModels.size();
+  for (i=0; i<num_models; ++i)
+    orderedModels[i].clear_model_keys();
+}
+
+
+inline bool HierarchSurrModel::multifidelity_precedence() const
+{ return mfPrecedence; }
 
 
 inline void HierarchSurrModel::
-surrogate_model_key(unsigned short lf_model_index,
-		    unsigned short lf_soln_lev_index)
+multifidelity_precedence(bool mf_prec, bool update_default)
 {
-  SurrogateModel::surrogate_model_key(lf_model_index, lf_soln_lev_index);
-
-  key_updates(lf_model_index, lf_soln_lev_index);
+  mfPrecedence = mf_prec;
+  if (update_default) assign_default_keys();
 }
 
 
-inline void HierarchSurrModel::surrogate_model_key(const UShortArray& lf_key)
+inline bool HierarchSurrModel::multifidelity() const
 {
-  SurrogateModel::surrogate_model_key(lf_key);
+  // This function is used when we don't want to alter logic at run-time based
+  // on a deactivated key (as for same{Model,Interface}Instance)
+  // > we rely on mfPrecedence passed from NonDExpansion::configure_sequence()
+  //   based on the ML/MF algorithm selection; otherwise defaults to true
 
-  size_t key_len = lf_key.size();
-  unsigned short model_form = (key_len >= 1) ? lf_key[0] : USHRT_MAX,
-             soln_lev_index = (key_len >= 2) ? lf_key[1] : USHRT_MAX;
-  key_updates(model_form, soln_lev_index);
+  return ( orderedModels.size() > 1 &&
+	   ( mfPrecedence || orderedModels.back().solution_levels() <= 1 ) );
 }
 
 
-inline Model& HierarchSurrModel::truth_model()
-{ return orderedModels[truthModelKey.front()]; }
-
-
-inline void HierarchSurrModel::
-truth_model_key(unsigned short hf_model_index, unsigned short hf_soln_lev_index)
+inline bool HierarchSurrModel::multilevel() const
 {
-  SurrogateModel::truth_model_key(hf_model_index, hf_soln_lev_index);
-
-  key_updates(hf_model_index, hf_soln_lev_index);
+  return ( orderedModels.back().solution_levels() > 1 &&
+	   ( !mfPrecedence || orderedModels.size() <= 1 ) );
 }
 
 
-inline void HierarchSurrModel::truth_model_key(const UShortArray& hf_key)
+inline bool HierarchSurrModel::multilevel_multifidelity() const
 {
-  SurrogateModel::truth_model_key(hf_key);
-
-  size_t key_len = hf_key.size();
-  unsigned short model_form = (key_len >= 1) ? hf_key[0] : USHRT_MAX,
-             soln_lev_index = (key_len >= 2) ? hf_key[1] : USHRT_MAX;
-  key_updates(model_form, soln_lev_index);
+  return ( orderedModels.size() > 1 &&
+	   orderedModels.back().solution_levels() > 1 );
 }
 
 
 inline const unsigned short HierarchSurrModel::correction_mode() const
 { return correctionMode; }
-
-
-inline UShortArrayPair HierarchSurrModel::fidelity_keys()
-{ return std::make_pair(surrModelKey, truthModelKey); }
 
 
 inline void HierarchSurrModel::correction_mode(unsigned short corr_mode)
@@ -500,14 +669,14 @@ inline void HierarchSurrModel::resize_from_subordinate_model(size_t depth)
   // bottom-up data flow, so recurse first
   if (lf_resize) {
     Model& lf_model = surrogate_model();
-    if (depth == std::numeric_limits<size_t>::max())
+    if (depth == SZ_MAX)
       lf_model.resize_from_subordinate_model(depth);//retain special value (inf)
     else if (depth)
       lf_model.resize_from_subordinate_model(depth - 1);
   }
   if (hf_resize) {
     Model& hf_model = truth_model();
-    if (depth == std::numeric_limits<size_t>::max())
+    if (depth == SZ_MAX)
       hf_model.resize_from_subordinate_model(depth);//retain special value (inf)
     else if (depth)
       hf_model.resize_from_subordinate_model(depth - 1);
@@ -525,7 +694,7 @@ inline void HierarchSurrModel::update_from_subordinate_model(size_t depth)
   case AUTO_CORRECTED_SURROGATE: { // LF is active
     Model& lf_model = surrogate_model();
     // bottom-up data flow, so recurse first
-    if (depth == std::numeric_limits<size_t>::max())
+    if (depth == SZ_MAX)
       lf_model.update_from_subordinate_model(depth);//retain special value (inf)
     else if (depth)
       lf_model.update_from_subordinate_model(depth - 1);
@@ -537,7 +706,7 @@ inline void HierarchSurrModel::update_from_subordinate_model(size_t depth)
   case AGGREGATED_MODELS:  case MODEL_DISCREPANCY: { // prefer truth model
     Model& hf_model = truth_model();
     // bottom-up data flow, so recurse first
-    if (depth == std::numeric_limits<size_t>::max())
+    if (depth == SZ_MAX)
       hf_model.update_from_subordinate_model(depth);//retain special value (inf)
     else if (depth)
       hf_model.update_from_subordinate_model(depth - 1);
@@ -571,9 +740,9 @@ inline void HierarchSurrModel::surrogate_response_mode(short mode)
   if ( !corrType && ( mode == AUTO_CORRECTED_SURROGATE ||
 		      mode == MODEL_DISCREPANCY ) ) {
     Cerr << "Error: activation of mode ";
-    if (mode == AUTO_CORRECTED_SURROGATE) Cout << "AUTO_CORRECTED_SURROGATE";
-    else                                  Cout << "MODEL_DISCREPANCY";
-    Cout << " requires specification of a correction type." << std::endl;
+    if (mode == AUTO_CORRECTED_SURROGATE) Cerr << "AUTO_CORRECTED_SURROGATE";
+    else                                  Cerr << "MODEL_DISCREPANCY";
+    Cerr << " requires specification of a correction type." << std::endl;
     abort_handler(MODEL_ERROR);
   }
 
@@ -585,12 +754,12 @@ inline void HierarchSurrModel::surrogate_response_mode(short mode)
   // don't pass to low fidelity model (in case it includes surrogates) since
   // point of a surrogate bypass is to get a surrogate-free truth evaluation
   if (mode == BYPASS_SURROGATE) // recurse in this case
-    orderedModels[truthModelKey.front()].surrogate_response_mode(mode);
+    truth_model().surrogate_response_mode(mode);
 }
 
 
 inline void HierarchSurrModel::
-surrogate_function_indices(const IntSet& surr_fn_indices)
+surrogate_function_indices(const SizetSet& surr_fn_indices)
 { surrogateFnIndices = surr_fn_indices; }
 
 
@@ -684,11 +853,11 @@ inline bool HierarchSurrModel::restart_file(bool recurse_flag) const
 
 inline void HierarchSurrModel::set_evaluation_reference()
 {
-  //orderedModels[surrModelKey.front()].set_evaluation_reference();
+  //surrogate_model().set_evaluation_reference();
 
   // don't recurse this, since the eval reference is for the top level iteration
   //if (responseMode == BYPASS_SURROGATE)
-  //  orderedModels[truthModelKey.front()].set_evaluation_reference();
+  //  truth_model().set_evaluation_reference();
 
   // may want to add this in time
   //surrModelEvalRef = surrModelEvalCntr;

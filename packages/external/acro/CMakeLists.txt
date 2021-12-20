@@ -35,8 +35,8 @@ option(ENABLE_TESTS "Enable testing in Acro" OFF)
 if(ENABLE_TESTS)
 
   # Install Python virtual environment for testing
-  find_package(PythonInterp)
-  if (NOT PYTHONINTERP_FOUND)
+  find_package(Python REQUIRED COMPONENTS Interpreter)
+  if (NOT Python_Interpreter_FOUND)
     message(SEND_ERROR "Python interpreter required for ENABLE_TESTS")
   endif()
 
@@ -57,7 +57,7 @@ if(ENABLE_TESTS)
             ${CMAKE_CURRENT_SOURCE_DIR}/admin/vpy/dev.ini
     COMMAND ${CMAKE_COMMAND}
     ARGS -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/python
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${Python_EXECUTABLE}
     ARGS ${CMAKE_CURRENT_SOURCE_DIR}/setup
   )
 

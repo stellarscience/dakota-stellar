@@ -114,134 +114,137 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
+  UShortRealArrayMap::iterator it = collocPointsMap.find(order);
+  if (it != collocPointsMap.end())
+    return it->second;
+
+  RealArray& colloc_pts = collocPointsMap[order]; // create new array
+  colloc_pts.resize(order);
   bool rule_err = false;
-  if (collocPoints.size() != order) { // if not already computed
-    collocPoints.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    if (collocRule == GENZ_KEISTER) {
-      webbur::hermite_genz_keister_lookup_points(order, &collocPoints[0]);
-      for (size_t i=0; i<order; i++)
-	collocPoints[i] *= ptFactor; // scale H_n by sr2 to get He_n
-    }
-    else if (collocRule == GAUSS_HERMITE) {
-      if (order <= 20) { // retrieve full precision tabulated values
-	webbur::hermite_lookup_points(order, &collocPoints[0]);
-	for (size_t i=0; i<order; i++)
-	  collocPoints[i] *= ptFactor; // scale H_n by sr2 to get He_n
-      }
-      else { // sandia_rules calculates points/weights together
-	if (collocWeights.size() != order)
-	  collocWeights.resize(order);
-	webbur::hermite_compute(order, &collocPoints[0], &collocWeights[0]);
-	for (size_t i=0; i<order; i++) {
-	  collocPoints[i]  *= ptFactor; // scale H_n by sr2 to get He_n
-	  collocWeights[i] *= wtFactor; // polynomial weight fn -> PDF
-	}
-      }
-    }
-    else
-      rule_err = true;
-#else
-    if (collocRule == GENZ_KEISTER) {
-      PCerr << "Error: VPISparseGrid required for Genz-Keister points in "
-	    << "HermiteOrthogPolynomial::collocation_points()." << std::endl;
-      abort_handler(-1);
-    }
-    else if (collocRule == GAUSS_HERMITE) {
-      switch (order) {
-      case 1: // zeros of He_1(x) for one Gauss-Hermite point:
-	collocPoints[0] = 0.0;  break;
-      case 2: // zeros of He_2(x) for two Gauss-Hermite points:
-	collocPoints[0] = -1.0;
-	collocPoints[1] =  1.0; break;
-      case 3: { // zeros of He_3(x) for three Gauss-Hermite points:
-	Real sr3 = std::sqrt(3.);
-	collocPoints[0] = -sr3;
-	collocPoints[1] =  0.0;
-	collocPoints[2] =  sr3; break;
-      }
-      case 4: { // zeros of He_4(x) for four Gauss-Hermite points:
-	Real sr3 = std::sqrt(3.), sr6 = std::sqrt(6.),
-	  sr3psr6 = std::sqrt(3.+sr6), sr3msr6 = std::sqrt(3.-sr6);
-	collocPoints[0] = -sr3psr6;
-	collocPoints[1] = -sr3msr6;
-	collocPoints[2] =  sr3msr6;
-	collocPoints[3] =  sr3psr6; break;
-      }
-      case 5: { // zeros of He_5(x) for five Gauss-Hermite points:
-	Real sr10 = std::sqrt(10.), sr5psr10 = std::sqrt(5.+sr10),
-	  sr5msr10 = std::sqrt(5.-sr10);
-	collocPoints[0] = -sr5psr10;
-	collocPoints[1] = -sr5msr10;
-	collocPoints[2] =  0.0;
-	collocPoints[3] =  sr5msr10;
-	collocPoints[4] =  sr5psr10; break;
-      }
-	// tabulated values from Abramowitz & Stegun have limited precision
-      case 6:
-	collocPoints[0] = -2.350604973674492 * ptFactor;
-	collocPoints[1] = -1.335849074013697 * ptFactor;
-	collocPoints[2] = -0.436077411927617 * ptFactor;
-	collocPoints[3] = -collocPoints[2];
-	collocPoints[4] = -collocPoints[1];
-	collocPoints[5] = -collocPoints[0]; break;
-      case 7:
-	collocPoints[0] = -2.651961356835233 * ptFactor;
-	collocPoints[1] = -1.673551628767471 * ptFactor;
-	collocPoints[2] = -0.816287882858965 * ptFactor;
-	collocPoints[3] =  0.0;
-	collocPoints[4] = -collocPoints[2];
-	collocPoints[5] = -collocPoints[1];
-	collocPoints[6] = -collocPoints[0]; break;
-      case 8:
-	collocPoints[0] = -2.930637420257244 * ptFactor;
-	collocPoints[1] = -1.981656756695843 * ptFactor;
-	collocPoints[2] = -1.157193712446780 * ptFactor;
-	collocPoints[3] = -0.381186990207322 * ptFactor;
-	collocPoints[4] = -collocPoints[3];
-	collocPoints[5] = -collocPoints[2];
-	collocPoints[6] = -collocPoints[1];
-	collocPoints[7] = -collocPoints[0]; break;
-      case 9:
-	collocPoints[0] = -3.190993201781528 * ptFactor;
-	collocPoints[1] = -2.266580584531843 * ptFactor;
-	collocPoints[2] = -1.468553289216668 * ptFactor;
-	collocPoints[3] = -0.723551018752838 * ptFactor;
-	collocPoints[4] =  0.0;
-	collocPoints[5] = -collocPoints[3];
-	collocPoints[6] = -collocPoints[2];
-	collocPoints[7] = -collocPoints[1];
-	collocPoints[8] = -collocPoints[0]; break;
-      case 10:
-	collocPoints[0] = -3.436159118837738 * ptFactor;
-	collocPoints[1] = -2.532731674232790 * ptFactor;
-	collocPoints[2] = -1.756683649299882 * ptFactor;
-	collocPoints[3] = -1.036610829789514 * ptFactor;
-	collocPoints[4] = -0.342901327223705 * ptFactor;
-	collocPoints[5] = -collocPoints[4];
-	collocPoints[6] = -collocPoints[3];
-	collocPoints[7] = -collocPoints[2];
-	collocPoints[8] = -collocPoints[1];
-	collocPoints[9] = -collocPoints[0]; break;
-      default:
-	PCerr << "Error: overflow in maximum quadrature order limit (10) in "
-	      << "HermiteOrthogPolynomial::collocation_points().  Configure "
-	      << "with VPISparseGrid to extend range." << std::endl;
-	abort_handler(-1); break;
-      }
-    }
-    else
-      rule_err = true;
-#endif
+  if (collocRule == GENZ_KEISTER) {
+    webbur::hermite_genz_keister_lookup_points(order, &colloc_pts[0]);
+    for (size_t i=0; i<order; i++)
+      colloc_pts[i] *= ptFactor; // scale H_n by sr2 to get He_n
   }
+  else if (collocRule == GAUSS_HERMITE) {
+    if (order <= 20) { // retrieve full precision tabulated values
+      webbur::hermite_lookup_points(order, &colloc_pts[0]);
+      for (size_t i=0; i<order; i++)
+	colloc_pts[i] *= ptFactor; // scale H_n by sr2 to get He_n
+    }
+    else { // sandia_rules calculates points/weights together
+      RealArray& colloc_wts = collocWeightsMap[order];
+      if (colloc_wts.size() != order)
+	colloc_wts.resize(order);
+      webbur::hermite_compute(order, &colloc_pts[0], &colloc_wts[0]);
+      for (size_t i=0; i<order; i++) {
+	colloc_pts[i]  *= ptFactor; // scale H_n by sr2 to get He_n
+	colloc_wts[i] *= wtFactor; // polynomial weight fn -> PDF
+      }
+    }
+  }
+  else
+    rule_err = true;
+#else
+  if (collocRule == GENZ_KEISTER) {
+    PCerr << "Error: VPISparseGrid required for Genz-Keister points in "
+	  << "HermiteOrthogPolynomial::collocation_points()." << std::endl;
+    abort_handler(-1);
+  }
+  else if (collocRule == GAUSS_HERMITE) {
+    switch (order) {
+    case 1: // zeros of He_1(x) for one Gauss-Hermite point:
+      colloc_pts[0] = 0.0;  break;
+    case 2: // zeros of He_2(x) for two Gauss-Hermite points:
+      colloc_pts[0] = -1.0;
+      colloc_pts[1] =  1.0; break;
+    case 3: { // zeros of He_3(x) for three Gauss-Hermite points:
+      Real sr3 = std::sqrt(3.);
+      colloc_pts[0] = -sr3;
+      colloc_pts[1] =  0.0;
+      colloc_pts[2] =  sr3; break;
+    }
+    case 4: { // zeros of He_4(x) for four Gauss-Hermite points:
+      Real sr3 = std::sqrt(3.), sr6 = std::sqrt(6.),
+	sr3psr6 = std::sqrt(3.+sr6), sr3msr6 = std::sqrt(3.-sr6);
+      colloc_pts[0] = -sr3psr6;
+      colloc_pts[1] = -sr3msr6;
+      colloc_pts[2] =  sr3msr6;
+      colloc_pts[3] =  sr3psr6; break;
+    }
+    case 5: { // zeros of He_5(x) for five Gauss-Hermite points:
+      Real sr10 = std::sqrt(10.), sr5psr10 = std::sqrt(5.+sr10),
+	sr5msr10 = std::sqrt(5.-sr10);
+      colloc_pts[0] = -sr5psr10;
+      colloc_pts[1] = -sr5msr10;
+      colloc_pts[2] =  0.0;
+      colloc_pts[3] =  sr5msr10;
+      colloc_pts[4] =  sr5psr10; break;
+    }
+    // tabulated values from Abramowitz & Stegun have limited precision
+    case 6:
+      colloc_pts[0] = -2.350604973674492 * ptFactor;
+      colloc_pts[1] = -1.335849074013697 * ptFactor;
+      colloc_pts[2] = -0.436077411927617 * ptFactor;
+      colloc_pts[3] = -colloc_pts[2];
+      colloc_pts[4] = -colloc_pts[1];
+      colloc_pts[5] = -colloc_pts[0]; break;
+    case 7:
+      colloc_pts[0] = -2.651961356835233 * ptFactor;
+      colloc_pts[1] = -1.673551628767471 * ptFactor;
+      colloc_pts[2] = -0.816287882858965 * ptFactor;
+      colloc_pts[3] =  0.0;
+      colloc_pts[4] = -colloc_pts[2];
+      colloc_pts[5] = -colloc_pts[1];
+      colloc_pts[6] = -colloc_pts[0]; break;
+    case 8:
+      colloc_pts[0] = -2.930637420257244 * ptFactor;
+      colloc_pts[1] = -1.981656756695843 * ptFactor;
+      colloc_pts[2] = -1.157193712446780 * ptFactor;
+      colloc_pts[3] = -0.381186990207322 * ptFactor;
+      colloc_pts[4] = -colloc_pts[3];
+      colloc_pts[5] = -colloc_pts[2];
+      colloc_pts[6] = -colloc_pts[1];
+      colloc_pts[7] = -colloc_pts[0]; break;
+    case 9:
+      colloc_pts[0] = -3.190993201781528 * ptFactor;
+      colloc_pts[1] = -2.266580584531843 * ptFactor;
+      colloc_pts[2] = -1.468553289216668 * ptFactor;
+      colloc_pts[3] = -0.723551018752838 * ptFactor;
+      colloc_pts[4] =  0.0;
+      colloc_pts[5] = -colloc_pts[3];
+      colloc_pts[6] = -colloc_pts[2];
+      colloc_pts[7] = -colloc_pts[1];
+      colloc_pts[8] = -colloc_pts[0]; break;
+    case 10:
+      colloc_pts[0] = -3.436159118837738 * ptFactor;
+      colloc_pts[1] = -2.532731674232790 * ptFactor;
+      colloc_pts[2] = -1.756683649299882 * ptFactor;
+      colloc_pts[3] = -1.036610829789514 * ptFactor;
+      colloc_pts[4] = -0.342901327223705 * ptFactor;
+      colloc_pts[5] = -colloc_pts[4];
+      colloc_pts[6] = -colloc_pts[3];
+      colloc_pts[7] = -colloc_pts[2];
+      colloc_pts[8] = -colloc_pts[1];
+      colloc_pts[9] = -colloc_pts[0]; break;
+    default:
+      PCerr << "Error: overflow in maximum quadrature order limit (10) in "
+	    << "HermiteOrthogPolynomial::collocation_points().  Configure "
+	    << "with VPISparseGrid to extend range." << std::endl;
+      abort_handler(-1); break;
+    }
+  }
+  else
+    rule_err = true;
+#endif
 
   if (rule_err) {
     PCerr << "Error: unsupported collocation rule in "
 	  << "HermiteOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
-
-  return collocPoints;
+  return colloc_pts;
 }
 
 
@@ -259,110 +262,113 @@ type1_collocation_weights(unsigned short order)
   // 1/sqrt(2*PI) exp(-x^2/2) over the support range of [-infinity,+infinity]
   // (the std normal CDF for +infinity).
 
+  UShortRealArrayMap::iterator it = collocWeightsMap.find(order);
+  if (it != collocWeightsMap.end())
+    return it->second;
+  
+  RealArray& colloc_wts = collocWeightsMap[order]; // create new array
+  colloc_wts.resize(order);
   bool rule_err = false;
-  if (collocWeights.size() != order) { // if not already computed
-    collocWeights.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    if (collocRule == GENZ_KEISTER) {
-      webbur::hermite_genz_keister_lookup_weights(order, &collocWeights[0]);
-      for (size_t i=0; i<order; i++)
-	collocWeights[i] *= wtFactor; // polynomial weight fn -> PDF
-    }
-    else if (collocRule == GAUSS_HERMITE) {
-      if (order <= 20) { // retrieve full precision tabulated values
-	webbur::hermite_lookup_weights(order, &collocWeights[0]);
-	for (size_t i=0; i<order; i++)
-	  collocWeights[i] *= wtFactor; // polynomial weight fn -> PDF
-      }
-      else { // sandia_rules calculates points/weights together
-	if (collocPoints.size() != order)
-	  collocPoints.resize(order);
-	webbur::hermite_compute(order, &collocPoints[0], &collocWeights[0]);
-	for (size_t i=0; i<order; i++) {
-	  collocPoints[i]  *= ptFactor; // scale H_n pts by sr2 to get He_n pts
-	  collocWeights[i] *= wtFactor; // polynomial weight fn -> PDF
-	}
-      }
-    }
-    else
-      rule_err = true;
-#else
-    if (collocRule == GENZ_KEISTER) {
-      PCerr << "Error: VPISparseGrid required for Genz-Keister points in "
-	    << "HermiteOrthogPolynomial::type1_collocation_weights()."
-	    << std::endl;
-      abort_handler(-1);
-    }
-    else if (collocRule == GAUSS_HERMITE) {
-      switch (order) {
-      case 1: // weights for one Gauss-Hermite point:
-	collocWeights[0] = 1.0; break;
-      case 2: // weights for two Gauss-Hermite points:
-	collocWeights[0] = collocWeights[1] = 0.5; break;
-      case 3: // weights for three Gauss-Hermite points:
-	collocWeights[0] = collocWeights[2] = 1./6.;
-	collocWeights[1] = 2./3.; break;
-      case 4: { // weights for four Gauss-Hermite points:
-	Real sr6 = std::sqrt(6.);
-	collocWeights[0] = collocWeights[3] = 1./4./(3.+sr6);
-	collocWeights[1] = collocWeights[2] = 1./4./(3.-sr6); break;
-      }
-      case 5: { // weights for five Gauss-Hermite points:
-	Real w2sr10 = 2.*std::sqrt(10.);
-	collocWeights[0] = collocWeights[4] = 3./20./(7.+w2sr10);
-	collocWeights[1] = collocWeights[3] = 3./20./(7.-w2sr10);
-	collocWeights[2] = 8./15.; break;
-      }
-	// tabulated values from Abramowitz & Stegun have limited precision
-      case 6:
-	collocWeights[0] = collocWeights[5] = 4.530009905509e-3 * wtFactor;
-	collocWeights[1] = collocWeights[4] = 0.1570673203229 * wtFactor;
-	collocWeights[2] = collocWeights[3] = 0.7246295952244 * wtFactor; break;
-      case 7:
-	collocWeights[0] = collocWeights[6] = 9.717812450995e-4 * wtFactor;
-	collocWeights[1] = collocWeights[5] = 5.451558281913e-2 * wtFactor;
-	collocWeights[2] = collocWeights[4] = 0.4256072526101 * wtFactor;
-	collocWeights[3] = 0.8102646175568 * wtFactor; break;
-      case 8:
-	collocWeights[0] = collocWeights[7] = 1.996040722114e-4 * wtFactor;
-	collocWeights[1] = collocWeights[6] = 1.707798300741e-2 * wtFactor;
-	collocWeights[2] = collocWeights[5] = 0.2078023258149 * wtFactor;
-	collocWeights[3] = collocWeights[4] = 0.6611470125582 * wtFactor; break;
-      case 9:
-	collocWeights[0] = collocWeights[8] = 3.960697726326e-5 * wtFactor;
-	collocWeights[1] = collocWeights[7] = 4.943624275537e-3 * wtFactor;
-	collocWeights[2] = collocWeights[6] = 8.847452739438e-2 * wtFactor;
-	collocWeights[3] = collocWeights[5] = 0.4326515590026 * wtFactor;
-	collocWeights[4] = 0.7202352156061 * wtFactor; break;
-      case 10:
-	collocWeights[0] = collocWeights[9] = 7.640432855233e-6 * wtFactor;
-	collocWeights[1] = collocWeights[8] = 1.343645746781e-3 * wtFactor;
-	collocWeights[2] = collocWeights[7] = 3.387439445548e-2 * wtFactor;
-	collocWeights[3] = collocWeights[6] = 0.2401386110823 * wtFactor;
-	collocWeights[4] = collocWeights[5] = 0.6108626337353 * wtFactor; break;
-      default:
-	// define Gauss wts from Gauss pts using
-	// -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
-	// which for He(x), is n!/(n He_{n-1}(x_i))^2.
-	const RealArray& colloc_pts = collocation_points(order);
-	for (size_t i=0; i<order; i++)
-	  collocWeights[i] = factorial(order)/std::pow(order*
-	    type1_value(colloc_pts[i], order-1), 2);
-	break;
-      }
-    }
-    else
-      rule_err = true;
-#endif
+  if (collocRule == GENZ_KEISTER) {
+    webbur::hermite_genz_keister_lookup_weights(order, &colloc_wts[0]);
+    for (size_t i=0; i<order; i++)
+      colloc_wts[i] *= wtFactor; // polynomial weight fn -> PDF
   }
-
-  if (rule_err) {
-    PCerr << "Error: unsupported collocation rule in HermiteOrthogPolynomial::"
-	  << "type1_collocation_weights()." << std::endl;
+  else if (collocRule == GAUSS_HERMITE) {
+    if (order <= 20) { // retrieve full precision tabulated values
+      webbur::hermite_lookup_weights(order, &colloc_wts[0]);
+      for (size_t i=0; i<order; i++)
+	colloc_wts[i] *= wtFactor; // polynomial weight fn -> PDF
+    }
+    else { // sandia_rules calculates points/weights together
+      RealArray& colloc_pts = collocPointsMap[order];
+      if (colloc_pts.size() != order)
+	colloc_pts.resize(order);
+      webbur::hermite_compute(order, &colloc_pts[0], &colloc_wts[0]);
+      for (size_t i=0; i<order; i++) {
+	colloc_pts[i]  *= ptFactor; // scale H_n pts by sr2 to get He_n pts
+	colloc_wts[i] *= wtFactor; // polynomial weight fn -> PDF
+      }
+    }
+  }
+  else
+    rule_err = true;
+#else
+  if (collocRule == GENZ_KEISTER) {
+    PCerr << "Error: VPISparseGrid required for Genz-Keister points in "
+	  << "HermiteOrthogPolynomial::type1_collocation_weights()."
+	  << std::endl;
     abort_handler(-1);
   }
+  else if (collocRule == GAUSS_HERMITE) {
+    switch (order) {
+    case 1: // weights for one Gauss-Hermite point:
+      colloc_wts[0] = 1.0; break;
+    case 2: // weights for two Gauss-Hermite points:
+      colloc_wts[0] = colloc_wts[1] = 0.5; break;
+    case 3: // weights for three Gauss-Hermite points:
+      colloc_wts[0] = colloc_wts[2] = 1./6.;
+      colloc_wts[1] = 2./3.; break;
+    case 4: { // weights for four Gauss-Hermite points:
+      Real sr6 = std::sqrt(6.);
+      colloc_wts[0] = colloc_wts[3] = 1./4./(3.+sr6);
+      colloc_wts[1] = colloc_wts[2] = 1./4./(3.-sr6); break;
+    }
+    case 5: { // weights for five Gauss-Hermite points:
+      Real w2sr10 = 2.*std::sqrt(10.);
+      colloc_wts[0] = colloc_wts[4] = 3./20./(7.+w2sr10);
+      colloc_wts[1] = colloc_wts[3] = 3./20./(7.-w2sr10);
+      colloc_wts[2] = 8./15.; break;
+    }
+      // tabulated values from Abramowitz & Stegun have limited precision
+    case 6:
+      colloc_wts[0] = colloc_wts[5] = 4.530009905509e-3 * wtFactor;
+      colloc_wts[1] = colloc_wts[4] = 0.1570673203229 * wtFactor;
+      colloc_wts[2] = colloc_wts[3] = 0.7246295952244 * wtFactor; break;
+    case 7:
+      colloc_wts[0] = colloc_wts[6] = 9.717812450995e-4 * wtFactor;
+      colloc_wts[1] = colloc_wts[5] = 5.451558281913e-2 * wtFactor;
+      colloc_wts[2] = colloc_wts[4] = 0.4256072526101 * wtFactor;
+      colloc_wts[3] = 0.8102646175568 * wtFactor; break;
+    case 8:
+      colloc_wts[0] = colloc_wts[7] = 1.996040722114e-4 * wtFactor;
+      colloc_wts[1] = colloc_wts[6] = 1.707798300741e-2 * wtFactor;
+      colloc_wts[2] = colloc_wts[5] = 0.2078023258149 * wtFactor;
+      colloc_wts[3] = colloc_wts[4] = 0.6611470125582 * wtFactor; break;
+    case 9:
+      colloc_wts[0] = colloc_wts[8] = 3.960697726326e-5 * wtFactor;
+      colloc_wts[1] = colloc_wts[7] = 4.943624275537e-3 * wtFactor;
+      colloc_wts[2] = colloc_wts[6] = 8.847452739438e-2 * wtFactor;
+      colloc_wts[3] = colloc_wts[5] = 0.4326515590026 * wtFactor;
+      colloc_wts[4] = 0.7202352156061 * wtFactor; break;
+    case 10:
+      colloc_wts[0] = colloc_wts[9] = 7.640432855233e-6 * wtFactor;
+      colloc_wts[1] = colloc_wts[8] = 1.343645746781e-3 * wtFactor;
+      colloc_wts[2] = colloc_wts[7] = 3.387439445548e-2 * wtFactor;
+      colloc_wts[3] = colloc_wts[6] = 0.2401386110823 * wtFactor;
+      colloc_wts[4] = colloc_wts[5] = 0.6108626337353 * wtFactor; break;
+    default:
+      // define Gauss wts from Gauss pts using
+      // -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
+      // which for He(x), is n!/(n He_{n-1}(x_i))^2.
+      const RealArray& colloc_pts = collocation_points(order);
+      for (size_t i=0; i<order; i++)
+	colloc_wts[i] = factorial(order)
+	              / std::pow(order*type1_value(colloc_pts[i], order-1), 2);
+      break;
+    }
+  }
+  else
+    rule_err = true;
+#endif
 
-  return collocWeights;
+  if (rule_err) {
+    PCerr << "Error: unsupported collocation rule in HermiteOrthogPolynomial"
+	  << "::type1_collocation_weights()." << std::endl;
+    abort_handler(-1);
+  }
+  return colloc_wts;
 }
 
 } // namespace Pecos

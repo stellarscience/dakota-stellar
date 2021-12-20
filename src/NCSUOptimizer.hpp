@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -18,22 +19,10 @@
 
 namespace Dakota {
 
-/// Wrapper class for the NCSU DIRECT optimization library.
-
-/** The NCSUOptimizer class provides a wrapper for a Fortran 77
-    implementation of the DIRECT algorithm developed at North Carolina
-    State University. It uses a function pointer approach for which passed 
-    functions must be either global functions or static member functions.  
-    Any attribute used within static member functions must be either local 
-    to that function or accessed through a static pointer.
-
-    The user input mappings are as follows: */
-
 /**
  * \brief A version of TraitsBase specialized for NCSU optimizers
  *
  */
-
 class NCSUTraits: public TraitsBase
 {
   public:
@@ -52,6 +41,16 @@ class NCSUTraits: public TraitsBase
 };
 
 
+/// Wrapper class for the NCSU DIRECT optimization library.
+
+/** The NCSUOptimizer class provides a wrapper for a Fortran 77
+    implementation of the DIRECT algorithm developed at North Carolina
+    State University. It uses a function pointer approach for which passed 
+    functions must be either global functions or static member functions.  
+    Any attribute used within static member functions must be either local 
+    to that function or accessed through a static pointer.
+
+    The user input mappings are as follows: */
 class NCSUOptimizer: public Optimizer
 {
 public:
@@ -64,7 +63,7 @@ public:
   NCSUOptimizer(ProblemDescDB& problem_db, Model& model);
 
   /// alternate constructor for instantiations "on the fly"
-  NCSUOptimizer(Model& model, const int& max_iter, const int& max_eval,
+  NCSUOptimizer(Model& model, size_t max_iter, size_t max_eval,
 		double min_box_size = -1., double vol_box_size = -1.,
 		double solution_target = -DBL_MAX);
 
@@ -72,9 +71,8 @@ public:
   NCSUOptimizer(Model& model);
 
   /// alternate constructor for instantiations "on the fly"
-  NCSUOptimizer(const RealVector& var_l_bnds,
-		const RealVector& var_u_bnds, const int& max_iter,
-		const int& max_eval, 
+  NCSUOptimizer(const RealVector& var_l_bnds, const RealVector& var_u_bnds,
+		size_t max_iter, size_t max_eval,
   	        double (*user_obj_eval) (const RealVector &x),
 		double min_box_size = -1., double vol_box_size = -1.,
 		double solution_target = -DBL_MAX);

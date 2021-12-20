@@ -32,7 +32,9 @@ NumArray<double> mean(const Basic2DArray<T>& matrix, const int stats_flag)
 {
 NumArray<double> temp(matrix.ncols());
 
-temp = 0.0;
+// BMA: NumArray appears to default initialize to 0 and has no
+// operator= for the stored type
+//temp = 0.0;
 
 for (size_type j=0; j<matrix.nrows(); j++)
   for (size_type i=0; i<matrix.ncols(); i++)
@@ -64,7 +66,9 @@ DoubleVector var(const Basic2DArray<T>& mat, BasicArray<double>& array_mean,
 DoubleVector ans(mat.ncols());
 array_mean &= mean(mat);
 
-ans = 0.0;
+// BMA: NumArray appears to default initialize to 0 and has no
+// operator= for the stored type
+//ans = 0.0;
 for (size_type i=0; i<mat.nrows(); i++)
   for (size_type j=0; j<ans.size(); j++)
     ans[j] += ((mat[i][j] - array_mean[j]) * (mat[i][j] - array_mean[j]));

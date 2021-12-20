@@ -12,8 +12,6 @@ message("${DakotaSurrogates_SOURCE_DIR}")
 include_directories(${DakotaSurrogates_SOURCE_DIR}/models/src
                     ${DakotaSurrogates_SOURCE_DIR}/pecos_wrapper/src
                     ${Pecos_SOURCE_DIR}/src
-                    ${Boost_INCLUDE_DIR}
-                    ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
 
 remove_definitions("-DHAVE_CONFIG_H")

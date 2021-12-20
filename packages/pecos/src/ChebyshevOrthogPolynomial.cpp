@@ -194,28 +194,29 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  if (collocPoints.size() != order) { // if not already computed
-    collocPoints.resize(order);
-
+  UShortRealArrayMap::iterator it = collocPointsMap.find(order);
+  if (it != collocPointsMap.end())
+    return it->second;
+    
+  RealArray& colloc_pts = collocPointsMap[order]; // create new array
+  colloc_pts.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    // separable calculation of points/weights in sandia_rules.C
-    if (collocRule == CLENSHAW_CURTIS)
-      webbur::clenshaw_curtis_compute_points(order, &collocPoints[0]);
-    else if (collocRule == FEJER2)
-      webbur::fejer2_compute_points(order, &collocPoints[0]);
-    else {
-      PCerr << "Error: unsupported collocation point type in ChebyshevOrthog"
-	    << "Polynomial::collocation_points()." << std::endl;
-      abort_handler(-1);
-    }
-#else
-    PCerr << "Error: configuration with VPISparseGrid package required in "
-	  << "ChebyshevOrthogPolynomial::collocation_points()." << std::endl;
+  // separable calculation of points/weights in sandia_rules.C
+  if (collocRule == CLENSHAW_CURTIS)
+    webbur::clenshaw_curtis_compute_points(order, &colloc_pts[0]);
+  else if (collocRule == FEJER2)
+    webbur::fejer2_compute_points(order, &colloc_pts[0]);
+  else {
+    PCerr << "Error: unsupported collocation point type in ChebyshevOrthog"
+	  << "Polynomial::collocation_points()." << std::endl;
     abort_handler(-1);
-#endif
   }
-
-  return collocPoints;
+#else
+  PCerr << "Error: configuration with VPISparseGrid package required in "
+	<< "ChebyshevOrthogPolynomial::collocation_points()." << std::endl;
+  abort_handler(-1);
+#endif
+  return colloc_pts;
 }
 
 
@@ -232,31 +233,32 @@ type1_collocation_weights(unsigned short order)
     abort_handler(-1);
   }
 
-  if (collocWeights.size() != order) { // if not already computed
-    collocWeights.resize(order);
+  UShortRealArrayMap::iterator it = collocWeightsMap.find(order);
+  if (it != collocWeightsMap.end())
+    return it->second;
 
+  RealArray& colloc_wts = collocWeightsMap[order]; // create new array
+  colloc_wts.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    // separable calculation of points/weights in sandia_rules.C
-    if (collocRule == CLENSHAW_CURTIS)
-      webbur::clenshaw_curtis_compute_weights(order, &collocWeights[0]);
-    else if (collocRule == FEJER2)
-      webbur::fejer2_compute_weights(order, &collocWeights[0]);
-    else {
-      PCerr << "Error: unsupported collocation weight type in ChebyshevOrthog"
-	    << "Polynomial::type1_collocation_weights()." << std::endl;
-      abort_handler(-1);
-    }
-    for (size_t i=0; i<order; i++)
-      collocWeights[i] *= wtFactor;
-#else
-    PCerr << "Error: configuration with VPISparseGrid package required in "
-	  << "ChebyshevOrthogPolynomial::type1_collocation_weights()."
-	  << std::endl;
+  // separable calculation of points/weights in sandia_rules.C
+  if (collocRule == CLENSHAW_CURTIS)
+    webbur::clenshaw_curtis_compute_weights(order, &colloc_wts[0]);
+  else if (collocRule == FEJER2)
+    webbur::fejer2_compute_weights(order, &colloc_wts[0]);
+  else {
+    PCerr << "Error: unsupported collocation weight type in ChebyshevOrthog"
+	  << "Polynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
-#endif
   }
-
-  return collocWeights;
+  for (size_t i=0; i<order; i++)
+    colloc_wts[i] *= wtFactor;
+#else
+  PCerr << "Error: configuration with VPISparseGrid package required in "
+	<< "ChebyshevOrthogPolynomial::type1_collocation_weights()."
+	<< std::endl;
+  abort_handler(-1);
+#endif
+  return colloc_wts;
 }
 
 } // namespace Pecos

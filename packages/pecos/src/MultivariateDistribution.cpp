@@ -20,44 +20,25 @@ namespace Pecos {
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_mv_dist() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~MultivariateDistribution). */
+    letter IS the representation, its rep pointer is set to NULL. */
 MultivariateDistribution::MultivariateDistribution(BaseConstructor):
-  correlationFlag(false), mvDistRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "MultivariateDistribution::MultivariateDistribution(Base"
-        << "Constructor) called to build base class for letter." << std::endl;
-#endif
-}
+  correlationFlag(false)
+{ /* empty ctor */ }
 
 
-/** The default constructor: mvDistRep is NULL in this case.  This
-    makes it necessary to check for NULL in the copy constructor,
-    assignment operator, and destructor. */
-MultivariateDistribution::MultivariateDistribution():
-  mvDistRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "MultivariateDistribution::MultivariateDistribution() called to "
-        << "build empty envelope." << std::endl;
-#endif
-}
+/** The default constructor: mvDistRep is NULL in this case. */
+MultivariateDistribution::MultivariateDistribution()
+{ /* empty ctor */ }
 
 
 /** Envelope constructor only needs to extract enough data to properly
     execute get_mv_dist, since MultivariateDistribution(BaseConstructor)
     builds the actual base class data for the derived transformations. */
 MultivariateDistribution::
-MultivariateDistribution(short mv_dist_type): referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "MultivariateDistribution::MultivariateDistribution(string&) "
-        << "called to instantiate envelope." << std::endl;
-#endif
-
+MultivariateDistribution(short mv_dist_type):
   // Set the rep pointer to the appropriate derived type
-  mvDistRep = get_distribution(mv_dist_type);
+  mvDistRep(get_distribution(mv_dist_type))
+{
   if ( !mvDistRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -65,20 +46,15 @@ MultivariateDistribution(short mv_dist_type): referenceCount(1)
 
 /** Used only by the envelope constructor to initialize mvDistRep to the 
     appropriate derived type. */
-MultivariateDistribution* MultivariateDistribution::
-get_distribution(short mv_dist_type) const
+std::shared_ptr<MultivariateDistribution>
+MultivariateDistribution::get_distribution(short mv_dist_type) const
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_distribution(string&)."
-	<< std::endl;
-#endif
-
-  MultivariateDistribution* mvd_rep;
+  std::shared_ptr<MultivariateDistribution> mvd_rep;
   switch (mv_dist_type) {
   case MARGINALS_CORRELATIONS:
-    mvd_rep = new MarginalsCorrDistribution();      break;
+    mvd_rep = std::make_shared<MarginalsCorrDistribution>();      break;
   case MULTIVARIATE_NORMAL:
-    mvd_rep = new MultivariateNormalDistribution(); break;
+    mvd_rep = std::make_shared<MultivariateNormalDistribution>(); break;
   //case JOINT_KDE:
   //  mvd_rep = new JointKDEDistribution();         break;
   //case GAUSSIAN_COPULA:
@@ -87,7 +63,6 @@ get_distribution(short mv_dist_type) const
   default:
     PCerr << "Error: MultivariateDistribution type " << mv_dist_type
 	  << " not available." << std::endl;
-    mvd_rep = NULL;
   }
 
   // some derived classes (especially template classes) cover multiple
@@ -99,75 +74,23 @@ get_distribution(short mv_dist_type) const
 }
 
 
-/** Copy constructor manages sharing of mvDistRep and incrementing
-    of referenceCount. */
+/** Copy constructor manages sharing of mvDistRep. */
 MultivariateDistribution::
-MultivariateDistribution(const MultivariateDistribution& mv_dist)
-{
-  // Increment new (no old to decrement)
-  mvDistRep = mv_dist.mvDistRep;
-  if (mvDistRep) // Check for an assignment of NULL
-    ++mvDistRep->referenceCount;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "MultivariateDistribution::MultivariateDistribution("
-        << "MultivariateDistribution&)" << std::endl;
-  if (mvDistRep)
-    PCout << "mvDistRep referenceCount = " << mvDistRep->referenceCount
-	  << std::endl;
-#endif
-}
+MultivariateDistribution(const MultivariateDistribution& mv_dist):
+  mvDistRep(mv_dist.mvDistRep)
+{ /* empty rep */ }
 
 
-/** Assignment operator decrements referenceCount for old mvDistRep, assigns
-    new mvDistRep, and increments referenceCount for new mvDistRep. */
 MultivariateDistribution MultivariateDistribution::
 operator=(const MultivariateDistribution& mv_dist)
 {
-  if (mvDistRep != mv_dist.mvDistRep) { // normal case: old != new
-    // Decrement old
-    if (mvDistRep) // Check for null pointer
-      if (--mvDistRep->referenceCount == 0) 
-	delete mvDistRep;
-    // Assign and increment new
-    mvDistRep = mv_dist.mvDistRep;
-    if (mvDistRep) // Check for an assignment of NULL
-      ++mvDistRep->referenceCount;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "MultivariateDistribution::operator=(MultivariateDistribution&)"
-        << std::endl;
-  if (mvDistRep)
-    PCout << "mvDistRep referenceCount = " << mvDistRep->referenceCount
-	  << std::endl;
-#endif
-
+  mvDistRep = mv_dist.mvDistRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes mvDistRep
-    when referenceCount reaches zero. */
 MultivariateDistribution::~MultivariateDistribution()
-{ 
-  // Check for NULL pointer 
-  if (mvDistRep) {
-    --mvDistRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "mvDistRep referenceCount decremented to " 
-	  << mvDistRep->referenceCount << std::endl;
-#endif
-    if (mvDistRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting mvDistRep" << std::endl;
-#endif
-      delete mvDistRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 const RandomVariable& MultivariateDistribution::random_variable(size_t i) const
@@ -595,7 +518,7 @@ Real MultivariateDistribution::pdf(const RealVector& pt) const
 Real MultivariateDistribution::log_pdf(const RealVector& pt) const
 {
   if (mvDistRep)
-    return mvDistRep->pdf(pt);
+    return mvDistRep->log_pdf(pt);
   else // default implementation (exponential-based distribs will override)
     return std::log(pdf(pt));
 }
@@ -687,7 +610,8 @@ MultivariateDistribution MultivariateDistribution::copy() const
 
 
 /** Default overridden by derived classes */
-void MultivariateDistribution::copy_rep(MultivariateDistribution* source_rep)
+void MultivariateDistribution::
+copy_rep(std::shared_ptr<MultivariateDistribution> source_rep)
 { correlationFlag = source_rep->correlationFlag; }
 
 } // namespace Pecos

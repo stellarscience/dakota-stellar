@@ -103,16 +103,15 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// transRep to the appropriate derived type.
-  DataTransformation* get_data_trans(const String& data_trans_type);
+  std::shared_ptr<DataTransformation>
+  get_data_trans(const String& data_trans_type);
 
   //
   //- Heading: Data members
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  DataTransformation* dataTransRep;
-  /// number of objects sharing dataTransRep
-  int referenceCount;
+  std::shared_ptr<DataTransformation> dataTransRep;
 };
 
 } // namespace Pecos

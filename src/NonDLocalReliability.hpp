@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -65,14 +66,11 @@ public:
   void derived_set_communicators(ParLevLIter pl_iter);
   void derived_free_communicators(ParLevLIter pl_iter);
 
-  /// performs an uncertainty propagation using analytical reliability 
-  /// methods which solve constrained optimization problems to obtain
-  /// approximations of the cumulative distribution function of response 
-  void core_run();
+  /// initialize graphics customized for local reliability methods
+  void initialize_graphics(int iterator_server_id = 1);
 
-  /// print the approximate mean, standard deviation, and importance factors
-  /// when using the mean value method or the CDF/CCDF information when using
-  /// MPP-search-based reliability methods
+  void pre_run();
+  void core_run();
   void print_results(std::ostream& s, short results_state = FINAL_RESULTS);
 
   /// return name of active MPP optimizer

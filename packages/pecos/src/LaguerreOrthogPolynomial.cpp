@@ -191,96 +191,100 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  if (collocPoints.size() != order) { // if not already computed
-    collocPoints.resize(order);
+  UShortRealArrayMap::iterator it = collocPointsMap.find(order);
+  if (it != collocPointsMap.end())
+    return it->second;
+    
+  RealArray& colloc_pts = collocPointsMap[order]; // create new array
+  colloc_pts.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    if (order <= 20) // retrieve full precision tabulated values
-      webbur::laguerre_lookup_points(order, &collocPoints[0]);
-    else { // calculates points/weights together
-      if (collocWeights.size() != order)
-	collocWeights.resize(order);
-      webbur::laguerre_compute(order, &collocPoints[0], &collocWeights[0]);
-    }
-#else
-    switch (order) {
-    case 1: // zeros of L_1(x) for one Gauss-Laguerre point:
-      collocPoints[0] =  1.0; break;
-    case 2: { // zeros of L_2(x) for two Gauss-Laguerre points:
-      Real sr2 = std::sqrt(2.);
-      collocPoints[0] =  2. - sr2;
-      collocPoints[1] =  2. + sr2; break;
-    }
-    // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
-    case 3:
-      collocPoints[0] =  0.415774556783;
-      collocPoints[1] =  2.294280360279;
-      collocPoints[2] =  6.289945082937; break;
-    case 4:
-      collocPoints[0] =  0.322547689619;
-      collocPoints[1] =  1.745761101158;
-      collocPoints[2] =  4.536620296921;
-      collocPoints[3] =  9.395070912301; break;
-    case 5:
-      collocPoints[0] =  0.263560319718;
-      collocPoints[1] =  1.413403059107;
-      collocPoints[2] =  3.596425771041;
-      collocPoints[3] =  7.085810005859;
-      collocPoints[4] = 12.640800844276; break;
-    case 6:
-      collocPoints[0] =  0.222846604179;
-      collocPoints[1] =  1.188932101673;
-      collocPoints[2] =  2.992736326059;
-      collocPoints[3] =  5.775143569105;
-      collocPoints[4] =  9.837467418383;
-      collocPoints[5] = 15.982873980602; break;
-    case 7:
-      collocPoints[0] =  0.193043676560;
-      collocPoints[1] =  1.026664895339;
-      collocPoints[2] =  2.567876744951;
-      collocPoints[3] =  4.900353084526;
-      collocPoints[4] =  8.182153444563;
-      collocPoints[5] = 12.734180291798;
-      collocPoints[6] = 19.395727862263; break;
-    case 8:
-      collocPoints[0] =  0.170279632305;
-      collocPoints[1] =  0.903701776799;
-      collocPoints[2] =  2.251086629866;
-      collocPoints[3] =  4.266700170288;
-      collocPoints[4] =  7.045905402393;
-      collocPoints[5] = 10.758516010181;
-      collocPoints[6] = 15.740678641278;
-      collocPoints[7] = 22.863131736889; break;
-    case 9:
-      collocPoints[0] =  0.152322227732;
-      collocPoints[1] =  0.807220022742;
-      collocPoints[2] =  2.005135155619;
-      collocPoints[3] =  3.783473973331;
-      collocPoints[4] =  6.204956777877;
-      collocPoints[5] =  9.372985251688;
-      collocPoints[6] = 13.466236911092;
-      collocPoints[7] = 18.833597788992;
-      collocPoints[8] = 26.374071890927; break;
-    case 10:
-      collocPoints[0] =  0.137793470540;
-      collocPoints[1] =  0.729454549503;
-      collocPoints[2] =  1.808342901740;
-      collocPoints[3] =  3.401433697855;
-      collocPoints[4] =  5.552496140064;
-      collocPoints[5] =  8.330152746764;
-      collocPoints[6] = 11.843785837900;
-      collocPoints[7] = 16.279257831378;
-      collocPoints[8] = 21.996585811981;
-      collocPoints[9] = 29.920697012274; break;
-    default:
-      PCerr << "Error: overflow in maximum quadrature order limit (10) in "
-	    << "LaguerreOrthogPolynomial::collocation_points().  Configure "
-	    << "with VPISparseGrid to extend range." << std::endl;
-      abort_handler(-1); break;
-    }
-#endif
+  if (order <= 20) // retrieve full precision tabulated values
+    webbur::laguerre_lookup_points(order, &colloc_pts[0]);
+  else { // calculates points/weights together
+    RealArray& colloc_wts = collocWeightsMap[order];
+    if (colloc_wts.size() != order)
+      colloc_wts.resize(order);
+    webbur::laguerre_compute(order, &colloc_pts[0], &colloc_wts[0]);
   }
+#else
+  switch (order) {
+  case 1: // zeros of L_1(x) for one Gauss-Laguerre point:
+    colloc_pts[0] =  1.0; break;
+  case 2: { // zeros of L_2(x) for two Gauss-Laguerre points:
+    Real sr2 = std::sqrt(2.);
+    colloc_pts[0] =  2. - sr2;
+    colloc_pts[1] =  2. + sr2; break;
+  }
+  // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
+  case 3:
+    colloc_pts[0] =  0.415774556783;
+    colloc_pts[1] =  2.294280360279;
+    colloc_pts[2] =  6.289945082937; break;
+  case 4:
+    colloc_pts[0] =  0.322547689619;
+    colloc_pts[1] =  1.745761101158;
+    colloc_pts[2] =  4.536620296921;
+    colloc_pts[3] =  9.395070912301; break;
+  case 5:
+    colloc_pts[0] =  0.263560319718;
+    colloc_pts[1] =  1.413403059107;
+    colloc_pts[2] =  3.596425771041;
+    colloc_pts[3] =  7.085810005859;
+    colloc_pts[4] = 12.640800844276; break;
+  case 6:
+    colloc_pts[0] =  0.222846604179;
+    colloc_pts[1] =  1.188932101673;
+    colloc_pts[2] =  2.992736326059;
+    colloc_pts[3] =  5.775143569105;
+    colloc_pts[4] =  9.837467418383;
+    colloc_pts[5] = 15.982873980602; break;
+  case 7:
+    colloc_pts[0] =  0.193043676560;
+    colloc_pts[1] =  1.026664895339;
+    colloc_pts[2] =  2.567876744951;
+    colloc_pts[3] =  4.900353084526;
+    colloc_pts[4] =  8.182153444563;
+    colloc_pts[5] = 12.734180291798;
+    colloc_pts[6] = 19.395727862263; break;
+  case 8:
+    colloc_pts[0] =  0.170279632305;
+    colloc_pts[1] =  0.903701776799;
+    colloc_pts[2] =  2.251086629866;
+    colloc_pts[3] =  4.266700170288;
+    colloc_pts[4] =  7.045905402393;
+    colloc_pts[5] = 10.758516010181;
+    colloc_pts[6] = 15.740678641278;
+    colloc_pts[7] = 22.863131736889; break;
+  case 9:
+    colloc_pts[0] =  0.152322227732;
+    colloc_pts[1] =  0.807220022742;
+    colloc_pts[2] =  2.005135155619;
+    colloc_pts[3] =  3.783473973331;
+    colloc_pts[4] =  6.204956777877;
+    colloc_pts[5] =  9.372985251688;
+    colloc_pts[6] = 13.466236911092;
+    colloc_pts[7] = 18.833597788992;
+    colloc_pts[8] = 26.374071890927; break;
+  case 10:
+    colloc_pts[0] =  0.137793470540;
+    colloc_pts[1] =  0.729454549503;
+    colloc_pts[2] =  1.808342901740;
+    colloc_pts[3] =  3.401433697855;
+    colloc_pts[4] =  5.552496140064;
+    colloc_pts[5] =  8.330152746764;
+    colloc_pts[6] = 11.843785837900;
+    colloc_pts[7] = 16.279257831378;
+    colloc_pts[8] = 21.996585811981;
+    colloc_pts[9] = 29.920697012274; break;
+  default:
+    PCerr << "Error: overflow in maximum quadrature order limit (10) in "
+	  << "LaguerreOrthogPolynomial::collocation_points().  Configure "
+	  << "with VPISparseGrid to extend range." << std::endl;
+    abort_handler(-1); break;
+  }
+#endif
 
-  return collocPoints;
+  return colloc_pts;
 }
 
 
@@ -297,100 +301,104 @@ type1_collocation_weights(unsigned short order)
   // The sums of the weights = 1, which is the integral of the density function
   // exp(-x) over the support range of [0,+infinity].
 
-  if (collocWeights.size() != order) { // if not already computed
-    collocWeights.resize(order);
-#ifdef HAVE_SPARSE_GRID
-    if (order <= 20) // tabulated values from sandia_rules have full precision
-      webbur::laguerre_lookup_weights(order, &collocWeights[0]);
-    else { // sandia_rules calculates points/weights together
-      if (collocPoints.size() != order)
-	collocPoints.resize(order);
-      webbur::laguerre_compute(order, &collocPoints[0], &collocWeights[0]);
-    }
-#else
-    switch (order) {
-    case 1: // weights for one Gauss-Laguerre point:
-      collocWeights[0] = 1.0; break;
-    case 2: { // weights for two Gauss-Laguerre points:
-      Real sr2 = std::sqrt(2.);
-      collocWeights[0] = (2. + sr2)/4.;
-      collocWeights[1] = (2. - sr2)/4.; break;
-    }
-    // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
-    case 3:
-      collocWeights[0] = 0.711093009929;
-      collocWeights[1] = 0.278517733569;
-      collocWeights[2] = 0.0103892565016; break;
-    case 4:
-      collocWeights[0] = 0.603154104342;
-      collocWeights[1] = 0.357418692438;
-      collocWeights[2] = 0.0388879085150;
-      collocWeights[3] = 0.000539294705561; break;
-    case 5:
-      collocWeights[0] = 0.521755610583;
-      collocWeights[1] = 0.398666811083;
-      collocWeights[2] = 0.0759424496817;
-      collocWeights[3] = 0.00361175867992;
-      collocWeights[4] = 2.33699723858e-5; break;
-    case 6:
-      collocWeights[0] = 0.458964673950;
-      collocWeights[1] = 0.417000830772;
-      collocWeights[2] = 0.113373382074;
-      collocWeights[3] = 0.0103991974531;
-      collocWeights[4] = 0.000261017202815;
-      collocWeights[5] = 8.98547906430e-7; break;
-    case 7:
-      collocWeights[0] = 0.409318951701;
-      collocWeights[1] = 0.421831277862;
-      collocWeights[2] = 0.147126348658;
-      collocWeights[3] = 0.0206335144687;
-      collocWeights[4] = 0.00107401014328;
-      collocWeights[5] = 1.58654643486e-5;
-      collocWeights[6] = 3.17031547900e-8; break;
-    case 8:
-      collocWeights[0] = 0.369188589342;
-      collocWeights[1] = 0.418786780814;
-      collocWeights[2] = 0.175794986637;
-      collocWeights[3] = 0.0333434922612;
-      collocWeights[4] = 0.00279453623523;
-      collocWeights[5] = 9.07650877336e-5;
-      collocWeights[6] = 8.48574671627e-7;
-      collocWeights[7] = 1.04800117487e-9; break;
-    case 9:
-      collocWeights[0] = 0.336126421798;
-      collocWeights[1] = 0.411213980424;
-      collocWeights[2] = 0.199287525371;
-      collocWeights[3] = 0.0474605627657;
-      collocWeights[4] = 0.00559962661079;
-      collocWeights[5] = 0.000305249767093;
-      collocWeights[6] = 6.59212302608e-6;
-      collocWeights[7] = 4.11076933035e-8;
-      collocWeights[8] = 3.29087403035e-11; break;
-    case 10:
-      collocWeights[0] = 0.308441115765;
-      collocWeights[1] = 0.401119929155;
-      collocWeights[2] = 0.218068287612;
-      collocWeights[3] = 0.0620874560987;
-      collocWeights[4] = 0.00950151697518;
-      collocWeights[5] = 0.000753008388588;
-      collocWeights[6] = 2.82592334960e-5;
-      collocWeights[7] = 4.24931398496e-7;
-      collocWeights[8] = 1.83956482398e-9;
-      collocWeights[9] = 9.91182721961e-13; break;
-    default:
-      // define Gauss wts from Gauss pts using
-      // -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
-      // which for L(x), is x_i/(n L_{n-1}(x_i))^2.
-      const RealArray& colloc_pts = collocation_points(order);
-      for (size_t i=0; i<order; i++)
-	collocWeights[i] = colloc_pts[i] / std::pow(order *
-			   type1_value(colloc_pts[i], order-1), 2);
-      break;
-    }
-#endif
-  }
+  UShortRealArrayMap::iterator it = collocWeightsMap.find(order);
+  if (it != collocWeightsMap.end())
+    return it->second;
 
-  return collocWeights;
+  RealArray& colloc_wts = collocWeightsMap[order]; // create new array
+  colloc_wts.resize(order);
+#ifdef HAVE_SPARSE_GRID
+  if (order <= 20) // tabulated values from sandia_rules have full precision
+    webbur::laguerre_lookup_weights(order, &colloc_wts[0]);
+  else { // sandia_rules calculates points/weights together
+    RealArray& colloc_pts = collocPointsMap[order];
+    if (colloc_pts.size() != order)
+      colloc_pts.resize(order);
+    webbur::laguerre_compute(order, &colloc_pts[0], &colloc_wts[0]);
+  }
+#else
+  switch (order) {
+  case 1: // weights for one Gauss-Laguerre point:
+    colloc_wts[0] = 1.0; break;
+  case 2: { // weights for two Gauss-Laguerre points:
+    Real sr2 = std::sqrt(2.);
+    colloc_wts[0] = (2. + sr2)/4.;
+    colloc_wts[1] = (2. - sr2)/4.; break;
+  }
+  // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
+  case 3:
+    colloc_wts[0] = 0.711093009929;
+    colloc_wts[1] = 0.278517733569;
+    colloc_wts[2] = 0.0103892565016; break;
+  case 4:
+    colloc_wts[0] = 0.603154104342;
+    colloc_wts[1] = 0.357418692438;
+    colloc_wts[2] = 0.0388879085150;
+    colloc_wts[3] = 0.000539294705561; break;
+  case 5:
+    colloc_wts[0] = 0.521755610583;
+    colloc_wts[1] = 0.398666811083;
+    colloc_wts[2] = 0.0759424496817;
+    colloc_wts[3] = 0.00361175867992;
+    colloc_wts[4] = 2.33699723858e-5; break;
+  case 6:
+    colloc_wts[0] = 0.458964673950;
+    colloc_wts[1] = 0.417000830772;
+    colloc_wts[2] = 0.113373382074;
+    colloc_wts[3] = 0.0103991974531;
+    colloc_wts[4] = 0.000261017202815;
+    colloc_wts[5] = 8.98547906430e-7; break;
+  case 7:
+    colloc_wts[0] = 0.409318951701;
+    colloc_wts[1] = 0.421831277862;
+    colloc_wts[2] = 0.147126348658;
+    colloc_wts[3] = 0.0206335144687;
+    colloc_wts[4] = 0.00107401014328;
+    colloc_wts[5] = 1.58654643486e-5;
+    colloc_wts[6] = 3.17031547900e-8; break;
+  case 8:
+    colloc_wts[0] = 0.369188589342;
+    colloc_wts[1] = 0.418786780814;
+    colloc_wts[2] = 0.175794986637;
+    colloc_wts[3] = 0.0333434922612;
+    colloc_wts[4] = 0.00279453623523;
+    colloc_wts[5] = 9.07650877336e-5;
+    colloc_wts[6] = 8.48574671627e-7;
+    colloc_wts[7] = 1.04800117487e-9; break;
+  case 9:
+    colloc_wts[0] = 0.336126421798;
+    colloc_wts[1] = 0.411213980424;
+    colloc_wts[2] = 0.199287525371;
+    colloc_wts[3] = 0.0474605627657;
+    colloc_wts[4] = 0.00559962661079;
+    colloc_wts[5] = 0.000305249767093;
+    colloc_wts[6] = 6.59212302608e-6;
+    colloc_wts[7] = 4.11076933035e-8;
+    colloc_wts[8] = 3.29087403035e-11; break;
+  case 10:
+    colloc_wts[0] = 0.308441115765;
+    colloc_wts[1] = 0.401119929155;
+    colloc_wts[2] = 0.218068287612;
+    colloc_wts[3] = 0.0620874560987;
+    colloc_wts[4] = 0.00950151697518;
+    colloc_wts[5] = 0.000753008388588;
+    colloc_wts[6] = 2.82592334960e-5;
+    colloc_wts[7] = 4.24931398496e-7;
+    colloc_wts[8] = 1.83956482398e-9;
+    colloc_wts[9] = 9.91182721961e-13; break;
+  default:
+    // define Gauss wts from Gauss pts using
+    // -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
+    // which for L(x), is x_i/(n L_{n-1}(x_i))^2.
+    const RealArray& colloc_pts = collocation_points(order);
+    for (size_t i=0; i<order; i++)
+      colloc_wts[i] = colloc_pts[i]
+	            / std::pow(order * type1_value(colloc_pts[i], order-1), 2);
+    break;
+  }
+#endif
+
+  return colloc_wts;
 }
 
 } // namespace Pecos

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -64,7 +65,7 @@ NCSUOptimizer::NCSUOptimizer(ProblemDescDB& problem_db, Model& model):
 /** This is an alternate constructor for instantiations on the fly
     using a Model but no ProblemDescDB. */
 NCSUOptimizer::
-NCSUOptimizer(Model& model, const int& max_iter, const int& max_eval,
+NCSUOptimizer(Model& model, size_t max_iter, size_t max_eval,
 	      double min_box_size, double vol_box_size, double solution_target):
   Optimizer(NCSU_DIRECT, model, std::shared_ptr<TraitsBase>(new NCSUTraits())),
   setUpType(SETUP_MODEL),
@@ -92,9 +93,8 @@ NCSUOptimizer::NCSUOptimizer(Model& model):
 /** This is an alternate constructor for performing an optimization using
     the passed in objective function pointer. */
 NCSUOptimizer::
-NCSUOptimizer(const RealVector& var_l_bnds,
-	      const RealVector& var_u_bnds, const int& max_iter,
-	      const int& max_eval,
+NCSUOptimizer(const RealVector& var_l_bnds, const RealVector& var_u_bnds,
+	      size_t max_iter, size_t max_eval,
 	      double (*user_obj_eval) (const RealVector &x),
 	      double min_box_size, double vol_box_size, double solution_target):
   Optimizer(NCSU_DIRECT, var_l_bnds.length(), 0, 0, 0, 0, 0, 0, 0, std::shared_ptr<TraitsBase>(new NCSUTraits())),
@@ -273,7 +273,8 @@ void NCSUOptimizer::core_run()
 
   // terminate when size of box  w/ f_min < sigmaper*size of orig box
   double sigmaper = (minBoxSize >= 0.) ? minBoxSize : 1.e-4;
-  // terminate when volume of box w/ f_min < volper*volume of orig box
+  // terminate when volume of box w/ f_min < volper percent of the volume of 
+  // orig box
   double volper   = (volBoxSize >= 0.) ? volBoxSize : 1.e-6;
   // convergence tolerance for target solution (DIRECT wants 0. when inactive)
   double fglper   = (solutionTarget > -DBL_MAX) ? convergenceTol : 0.;
@@ -301,8 +302,7 @@ void NCSUOptimizer::core_run()
   else
     local_des_vars.size(num_cv);
 
-  int max_iter = maxIterations;
-  int max_eval = maxFunctionEvals;
+  int max_iter = maxIterations, max_eval = maxFunctionEvals;
   NCSU_DIRECT_F77(objective_eval, local_des_vars.values(), num_cv, eps,
 		  max_eval, max_iter, fmin, lowerBounds.values(),
 		  upperBounds.values(), algmethod, ierror, logfile,
@@ -350,8 +350,8 @@ void NCSUOptimizer::core_run()
       Cout << "(prescribed global minimum reached within tolerance)";
       break;;
     case 4:
-      Cout << "(best rectangle reduced from original volume by prescribed "
-	   << "fraction)";
+      Cout << "(volume of best hyperrectangle is less than the "
+        << "prescribed percentage of the original)"; 
       break;;
     case 5:
       Cout << "(best rectangle measure is less than prescribed min box size)";

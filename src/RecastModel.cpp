@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -22,12 +23,11 @@ using namespace std;
 
 namespace Dakota {
 
-// define special values for componentParallelMode
-#define SUB_MODEL 2
 //#define DEBUG
 
 // init static var
 StringStringPairIntMap RecastModel::recastModelIdCounters;
+
 
 /** Default recast model constructor.  Requires full definition of the
     transformation; if any mappings are NULL, they are assumed to
@@ -190,6 +190,10 @@ init_sizes(const SizetArray& vars_comps_totals, const BitArray& all_relax_di,
   bool reshape_vars =
     init_variables(vars_comps_totals, all_relax_di, all_relax_dr); 
 
+  // Currently this reshape is subspace-specific and handled in derived classes
+  //if (reshape_vars) // else full-space initialization is sufficient
+  //  init_distribution(rv_types, vars_comps_totals); // reshape mvDist
+
   // recasting of response and constraints
   init_response(num_recast_primary_fns, num_recast_secondary_fns, 
 		recast_resp_order, reshape_vars);
@@ -281,7 +285,6 @@ init_variables(const SizetArray& vars_comps_totals,
       svd.all_relaxed_discrete_int()  == all_relax_di )      &&
     ( all_relax_dr.empty() || 
       svd.all_relaxed_discrete_real() == all_relax_dr );
-  bool reshape_vars = !vars_char_same;
 
   // check change in character first as mapping may not yet be present...
   if (vars_char_same) {
@@ -296,10 +299,10 @@ init_variables(const SizetArray& vars_comps_totals,
     currentVariables = Variables(recast_svd);
   }
 
-  // propagate number of active continuous vars to deriv vars
+  // propagate number of active continuous vars to derivative vars
   numDerivVars = currentVariables.cv();
 
-  return reshape_vars;
+  return !vars_char_same; // return reshape_vars
 }
 
 
@@ -357,6 +360,7 @@ init_constraints(size_t num_recast_secondary_fns,
       sub_model_cons.num_linear_ineq_constraints(),
       sub_model_cons.num_linear_eq_constraints());
 }
+
 
 void RecastModel::inverse_mappings(
     void (*inv_vars_map)     (const Variables& recast_vars,
@@ -742,7 +746,7 @@ inverse_transform_response(const Variables& sub_model_vars,
 
 void RecastModel::initialize_data_from_submodel()
 {
-  componentParallelMode = SUB_MODEL;
+  componentParallelMode = SUB_MODEL_MODE;
   outputLevel           = subModel.output_level();
 
   gradientType          = subModel.gradient_type();
@@ -787,7 +791,7 @@ void RecastModel::update_from_model(Model& model)
 bool RecastModel::update_variables_from_model(Model& model)
 {
   bool update_active_complement = true;
-  if (invVarsMapping) {
+  if (invVarsMapping) { // inv mapping provided: sub-model -> recast
     assign_instance();
 
     // generally restricted to active variables
@@ -797,7 +801,7 @@ bool RecastModel::update_variables_from_model(Model& model)
     // constraints and values, but there's currently no mechanism to
     // do so.  The client of a RecastModel must manage this.
   }
-  else if (variablesMapping) {
+  else if (variablesMapping) { // only fwd mapping for recast -> sub-model
     // no reasonable default for active vars
 
     // can't just apply variables mapping to values/bounds, since need inverse
@@ -815,37 +819,9 @@ bool RecastModel::update_variables_from_model(Model& model)
   else {
     update_active_complement = false; // can use all view updates below
 
-    // variable values
-    currentVariables.all_continuous_variables(
-      model.all_continuous_variables());
-    currentVariables.all_discrete_int_variables(
-      model.all_discrete_int_variables());
-    currentVariables.all_discrete_string_variables(
-      model.all_discrete_string_variables());
-    currentVariables.all_discrete_real_variables(
-      model.all_discrete_real_variables());
-    // variable bounds
-    userDefinedConstraints.all_continuous_lower_bounds(
-      model.all_continuous_lower_bounds());
-    userDefinedConstraints.all_continuous_upper_bounds(
-      model.all_continuous_upper_bounds());
-    userDefinedConstraints.all_discrete_int_lower_bounds(
-      model.all_discrete_int_lower_bounds());
-    userDefinedConstraints.all_discrete_int_upper_bounds(
-      model.all_discrete_int_upper_bounds());
-    userDefinedConstraints.all_discrete_real_lower_bounds(
-      model.all_discrete_real_lower_bounds());
-    userDefinedConstraints.all_discrete_real_upper_bounds(
-      model.all_discrete_real_upper_bounds());
-    // variable labels
-    currentVariables.all_continuous_variable_labels(
-      model.all_continuous_variable_labels());
-    currentVariables.all_discrete_int_variable_labels(
-      model.all_discrete_int_variable_labels());
-    currentVariables.all_discrete_string_variable_labels(
-      model.all_discrete_string_variable_labels());
-    currentVariables.all_discrete_real_variable_labels(
-      model.all_discrete_real_variable_labels());
+    update_variable_values(model);
+    update_variable_bounds(model);
+    update_variable_labels(model);
 
     // uncertain variable distribution data
     // > deep copies were used previously for Pecos::DistributionParams
@@ -857,24 +833,90 @@ bool RecastModel::update_variables_from_model(Model& model)
     // Note: becomes less important w/ broader use of ProbabilityTransformModel
     mvDist = subModel.multivariate_distribution(); // shared rep
 
-    // linear constraints
-    if (model.num_linear_ineq_constraints()) {
-      userDefinedConstraints.linear_ineq_constraint_coeffs(
-        model.linear_ineq_constraint_coeffs());
-      userDefinedConstraints.linear_ineq_constraint_lower_bounds(
-        model.linear_ineq_constraint_lower_bounds());
-      userDefinedConstraints.linear_ineq_constraint_upper_bounds(
-        model.linear_ineq_constraint_upper_bounds());
-    }
-    if (model.num_linear_eq_constraints()) {
-      userDefinedConstraints.linear_eq_constraint_coeffs(
-        model.linear_eq_constraint_coeffs());
-      userDefinedConstraints.linear_eq_constraint_targets(
-        model.linear_eq_constraint_targets());
-    }
+    update_linear_constraints(model);
   }
 
   return update_active_complement;
+}
+
+
+void RecastModel::update_variable_values(const Model& model)
+{
+  currentVariables.all_continuous_variables
+    (model.all_continuous_variables());
+  update_discrete_variable_values(model);
+}
+
+
+void RecastModel::update_discrete_variable_values(const Model& model)
+{
+  currentVariables.all_discrete_int_variables
+    (model.all_discrete_int_variables());
+  currentVariables.all_discrete_string_variables
+    (model.all_discrete_string_variables());
+  currentVariables.all_discrete_real_variables
+    (model.all_discrete_real_variables());
+}
+
+
+void RecastModel::update_variable_bounds(const Model& model)
+{
+  userDefinedConstraints.all_continuous_lower_bounds
+    (model.all_continuous_lower_bounds());
+  userDefinedConstraints.all_continuous_upper_bounds
+    (model.all_continuous_upper_bounds());
+  update_discrete_variable_bounds(model);
+}
+
+
+void RecastModel::update_discrete_variable_bounds(const Model& model)
+{
+  userDefinedConstraints.all_discrete_int_lower_bounds
+    (model.all_discrete_int_lower_bounds());
+  userDefinedConstraints.all_discrete_int_upper_bounds
+    (model.all_discrete_int_upper_bounds());
+  userDefinedConstraints.all_discrete_real_lower_bounds
+    (model.all_discrete_real_lower_bounds());
+  userDefinedConstraints.all_discrete_real_upper_bounds
+    (model.all_discrete_real_upper_bounds());
+}
+
+
+void RecastModel::update_variable_labels(const Model& model)
+{
+  currentVariables.all_continuous_variable_labels
+    ( model.all_continuous_variable_labels());
+  update_discrete_variable_labels(model);
+}
+
+
+void RecastModel::update_discrete_variable_labels(const Model& model)
+{
+  currentVariables.all_discrete_int_variable_labels
+    (model.all_discrete_int_variable_labels());
+  currentVariables.all_discrete_string_variable_labels
+    (model.all_discrete_string_variable_labels());
+  currentVariables.all_discrete_real_variable_labels
+    (model.all_discrete_real_variable_labels());
+}
+
+
+void RecastModel::update_linear_constraints(const Model& model)
+{
+  if (model.num_linear_ineq_constraints()) {
+    userDefinedConstraints.linear_ineq_constraint_coeffs
+      (model.linear_ineq_constraint_coeffs());
+    userDefinedConstraints.linear_ineq_constraint_lower_bounds
+      (model.linear_ineq_constraint_lower_bounds());
+    userDefinedConstraints.linear_ineq_constraint_upper_bounds
+      (model.linear_ineq_constraint_upper_bounds());
+  }
+  if (model.num_linear_eq_constraints()) {
+    userDefinedConstraints.linear_eq_constraint_coeffs
+      (model.linear_eq_constraint_coeffs());
+    userDefinedConstraints.linear_eq_constraint_targets
+      (model.linear_eq_constraint_targets());
+  }
 }
 
 
@@ -988,28 +1030,34 @@ void RecastModel::update_response_from_model(Model& model)
     // update currentResponse from model secondary fns
   }
   else {
-    // secondary response function labels
-    const StringArray& sm_resp_labels = model.response_labels();
-    size_t i,
-      num_nln_con = userDefinedConstraints.num_nonlinear_eq_constraints() +
-        userDefinedConstraints.num_nonlinear_ineq_constraints(),
-      num_primary    = numFns - num_nln_con,
-      num_sm_primary = model.response_size() - num_nln_con;
-    for (i=0; i<num_nln_con; i++)
-      currentResponse.shared_data().function_label(
-	sm_resp_labels[num_sm_primary+i], num_primary+i);
-
-    // nonlinear constraint bounds/targets
-    if (model.num_nonlinear_ineq_constraints()) {
-      userDefinedConstraints.nonlinear_ineq_constraint_lower_bounds(
-        model.nonlinear_ineq_constraint_lower_bounds());
-      userDefinedConstraints.nonlinear_ineq_constraint_upper_bounds(
-        model.nonlinear_ineq_constraint_upper_bounds());
-    }
-    if (model.num_nonlinear_eq_constraints())
-      userDefinedConstraints.nonlinear_eq_constraint_targets(
-        model.nonlinear_eq_constraint_targets());
+    update_secondary_response(model);
   }
+}
+
+
+void RecastModel::update_secondary_response(const Model& model)
+{
+  // secondary response function labels
+  const StringArray& sm_resp_labels = model.response_labels();
+  size_t i,
+    num_nln_con = userDefinedConstraints.num_nonlinear_eq_constraints() +
+    userDefinedConstraints.num_nonlinear_ineq_constraints(),
+    num_primary    = numFns - num_nln_con,
+    num_sm_primary = model.response_size() - num_nln_con;
+  for (i=0; i<num_nln_con; i++)
+    currentResponse.shared_data().function_label
+      (sm_resp_labels[num_sm_primary+i], num_primary+i);
+
+  // nonlinear constraint bounds/targets
+  if (model.num_nonlinear_ineq_constraints()) {
+    userDefinedConstraints.nonlinear_ineq_constraint_lower_bounds
+      (model.nonlinear_ineq_constraint_lower_bounds());
+    userDefinedConstraints.nonlinear_ineq_constraint_upper_bounds
+      (model.nonlinear_ineq_constraint_upper_bounds());
+  }
+  if (model.num_nonlinear_eq_constraints())
+    userDefinedConstraints.nonlinear_eq_constraint_targets
+      (model.nonlinear_eq_constraint_targets());
 }
 
 

@@ -46,43 +46,23 @@ namespace Pecos {
     class letter and the derived constructor selects this base class
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_random_variable() again).  Since the
-    letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~RandomVariable). */
-RandomVariable::RandomVariable(BaseConstructor):
-  ranVarType(NO_TYPE), ranVarRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "RandomVariable::RandomVariable(BaseConstructor) called to build "
-        << "base class for letter." << std::endl;
-#endif
-}
+    letter IS the representation, its rep pointer is set to NULL. */
+RandomVariable::RandomVariable(BaseConstructor)
+{ /* empty ctor */ }
 
 
-/** The default constructor: ranVarRep is NULL in this case.  This
-    makes it necessary to check for NULL in the copy constructor,
-    assignment operator, and destructor. */
-RandomVariable::RandomVariable(): ranVarRep(NULL), referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "RandomVariable::RandomVariable() called to build empty envelope."
-	<< std::endl;
-#endif
-}
+/** The default constructor: ranVarRep is NULL in this case. */
+RandomVariable::RandomVariable()
+{ /* empty ctor */ }
 
 
 /** Envelope constructor only needs to extract enough data to properly
     execute get_random_variable, since RandomVariable(BaseConstructor)
     builds the actual base class data for the derived basis functions. */
 RandomVariable::RandomVariable(short ran_var_type):
-  referenceCount(1)
-{
-#ifdef REFCOUNT_DEBUG
-  PCout << "RandomVariable::RandomVariable(short) called to instantiate "
-	<< "envelope." << std::endl;
-#endif
-
   // Set the rep pointer to the appropriate derived type
-  ranVarRep = get_random_variable(ran_var_type);
+  ranVarRep(get_random_variable(ran_var_type))
+{
   if ( !ranVarRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -90,65 +70,82 @@ RandomVariable::RandomVariable(short ran_var_type):
 
 /** Used only by the envelope constructor to initialize ranVarRep to the 
     appropriate derived type. */
-RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
+std::shared_ptr<RandomVariable>
+RandomVariable::get_random_variable(short ran_var_type)
 {
-#ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_random_variable(short)."
-	<< std::endl;
-#endif
-
-  RandomVariable* ran_var_rep;
+  std::shared_ptr<RandomVariable> ran_var_rep;
   switch (ran_var_type) {
   // continuous / discrete range / set variables
-  case CONTINUOUS_RANGE:    ran_var_rep = new RangeVariable<Real>();      break;
-  case DISCRETE_RANGE:      ran_var_rep = new RangeVariable<int>();       break;
-  case DISCRETE_SET_INT:    ran_var_rep = new SetVariable<int>();         break;
-  case DISCRETE_SET_STRING: ran_var_rep = new SetVariable<String>();      break;
-  case DISCRETE_SET_REAL:   ran_var_rep = new SetVariable<Real>();        break;
+  case CONTINUOUS_RANGE:
+    ran_var_rep = std::make_shared<RangeVariable<Real>>();                break;
+  case DISCRETE_RANGE:
+    ran_var_rep = std::make_shared<RangeVariable<int>>();                 break;
+  case DISCRETE_SET_INT:
+    ran_var_rep = std::make_shared<SetVariable<int>>();                   break;
+  case DISCRETE_SET_STRING:
+    ran_var_rep = std::make_shared<SetVariable<String>>();                break;
+  case DISCRETE_SET_REAL:
+    ran_var_rep = std::make_shared<SetVariable<Real>>();                  break;
   // continuous aleatory random variables:
-  case STD_NORMAL: case NORMAL: ran_var_rep = new NormalRandomVariable(); break;
-  case BOUNDED_NORMAL: ran_var_rep = new BoundedNormalRandomVariable();   break;
-  case LOGNORMAL:      ran_var_rep = new LognormalRandomVariable();       break;
+  case STD_NORMAL: case NORMAL:
+    ran_var_rep = std::make_shared<NormalRandomVariable>();               break;
+  case BOUNDED_NORMAL:
+    ran_var_rep = std::make_shared<BoundedNormalRandomVariable>();        break;
+  case LOGNORMAL:
+    ran_var_rep = std::make_shared<LognormalRandomVariable>();            break;
   case BOUNDED_LOGNORMAL:
-    ran_var_rep = new BoundedLognormalRandomVariable();                   break;
+    ran_var_rep = std::make_shared<BoundedLognormalRandomVariable>();     break;
   case STD_UNIFORM: case UNIFORM:
-    ran_var_rep = new UniformRandomVariable();                            break;
-  case LOGUNIFORM:     ran_var_rep = new LoguniformRandomVariable();      break;
-  case TRIANGULAR:     ran_var_rep = new TriangularRandomVariable();      break;
+    ran_var_rep = std::make_shared<UniformRandomVariable>();              break;
+  case LOGUNIFORM:
+    ran_var_rep = std::make_shared<LoguniformRandomVariable>();           break;
+  case TRIANGULAR:
+    ran_var_rep = std::make_shared<TriangularRandomVariable>();           break;
   case STD_EXPONENTIAL: case EXPONENTIAL:
-    ran_var_rep = new ExponentialRandomVariable();                        break;
-  case STD_BETA:  case BETA:  ran_var_rep = new BetaRandomVariable();     break;
-  case STD_GAMMA: case GAMMA: ran_var_rep = new GammaRandomVariable();    break;
-  case GUMBEL:         ran_var_rep = new GumbelRandomVariable();          break;
-  case FRECHET:        ran_var_rep = new FrechetRandomVariable();         break;
-  case WEIBULL:        ran_var_rep = new WeibullRandomVariable();         break;
-  case HISTOGRAM_BIN:  ran_var_rep = new HistogramBinRandomVariable();    break;
+    ran_var_rep = std::make_shared<ExponentialRandomVariable>();          break;
+  case STD_BETA: case BETA:
+    ran_var_rep = std::make_shared<BetaRandomVariable>();                 break;
+  case STD_GAMMA: case GAMMA:
+    ran_var_rep = std::make_shared<GammaRandomVariable>();                break;
+  case GUMBEL:
+    ran_var_rep = std::make_shared<GumbelRandomVariable>();               break;
+  case FRECHET: 
+    ran_var_rep = std::make_shared<FrechetRandomVariable>();              break;
+  case WEIBULL:
+    ran_var_rep = std::make_shared<WeibullRandomVariable>();              break;
+  case HISTOGRAM_BIN:
+    ran_var_rep = std::make_shared<HistogramBinRandomVariable>();         break;
   // hyper-parameter distributions:
-  case INV_GAMMA:      ran_var_rep = new InvGammaRandomVariable();        break;
+  case INV_GAMMA:
+    ran_var_rep = std::make_shared<InvGammaRandomVariable>();             break;
   // discrete aleatory random variables:
-  case POISSON:        ran_var_rep = new PoissonRandomVariable();         break;
-  case BINOMIAL:       ran_var_rep = new BinomialRandomVariable();        break;
-  case NEGATIVE_BINOMIAL: ran_var_rep = new NegBinomialRandomVariable();  break;
-  case GEOMETRIC:      ran_var_rep = new GeometricRandomVariable();       break;
-  case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
+  case POISSON:
+    ran_var_rep = std::make_shared<PoissonRandomVariable>();              break;
+  case BINOMIAL:
+    ran_var_rep = std::make_shared<BinomialRandomVariable>();             break;
+  case NEGATIVE_BINOMIAL:
+    ran_var_rep = std::make_shared<NegBinomialRandomVariable>();          break;
+  case GEOMETRIC:
+    ran_var_rep = std::make_shared<GeometricRandomVariable>();            break;
+  case HYPERGEOMETRIC:
+    ran_var_rep = std::make_shared<HypergeometricRandomVariable>();       break;
   // continuous / discrete epistemic intervals: distinct from HistogramBin
   // in ability to support overlapping/disjoint intervals
   case CONTINUOUS_INTERVAL_UNCERTAIN:
-    ran_var_rep = new IntervalRandomVariable<Real>();                     break;
+    ran_var_rep = std::make_shared<IntervalRandomVariable<Real>>();       break;
   case DISCRETE_INTERVAL_UNCERTAIN:
-    ran_var_rep = new IntervalRandomVariable<int>();                      break;
+    ran_var_rep = std::make_shared<IntervalRandomVariable<int>>();        break;
   // aleatory / epistemic sets: distinct only in interpretation of set probs
   // (statistical expectations should not be used in epistemic case)
   case HISTOGRAM_PT_INT:    case DISCRETE_UNCERTAIN_SET_INT:
-    ran_var_rep = new DiscreteSetRandomVariable<int>();                   break;
+    ran_var_rep = std::make_shared<DiscreteSetRandomVariable<int>>();     break;
   case HISTOGRAM_PT_STRING: case DISCRETE_UNCERTAIN_SET_STRING:
-    ran_var_rep = new DiscreteSetRandomVariable<String>();                break;
+    ran_var_rep = std::make_shared<DiscreteSetRandomVariable<String>>();  break;
   case HISTOGRAM_PT_REAL:   case DISCRETE_UNCERTAIN_SET_REAL:
-    ran_var_rep = new DiscreteSetRandomVariable<Real>();                  break;
+    ran_var_rep = std::make_shared<DiscreteSetRandomVariable<Real>>();    break;
   default:
     PCerr << "Error: RandomVariable type " << ran_var_type << " not available."
 	  << std::endl;
-    ran_var_rep = NULL;                                                   break;
   }
 
   // some derived classes (especially template classes) cover multiple
@@ -160,73 +157,21 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
 }
 
 
-/** Copy constructor manages sharing of ranVarRep and incrementing
-    of referenceCount. */
-RandomVariable::RandomVariable(const RandomVariable& ran_var)
-{
-  // Increment new (no old to decrement)
-  ranVarRep = ran_var.ranVarRep;
-  if (ranVarRep) // Check for an assignment of NULL
-    ++ranVarRep->referenceCount;
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "RandomVariable::RandomVariable(RandomVariable&)"
-	<< std::endl;
-  if (ranVarRep)
-    PCout << "ranVarRep referenceCount = " << ranVarRep->referenceCount
-	  << std::endl;
-#endif
-}
+/** Copy constructor manages sharing of ranVarRep. */
+RandomVariable::RandomVariable(const RandomVariable& ran_var):
+  ranVarRep(ran_var.ranVarRep)
+{ /* empty ctor */ }
 
 
-/** Assignment operator decrements referenceCount for old ranVarRep,
-    assigns new ranVarRep, and increments referenceCount for new
-    ranVarRep. */
 RandomVariable RandomVariable::operator=(const RandomVariable& ran_var)
 {
-  if (ranVarRep != ran_var.ranVarRep) { // std case: old != new
-    // Decrement old
-    if (ranVarRep) // Check for null pointer
-      if (--ranVarRep->referenceCount == 0) 
-	delete ranVarRep;
-    // Assign and increment new
-    ranVarRep = ran_var.ranVarRep;
-    if (ranVarRep) // Check for an assignment of NULL
-      ++ranVarRep->referenceCount;
-  }
-  // else if assigning same rep, then do nothing since referenceCount
-  // should already be correct
-
-#ifdef REFCOUNT_DEBUG
-  PCout << "RandomVariable::operator=(RandomVariable&)" << std::endl;
-  if (ranVarRep)
-    PCout << "ranVarRep referenceCount = " << ranVarRep->referenceCount
-	  << std::endl;
-#endif
-
+  ranVarRep = ran_var.ranVarRep;
   return *this; // calls copy constructor since returned by value
 }
 
 
-/** Destructor decrements referenceCount and only deletes ranVarRep
-    when referenceCount reaches zero. */
 RandomVariable::~RandomVariable()
-{ 
-  // Check for NULL pointer 
-  if (ranVarRep) {
-    --ranVarRep->referenceCount;
-#ifdef REFCOUNT_DEBUG
-    PCout << "ranVarRep referenceCount decremented to "
-	  << ranVarRep->referenceCount << std::endl;
-#endif
-    if (ranVarRep->referenceCount == 0) {
-#ifdef REFCOUNT_DEBUG
-      PCout << "deleting ranVarRep" << std::endl;
-#endif
-      delete ranVarRep;
-    }
-  }
-}
+{ /* empty dtor */ }
 
 
 Real RandomVariable::cdf(Real x) const

@@ -218,6 +218,8 @@ create_parameter("ls_distance", mindist,
 
 void DIRECT::reset_DIRECT()
 {
+  using utilib::operator<<;
+
 if ( problem.empty() ) return;
 
 dimen = problem->num_real_vars;
@@ -1761,6 +1763,8 @@ BUG?
 
 direct::bvector DIRECT::Basis(int n, list<direct::NeighborHood> &Nsort, list<int> &hull)
 {
+  using utilib::operator<<;
+
 const double Estart = 0.2;
 const double alphstart = 0.3;
 const double interval = 10.0;

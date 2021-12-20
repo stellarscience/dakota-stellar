@@ -1,3 +1,12 @@
+#  _______________________________________________________________________
+#
+#  DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
+#  Copyright 2014-2020
+#  National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Dakota directory.
+#  _______________________________________________________________________
+
 # CMakeLists.txt for Dakota src
 
 # --- Initialize variables for Makefile export
@@ -30,9 +39,6 @@ list(APPEND DAKOTA_INCDIRS
   ${Dakota_BINARY_DIR}/src
   ${Dakota_SOURCE_DIR}/src ${Dakota_SOURCE_DIR}/packages
   )
-
-list(APPEND EXT_TPL_INCDIRS
-  ${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 
 add_definitions("-DHAVE_CONFIG_H")
 add_definitions("-DDISABLE_DAKOTA_CONFIG_H")
@@ -103,7 +109,7 @@ endif()
 # Generat DakotaBuildInfo.src if needed
 
 set(DAKOTA_BUILDINFO_PATH)
-if(DAKOTA_GIT_checkout)
+if(NOT DAKOTA_VERSION_FOUND)
   file( WRITE ${Dakota_BINARY_DIR}/generated/src/DakotaBuildInfo.cpp
     "// -- AUTO GENERATED FILE; DO NOT EDIT --
     #include \"DakotaBuildInfo.hpp\"
@@ -118,11 +124,6 @@ if(DAKOTA_GIT_checkout)
     message(STATUS
       "Found a generated file: ${CMAKE_CURRENT_SOURCE_DIR}/DakotaBuildInfo.cpp in the source tree; please remove!")
   endif() # incorrect location DakotaBuildInfo.cpp
-
-else() # source tree NOT a Git repo
-
-  message(STATUS "EXPECTED - DakotaBuildInfo.cpp found in the src tree.")
-
 endif()
 
 # -----------------
@@ -130,6 +131,8 @@ endif()
 
 # -----------------
 # Boost Adjustments
+
+# BMA TODO: Consider removing these, if possible
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "XL" OR
    ${CMAKE_CXX_COMPILER_ID} MATCHES "VisualAge")
@@ -200,39 +203,10 @@ if(HAVE_SYS_WAIT_H)
   add_definitions("-DHAVE_SYS_WAIT_H")
 endif(HAVE_SYS_WAIT_H)
 
-check_function_exists(usleep HAVE_USLEEP)
-if(HAVE_USLEEP)
-  add_definitions("-DHAVE_USLEEP")
-endif(HAVE_USLEEP)
-
 check_include_file(pdb.h HAVE_PDB_H)
 if(HAVE_PDB_H)
   add_definitions("-DHAVE_PDB_H")
 endif(HAVE_PDB_H)
-
-
-if(DAKOTA_F90)
-  # A future version of CMake should set the Fortran FIXED_FLAG automagically
-  if(${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
-    set(FIXED_FLAG "-fixed")
-  elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
-    set(FIXED_FLAG "-ffixed-form")
-  elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
-    set(FIXED_FLAG "-Mfixed")
-  elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "XL" OR
-         ${CMAKE_Fortran_COMPILER_ID} MATCHES "VisualAge")
-    set(FIXED_FLAG "-qfixed")
-  elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "SunPro")
-    set(FIXED_FLAG "-fixed")
-  endif()
-
-  add_definitions("-DDAKOTA_F90")
-  #include_directories(${Dakota_BINARY_DIR})
-
-  #list(APPEND CMAKE_Fortran_FLAGS ${FIXED_FLAG})
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${FIXED_FLAG}")
-endif(DAKOTA_F90)
-
 
 # WJB - ToDo: Improve logic to support WinDLL case
 option(DAKOTA_DL_SOLVER
@@ -330,42 +304,34 @@ if(DAKOTA_SCILAB)
   endif() # SCILAB_ROOT
 endif() #DAKOTA_SCILAB
 
-option(DAKOTA_PYTHON "Toggle Python interface, default is disabled" OFF)
-option(DAKOTA_PYTHON_NUMPY
-  "Attempt to link to Python NumPy interface? Default: yes." ON)
-if(DAKOTA_PYTHON)
-  include(FindPythonLibs)
+if(DAKOTA_PYTHON_DIRECT_INTERFACE)
 
-  if(PYTHONLIBS_FOUND)
-    # Have a valid Python.h and libraries
-    message(STATUS "Using Python headers in: ${PYTHON_INCLUDE_DIRS}")
-    message(STATUS "Using Python libraries in: ${PYTHON_LIBRARIES}")
-    list(APPEND EXT_TPL_INCDIRS ${PYTHON_INCLUDE_DIRS})
-    add_definitions("-DDAKOTA_PYTHON")
-    list(APPEND EXT_TPL_LIBS ${PYTHON_LIBRARIES})
+  message(STATUS "Dakota Python direct interface using:\n"
+    "     Include dirs: ${Python_INCLUDE_DIRS}\n"
+    "     Libraries:    ${Python_LIBRARIES}"
+    )
 
-    if(DAKOTA_PYTHON_NUMPY)
-      include(FindNUMARRAY)
-      if(PYTHON_NUMARRAY_FOUND)
-	# Have a valid arrayobject.h
-	message(STATUS "Using NumPy headers in: ${PYTHON_NUMARRAY_INCLUDE_DIR}")
-	list(APPEND EXT_TPL_INCDIRS ${PYTHON_NUMARRAY_INCLUDE_DIR})
-	add_definitions("-DDAKOTA_PYTHON_NUMPY")
-      else()
-	message("Python NumPy requested, but headers/libaries not found; "
-	  "disabling NumPy")
-      endif(PYTHON_NUMARRAY_FOUND)
-    else()
-      message(STATUS "Disabling NumPy interface due to DAKOTA_PYTHON_NUMPY = "
-	"${DAKOTA_PYTHON_NUMPY}")
-    endif()
-  else()
-    message(SEND_ERROR 
-      "Python requested via DAKOTA_PYTHON, but Python headers/libraries "
-      "associated with Python installed with ${PYTHON_EXECUTABLE} not found"
-      )
+  # TODO: Use imported targets for include/lib if we can figure them out
+  # TODO: Use target_definitions
+  # If not, use  Python_LIBRARY_DIRS
+
+  list(APPEND EXT_TPL_INCDIRS ${Python_INCLUDE_DIRS})
+  add_definitions("-DDAKOTA_PYTHON")
+  list(APPEND EXT_TPL_LIBS ${Python_LIBRARIES})
+
+  # Pybind11 is also included alongside older Python interface
+  list(APPEND EXT_TPL_INCDIRS ${pybind11_INCLUDE_DIR})
+  add_definitions("-DDAKOTA_PYBIND11")
+
+  if (DAKOTA_PYTHON_DIRECT_INTERFACE_NUMPY)
+    message(STATUS "Dakota Python direct interface using NumPy:\n"
+      "     Include dirs: ${Python_NumPy_INCLUDE_DIRS}")
+    list(APPEND EXT_TPL_INCDIRS ${Python_NumPy_INCLUDE_DIRS})
+    add_definitions("-DDAKOTA_PYTHON_NUMPY")
   endif()
-endif(DAKOTA_PYTHON)
+
+endif()
+
 
 if(DAKOTA_MODELCENTER)
   add_definitions("-DDAKOTA_MODELCENTER")
@@ -461,9 +427,10 @@ set(db_src ProblemDescDB.cpp NIDRProblemDescDB.cpp DataEnvironment.cpp
 ## Model sources.
 set(model_src DakotaModel.cpp SimulationModel.cpp NestedModel.cpp
   RecastModel.cpp DataTransformModel.cpp ProbabilityTransformModel.cpp
-  ScalingModel.cpp WeightingModel.cpp SurrogateModel.cpp DataFitSurrModel.cpp
-  HierarchSurrModel.cpp ActiveSubspaceModel.cpp RandomFieldModel.cpp DiscrepancyCorrection.cpp
-  AdaptedBasisModel.cpp)
+  ScalingModel.cpp ScalingOptions.cpp WeightingModel.cpp SurrogateModel.cpp
+  DataFitSurrModel.cpp HierarchSurrModel.cpp NonHierarchSurrModel.cpp
+  RandomFieldModel.cpp SubspaceModel.cpp ActiveSubspaceModel.cpp
+  AdaptedBasisModel.cpp DiscrepancyCorrection.cpp)
 
 ## Constraint sources.
 set(constraint_src DakotaConstraints.cpp MixedVarConstraints.cpp
@@ -495,12 +462,25 @@ if(HAVE_SURFPACK)
   list(APPEND DAKOTA_PKG_LIBS surfpack surfpack_fortran)
 endif(HAVE_SURFPACK)
 
+if(DAKOTA_MODULE_SURROGATES)
+  add_definitions("-DHAVE_DAKOTA_SURROGATES")
+  list(APPEND interface_src DakotaSurrogates.cpp DakotaSurrogatesGP.cpp
+    DakotaSurrogatesPoly.cpp) # SharedGPApproxData.cpp)
+  # TODO: Change so libraries in this dir depend on Eigen3::Eigen target
+  list(APPEND DAKOTA_INCDIRS 
+    ${Dakota_SOURCE_DIR}/src/util
+    ${Dakota_SOURCE_DIR}/src/surrogates
+    ${DAKOTA_EIGEN3_INCLUDE_DIR}
+    )
+  add_definitions("-DHAVE_EIGEN -DEIGEN_MPL2_ONLY")
+endif(DAKOTA_MODULE_SURROGATES)
+
 if(DAKOTA_MATLAB)
   list(APPEND interface_src MatlabInterface.cpp)
 endif()
 
-if(DAKOTA_PYTHON)
-  list(APPEND interface_src PythonInterface.cpp)
+if(DAKOTA_PYTHON_DIRECT_INTERFACE)
+  list(APPEND interface_src PythonInterface.cpp Pybind11Interface.cpp)
 endif()
 
 if(DAKOTA_SCILAB)
@@ -523,10 +503,13 @@ set(iterator_src DakotaIterator.cpp DakotaAnalyzer.cpp DakotaPStudyDACE.cpp
     NonDIntegration.cpp NonDCubature.cpp NonDQuadrature.cpp NonDSparseGrid.cpp
     NonDExpansion.cpp NonDPolynomialChaos.cpp NonDStochCollocation.cpp
     NonDMultilevelPolynomialChaos.cpp NonDMultilevelStochCollocation.cpp
-    NonDCalibration.cpp NonDBayesCalibration.cpp NonDWASABIBayesCalibration.cpp
-    NonDSampling.cpp NonDLHSSampling.cpp
-    NonDMultilevelSampling.cpp NonDAdaptImpSampling.cpp NonDGPImpSampling.cpp 
-    NonDPOFDarts.cpp NonDRKDDarts.cpp
+    NonDSurrogateExpansion.cpp NonDCalibration.cpp NonDBayesCalibration.cpp
+    NonDWASABIBayesCalibration.cpp NonDSampling.cpp NonDLHSSampling.cpp
+    NonDEnsembleSampling.cpp NonDHierarchSampling.cpp NonDMultilevelSampling.cpp
+    NonDControlVariateSampling.cpp NonDMultilevControlVarSampling.cpp
+    NonDNonHierarchSampling.cpp NonDACVSampling.cpp
+    NonDMultifidelitySampling.cpp NonDAdaptImpSampling.cpp
+    NonDGPImpSampling.cpp NonDPOFDarts.cpp NonDRKDDarts.cpp
     DakotaMinimizer.cpp DakotaOptimizer.cpp DakotaTraitsBase.cpp
     DakotaLeastSq.cpp NonlinearCGOptimizer.cpp 
     SurrBasedMinimizer.cpp SurrBasedLocalMinimizer.cpp SurrBasedLevelData.cpp
@@ -537,7 +520,10 @@ set(iterator_src DakotaIterator.cpp DakotaAnalyzer.cpp DakotaPStudyDACE.cpp
 )
 set(Dakota_src_fortran lawson_hanson1.f)
 if(DAKOTA_F90)
+  add_definitions("-DDAKOTA_F90")
   list(APPEND Dakota_src_fortran lawson_hanson2.f90)
+  set_source_files_properties(lawson_hanson2.f90
+    PROPERTIES Fortran_FORMAT FIXED)
 endif(DAKOTA_F90)
 
 if(HAVE_ACRO)
@@ -606,16 +592,10 @@ if(HAVE_QUESO)
   endif()
 endif(HAVE_QUESO)
 
-# Boost is required, but have to protect against empty DIR list
-if(Boost_FOUND)
-  list(APPEND EXT_TPL_LIBDIRS ${Boost_LIBRARY_DIRS})
-  list(APPEND EXT_TPL_LIBS ${Boost_LIBRARIES})
-endif()
-
 CheckPackage(C3)
 if(HAVE_C3)
-  set(iterator_src ${iterator_src} NonDC3FunctionTrain.cpp)
-  list(APPEND interface_src C3Approximation.cpp SharedC3ApproxData.cpp)
+  set(iterator_src ${iterator_src} NonDC3FunctionTrain.cpp NonDMultilevelFunctionTrain.cpp)
+  list(APPEND interface_src C3Approximation.cpp SharedC3ApproxData.cpp C3FnTrainData.cpp)
   # BMA: disabled these includes as we aren't including c3.h
   ##list(APPEND DAKOTA_INCDIRS
   ##  ${C3_SOURCE_DIR}/include
@@ -719,11 +699,20 @@ endif(HAVE_NOMAD)
 
 if(HAVE_NOWPAC)
   add_definitions("-DHAVE_NOWPAC")
-  set(DAKOTA_NOWPAC_ROOT_DIR   "${Dakota_SOURCE_DIR}/packages/external/nowpac")
-  set(DAKOTA_NOWPAC_NLOPT_ROOT "${Dakota_BINARY_DIR}/packages/external/nowpac/nowpac/external/nlopt")
-  set(DAKOTA_NOWPAC_EIGEN_ROOT "${Dakota_BINARY_DIR}/packages/external/nowpac/nowpac/external/eigen")
-  list(APPEND DAKOTA_INCDIRS ${DAKOTA_NOWPAC_ROOT_DIR}/include ${DAKOTA_NOWPAC_NLOPT_ROOT}/include ${DAKOTA_NOWPAC_EIGEN_ROOT}/include/eigen3)
-  link_directories(${DAKOTA_NOWPAC_ROOT_DIR}/lib ${DAKOTA_NOWPAC_NLOPT_ROOT}/lib) # ${DAKOTA_NOWPAC_ROOT_DIR}/include ${DAKOTA_NOWPAC_NLOPT_ROOT}/include
+  if(NOT DAKOTA_NOWPAC_ROOT_DIR)
+    set(DAKOTA_NOWPAC_ROOT_DIR   "${Dakota_SOURCE_DIR}/packages/external/snowpac")
+  endif(NOT DAKOTA_NOWPAC_ROOT_DIR)
+  if( NOT DAKOTA_NOWPAC_NLOPT_ROOT)
+    set(DAKOTA_NOWPAC_NLOPT_ROOT "${Dakota_BINARY_DIR}/packages/external/snowpac/nowpac/external/nlopt")
+  endif(NOT DAKOTA_NOWPAC_NLOPT_ROOT)
+  message(STATUS "NOWPAC ROOT DIR ${DAKOTA_NOWPAC_ROOT_DIR}")
+  message(STATUS "NOWPAC NLOPT DIR ${DAKOTA_NOWPAC_NLOPT_ROOT}")
+  list(APPEND DAKOTA_INCDIRS ${DAKOTA_NOWPAC_ROOT_DIR}/include
+    ${DAKOTA_NOWPAC_NLOPT_ROOT}/include ${DAKOTA_EIGEN3_INCLUDE_DIR})
+  link_directories(${DAKOTA_NOWPAC_ROOT_DIR}/lib
+    ${DAKOTA_NOWPAC_NLOPT_ROOT}/lib)
+  # ${DAKOTA_NOWPAC_ROOT_DIR}/include ${DAKOTA_NOWPAC_NLOPT_ROOT}/include
+ 
   set(iterator_src ${iterator_src} NOWPACOptimizer.cpp)
   list(APPEND DAKOTA_PKG_LIBS nowpac nlopt)
   #list(APPEND EXPORT_TARGETS nowpac nlopt)
@@ -735,11 +724,11 @@ if(HAVE_NPSOL)
   list(APPEND iterator_src SOLBase.cpp NPSOLOptimizer.cpp NLSSOLLeastSq.cpp)
 
   if(NOT APPLE)
-    list(APPEND Dakota_src_fortran npoptn_wrapper.f)
+    list(APPEND Dakota_src_fortran sol_optn_wrapper.f)
   else()
-    # ToDo: Debug unusual Mac build error when npoptn_wrapper.f is appended
+    # ToDo: Debug unusual Mac build error when sol_optn_wrapper.f is appended
     #       to the Dakota_src_fortran list rather than the iterator_src list
-    list(APPEND iterator_src npoptn_wrapper.f)
+    list(APPEND iterator_src sol_optn_wrapper.f)
   endif()
 endif(HAVE_NPSOL)
 
@@ -758,6 +747,27 @@ if(HAVE_OPTPP)
   list(APPEND DAKOTA_PKG_LIBS optpp)
   list(APPEND EXPORT_TARGETS optpp)
 endif(HAVE_OPTPP)
+
+if(HAVE_MUQ)
+  ##  #SET( CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} ${Dakota_SOURCE_DIR}/packages/external/muq2/CMake)
+  ##  include(${Dakota_SOURCE_DIR}/packages/external/muq2/CMake/MUQ_PRIVATE/MUQ_PRIVATEConfig.cmake)
+  ##  list(APPEND DAKOTA_INCDIRS ${Dakota_SOURCE_DIR}/packages/external/muq2/include)
+  ##  list(APPEND DAKOTA_INCDIRS ${MUQ_INCLUDE_DIRS})
+  ##  #link_directories($(MUQ_LIBRARY_DIR))
+  ##  list(APPEND DAKOTA_PKG_LIBS ${MUQ_LIBRARIES})
+  ##  list(APPEND DAKOTA_LIBDIRS ${MUQ_LIBRARY_DIR})
+  ##  #add_subdirectory(surrogates/models/src)
+  ##  #add_subdirectory(surrogates/models/unit)
+
+  # BMA TODO: Would prefer find_package / config mode as RWH demoed above
+  # lib/ dir isn't sufficiently general, though MUQ hard-codes it
+  # BMA TODO: Make sure the exports and install rules work properly
+  add_definitions("-DHAVE_MUQ")
+  set(iterator_src ${iterator_src} NonDMUQBayesCalibration.cpp)
+  list(APPEND DAKOTA_INCDIRS ${Dakota_BINARY_DIR}/packages/external/muq2/include)
+  list(APPEND DAKOTA_LIBDIRS ${Dakota_BINARY_DIR}/packages/external/muq2/lib)
+  list(APPEND DAKOTA_PKG_LIBS muqUtilities muqModeling muqOptimization muqApproximation muqSamplingAlgorithms muqInference)
+endif()
 
 if(HAVE_ROL)
   list(APPEND DAKOTA_INCDIRS ${ROL_INCLUDE_DIRS})
@@ -829,20 +839,18 @@ endif(HAVE_AMPL)
 # with gslcblas
 if(DAKOTA_HAVE_GSL)
   list(APPEND EXT_TPL_INCDIRS "${GSL_INCLUDE_DIRS}")
-  list(APPEND EXT_TPL_LIBDIRS "${GSL_LIBRARY_DIRS}")
-  # GSL_LIBRARIES may or may not include a CBLAS library, depending on
-  # top-level option GSL_WITHOUT_CBLAS
-  list(APPEND EXT_TPL_LIBS ${GSL_LIBRARIES})
   if(DAKOTA_CBLAS_LIBS) 
-    list(APPEND EXT_TPL_LIBS ${DAKOTA_CBLAS_LIBS})
+    list(APPEND EXT_TPL_LIBS ${GSL_LIBRARY} ${DAKOTA_CBLAS_LIBS})
+  else()
+    list(APPEND EXT_TPL_LIBS ${GSL_LIBRARIES})
   endif()
 endif(DAKOTA_HAVE_GSL)
 
 list(APPEND EXT_TPL_LIBS ${LAPACK_LIBS} ${BLAS_LIBS})
 # BMA: Should probably use only ATLAS when enabling C3...
-if(HAVE_C3)
+if(HAVE_C3 AND c3_atlas_lib)
   message(WARNING "Dakota/C3: Duplicate include of ATLAS and BLAS/LAPACK")
-  list(INSERT EXT_TPL_LIBS 0 "${atlas_lib}")
+  list(INSERT EXT_TPL_LIBS 0 "${c3_atlas_lib}")
 endif()
 
 # Now that packages and TPLs are processed, set include/link directories
@@ -860,8 +868,20 @@ set_target_properties(dakota_src_fortran PROPERTIES INCLUDE_DIRECTORIES "")
 list(APPEND EXPORT_TARGETS dakota_src_fortran)
 
 add_library(dakota_src ${Dakota_src})
-target_link_libraries(dakota_src dakota_src_fortran)
+# When using Boost imported targets, we only link libraries using them,
+# then rely on transitive library linking from CMake
+target_link_libraries(dakota_src dakota_src_fortran ${DAKOTA_BOOST_TARGETS})
+if(DAKOTA_MODULE_SURROGATES)
+  target_link_libraries(dakota_src dakota_surrogates)
+  #list(APPEND DAKOTA_PKG_LIBS dakota_surrogates)
+  list(APPEND EXPORT_TARGETS dakota_surrogates dakota_util)
+  list(APPEND DAKOTA_LIBS dakota_surrogates dakota_util)
+endif()
+
 DakotaApplyMPISettings(dakota_src)
+if(DAKOTA_DISABLE_FPE_TRAPS)
+  target_compile_definitions(dakota_src PUBLIC DAKOTA_DISABLE_FPE_TRAPS)
+endif()
 if(HAVE_AMPL)
   # Enforce AMPL config header creation prior to compiling dakota sources
   add_dependencies(dakota_src amplsolver)
@@ -875,7 +895,9 @@ list (APPEND DAKOTA_LIBS dakota_src dakota_src_fortran)
 set(DAKOTA_ALL_LIBS ${DAKOTA_LIBS})
 list(APPEND DAKOTA_ALL_LIBS ${DAKOTA_PKG_LIBS})
 list(APPEND DAKOTA_ALL_LIBS ${DAKOTA_EXTPROJ_LIBS})
+# We do not put Boost targets in EXT_TPL_LIBS
 list(APPEND DAKOTA_ALL_LIBS ${EXT_TPL_LIBS})
+
 
 # --- Explicit dependencies for Dakota core libraries
 
@@ -884,9 +906,17 @@ if(HAVE_ACRO)
 endif()
 
 if(HAVE_NOWPAC)
-  # Require Eigen and NLOPT ExternalProjects to be downloaded, built,
-  # and installed before building Dakota sources
-  add_dependencies(dakota_src EIGEN NLOPT)
+  # NLOPT ExternalProject to be downloaded, built, and installed
+  # before building Dakota sources
+  if(NOT HAVE_EXTERNAL_NOWPAC)
+    add_dependencies(dakota_src NLOPT)
+  endif()
+  # BMA: Why are we linking to something in a source dir?
+  #target_link_libraries(dakota_src ${DAKOTA_NOWPAC_ROOT_DIR}/snowpac/lib/libnowpac.a)
+  # This will only work for in-build NOWPACK for now:
+  target_link_libraries(dakota_src ${NOWPAC_BINARY_DIR}/nowpac/lib/libnowpac.a)
+  # Can't do following as not exported
+  #target_link_libraries(dakota_src nowpac)
 endif()
 
 # EXTRA_TPL_LIBS doesn't suffice, due to symbols needed by ParallelLibrary
@@ -953,6 +983,9 @@ install(TARGETS dakota_src_fortran EXPORT ${ExportTarget} DESTINATION lib)
 install(TARGETS dakota_src EXPORT ${ExportTarget} DESTINATION lib)
 install(TARGETS dakota dakota_restart_util EXPORT DESTINATION bin)
 install(TARGETS dakota_library_mode DESTINATION bin)
+#if(DAKOTA_MODULE_SURROGATES)
+#  install(TARGETS dakota_surrogates EXPORT ${ExportTarget} DESTINATION lib)
+#endif(DAKOTA_MODULE_SURROGATES)
 file(GLOB Dakota_hdr *.hpp *.h)
 # We don't install NIDR_keywds0.hpp as is not needed by clients
 install(FILES ${Dakota_hdr} ${Dakota_BINARY_DIR}/generated/src/NIDR_keywds.hpp
@@ -1003,11 +1036,46 @@ set(Dakota_LIBRARIES ${DAKOTA_LIBS} ${DAKOTA_PKG_LIBS} ${DAKOTA_EXTPROJ_LIBS}
   CACHE INTERNAL "Dakota libraries") 
 
 # Libraries that will be on the system
-set(Dakota_TPL_LIBRARIES ${EXT_TPL_LIBS}  
+# We add Boost libraries by path/name here for Makefile.export purposes
+set(Dakota_TPL_LIBRARIES ${EXT_TPL_LIBS} ${Boost_LIBRARIES}
   CACHE INTERNAL "Dakota TPL libraries") 
  
 message(STATUS "Dakota_LIBRARIES: ${Dakota_LIBRARIES}")
 message(STATUS "Dakota_TPL_LIBRARIES: ${Dakota_TPL_LIBRARIES}")
+
+
+# Top-level dakota.environment Python module
+if(DAKOTA_PYBIND11)
+  # NOTE: Library name "environment" is really generic due to overly
+  # simple Python packaging scheme we're using; revisit.
+  # TODO: Need to always compile libs PIC when using Python
+  # TODO: Consider -undefined dynamic_lookup link flag on Mac
+  pybind11_add_module(environment dakota_python.cpp)
+  # TODO: transitive includes when merging from devel
+#  target_include_directories(surrogates PRIVATE ${Teuchos_INCLUDE_DIRS})
+  target_link_libraries(environment PRIVATE dakota_src
+    ${Dakota_LIBRARIES} ${Dakota_TPL_LIBRARIES}
+    )
+
+  # The generated link.txt has too long a single argument to RPATH
+  if(DAKOTA_SPLIT_ENVIRONMENT_LINK_TXT)
+    add_custom_command(TARGET environment PRE_LINK
+      COMMAND ${CMAKE_COMMAND}
+      ARGS -P ${Dakota_SOURCE_DIR}/cmake/DakotaSplitEnvironmentLinkTxt.cmake
+    )
+  endif()
+
+  if (APPLE)
+    set_target_properties(environment PROPERTIES INSTALL_RPATH
+      "@rpath;@rpath/../../../../../lib;@rpath/../../../../../bin")
+  elseif (UNIX)
+    set_target_properties(environment PROPERTIES INSTALL_RPATH
+      "\$ORIGIN;\$ORIGIN/../../../../../lib;\$ORIGIN/../../../../../bin")
+  endif()
+  install(TARGETS environment EXPORT ${ExportTarget}
+    DESTINATION share/dakota/Python/dakota/environment/)
+  install(FILES __init__.py DESTINATION share/dakota/Python/dakota/environment)
+endif()
 
 
 if (DAKOTA_API_JAVA)

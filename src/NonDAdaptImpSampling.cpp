@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -47,7 +48,7 @@ NonDAdaptImpSampling(ProblemDescDB& problem_db, Model& model):
   if (!sampleType)
     sampleType = SUBMETHOD_LHS;
 
-  finalMomentsType = NO_MOMENTS;
+  finalMomentsType = Pecos::NO_MOMENTS;
 
   // size of refinement batches is separate from initial LHS size (numSamples)
   const IntVector& db_refine_samples = 
@@ -63,8 +64,8 @@ NonDAdaptImpSampling(ProblemDescDB& problem_db, Model& model):
   }
 
   statsFlag = true;
-  uSpaceModel.assign_rep(new ProbabilityTransformModel(iteratedModel,
-    STD_NORMAL_U, useModelBounds), false);
+  uSpaceModel.assign_rep(std::make_shared<ProbabilityTransformModel>
+			 (iteratedModel, STD_NORMAL_U, useModelBounds));
 
   // maxEvalConcurrency defined from initial LHS size (numSamples)
 }
@@ -85,14 +86,14 @@ NonDAdaptImpSampling(Model& model, unsigned short sample_type,
   useModelBounds(use_model_bounds), invertProb(false),
   trackExtremeValues(track_extreme), refineSamples(refine_samples)
 {
-  finalMomentsType = NO_MOMENTS;
+  finalMomentsType = Pecos::NO_MOMENTS;
 
   if (x_space_model)
     // This option is currently unused.  If used in the future, care must be
     // taken to ensure that natafTransform.{x,u}_types() inherited from above
     // are synchronized with those from the calling context.
-    uSpaceModel.assign_rep(new ProbabilityTransformModel(model,
-      STD_NORMAL_U, useModelBounds, 5.), false);
+    uSpaceModel.assign_rep(std::make_shared<ProbabilityTransformModel>
+			   (model, STD_NORMAL_U, useModelBounds, 5.));
   else
     uSpaceModel = model;
 
@@ -525,7 +526,7 @@ void NonDAdaptImpSampling::converge_statistics(bool cov_flag)
   RealVectorArray var_samples_u(refineSamples);
   RealVector fn_samples(refineSamples);
   size_t total_samples = 0,
-    max_iter    = (maxIterations < 0) ? 100 : maxIterations, // default to 100
+    max_iter = (maxIterations == SZ_MAX) ? 100 : maxIterations,// default to 100
     max_samples = refineSamples * max_iter;
   Real sum_var = 0., cov, old_cov = 0., p, sum_p = 0.,
     old_p = (invertProb) ? 1. - probEstimate : probEstimate;

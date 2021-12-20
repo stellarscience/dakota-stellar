@@ -11,7 +11,7 @@
 #endif
 
 #include "pds.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 int pdsdone(int maxitr, int count, int n, double stol, double *length,
 	    double *v0, double *conv, double finit, double fprev,

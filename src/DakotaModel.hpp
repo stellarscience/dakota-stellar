@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -23,10 +24,12 @@
 //#include "DakotaInterface.hpp"
 #include "DakotaResponse.hpp"
 #include "MultivariateDistribution.hpp"
+#include "ScalingOptions.hpp"
 
 namespace Pecos { /* forward declarations */
 class SurrogateData;
 class ProbabilityTransformation;
+class ActiveKey;
 }
 
 namespace Dakota {
@@ -43,44 +46,6 @@ class Approximation;
 class SharedApproxData;
 class DiscrepancyCorrection;
 class EvaluationStore;
-
-/// Simple container for user-provided scaling data, possibly expanded by replicates through the models
-class ScalingOptions {
-public:
-  /// default ctor: no scaling specified
-  ScalingOptions() { /* empty ctor */ };
-  /// standard ctor: scaling from problem DB
-  ScalingOptions(const StringArray& cv_st, RealVector cv_s,
-                 const StringArray& pri_st, RealVector pri_s,
-                 const StringArray& nln_ineq_st, RealVector nln_ineq_s,
-                 const StringArray& nln_eq_st, RealVector nln_eq_s,
-                 const StringArray& lin_ineq_st, RealVector lin_ineq_s,
-                 const StringArray& lin_eq_st, RealVector lin_eq_s):
-    cvScaleTypes(cv_st), cvScales(cv_s), 
-    priScaleTypes(pri_st), priScales(pri_s),
-    nlnIneqScaleTypes(nln_ineq_st), nlnIneqScales(nln_ineq_s),
-    nlnEqScaleTypes(nln_eq_st), nlnEqScales(nln_eq_s),
-    linIneqScaleTypes(lin_ineq_st), linIneqScales(lin_ineq_s),
-    linEqScaleTypes(lin_eq_st), linEqScales(lin_eq_s) 
-  { /* empty ctor */ }
-  
-  // continuous variables scales
-  StringArray cvScaleTypes;
-  RealVector  cvScales;
-  // primary response scales
-  StringArray priScaleTypes;
-  RealVector  priScales;
-  // nonlinear constraint scales
-  StringArray nlnIneqScaleTypes;
-  RealVector  nlnIneqScales;
-  StringArray nlnEqScaleTypes;
-  RealVector  nlnEqScales;
-  // linear constraint scales
-  StringArray linIneqScaleTypes;
-  RealVector  linIneqScales;
-  StringArray linEqScaleTypes;
-  RealVector  linEqScales;               
-};
 
 
 /// Base class for the model class hierarchy.
@@ -136,51 +101,48 @@ public:
   /// dive through model recursions that may bypass some components.
   virtual Model& subordinate_model();
 
-  /// set the active multi-index key within surrogate data, grid driver,
+  /// set the active model key within surrogate data, grid driver,
   /// and approximation classes that support the management of multiple
   /// approximation states within surrogate models
-  virtual void active_model_key(const UShortArray& mi_key);
-  /// reset by removing all multi-index keys within surrogate data, grid
-  /// driver, and approximation classes that support the management of
-  /// multiple approximation states within surrogate models
+  virtual void active_model_key(const Pecos::ActiveKey& key);
+  /// reset by removing all model keys within surrogate data, grid driver,
+  /// and approximation classes that support the management of multiple
+  /// approximation states within surrogate models
   virtual void clear_model_keys();
 
   /// return number of unique response functions (managing any aggregations)
   virtual size_t qoi() const;
 
   /// return the active approximation sub-model in surrogate models
-  virtual Model& surrogate_model();
-  /// set the indices that define the active approximation sub-model
-  /// within surrogate models
-  virtual void surrogate_model_key(unsigned short lf_model_index,
-				 unsigned short lf_soln_lev_index = USHRT_MAX);
-  /// set the index pair that defines the active approximation sub-model
-  /// within surrogate models
-  virtual void surrogate_model_key(const UShortArray& lf_key);
-  /// return the indices of the active approximation sub-model within
-  /// surrogate models
-  virtual const UShortArray& surrogate_model_key() const;
-
+  virtual Model& surrogate_model(size_t i = _NPOS);
+  /// return the active approximation sub-model in surrogate models
+  virtual const Model& surrogate_model(size_t i = _NPOS) const;
   /// return the active truth sub-model in surrogate models
   virtual Model& truth_model();
-  /// set the indices that define the active truth sub-model within
-  /// surrogate models
-  virtual void truth_model_key(unsigned short hf_model_index,
-			       unsigned short hf_soln_lev_index = USHRT_MAX);
-  /// set the index pair that defines the active truth sub-model within
-  /// surrogate models
-  virtual void truth_model_key(const UShortArray& hf_key);
-  /// return the indices of the active truth sub-model within surrogate models
-  virtual const UShortArray& truth_model_key() const;
+  /// return the active truth sub-model in surrogate models
+  virtual const Model& truth_model() const;
+
+  /// identify if hierarchy is across model forms
+  virtual bool multifidelity() const;
+  /// identify if hierarchy is across resolution levels
+  virtual bool multilevel() const;
+  /// identify if hierarchy is across both model forms and resolution levels
+  virtual bool multilevel_multifidelity() const;
+
+  /// return precedence for hierarchy definition, model forms or
+  /// resolution levels
+  virtual bool multifidelity_precedence() const;
+  /// assign precedence for hierarchy definition (model forms or
+  /// resolution levels) as determined from algorithm context
+  virtual void multifidelity_precedence(bool mf_prec,
+					bool update_default = false);
 
   /// portion of subordinate_models() specific to derived model classes
   virtual void derived_subordinate_models(ModelList& ml, bool recurse_flag);
   /// resize vars/resp if needed from the bottom up
-  virtual void resize_from_subordinate_model(size_t depth = 
-    std::numeric_limits<size_t>::max());
+  virtual void resize_from_subordinate_model(size_t depth = SZ_MAX);
   /// propagate vars/labels/bounds/targets from the bottom up
-  virtual void update_from_subordinate_model(size_t depth = 
-    std::numeric_limits<size_t>::max());
+  virtual void update_from_subordinate_model(size_t depth = SZ_MAX);
   /// return the interface employed by the derived model class, if present:
   /// SimulationModel::userDefinedInterface, DataFitSurrModel::approxInterface,
   /// or NestedModel::optionalInterface
@@ -189,16 +151,30 @@ public:
   /// number of discrete levels within solution control (SimulationModel)
   virtual size_t solution_levels(bool lwr_bnd = true) const;
   /// activate a particular level within the solution level control
-  /// and return the cost estimate (SimulationModel)
-  virtual void solution_level_index(unsigned short index);
+  /// (SimulationModel)
+  virtual void solution_level_cost_index(size_t index);
   /// return currently active level within the solution level control
   /// (SimulationModel)
-  virtual unsigned short solution_level_index() const;
+  virtual size_t solution_level_cost_index() const;
   /// return ordered cost estimates across solution levels (SimulationModel)
   virtual RealVector solution_level_costs() const;
   /// return currently active cost estimate from solution level
   /// control (SimulationModel)
   virtual Real solution_level_cost() const;
+
+  /// return type of solution control variable
+  virtual short solution_control_variable_type() const;
+  /// return index of solution control variable within all variables
+  virtual size_t solution_control_variable_index() const;
+  /// return index of solution control variable within all discrete variables
+  virtual size_t solution_control_discrete_variable_index() const;
+
+  /// return the active (integer) value of the solution control
+  virtual int    solution_level_int_value() const;
+  /// return the active (string) value of the solution control
+  virtual String solution_level_string_value() const;
+  /// return the active (real) value of the solution control
+  virtual Real   solution_level_real_value() const;
 
   /// set the relative weightings for multiple objective functions or least
   /// squares terms
@@ -206,7 +182,7 @@ public:
 					   bool recurse_flag = true);
 
   /// set the (currently active) surrogate function index set
-  virtual void surrogate_function_indices(const IntSet& surr_fn_indices);
+  virtual void surrogate_function_indices(const SizetSet& surr_fn_indices);
 
   /// return probability transformation employed by the Model (forwarded along
   /// to ProbabilityTransformModel recasting)
@@ -269,8 +245,13 @@ public:
   /// anchor response at vars; rebuild if needed
   virtual bool build_approximation(const Variables& vars,
 				   const IntResponsePair& response_pr);
-  /// update an existing SurrogateModel approximation
+
+  /// incremental rebuild of an existing SurrogateModel approximation
   virtual void rebuild_approximation();
+  /// incremental rebuild of an existing SurrogateModel approximation
+  virtual void rebuild_approximation(const IntResponsePair& response_pr);
+  /// incremental rebuild of an existing SurrogateModel approximation
+  virtual void rebuild_approximation(const IntResponseMap& resp_map);
 
   /// replace the approximation data within an existing surrogate
   /// based on data updates propagated elsewhere
@@ -296,13 +277,29 @@ public:
 				    const IntResponsePair& response_pr,
 				    bool rebuild_flag);
   /// append multiple points to an existing surrogate's data
+  virtual void append_approximation(const RealMatrix& samples,
+				    const IntResponseMap& resp_map,
+				    bool rebuild_flag);
+  /// append multiple points to an existing surrogate's data
   virtual void append_approximation(const VariablesArray& vars_array,
 				    const IntResponseMap& resp_map,
 				    bool rebuild_flag);
   /// append multiple points to an existing surrogate's data
-  virtual void append_approximation(const RealMatrix& samples,
-				    const IntResponseMap& resp_map,
+  virtual void append_approximation(const IntVariablesMap& vars_map,
+				    const IntResponseMap&  resp_map,
 				    bool rebuild_flag);
+
+  /// replace the response for a single point (based on eval id from
+  /// response_pr) within an existing surrogate's data
+  virtual void replace_approximation(const IntResponsePair& response_pr,
+				     bool rebuild_flag);
+  /// replace the responses for a set of points (based on eval ids from
+  /// resp_map) within an existing surrogate's data
+  virtual void replace_approximation(const IntResponseMap& resp_map,
+				     bool rebuild_flag);
+  /// assigns a flag to track evaluation ids within surrogate data,
+  /// enabling id-based lookups for data replacement
+  virtual void track_evaluation_ids(bool track);
 
   /// remove the previous data set addition to a surrogate (e.g., due
   /// to a previous append_approximation() call); flag manages storing
@@ -325,6 +322,15 @@ public:
   /// clear inactive approximations (finalization + combination completed)
   virtual void clear_inactive();
 
+  /// query the approximation for available advancement in resolution controls
+  /// (order, rank, etc.); an input to adaptive refinement strategies
+  virtual bool advancement_available();
+  /// query the approximation for updates in formulation, requiring a rebuild
+  /// even if no updates to the build data
+  virtual bool formulation_updated() const;
+  /// assign the status of approximation formulation updates
+  virtual void formulation_updated(bool update);
+
   /// execute the DACE iterator (prior to building/appending the approximation)
   virtual void run_dace();
 
@@ -345,8 +351,7 @@ public:
   virtual std::vector<Approximation>& approximations();
   /// retrieve a SurrogateData instance from a particular Approximation
   /// instance within the ApproximationInterface of a DataFitSurrModel
-  virtual const Pecos::SurrogateData&
-    approximation_data(size_t fn_index, size_t d_index = _NPOS);
+  virtual const Pecos::SurrogateData& approximation_data(size_t fn_index);
 
   /// retrieve the approximation coefficients from each Approximation
   /// within a DataFitSurrModel
@@ -368,8 +373,8 @@ public:
   /// forming currentResponse
   virtual short surrogate_response_mode() const;
 
-  /// link together more than one SurrogateData instance (DataFitSurrModel)
-  virtual void link_multilevel_approximation_data();
+  // link together more than one SurrogateData instance (DataFitSurrModel)
+  //virtual void link_multilevel_approximation_data();
 
   /// retrieve error estimates corresponding to the Model's response
   /// (could be surrogate error for SurrogateModels, statistical MSE for
@@ -385,11 +390,12 @@ public:
   /// return the correction type from the DiscrepancyCorrection object
   /// used by SurrogateModels
   virtual short correction_type();
-  /// apply the DiscrepancyCorrection object to correct an approximation
-  /// within a SurrogateModel
+
+  /// apply a DiscrepancyCorrection to correct an approximation within
+  /// a HierarchSurrModel
   virtual void single_apply(const Variables& vars, Response& resp,
-			    const UShortArrayPair& keys);
-  /// apply the DiscrepancyCorrection object to recursively correct an 
+			    const Pecos::ActiveKey& paired_key);
+  /// apply a sequence of DiscrepancyCorrections to recursively correct an 
   /// approximation within a HierarchSurrModel
   virtual void recursive_apply(const Variables& vars, Response& resp);
 
@@ -427,6 +433,15 @@ public:
   /// in synchronous evaluate functions to prevent the error
   /// of trying to run a multiprocessor job on the master.
   virtual bool derived_master_overload() const;
+
+  /// create 2D graphics plots for automatic logging of vars/response data
+  virtual void create_2d_plots();
+  /// create a tabular output stream for automatic logging of vars/response data
+  virtual void create_tabular_datastream();
+
+  /// Update tabular/graphics data with latest variables/response data
+  virtual void derived_auto_graphics(const Variables& vars,
+				     const Response& resp);
 
   /// update the Model's inactive view based on higher level (nested) context
   virtual void inactive_view(short view, bool recurse_flag = true);
@@ -571,7 +586,7 @@ public:
   //
  
   /// replaces existing letter with a new one
-  void assign_rep(Model* model_rep, bool ref_count_incr = true);
+  void assign_rep(std::shared_ptr<Model> model_rep);
 
   // VARIABLES
 
@@ -591,6 +606,8 @@ public:
 
   /// set the active variables in currentVariables
   void active_variables(const Variables& vars);
+  /// set the inactive variables in currentVariables
+  void inactive_variables(const Variables& vars);
 
   /// return the active continuous variables from currentVariables
   const RealVector& continuous_variables() const;
@@ -1132,7 +1149,7 @@ public:
 
   /// returns modelRep for access to derived class member functions
   /// that are not mapped to the top Model level
-  Model* model_rep() const;
+  std::shared_ptr<Model> model_rep() const;
 
   /// set the specified configuration to the Model's inactive vars,
   /// converting from real to integer or through index to string value
@@ -1146,17 +1163,22 @@ public:
   static void inactive_variables(const RealVector& config_vars, Model& model,
 				 Variables& updated_vars);
 
-  /// Bulk synchronously evaluate the model for each column in the
-  /// samples matrix and return as columns of the response matrix
+  /// Bulk synchronously evaluate the model for each column (of active
+  /// variables) in the samples matrix and return as columns of the
+  /// response matrix
   static void evaluate(const RealMatrix& samples_matrix,
+		       Model& model, RealMatrix& resp_matrix);
+
+  /// Bulk synchronously evaluate the model for each entry (of active
+  /// variables) in the samples vector and return as columns of the
+  /// response matrix
+  static void evaluate(const VariablesArray& sample_vars,
 		       Model& model, RealMatrix& resp_matrix);
 
   /// Return the model ID of the "innermost" model. 
   /// For all derived Models except RecastModels, return modelId.
-  /// The RecastModel override returns the root_model_id() of the
-  /// subModel.
+  /// The RecastModel override returns the root_model_id() of the subModel.
   virtual String root_model_id();
-
 
   virtual ActiveSet default_active_set();
 
@@ -1194,11 +1216,10 @@ protected:
   EvaluationsDBState modelEvaluationsDBState;
   /// Whether to write interface evals to the evaluations DB
   EvaluationsDBState interfEvaluationsDBState;
+
   //
   //- Heading: Virtual functions
   //
-
-
 
   /// portion of evaluate() specific to derived model classes
   virtual void derived_evaluate(const ActiveSet& set);
@@ -1420,9 +1441,8 @@ protected:
   /// the ParallelConfiguration node used by this Model instance
   ParConfigLIter modelPCIter;
 
-  /// the component parallelism mode: 0 (none),
-  /// 1 (INTERFACE/OPTIONAL_INTERFACE/SURROGATE_MODEL), or
-  /// 2 (SUB_MODEL/TRUTH_MODEL)
+  /// the component parallelism mode: NO_PARALLEL_MODE, SURROGATE_MODEL_MODE,
+  // TRUTH_MODEL_MODE, SUB_MODEL_MODE, INTERFACE_MODE, OPTIONAL_INTERFACE_MODE
   short componentParallelMode;
 
   /// flags asynch evaluations (local or distributed)
@@ -1487,7 +1507,7 @@ private:
   //
 
   /// Used by the envelope to instantiate the correct letter class
-  Model* get_model(ProblemDescDB& problem_db);
+  std::shared_ptr<Model> get_model(ProblemDescDB& problem_db);
 
   /// evaluate numerical gradients using finite differences.  This
   /// routine is selected with "method_source dakota" (the default
@@ -1652,9 +1672,7 @@ private:
   BoolDeque recastFlags;
 
   /// pointer to the letter (initialized only for the envelope)
-  Model* modelRep;
-  /// number of objects sharing modelRep
-  int referenceCount;
+  std::shared_ptr<Model> modelRep;
 
   /// the last used model ID number for on-the-fly instantiations
   /// (increment before each use)
@@ -1754,6 +1772,13 @@ inline void Model::active_variables(const Variables& vars)
 {
   if (modelRep) modelRep->currentVariables.active_variables(vars);
   else          currentVariables.active_variables(vars);
+}
+
+
+inline void Model::inactive_variables(const Variables& vars)
+{
+  if (modelRep) modelRep->currentVariables.inactive_variables(vars);
+  else          currentVariables.inactive_variables(vars);
 }
 
 
@@ -3680,7 +3705,7 @@ inline bool Model::is_null() const
 { return (modelRep) ? false : true; }
 
 
-inline Model* Model::model_rep() const
+inline std::shared_ptr<Model> Model::model_rep() const
 { return modelRep; }
 
 

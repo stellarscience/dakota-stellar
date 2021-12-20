@@ -132,11 +132,11 @@ protected:
 };
 
 
-}
-
 template <class DomainT, class ValueT, class DominationFuncT>
 std::ostream& operator<<(std::ostream& os,
                          const colin::ParetoSet<DomainT, ValueT, DominationFuncT> & obj)
 { obj.write(os); return os; }
+
+}
 
 #endif

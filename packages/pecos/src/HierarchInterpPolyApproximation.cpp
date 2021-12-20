@@ -14,6 +14,7 @@
 #include "HierarchInterpPolyApproximation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "pecos_stat_util.hpp"
+#include "ActiveKey.hpp"
 
 //#define DEBUG
 //#define VBD_DEBUG
@@ -26,12 +27,12 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   const ExpansionConfigOptions& ec_options = data_rep->expConfigOptions;
   const UShort4DArray& colloc_key = data_rep->hsg_driver()->collocation_key();
   size_t i, j, k, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    num_deriv_v = modSurrData.num_derivative_variables();
+    num_deriv_v = surrData.num_derivative_variables();
 
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -68,17 +69,17 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 
   // checking num_points is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total
-  //size_t num_points = modSurrData.points();
+  //size_t num_points = surrData.points();
   //bool update_exp_form =
   //  ( (expansionCoeffFlag     && exp_t1_coeffs.length() != num_points) ||
   //    (expansionCoeffGradFlag && exp_t1_coeff_grads.numCols() != num_points));
 
   if (ec_options.refineControl) {
     size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
-    if (refMomentsIter->second.empty())
-      refMomentsIter->second.sizeUninitialized(num_moments);
-    if (deltaMomentsIter->second.empty())
-      deltaMomentsIter->second.sizeUninitialized(num_moments);
+    if (primaryRefMomIter->second.length() != num_moments)
+      primaryRefMomIter->second.sizeUninitialized(num_moments);
+    if (primaryDeltaMomIter->second.length() != num_moments)
+      primaryDeltaMomIter->second.sizeUninitialized(num_moments);
   }
 }
 
@@ -94,23 +95,23 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   /*
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
+  if (data_rep->expConfigOptions.discrepReduction == RECURSIVE_DISCREPANCY)
     compute_recursive_coefficients();
   else
-    // modSurrData is comprised of discrepancy data (for active keys beyond
+    // surrData is comprised of discrepancy data (for active keys beyond
     // the first) and we estimate hierarchical coefficients for each key
     // independent of all others
     compute_distinct_coefficients();
   */
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, v, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    cntr = 0, c_index, num_deriv_vars = modSurrData.num_derivative_variables();
+    cntr = 0, c_index, num_deriv_vars = surrData.num_derivative_variables();
   bool empty_c_index = colloc_index.empty(),
     use_derivs = data_rep->basisConfigOptions.useDerivs;
 
@@ -120,8 +121,8 @@ void HierarchInterpPolyApproximation::compute_coefficients()
 
   // always use modified surrogate data to build interpolants for either
   // the base or discrepancy levels (according to the active key)
-  const SDVArray& sdv_array = modSurrData.variables_data();
-  const SDRArray& sdr_array = modSurrData.response_data();
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   // level 0
   c_index = (empty_c_index) ? cntr++ : colloc_index[0][0][0];
@@ -190,9 +191,9 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
   synchronize_surrogate_data();
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   /* Prior to activeKey tracking for computed bits and cached moments:
   bool updated = update_active_iterators(data_rep->activeKey);
@@ -247,8 +248,8 @@ increment_coefficients(const UShortArray& index_set)
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-  const SDVArray& sdv_array = modSurrData.variables_data();
-  const SDRArray& sdr_array = modSurrData.response_data();
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   size_t lev, old_levels = exp_t1_coeffs.size(), set, old_sets,
     pt, old_pts = 0;
@@ -274,9 +275,9 @@ increment_coefficients(const UShortArray& index_set)
   RealMatrix& t2_coeffs      = exp_t2_coeffs[lev][set];
   RealMatrix& t1_coeff_grads = exp_t1_coeff_grads[lev][set];
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray& colloc_key = hsg_driver->collocation_key();
   size_t index, num_trial_pts = colloc_key[lev][set].size(),
@@ -323,9 +324,9 @@ increment_coefficients(const UShortArray& index_set)
 
 void HierarchInterpPolyApproximation::pop_coefficients(bool save_data)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  const ActiveKey& key = data_rep->activeKey;
 
   /* Prior to activeKey tracking for computed bits and cached moments:
   bool updated = update_active_iterators(key);
@@ -335,7 +336,7 @@ void HierarchInterpPolyApproximation::pop_coefficients(bool save_data)
   update_active_iterators(key);
   decrement_current_to_reference();
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   RealVector2DArray& exp_t1c  = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2c  = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1cg = expT1CoeffGradsIter->second;
@@ -509,9 +510,9 @@ void HierarchInterpPolyApproximation::pop_coefficients(bool save_data)
 
 void HierarchInterpPolyApproximation::push_coefficients()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  const ActiveKey& key = data_rep->activeKey;
 
   /* Prior to activeKey tracking for computed bits and cached moments:
   bool updated = update_active_iterators(key);
@@ -533,7 +534,7 @@ void HierarchInterpPolyApproximation::push_coefficients()
     //   is defined upstream in shared data) --> would have to retrieve from
     //   poppedLevMultiIndex somehow (too late?)
 
-    //HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+    //std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
     //const UShortArray& tr_set = hsg_driver->trial_set();
     //size_t lev = l1_norm(tr_set);
     size_t tr_lev = data_rep->hsg_driver()->trial_level(),
@@ -543,8 +544,8 @@ void HierarchInterpPolyApproximation::push_coefficients()
     if (expansionCoeffFlag) {
       push_index_to_back(poppedExpT1Coeffs[key][tr_lev], p_index,
 			 expT1CoeffsIter->second[tr_lev]);
-      SharedHierarchInterpPolyApproxData* data_rep
-	= (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+      std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+	std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
       if (use_derivs)
 	push_index_to_back(poppedExpT2Coeffs[key][tr_lev], p_index,
 			   expT2CoeffsIter->second[tr_lev]);
@@ -596,17 +597,17 @@ void HierarchInterpPolyApproximation::push_coefficients()
 
 void HierarchInterpPolyApproximation::finalize_coefficients()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
 
   /* Prior to activeKey tracking for computed bits and cached moments:
   bool updated = update_active_iterators(data_rep->activeKey);
   if (updated) clear_computed_bits();
-  else         clear_current_computed_bits(); //clear_delta_computed_bits();
+  else         clear_current_bits(); //clear_delta_bits();
   */
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators(data_rep->activeKey);
-  clear_current_computed_bits(); //clear_delta_computed_bits();
+  clear_current_bits(); //clear_delta_bits();
 
   promote_all_popped_coefficients();
 }
@@ -614,9 +615,9 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 
 void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  const ActiveKey& key = data_rep->activeKey;
 
   // Code supports iso/aniso refinement (one candidate with multiple index sets)
   // or generalized refinement (multiple candidates, each with one index set)
@@ -672,11 +673,11 @@ void HierarchInterpPolyApproximation::promote_all_popped_coefficients()
 
 void HierarchInterpPolyApproximation::clear_inactive()
 {
-  std::map<UShortArray, RealVector2DArray>::iterator e1c_it
+  std::map<ActiveKey, RealVector2DArray>::iterator e1c_it
     = expansionType1Coeffs.begin();
-  std::map<UShortArray, RealMatrix2DArray>::iterator e2c_it
+  std::map<ActiveKey, RealMatrix2DArray>::iterator e2c_it
     = expansionType2Coeffs.begin();
-  std::map<UShortArray, RealMatrix2DArray>::iterator e1g_it
+  std::map<ActiveKey, RealMatrix2DArray>::iterator e1g_it
     = expansionType1CoeffGrads.begin();
   while (e1c_it != expansionType1Coeffs.end())
     if (e1c_it == expT1CoeffsIter) // preserve active
@@ -691,16 +692,12 @@ void HierarchInterpPolyApproximation::clear_inactive()
 
 void HierarchInterpPolyApproximation::combine_coefficients()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   // Coefficient combination is not dependent on active state
   //update_active_iterators(data_rep->activeKey);
-
-  // Note: computed bits are also cleared when refineStatsType is changed
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    clear_computed_bits(); // increment: clear_current_computed_bits() ?
 
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
@@ -708,7 +705,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   const Sizet3DArray& comb_sm_map
     = hsg_driver->combined_smolyak_multi_index_map();
   size_t i, lev, set, pt, num_lev = comb_key.size(), num_sets, num_tp_pts,
-    num_v = modSurrData.num_derivative_variables();
+    num_v = surrData.num_derivative_variables();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
   // Resize combined expansion arrays and initialize to zero.
@@ -755,8 +752,8 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 
   // Roll up hierarchical surplus increments for each level-set-point
   if (expansionCoeffFlag) {
-    std::map<UShortArray, RealVector2DArray>::iterator ec1_it;
-    std::map<UShortArray, RealMatrix2DArray>::iterator ec2_it;
+    std::map<ActiveKey, RealVector2DArray>::iterator ec1_it;
+    std::map<ActiveKey, RealMatrix2DArray>::iterator ec2_it;
     for (ec1_it  = expansionType1Coeffs.begin(),
 	 ec2_it  = expansionType2Coeffs.begin(), i=0;
 	 ec1_it != expansionType1Coeffs.end() &&
@@ -782,7 +779,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
     }
   }
   if (expansionCoeffGradFlag) { // sum up expansionType1CoeffGrads
-    std::map<UShortArray, RealMatrix2DArray>::iterator eg1_it;
+    std::map<ActiveKey, RealMatrix2DArray>::iterator eg1_it;
     for (eg1_it  = expansionType1CoeffGrads.begin(), i=0;
 	 eg1_it != expansionType1CoeffGrads.end(); ++eg1_it, ++i) {
       const RealMatrix2DArray& t1g = eg1_it->second;
@@ -801,6 +798,16 @@ void HierarchInterpPolyApproximation::combine_coefficients()
       }
     }
   }
+
+  if (combinedMoments.length() != 2)
+    combinedMoments.sizeUninitialized(2);
+  if (combinedRefMoments.length() != 2)
+    combinedRefMoments.sizeUninitialized(2);
+  if (combinedDeltaMoments.length() != 2)
+    combinedDeltaMoments.sizeUninitialized(2);
+
+  clear_combined_bits();                                        // base
+  clear_reference_combined_bits(); clear_delta_combined_bits(); // derived
 }
 
 
@@ -811,6 +818,9 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   //   that are now assimilated within the active expansion
   // > we reassign T1Coeffs,T2Coeffs,T1CoeffGrads even if not active in order
   //   to preserve hierarchical sizing needed downstream (in value() et al.)
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  update_active_iterators(data_rep->activeKey);
 
   if (clear_combined) {
     std::swap(expT1CoeffsIter->second,     combinedExpT1Coeffs);
@@ -831,25 +841,38 @@ void HierarchInterpPolyApproximation::combined_to_active(bool clear_combined)
   productType2Coeffs.clear();     prodT2CoeffsIter = productType2Coeffs.end();
   poppedProdType1Coeffs.clear();  poppedProdType2Coeffs.clear();
 
-  // Create a dummy modSurrData for the combined-now-active coeffs, for
-  // accelerating FINAL_RESULTS (integration, VBD processing, etc.)
-  synthetic_surrogate_data(modSurrData); // overwrite data for activeKey
+  // migrate reference moments (for completeness)
+  primaryRefMeanIter->second = combinedRefMeanBits;
+  primaryRefVarIter->second  = combinedRefVarBits;
+  bool all_vars = !data_rep->nonRandomIndices.empty();
+  const ActiveKey& key = data_rep->activeKey;
+  if (all_vars) {
+    xPrevRefMean[key] = xPrevCombRefMean;
+    xPrevRefVar[key]  = xPrevCombRefVar;
+  }
+  if (clear_combined) {
+    primaryRefMomIter->second.swap(combinedRefMoments);
+    combinedRefMoments.resize(0);
+    clear_reference_combined_bits();
+  }
+  else
+    primaryRefMomIter->second = combinedRefMoments; // deep copy
+  // migrate delta moments (for completeness)
+  primaryDeltaMeanIter->second = combinedDeltaMeanBits;
+  primaryDeltaVarIter->second  = combinedDeltaVarBits;
+  if (all_vars) {
+    xPrevDeltaMean[key] = xPrevCombDeltaMean;
+    xPrevDeltaVar[key]  = xPrevCombDeltaVar;
+  }
+  if (clear_combined) {
+    primaryDeltaMomIter->second.swap(combinedMoments);
+    combinedDeltaMoments.resize(0);
+    clear_delta_combined_bits();
+  }
+  else
+    primaryDeltaMomIter->second = combinedDeltaMoments; // deep copy
 
-  // If outgoing stats type is active (e.g., as in Dakota::NonDExpansion::
-  // multifidelity_expansion()), then previous active stats are invalidated.
-  // But if outgoing stats type is combined, then can avoid recomputation
-  // and carry over current moment stats from combined to active. 
-  // Note: due to this carry-over optimization, updating of stats type from
-  //       COMBINED to ACTIVE must follow this function
-  // Note: reference and delta are less important to reuse in the context of
-  //       final active processing, so clear these tracker bits for simplicity
-  //       (even though they could be preserved as well with sufficient care).
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS)
-    { clear_reference_computed_bits(); clear_delta_computed_bits(); }
-  else // previous active coeffs overwritten -> all moments invalidated
-    clear_computed_bits();
+  InterpPolyApproximation::combined_to_active(clear_combined);
 }
 
 
@@ -859,9 +882,9 @@ synthetic_surrogate_data(SurrogateData& surr_data)
   // Update the active key of surr_data with synthetic data based on the
   // active grid from hsg_driver
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
 
   // HierarchSparseGridDriver::combined_to_active() transfers all data except
   // collocation indices, which are invalidated by the combination.  In support
@@ -955,8 +978,8 @@ increment_products(const UShort2DArray& set_partition)
   // update coefficients of product interpolants needed for efficient delta
   // covariance calculations
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   std::map<PolynomialApproximation*, RealVector2DArray>& prod_t1c
     = prodT1CoeffsIter->second;
   std::map<PolynomialApproximation*, RealMatrix2DArray>& prod_t2c
@@ -966,13 +989,13 @@ increment_products(const UShort2DArray& set_partition)
   // loop over all PolynomialApproximation* instances previously initialized
   // (including this pointer)
   if (data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS) {
-    UShortArray lf_key;  paired_lf_key(data_rep->activeKey, lf_key);
+    ActiveKey hf_key, lf_key; // extract either HF or aggregated {HF,LF} keys
+    data_rep->activeKey.extract_keys(hf_key, lf_key);
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
-	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2) {
+	 it1 != prod_t1c.end() && it2 != prod_t2c.end(); ++it1, ++it2)
       product_difference_interpolant(
 	(HierarchInterpPolyApproximation*)it1->first, it1->second,
-	it2->second, lf_key, set_partition);
-    }
+	it2->second, hf_key, lf_key, set_partition);
   }
   else
     for (it1  = prod_t1c.begin(), it2  = prod_t2c.begin();
@@ -994,8 +1017,8 @@ value(const RealVector& x, const UShort3DArray& sm_mi,
     abort_handler(-1);
   }
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   Real approx_val = 0.;
   SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   size_t lev, set, set_start = 0, set_end;
@@ -1032,8 +1055,8 @@ value(const RealVector& x, const UShort3DArray& sm_mi,
     abort_handler(-1);
   }
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   Real approx_val = 0.;
   SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   size_t lev, set, set_start = 0, set_end;
@@ -1081,8 +1104,8 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     approxGradient.sizeUninitialized(num_v);
   approxGradient = 0.;
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   size_t lev, set, set_start = 0, set_end;
   bool partial = !set_partition.empty();
@@ -1129,8 +1152,8 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     approxGradient.sizeUninitialized(num_v);
   approxGradient = 0.;
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   size_t lev, set, set_start = 0, set_end;
   bool partial = !set_partition.empty();
@@ -1175,8 +1198,8 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     approxGradient.sizeUninitialized(num_deriv_v);
   approxGradient = 0.;
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   bool partial = !set_partition.empty();
   for (lev=0; lev<=level; ++lev) {
@@ -1229,8 +1252,8 @@ gradient_nonbasis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     approxGradient.sizeUninitialized(num_deriv_v);
   approxGradient = 0.;
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   bool partial = !set_partition.empty();
   for (lev=0; lev<=level; ++lev) {
@@ -1269,12 +1292,6 @@ hessian_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
 
 Real HierarchInterpPolyApproximation::mean()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compMeanIter->second & 1))
-    return numMomentsIter->second[0];
-
   // Error check for required data
   if (!expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
@@ -1282,24 +1299,23 @@ Real HierarchInterpPolyApproximation::mean()
     abort_handler(-1);
   }
 
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryMeanIter->second & 1))
+    return primaryMomIter->second[0];
+
   Real mean = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second);
-  if (std_mode)
-    { numMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
+
+  if (use_tracker)
+    { primaryMomIter->second[0] = mean; primaryMeanIter->second |= 1; }
   return mean;
 }
 
 
-
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compMeanIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
-    return numMomentsIter->second[0];
-
   // Error check for required data
   if (!expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
@@ -1307,11 +1323,20 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
     abort_handler(-1);
   }
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryMeanIter->second & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
+    return primaryMomIter->second[0];
+
   Real mean = expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second);
-  if (all_mode) {
-    numMomentsIter->second[0] = mean;
-    compMeanIter->second |= 1;  xPrevMean[key] = x;
+
+  if (use_tracker) {
+    primaryMomIter->second[0] = mean;
+    primaryMeanIter->second |= 1;  xPrevMean[key] = x;
   }
   return mean;
 }
@@ -1319,19 +1344,21 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 
 Real HierarchInterpPolyApproximation::combined_mean()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compMeanIter->second & 1))
-    return numMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedMeanBits & 1))
+    return combinedMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real mean =
     expectation(combinedExpT1Coeffs, combinedExpT2Coeffs,
 		hsg_driver->combined_type1_hierarchical_weight_sets(),
 		hsg_driver->combined_type2_hierarchical_weight_sets());
-  if (std_mode)
-    { numMomentsIter->second[0] = mean; compMeanIter->second |= 1; }
+
+  if (use_tracker)
+    { combinedMoments[0] = mean; combinedMeanBits |= 1; }
   return mean;
 }
 
@@ -1339,22 +1366,22 @@ Real HierarchInterpPolyApproximation::combined_mean()
 
 Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compMeanIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevMean[key]))
-    return numMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedMeanBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombMean))
+    return combinedMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real mean = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  hsg_driver->combined_smolyak_multi_index(),
 			  hsg_driver->combined_collocation_key());
-  if (all_mode) {
-    numMomentsIter->second[0] = mean;
-    compMeanIter->second |= 1;  xPrevMean[key] = x;
-  }
+
+  if (use_tracker)
+    { combinedMoments[0] = mean;  combinedMeanBits |= 1;  xPrevCombMean = x; }
   return mean;
 }
 
@@ -1366,13 +1393,6 @@ Real HierarchInterpPolyApproximation::combined_mean(const RealVector& x)
     are inserted and some are augmented) requires no special treatment. */
 const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (std_mode && (compMeanIter->second & 2))
-    return momentGradsIter->second[0];
-
   // Error check for required data
   if (!expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in Hierarch"
@@ -1380,10 +1400,21 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  RealVector& mean_grad = momentGradsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryMeanIter->second & 2))
+    return primaryMomGradsIter->second[0];
+
+  RealVector& mean_grad = primaryMomGradsIter->second[0];
   mean_grad = expectation_gradient(expT1CoeffGradsIter->second);
-  if (std_mode) compMeanIter->second |=  2;//  activate 2-bit
-  else          compMeanIter->second &= ~2;//deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker) primaryMeanIter->second |=  2;//activate bit
+  else             primaryMeanIter->second &= ~2;//deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1402,14 +1433,15 @@ const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  if ( all_mode && (compMeanIter->second & 2) &&
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if ( use_tracker && (primaryMeanIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad[key]) )
     // && dvv == dvvPrev)
-    return momentGradsIter->second[0];
+    return primaryMomGradsIter->second[0];
 
   // ---------------------------------------------------------------------
   // For xi = ran vars, sa = augmented des vars, si = inserted design vars
@@ -1424,7 +1456,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
   // ---------------------------------------------------------------------
   size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
-  RealVector& mean_grad = momentGradsIter->second[0];
+  RealVector& mean_grad = primaryMomGradsIter->second[0];
   if (mean_grad.length() != num_deriv_vars)
     mean_grad.sizeUninitialized(num_deriv_vars);
   const RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
@@ -1465,8 +1497,12 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 	= expectation_gradient(x, exp_t1_coeffs, exp_t2_coeffs, deriv_index);
     }
   }
-  if (all_mode) { compMeanIter->second |=  2; xPrevMeanGrad[key] = x; }
-  else compMeanIter->second &= ~2; // deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  primaryMeanIter->second |=  2; xPrevMeanGrad[key] = x; } // activate bit
+  else primaryMeanIter->second &= ~2;          // deactivate: protect mixed use
   return mean_grad;
 }
 
@@ -1474,23 +1510,22 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 Real HierarchInterpPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
+  // Error check for required data
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-
-  if (same && std_mode && (compVarIter->second & 1))
-    return numMomentsIter->second[1];
-
-  // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
+  bool same = (this == hip_approx_2);
+  if ( !expansionCoeffFlag || ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
+
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = (same && data_rep->nonRandomIndices.empty()); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryVarIter->second & 1))
+    return primaryMomIter->second[1];
 
   Real covar, mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
   if (speedOverPrecision && product_interpolants())
@@ -1505,8 +1540,8 @@ covariance(PolynomialApproximation* poly_approx_2)
     covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
   }
 
-  if (same && std_mode)
-    { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
+  if (use_tracker)
+    { primaryMomIter->second[1] = covar; primaryVarIter->second |= 1; }
   return covar;
 }
 
@@ -1516,23 +1551,23 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-
-  if ( same && all_mode && (compVarIter->second & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
-    return numMomentsIter->second[1];
-
+  bool same = (this == hip_approx_2);
   // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
+  if ( !expansionCoeffFlag || ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
+
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+
+  if ( use_tracker && (primaryVarIter->second & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
+    return primaryMomIter->second[1];
 
   Real covar, mean_1 = mean(x),
     mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
@@ -1548,9 +1583,9 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
   }
 
-  if (same && all_mode) {
-    numMomentsIter->second[1] = covar;
-    compVarIter->second |= 1;  xPrevVar[key] = x;
+  if (use_tracker) {
+    primaryMomIter->second[1] = covar;
+    primaryVarIter->second |= 1;  xPrevVar[key] = x;
   }
   return covar;
 }
@@ -1561,13 +1596,13 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 {
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool  same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-
-  if (same && std_mode && (compVarIter->second & 1))
-    return numMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && data_rep->nonRandomIndices.empty()); // same, std
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedVarBits & 1))
+    return combinedMoments[1];
 
   Real mean_1 = combined_mean(),
        mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean();
@@ -1578,7 +1613,7 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
   //       immediately after switch from active to combined stats to provide
   //       reference prior to greedy adaptation.
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   central_product_interpolant(hsg_driver->combined_hierarchical_variable_sets(),
 			      hsg_driver->combined_smolyak_multi_index(),
 			      hsg_driver->combined_collocation_key(),
@@ -1593,8 +1628,8 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 		hsg_driver->combined_type1_hierarchical_weight_sets(),
 		hsg_driver->combined_type2_hierarchical_weight_sets());
 
-  if (same && std_mode)
-    { numMomentsIter->second[1] = covar; compVarIter->second |= 1; }
+  if (use_tracker)
+    { combinedMoments[1] = covar; combinedVarBits |= 1; }
   return covar;
 }
 
@@ -1604,14 +1639,15 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool  same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if ( same && all_mode && (compVarIter->second & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar[key]) )
-    return numMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && !data_rep->nonRandomIndices.empty()); // same, all
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if ( use_tracker && (combinedVarBits & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevCombVar) )
+    return combinedMoments[1];
 
   Real mean_1 = combined_mean(x),
        mean_2 = (same) ? mean_1 : hip_approx_2->combined_mean(x);
@@ -1622,7 +1658,7 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   //       immediately after switch from active to combined stats to provide
   //       reference prior to greedy adaptation.
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& comb_sm_mi = hsg_driver->combined_smolyak_multi_index();
   const UShort4DArray&   comb_key = hsg_driver->combined_collocation_key();
   central_product_interpolant(hsg_driver->combined_hierarchical_variable_sets(),
@@ -1636,10 +1672,8 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   Real covar
     = expectation(x, cov_t1_coeffs, cov_t2_coeffs, comb_sm_mi, comb_key);
 
-  if (same && all_mode) {
-    numMomentsIter->second[1] = covar;
-    compVarIter->second |= 1;  xPrevVar[key] = x;
-  }
+  if (use_tracker)
+    { combinedMoments[1] = covar;  combinedVarBits |= 1;  xPrevCombVar = x; }
   return covar;
 }
 
@@ -1650,29 +1684,32 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     are augmented) requires no special treatment. */
 const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (std_mode && (compVarIter->second & 2))
-    return momentGradsIter->second[1];
-
   // Error check for required data
-  if (!expansionCoeffFlag ||
-      !expansionCoeffGradFlag) {
+  if (!expansionCoeffFlag || !expansionCoeffGradFlag) {
     PCerr << "Error: insufficient expansion coefficient data in HierarchInterp"
 	  << "PolyApproximation::variance_gradient()." << std::endl;
     abort_handler(-1);
   }
 
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryVarIter->second & 2))
+    return primaryMomGradsIter->second[1];
+
   Real mean1 = mean(); const RealVector& mean1_grad = mean_gradient();
   RealMatrix2DArray cov_t1_coeff_grads;
   central_product_gradient_interpolant(this, mean1, mean1, mean1_grad,
 				       mean1_grad, cov_t1_coeff_grads);
-  RealVector& var_grad = momentGradsIter->second[1];
+  RealVector& var_grad = primaryMomGradsIter->second[1];
   var_grad = expectation_gradient(cov_t1_coeff_grads);
-  if (std_mode) compVarIter->second |=  2;
-  else          compVarIter->second &= ~2;// deactivate 2-bit: protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker) primaryVarIter->second |=  2;// activate bit
+  else             primaryVarIter->second &= ~2;// deactivate: protect mixed use
   return var_grad;
 }
 
@@ -1688,14 +1725,15 @@ const RealVector& HierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if ( all_mode && (compVarIter->second & 2) &&
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if ( use_tracker && (primaryVarIter->second & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad[key]) )
     // && dvv == dvvPrev)
-    return momentGradsIter->second[1];
+    return primaryMomGradsIter->second[1];
 
   // ---------------------------------------------------------------------
   // For xi = ran vars, sa = augmented des vars, si = inserted design vars
@@ -1728,7 +1766,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   if (augment)
     central_product_interpolant(this, mean_1, mean_1, cov_t1c, cov_t2c);
 
-  RealVector& var_grad = momentGradsIter->second[1];
+  RealVector& var_grad = primaryMomGradsIter->second[1];
   if (var_grad.length() != num_deriv_vars)
     var_grad.sizeUninitialized(num_deriv_vars);
   for (i=0; i<num_deriv_vars; ++i) {
@@ -1765,8 +1803,12 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
       var_grad[i] = expectation_gradient(x, cov_t1c, cov_t2c, deriv_index);
     }
   }
-  if (all_mode) { compVarIter->second |=  2; xPrevVarGrad[key] = x; }
-  else            compVarIter->second &= ~2;//deactivate 2-bit:protect mixed use
+
+  // In the case of returning a grad reference, we unconditionally update shared
+  // moment storage, but protect its reuse through bit tracker deactivation
+  if (use_tracker)
+    {  primaryVarIter->second |=  2; xPrevVarGrad[key] = x; } // activate bit
+  else primaryVarIter->second &= ~2;         // deactivate: protect mixed use
   return var_grad;
 }
 
@@ -1774,16 +1816,20 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 Real HierarchInterpPolyApproximation::
 reference_mean(const UShort2DArray& ref_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefMeanIter->second & 1))
-    return refMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryRefMeanIter->second & 1))
+    return primaryRefMomIter->second[0];
 
   Real ref_mean
     = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second, ref_key);
-  if (std_mode)
-    { refMomentsIter->second[0] = ref_mean; compRefMeanIter->second |= 1; }
+
+  if (use_tracker) {
+    primaryRefMomIter->second[0] = ref_mean;
+    primaryRefMeanIter->second  |= 1;
+  }
   return ref_mean;
 }
 
@@ -1791,19 +1837,21 @@ reference_mean(const UShort2DArray& ref_key)
 Real HierarchInterpPolyApproximation::
 reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefMeanIter->second & 1) &&
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryRefMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefMean[key]))
-    return refMomentsIter->second[0];
+    return primaryRefMomIter->second[0];
 
   Real ref_mean
     = expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, ref_key);
-  if (all_mode) {
-    refMomentsIter->second[0] = ref_mean;
-    compRefMeanIter->second |= 1;  xPrevRefMean[key] = x;
+
+  if (use_tracker) {
+    primaryRefMomIter->second[0] = ref_mean;
+    primaryRefMeanIter->second |= 1;  xPrevRefMean[key] = x;
   }
   return ref_mean;
 }
@@ -1811,22 +1859,23 @@ reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 
 /** does not require combinedExpT{1,2}Coeffs as works from full maps */
 Real HierarchInterpPolyApproximation::
-reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
+reference_combined_mean(const std::map<ActiveKey, UShort2DArray>& ref_key_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefMeanIter->second & 1))
-    return refMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedRefMeanBits & 1))
+    return combinedRefMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_mean
     = expectation(expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->type1_weight_sets_map(),
 		  hsg_driver->type2_weight_sets_map(), ref_key_map);
 
-  if (std_mode)
-    { refMomentsIter->second[0] = ref_mean; compRefMeanIter->second |= 1; }
+  if (use_tracker)
+    { combinedRefMoments[0] = ref_mean; combinedRefMeanBits |= 1; }
   return ref_mean;
 }
 
@@ -1834,24 +1883,26 @@ reference_combined_mean(const std::map<UShortArray, UShort2DArray>& ref_key_map)
 /** does not require combinedExpT{1,2}Coeffs as works from full maps */
 Real HierarchInterpPolyApproximation::
 reference_combined_mean(const RealVector& x,
-			const std::map<UShortArray, UShort2DArray>& ref_key_map)
+			const std::map<ActiveKey, UShort2DArray>& ref_key_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefMeanIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevRefMean[key]))
-    return refMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedRefMeanBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombRefMean))
+    return combinedRefMoments[0];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_mean
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
 		  hsg_driver->collocation_key_map(), ref_key_map);
-  if (all_mode) {
-    refMomentsIter->second[0] = ref_mean;
-    compRefMeanIter->second |= 1;  xPrevRefMean[key] = x;
+
+  if (use_tracker) {
+    combinedRefMoments[0] = ref_mean;
+    combinedRefMeanBits  |= 1;  xPrevCombRefMean = x;
   }
   return ref_mean;
 }
@@ -1860,11 +1911,12 @@ reference_combined_mean(const RealVector& x,
 Real HierarchInterpPolyApproximation::
 reference_variance(const UShort2DArray& ref_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefVarIter->second & 1))
-    return refMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryRefVarIter->second & 1))
+    return primaryRefMomIter->second[1];
 
   Real ref_var, ref_mean = reference_mean(ref_key);
   if (speedOverPrecision && product_interpolants())
@@ -1879,8 +1931,8 @@ reference_variance(const UShort2DArray& ref_key)
     ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key);
   }
 
-  if (std_mode)
-    { refMomentsIter->second[1] = ref_var; compRefVarIter->second |= 1; }
+  if (use_tracker)
+    { primaryRefMomIter->second[1] = ref_var; primaryRefVarIter->second |= 1; }
   return ref_var;
 }
 
@@ -1888,13 +1940,14 @@ reference_variance(const UShort2DArray& ref_key)
 Real HierarchInterpPolyApproximation::
 reference_variance(const RealVector& x, const UShort2DArray& ref_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefVarIter->second & 1) &&
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryRefVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevRefVar[key]))
-    return refMomentsIter->second[1];
+    return primaryRefMomIter->second[1];
 
   Real ref_var, ref_mean = reference_mean(x, ref_key);
   if (speedOverPrecision && product_interpolants())
@@ -1909,24 +1962,25 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
     ref_var = expectation(x, cov_t1_coeffs, cov_t2_coeffs, ref_key);
   }
 
-  if (all_mode) {
-    refMomentsIter->second[1] = ref_var;
-    compRefVarIter->second |= 1; xPrevRefVar[key] = x;
+  if (use_tracker) {
+    primaryRefMomIter->second[1] = ref_var;
+    primaryRefVarIter->second |= 1; xPrevRefVar[key] = x;
   }
   return ref_var;
 }
 
 
 Real HierarchInterpPolyApproximation::reference_combined_variance(
-  const std::map<UShortArray, UShort2DArray>& ref_key_map)
+  const std::map<ActiveKey, UShort2DArray>& ref_key_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compRefVarIter->second & 1))
-    return refMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedRefVarBits & 1))
+    return combinedRefMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(ref_key_map);
   if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
@@ -1935,8 +1989,8 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 			  hsg_driver->type2_weight_sets_map(), ref_key_map)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch and then integrate it
-    std::map<UShortArray, RealVector2DArray> cov_t1c_map;
-    std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
+    std::map<ActiveKey, RealVector2DArray> cov_t1c_map;
+    std::map<ActiveKey, RealMatrix2DArray> cov_t2c_map;
     central_product_interpolant(this, ref_mean, ref_mean, cov_t1c_map,
 				cov_t2c_map, ref_key_map);
     ref_var = expectation(cov_t1c_map, cov_t2c_map,
@@ -1944,25 +1998,26 @@ Real HierarchInterpPolyApproximation::reference_combined_variance(
 			  hsg_driver->type2_weight_sets_map(), ref_key_map);
   }
 
-  if (std_mode)
-    { refMomentsIter->second[1] = ref_var; compRefVarIter->second |= 1; }
+  if (use_tracker)
+    { combinedRefMoments[1] = ref_var; combinedRefVarBits |= 1; }
   return ref_var;
 }
 
 
 Real HierarchInterpPolyApproximation::
 reference_combined_variance(const RealVector& x,
-  const std::map<UShortArray, UShort2DArray>& ref_key_map)
+  const std::map<ActiveKey, UShort2DArray>& ref_key_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compRefVarIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevRefVar[key]))
-    return refMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedRefVarBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombRefVar))
+    return combinedRefMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real ref_var, ref_mean = reference_combined_mean(x, ref_key_map);
   if (speedOverPrecision && product_interpolants())
     // uncentered raw moment available (accept loss of precision)
@@ -1971,8 +2026,8 @@ reference_combined_variance(const RealVector& x,
 			  hsg_driver->collocation_key_map(), ref_key_map)
             - ref_mean * ref_mean;
   else { // form central product interp from scratch and then integrate it
-    std::map<UShortArray, RealVector2DArray> cov_t1c_map;
-    std::map<UShortArray, RealMatrix2DArray> cov_t2c_map;
+    std::map<ActiveKey, RealVector2DArray> cov_t1c_map;
+    std::map<ActiveKey, RealMatrix2DArray> cov_t2c_map;
     central_product_interpolant(this, ref_mean, ref_mean, cov_t1c_map,
 				cov_t2c_map, ref_key_map);
     ref_var = expectation(x, cov_t1c_map, cov_t2c_map,
@@ -1980,9 +2035,9 @@ reference_combined_variance(const RealVector& x,
 			  hsg_driver->collocation_key_map(), ref_key_map);
   }
 
-  if (all_mode) {
-    refMomentsIter->second[1] = ref_var;
-    compRefVarIter->second |= 1; xPrevRefVar[key] = x;
+  if (use_tracker) {
+    combinedRefMoments[1] = ref_var;
+    combinedRefVarBits |= 1; xPrevCombRefVar = x;
   }
   return ref_var;
 }
@@ -1990,20 +2045,21 @@ reference_combined_variance(const RealVector& x,
 
 Real HierarchInterpPolyApproximation::delta_mean()
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
-    return deltaMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryDeltaMeanIter->second & 1))
+    return primaryDeltaMomIter->second[0];
 
   UShort2DArray incr_key;
   data_rep->hsg_driver()->partition_increment_key(incr_key);
-
   Real delta_mean
     = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (std_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;
+
+  if (use_tracker) {
+    primaryDeltaMomIter->second[0] = delta_mean;
+    primaryDeltaMeanIter->second  |= 1;
   }
   return delta_mean;
 }
@@ -2012,17 +2068,19 @@ Real HierarchInterpPolyApproximation::delta_mean()
 /** This helper avoids recomputing incr_key. */
 Real HierarchInterpPolyApproximation::delta_mean(const UShort2DArray& incr_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
-    return deltaMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryDeltaMeanIter->second & 1))
+    return primaryDeltaMomIter->second[0];
 
   Real delta_mean
     = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (std_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;
+
+  if (use_tracker) {
+    primaryDeltaMomIter->second[0] = delta_mean;
+    primaryDeltaMeanIter->second  |= 1;
   }
   return delta_mean;
 }
@@ -2030,22 +2088,23 @@ Real HierarchInterpPolyApproximation::delta_mean(const UShort2DArray& incr_key)
 
 Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
-    return deltaMomentsIter->second[0];
+    return primaryDeltaMomIter->second[0];
 
   UShort2DArray incr_key;
   data_rep->hsg_driver()->partition_increment_key(incr_key);
-
   Real delta_mean =
     expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (all_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
+
+  if (use_tracker) {
+    primaryDeltaMomIter->second[0] = delta_mean;
+    primaryDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
   }
   return delta_mean;
 }
@@ -2055,19 +2114,21 @@ Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
 Real HierarchInterpPolyApproximation::
 delta_mean(const RealVector& x, const UShort2DArray& incr_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryDeltaMeanIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
-    return deltaMomentsIter->second[0];
+    return primaryDeltaMomIter->second[0];
 
   Real delta_mean =
     expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second, incr_key);
-  if (all_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
+
+  if (use_tracker) {
+    primaryDeltaMomIter->second[0] = delta_mean;
+    primaryDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
   }
   return delta_mean;
 }
@@ -2078,26 +2139,26 @@ Real HierarchInterpPolyApproximation::delta_combined_mean()
   // combined increment is the same as the active increment
   //return delta_mean();
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
-    return deltaMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedDeltaMeanBits & 1))
+    return combinedDeltaMoments[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  std::map<UShortArray, UShort2DArray> incr_key_map;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
+  std::map<ActiveKey, UShort2DArray> incr_key_map;
   hsg_driver->partition_increment_key(incr_key_map);
-
   Real delta_mean
     = expectation(expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->type1_weight_sets_map(),
 		  hsg_driver->type2_weight_sets_map(), incr_key_map);
-  if (std_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;
+
+  if (use_tracker) {
+    combinedDeltaMoments[0] = delta_mean;
+    combinedDeltaMeanBits  |= 1;
   }
   return delta_mean;
 }
@@ -2105,61 +2166,61 @@ Real HierarchInterpPolyApproximation::delta_combined_mean()
 
 /** This helper avoids recomputing incr_key_map. */
 Real HierarchInterpPolyApproximation::
-delta_combined_mean(const std::map<UShortArray, UShort2DArray>& incr_key_map)
+delta_combined_mean(const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   // combined increment is the same as the active increment
   //return delta_mean(incr_key);
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaMeanIter->second & 1))
-    return deltaMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedDeltaMeanBits & 1))
+    return combinedDeltaMoments[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_mean
     = expectation(expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->type1_weight_sets_map(),
 		  hsg_driver->type2_weight_sets_map(), incr_key_map);
-  if (std_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;
+
+  if (use_tracker) {
+    combinedDeltaMoments[0] = delta_mean;
+    combinedDeltaMeanBits  |= 1;
   }
   return delta_mean;
 }
 
 
-Real HierarchInterpPolyApproximation::
-delta_combined_mean(const RealVector& x)
+Real HierarchInterpPolyApproximation::delta_combined_mean(const RealVector& x)
 {
   // Potentially equivalent for all_vars mode as well, but use key maps
   //return delta_mean(x);
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
-    return deltaMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedDeltaMeanBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombDeltaMean))
+    return combinedDeltaMoments[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  std::map<UShortArray, UShort2DArray> incr_key_map;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
+  std::map<ActiveKey, UShort2DArray> incr_key_map;
   hsg_driver->partition_increment_key(incr_key_map);
-
   Real delta_mean
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
 		  hsg_driver->collocation_key_map(), incr_key_map);
-  if (all_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
+
+  if (use_tracker) {
+    combinedDeltaMoments[0] = delta_mean;
+    combinedDeltaMeanBits  |= 1;  xPrevCombDeltaMean = x;
   }
   return delta_mean;
 }
@@ -2168,30 +2229,31 @@ delta_combined_mean(const RealVector& x)
 /** This helper avoids recomputing incr_key_map. */
 Real HierarchInterpPolyApproximation::
 delta_combined_mean(const RealVector& x,
-		    const std::map<UShortArray, UShort2DArray>& incr_key_map)
+		    const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   // TO DO: equivalence for all_vars mode ?
   //return delta_mean(x, incr_key);
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaMeanIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevDeltaMean[key]))
-    return deltaMomentsIter->second[0];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedDeltaMeanBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombDeltaMean))
+    return combinedDeltaMoments[0];
 
   // Avoid dependence on metric_roll_up() (combinedExpT{1,2}Coeffs)
   // by employing incr_key_map on expansionType{1,2}Coeffs
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_mean
     = expectation(x, expansionType1Coeffs, expansionType2Coeffs,
 		  hsg_driver->smolyak_multi_index_map(),
 		  hsg_driver->collocation_key_map(), incr_key_map);
-  if (all_mode) {
-    deltaMomentsIter->second[0] = delta_mean;
-    compDeltaMeanIter->second  |= 1;  xPrevDeltaMean[key] = x;
+
+  if (use_tracker) {
+    combinedDeltaMoments[0] = delta_mean;
+    combinedDeltaMeanBits  |= 1;  xPrevCombDeltaMean = x;
   }
   return delta_mean;
 }
@@ -2202,13 +2264,14 @@ delta_combined_mean(const RealVector& x,
 Real HierarchInterpPolyApproximation::
 delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaVarIter->second & 1))
-    return deltaMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  if (use_tracker && (primaryDeltaVarIter->second & 1))
+    return primaryDeltaMomIter->second[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(expT1CoeffsIter->second,
@@ -2225,8 +2288,10 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
       hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
   }
 
-  if (std_mode)
-    { deltaMomentsIter->second[1] = delta_var; compDeltaVarIter->second |= 1; }
+  if (use_tracker) {
+    primaryDeltaMomIter->second[1] = delta_var;
+    primaryDeltaVarIter->second |= 1;
+  }
   return delta_var;
 }
 
@@ -2237,15 +2302,16 @@ Real HierarchInterpPolyApproximation::
 delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 	       const UShort2DArray& incr_key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaVarIter->second & 1) &&
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryDeltaVarIter->second & 1) &&
       data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
-    return deltaMomentsIter->second[1];
+    return primaryDeltaMomIter->second[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(x, expT1CoeffsIter->second,
@@ -2262,9 +2328,9 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
       hsg_driver->collocation_key(), ref_key, incr_key);
   }
   
-  if (all_mode) {
-    deltaMomentsIter->second[1] = delta_var;
-    compDeltaVarIter->second   |= 1;  xPrevDeltaVar[key] = x;
+  if (use_tracker) {
+    primaryDeltaMomIter->second[1] = delta_var;
+    primaryDeltaVarIter->second   |= 1;  xPrevDeltaVar[key] = x;
   }
   return delta_var;
 }
@@ -2274,16 +2340,17 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
     also eliminates poly_approx_2 from delta_combined_covariance()). */
 Real HierarchInterpPolyApproximation::
 delta_combined_variance(
-  const std::map<UShortArray, UShort2DArray>& ref_key_map,
-  const std::map<UShortArray, UShort2DArray>& incr_key_map)
+  const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+  const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool std_mode = data_rep->nonRandomIndices.empty();
-  if (std_mode && (compDeltaVarIter->second & 1))
-    return deltaMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = data_rep->nonRandomIndices.empty(); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedDeltaVarBits & 1))
+    return combinedDeltaMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(expansionType1Coeffs, expansionType2Coeffs,
@@ -2303,8 +2370,8 @@ delta_combined_variance(
       data_rep->activeKey, ref_key_map, incr_key_map);
   }
 
-  if (std_mode)
-    { deltaMomentsIter->second[1] = delta_var; compDeltaVarIter->second |= 1; }
+  if (use_tracker)
+    { combinedDeltaMoments[1] = delta_var; combinedDeltaVarBits |= 1; }
   return delta_var;
 }
 
@@ -2313,18 +2380,19 @@ delta_combined_variance(
     also eliminates poly_approx_2 from delta_combined_covariance()). */
 Real HierarchInterpPolyApproximation::
 delta_combined_variance(const RealVector& x,
-  const std::map<UShortArray, UShort2DArray>& ref_key_map,
-  const std::map<UShortArray, UShort2DArray>& incr_key_map)
+  const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+  const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (all_mode && (compDeltaVarIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
-    return deltaMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = !data_rep->nonRandomIndices.empty(); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedDeltaVarBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombDeltaVar))
+    return combinedDeltaMoments[1];
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   Real delta_var;
   if (product_interpolants())
     delta_var = delta_covariance(x, expansionType1Coeffs, expansionType2Coeffs,
@@ -2344,9 +2412,9 @@ delta_combined_variance(const RealVector& x,
       data_rep->activeKey, ref_key_map, incr_key_map);
   }
 
-  if (all_mode) {
-    deltaMomentsIter->second[1] = delta_var;
-    compDeltaVarIter->second   |= 1;  xPrevDeltaVar[key] = x;
+  if (use_tracker) {
+    combinedDeltaMoments[1] = delta_var;
+    combinedDeltaVarBits   |= 1;  xPrevCombDeltaVar = x;
   }
   return delta_var;
 }
@@ -2406,8 +2474,8 @@ delta_std_deviation(const RealVector& x, const UShort2DArray& ref_key,
 
 Real HierarchInterpPolyApproximation::
 delta_combined_std_deviation(
-  const std::map<UShortArray, UShort2DArray>& ref_key_map,
-  const std::map<UShortArray, UShort2DArray>& incr_key_map)
+  const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+  const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   // Preserve precision by avoiding subtractive cancellation
   // delta-sigma = sqrt( var0 + delta-var ) - sigma0
@@ -2434,8 +2502,8 @@ delta_combined_std_deviation(
 
 Real HierarchInterpPolyApproximation::
 delta_combined_std_deviation(const RealVector& x,
-  const std::map<UShortArray, UShort2DArray>& ref_key_map,
-  const std::map<UShortArray, UShort2DArray>& incr_key_map)
+  const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+  const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   // delta-sigma = sqrt( var0 + delta-var ) - sigma0
   //             = [ sqrt(1 + delta_var / var0) - 1 ] * sigma0
@@ -2485,8 +2553,8 @@ delta_beta(const RealVector& x, bool cdf_flag, Real z_bar,
 
 Real HierarchInterpPolyApproximation::
 delta_combined_beta(bool cdf_flag, Real z_bar,
-		    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-		    const std::map<UShortArray, UShort2DArray>& incr_key_map)
+		    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+		    const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   Real mu0      = reference_combined_mean(ref_key_map),
     delta_mu    = delta_combined_mean(incr_key_map),
@@ -2498,8 +2566,8 @@ delta_combined_beta(bool cdf_flag, Real z_bar,
 
 Real HierarchInterpPolyApproximation::
 delta_combined_beta(const RealVector& x, bool cdf_flag, Real z_bar,
-		    const std::map<UShortArray, UShort2DArray>& ref_key_map,
-		    const std::map<UShortArray, UShort2DArray>& incr_key_map)
+		    const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+		    const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   Real mu0      = reference_combined_mean(x, ref_key_map),
     delta_mu    = delta_combined_mean(x, incr_key_map),
@@ -2589,8 +2657,8 @@ delta_z(const RealVector& x, bool cdf_flag, Real beta_bar,
 
 Real HierarchInterpPolyApproximation::
 delta_combined_z(bool cdf_flag, Real beta_bar,
-		 const std::map<UShortArray, UShort2DArray>& ref_key_map,
-		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
+		 const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+		 const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
   //              = delta-mu - delta-sigma * beta-bar
@@ -2606,8 +2674,8 @@ delta_combined_z(bool cdf_flag, Real beta_bar,
 
 Real HierarchInterpPolyApproximation::
 delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar,
-		 const std::map<UShortArray, UShort2DArray>& ref_key_map,
-		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
+		 const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+		 const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
   //              = delta-mu - delta-sigma * beta-bar
@@ -2624,32 +2692,30 @@ delta_combined_z(const RealVector& x, bool cdf_flag, Real beta_bar,
 Real HierarchInterpPolyApproximation::
 delta_covariance(PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-
-  // Supports multiple grid increments in discerning nominal from delta based
-  // on isotropic/anisotropic/generalized index set increments.  In current
-  // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
-  // In the future, may need 3D keys for level/set/point.
-  bool  same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-  if (same && std_mode && (compDeltaVarIter->second & 1))
-    return deltaMomentsIter->second[1];
-
+  bool same = (this == hip_approx_2);
   // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !hip_approx_2->expansionCoeffFlag )) {
+  if ( !expansionCoeffFlag || ( !same && !hip_approx_2->expansionCoeffFlag )) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "HierarchInterpPolyApproximation::delta_covariance()" << std::endl;
     abort_handler(-1);
   }
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = (same && data_rep->nonRandomIndices.empty()); // std mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  // Supports multiple grid increments in discerning nominal from delta based
+  // on isotropic/anisotropic/generalized index set increments.  In current
+  // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
+  // In the future, may need 3D keys for level/set/point.
+  if (use_tracker && (primaryDeltaVarIter->second & 1))
+    return primaryDeltaMomIter->second[1];
+
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
-
   Real delta_covar;
   if (product_interpolants())
     delta_covar = delta_covariance(expT1CoeffsIter->second,
@@ -2672,9 +2738,9 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
       hsg_driver->type2_hierarchical_weight_sets(), ref_key, incr_key);
   }
 
-  if (same && std_mode) {
-    deltaMomentsIter->second[1] = delta_covar;
-    compDeltaVarIter->second |= 1;
+  if (use_tracker) {
+    primaryDeltaMomIter->second[1] = delta_covar;
+    primaryDeltaVarIter->second |= 1;
   }
   return delta_covar;
 }
@@ -2683,18 +2749,9 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-
-  bool  same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (same && all_mode && (compDeltaVarIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
-    return deltaMomentsIter->second[1];
-
+  bool same = (this == hip_approx_2);
   // Error check for required data
   if ( !expansionCoeffFlag ||
        ( !same && !hip_approx_2->expansionCoeffFlag )) {
@@ -2703,10 +2760,18 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool use_tracker = (same && !data_rep->nonRandomIndices.empty()); // all mode
+  // && data_rep->expConfigOptions.refineStatsType == ACTIVE_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (primaryDeltaVarIter->second & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
+    return primaryDeltaMomIter->second[1];
+
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
-
   Real delta_covar;
   if (product_interpolants())
     delta_covar = delta_covariance(x, expT1CoeffsIter->second,
@@ -2729,9 +2794,9 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
       ref_key, incr_key);
   }
 
-  if (same && all_mode) {
-    deltaMomentsIter->second[1] = delta_covar;
-    compDeltaVarIter->second |= 1; xPrevDeltaVar[key] = x;
+  if (use_tracker) {
+    primaryDeltaMomIter->second[1] = delta_covar;
+    primaryDeltaVarIter->second |= 1; xPrevDeltaVar[key] = x;
   }
   return delta_covar;
 }
@@ -2740,19 +2805,19 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool  same = (this == hip_approx_2),
-    std_mode = data_rep->nonRandomIndices.empty();
-  if (same && std_mode && (compDeltaVarIter->second & 1))
-    return deltaMomentsIter->second[1];
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && data_rep->nonRandomIndices.empty()); // same, std
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  if (use_tracker && (combinedDeltaVarBits & 1))
+    return combinedDeltaMoments[1];
   
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
-  
   // For combined statistics, we utilize the full coefficient maps
   // (expansionType{1,2}Coeffs) for the expected values using ref_key_map,
   // but only require the active coefficients (r1r2_t{1,2}_coeffs and active
@@ -2778,9 +2843,9 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
       ref_key_map, incr_key_map);
   }
 
-  if (same && std_mode) {
-    deltaMomentsIter->second[1] = delta_covar;
-    compDeltaVarIter->second |= 1;
+  if (use_tracker) {
+    combinedDeltaMoments[1] = delta_covar;
+    combinedDeltaVarBits |= 1;
   }
   return delta_covar;
 }
@@ -2790,22 +2855,21 @@ Real HierarchInterpPolyApproximation::
 delta_combined_covariance(const RealVector& x,
 			  PolynomialApproximation* poly_approx_2)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
+  bool same = (this == hip_approx_2),
+    use_tracker = (same && !data_rep->nonRandomIndices.empty()); // same, all
+  // && data_rep->expConfigOptions.refineStatsType == COMBINED_EXPANSION_STATS);
+  const ActiveKey& key = data_rep->activeKey;
+  if (use_tracker && (combinedDeltaVarBits & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevCombDeltaVar))
+    return combinedDeltaMoments[1];
 
-  bool  same = (this == hip_approx_2),
-    all_mode = !data_rep->nonRandomIndices.empty();
-  const UShortArray& key = data_rep->activeKey;
-  if (same && all_mode && (compDeltaVarIter->second & 1) &&
-      data_rep->match_nonrandom_vars(x, xPrevDeltaVar[key]))
-    return deltaMomentsIter->second[1];
-
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  std::map<UShortArray, UShort2DArray> ref_key_map, incr_key_map;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
+  std::map<ActiveKey, UShort2DArray> ref_key_map, incr_key_map;
   hsg_driver->partition_keys(ref_key_map, incr_key_map);
-
   Real delta_covar;
   if (product_interpolants())
     delta_covar = delta_covariance(x, expansionType1Coeffs,
@@ -2828,9 +2892,9 @@ delta_combined_covariance(const RealVector& x,
       data_rep->activeKey, ref_key_map, incr_key_map);
   }
 
-  if (same && all_mode) {
-    deltaMomentsIter->second[1] = delta_covar;
-    compDeltaVarIter->second |= 1; xPrevDeltaVar[key] = x;
+  if (use_tracker) {
+    combinedDeltaMoments[1] = delta_covar;
+    combinedDeltaVarBits |= 1; xPrevCombDeltaVar = x;
   }
   return delta_covar;
 }
@@ -2883,24 +2947,24 @@ delta_covariance(const RealVector2DArray& r1_t1_coeffs,
 
 
 Real HierarchInterpPolyApproximation::
-delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
-		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
-		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
-		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
+delta_covariance(const std::map<ActiveKey, RealVector2DArray>& r1_t1c_map,
+		 const std::map<ActiveKey, RealMatrix2DArray>& r1_t2c_map,
+		 const std::map<ActiveKey, RealVector2DArray>& r2_t1c_map,
+		 const std::map<ActiveKey, RealMatrix2DArray>& r2_t2c_map,
 		 bool same, const RealVector2DArray& r1r2_t1c,
 		 const RealMatrix2DArray& r1r2_t2c,
-		 const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
-		 const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
-		 const UShortArray& active_key,
-		 const std::map<UShortArray, UShort2DArray>& ref_key_map,
-		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
+		 const std::map<ActiveKey, RealVector2DArray>& t1_wts_map,
+		 const std::map<ActiveKey, RealMatrix2DArray>& t2_wts_map,
+		 const ActiveKey& active_key,
+		 const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+		 const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
-  std::map<UShortArray, RealVector2DArray>::const_iterator r1t1_cit
+  std::map<ActiveKey, RealVector2DArray>::const_iterator r1t1_cit
     = r1_t1c_map.find(active_key), t1w_cit = t1_wts_map.find(active_key);
-  std::map<UShortArray, RealMatrix2DArray>::const_iterator r1t2_cit
+  std::map<ActiveKey, RealMatrix2DArray>::const_iterator r1t2_cit
     = r1_t2c_map.find(active_key), t2w_cit = t2_wts_map.find(active_key);
-  std::map<UShortArray, UShort2DArray>::const_iterator
+  std::map<ActiveKey, UShort2DArray>::const_iterator
     //ref_cit = ref_key_map.find(active_key),
     incr_cit = incr_key_map.find(active_key);
   if (r1t1_cit == r1_t1c_map.end() || t1w_cit == t1_wts_map.end() ||
@@ -2931,9 +2995,9 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
   if (same)
     { ref_mean_r2 = ref_mean_r1; delta_mean_r2 = delta_mean_r1; }
   else {
-    std::map<UShortArray, RealVector2DArray>::const_iterator r2t1_cit
+    std::map<ActiveKey, RealVector2DArray>::const_iterator r2t1_cit
       = r2_t1c_map.find(active_key);
-    std::map<UShortArray, RealMatrix2DArray>::const_iterator r2t2_cit
+    std::map<ActiveKey, RealMatrix2DArray>::const_iterator r2t2_cit
       = r2_t2c_map.find(active_key);
     ref_mean_r2 =
       expectation(r2_t1c_map, r2_t2c_map, t1_wts_map, t2_wts_map, ref_key_map);
@@ -3000,28 +3064,28 @@ delta_covariance(const RealVector& x, const RealVector2DArray& r1_t1_coeffs,
 
 Real HierarchInterpPolyApproximation::
 delta_covariance(const RealVector& x,
-		 const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
-		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
-		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
-		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
+		 const std::map<ActiveKey, RealVector2DArray>& r1_t1c_map,
+		 const std::map<ActiveKey, RealMatrix2DArray>& r1_t2c_map,
+		 const std::map<ActiveKey, RealVector2DArray>& r2_t1c_map,
+		 const std::map<ActiveKey, RealMatrix2DArray>& r2_t2c_map,
 		 bool same, const RealVector2DArray& r1r2_t1c,
 		 const RealMatrix2DArray& r1r2_t2c,
-		 const std::map<UShortArray, UShort3DArray>& sm_mi_map,
-		 const std::map<UShortArray, UShort4DArray>& colloc_key_map,
-		 const UShortArray& active_key,
-		 const std::map<UShortArray, UShort2DArray>& ref_key_map,
-		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
+		 const std::map<ActiveKey, UShort3DArray>& sm_mi_map,
+		 const std::map<ActiveKey, UShort4DArray>& colloc_key_map,
+		 const ActiveKey& active_key,
+		 const std::map<ActiveKey, UShort2DArray>& ref_key_map,
+		 const std::map<ActiveKey, UShort2DArray>& incr_key_map)
 {
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
-  std::map<UShortArray, RealVector2DArray>::const_iterator r1t1_cit
+  std::map<ActiveKey, RealVector2DArray>::const_iterator r1t1_cit
     = r1_t1c_map.find(active_key);
-  std::map<UShortArray, RealMatrix2DArray>::const_iterator r1t2_cit
+  std::map<ActiveKey, RealMatrix2DArray>::const_iterator r1t2_cit
     = r1_t2c_map.find(active_key);
-  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit
+  std::map<ActiveKey, UShort3DArray>::const_iterator sm_cit
     = sm_mi_map.find(active_key);
-  std::map<UShortArray, UShort4DArray>::const_iterator ck_cit
+  std::map<ActiveKey, UShort4DArray>::const_iterator ck_cit
     = colloc_key_map.find(active_key);
-  std::map<UShortArray, UShort2DArray>::const_iterator incr_cit
+  std::map<ActiveKey, UShort2DArray>::const_iterator incr_cit
     = incr_key_map.find(active_key);
   if (r1t1_cit == r1_t1c_map.end() || r1t2_cit == r1_t2c_map.end() ||
       sm_cit   == sm_mi_map.end()  || ck_cit   == colloc_key_map.end() ||
@@ -3047,9 +3111,9 @@ delta_covariance(const RealVector& x,
   if (same)
     { ref_mean_r2 = ref_mean_r1; delta_mean_r2 = delta_mean_r1; }
   else {
-    std::map<UShortArray, RealVector2DArray>::const_iterator r2t1_cit
+    std::map<ActiveKey, RealVector2DArray>::const_iterator r2t1_cit
       = r2_t1c_map.find(active_key);
-    std::map<UShortArray, RealMatrix2DArray>::const_iterator r2t2_cit
+    std::map<ActiveKey, RealMatrix2DArray>::const_iterator r2t2_cit
       = r2_t2c_map.find(active_key);
     ref_mean_r2 =
       expectation(x, r2_t1c_map, r2_t2c_map, sm_mi_map, colloc_key_map,
@@ -3082,8 +3146,8 @@ expectation(const RealVector2DArray& t1_coeffs,
 	    const RealMatrix2DArray& t2_coeffs, const RealVector2DArray& t1_wts,
 	    const RealMatrix2DArray& t2_wts, const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   Real integral = 0.;
   size_t lev, set, pt, num_lev = t1_coeffs.size(),
     set_start = 0, set_end, num_tp_pts;
@@ -3145,7 +3209,7 @@ expectation(const RealVector2DArray& t1_coeffs,
   Real integral = 0.;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const RealVector2DArray& t1_wts
     = hsg_driver->type1_hierarchical_weight_sets();
   size_t lev, set, pt, num_lev = t1_coeffs.size(), num_sets,
@@ -3207,17 +3271,17 @@ expectation(const RealVector2DArray& t1_coeffs,
 
 
 Real HierarchInterpPolyApproximation::
-expectation(const std::map<UShortArray, RealVector2DArray>& t1_coeffs_map,
-	    const std::map<UShortArray, RealMatrix2DArray>& t2_coeffs_map,
-	    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
-	    const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
-	    const std::map<UShortArray, UShort2DArray>& set_partition_map)
+expectation(const std::map<ActiveKey, RealVector2DArray>& t1_coeffs_map,
+	    const std::map<ActiveKey, RealMatrix2DArray>& t2_coeffs_map,
+	    const std::map<ActiveKey, RealVector2DArray>& t1_wts_map,
+	    const std::map<ActiveKey, RealMatrix2DArray>& t2_wts_map,
+	    const std::map<ActiveKey, UShort2DArray>& set_partition_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  std::map<UShortArray, RealVector2DArray>::const_iterator t1c_cit, t1w_cit;
-  std::map<UShortArray, RealMatrix2DArray>::const_iterator t2c_cit, t2w_cit;
-  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  std::map<ActiveKey, RealVector2DArray>::const_iterator t1c_cit, t1w_cit;
+  std::map<ActiveKey, RealMatrix2DArray>::const_iterator t2c_cit, t2w_cit;
+  std::map<ActiveKey, UShort2DArray>::const_iterator p_cit;
 
   Real integral = 0.;
   for (t1c_cit = t1_coeffs_map.begin(),      t2c_cit  = t2_coeffs_map.begin(),
@@ -3231,24 +3295,24 @@ expectation(const std::map<UShortArray, RealVector2DArray>& t1_coeffs_map,
 
 
 Real HierarchInterpPolyApproximation::
-expectation(const std::map<UShortArray, std::map<PolynomialApproximation*,
+expectation(const std::map<ActiveKey, std::map<PolynomialApproximation*,
 	      RealVector2DArray> >& prod_t1c_map,
-	    const std::map<UShortArray, std::map<PolynomialApproximation*,
+	    const std::map<ActiveKey, std::map<PolynomialApproximation*,
 	      RealMatrix2DArray> >& prod_t2c_map,
 	    PolynomialApproximation* poly_approx_2,
-	    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
-	    const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
-	    const std::map<UShortArray, UShort2DArray>& set_partition_map)
+	    const std::map<ActiveKey, RealVector2DArray>& t1_wts_map,
+	    const std::map<ActiveKey, RealMatrix2DArray>& t2_wts_map,
+	    const std::map<ActiveKey, UShort2DArray>& set_partition_map)
 {
-  std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >
+  std::map<ActiveKey, std::map<PolynomialApproximation*, RealVector2DArray> >
     ::const_iterator p1c_cit;
-  std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >
+  std::map<ActiveKey, std::map<PolynomialApproximation*, RealMatrix2DArray> >
     ::const_iterator p2c_cit;
   std::map<PolynomialApproximation*, RealVector2DArray>::const_iterator t1c_cit;
   std::map<PolynomialApproximation*, RealMatrix2DArray>::const_iterator t2c_cit;
-  std::map<UShortArray, RealVector2DArray>::const_iterator t1w_cit;
-  std::map<UShortArray, RealMatrix2DArray>::const_iterator t2w_cit;
-  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
+  std::map<ActiveKey, RealVector2DArray>::const_iterator t1w_cit;
+  std::map<ActiveKey, RealMatrix2DArray>::const_iterator t2w_cit;
+  std::map<ActiveKey, UShort2DArray>::const_iterator p_cit;
 
   Real integral = 0.;
   for (p1c_cit = prod_t1c_map.begin(),       p2c_cit  = prod_t2c_map.begin(),
@@ -3269,8 +3333,8 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 	    const RealMatrix2DArray& t2_coeffs, const UShort3DArray& sm_mi,
 	    const UShort4DArray& colloc_key, const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   Real integral = 0.;
   size_t lev, set, pt, num_lev = t1_coeffs.size(), set_start = 0, set_end,
     num_tp_pts;
@@ -3331,17 +3395,17 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 
 Real HierarchInterpPolyApproximation::
 expectation(const RealVector& x,
-	    const std::map<UShortArray, RealVector2DArray>& t1_coeffs_map,
-	    const std::map<UShortArray, RealMatrix2DArray>& t2_coeffs_map,
-	    const std::map<UShortArray, UShort3DArray>& sm_mi_map,
-	    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
-	    const std::map<UShortArray, UShort2DArray>& set_partition_map)
+	    const std::map<ActiveKey, RealVector2DArray>& t1_coeffs_map,
+	    const std::map<ActiveKey, RealMatrix2DArray>& t2_coeffs_map,
+	    const std::map<ActiveKey, UShort3DArray>& sm_mi_map,
+	    const std::map<ActiveKey, UShort4DArray>& colloc_key_map,
+	    const std::map<ActiveKey, UShort2DArray>& set_partition_map)
 {
-  std::map<UShortArray, RealVector2DArray>::const_iterator t1c_cit;
-  std::map<UShortArray, RealMatrix2DArray>::const_iterator t2c_cit;
-  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
-  std::map<UShortArray, UShort4DArray>::const_iterator ck_cit;
-  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
+  std::map<ActiveKey, RealVector2DArray>::const_iterator t1c_cit;
+  std::map<ActiveKey, RealMatrix2DArray>::const_iterator t2c_cit;
+  std::map<ActiveKey, UShort3DArray>::const_iterator sm_cit;
+  std::map<ActiveKey, UShort4DArray>::const_iterator ck_cit;
+  std::map<ActiveKey, UShort2DArray>::const_iterator p_cit;
 
   Real integral = 0.;
   for (t1c_cit = t1_coeffs_map.begin(),     t2c_cit  = t2_coeffs_map.begin(),
@@ -3356,24 +3420,24 @@ expectation(const RealVector& x,
 
 Real HierarchInterpPolyApproximation::
 expectation(const RealVector& x,
-	    const std::map<UShortArray, std::map<PolynomialApproximation*,
+	    const std::map<ActiveKey, std::map<PolynomialApproximation*,
 	      RealVector2DArray> >& prod_t1c_map,
-	    const std::map<UShortArray, std::map<PolynomialApproximation*,
+	    const std::map<ActiveKey, std::map<PolynomialApproximation*,
 	      RealMatrix2DArray> >& prod_t2c_map,
 	    PolynomialApproximation* poly_approx_2,
-	    const std::map<UShortArray, UShort3DArray>& sm_mi_map,
-	    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
-	    const std::map<UShortArray, UShort2DArray>& set_partition_map)
+	    const std::map<ActiveKey, UShort3DArray>& sm_mi_map,
+	    const std::map<ActiveKey, UShort4DArray>& colloc_key_map,
+	    const std::map<ActiveKey, UShort2DArray>& set_partition_map)
 {
-  std::map<UShortArray, std::map<PolynomialApproximation*, RealVector2DArray> >
+  std::map<ActiveKey, std::map<PolynomialApproximation*, RealVector2DArray> >
     ::const_iterator p1c_cit;
-  std::map<UShortArray, std::map<PolynomialApproximation*, RealMatrix2DArray> >
+  std::map<ActiveKey, std::map<PolynomialApproximation*, RealMatrix2DArray> >
     ::const_iterator p2c_cit;
   std::map<PolynomialApproximation*, RealVector2DArray>::const_iterator t1c_cit;
   std::map<PolynomialApproximation*, RealMatrix2DArray>::const_iterator t2c_cit;
-  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
-  std::map<UShortArray, UShort4DArray>::const_iterator ck_cit;
-  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
+  std::map<ActiveKey, UShort3DArray>::const_iterator sm_cit;
+  std::map<ActiveKey, UShort4DArray>::const_iterator ck_cit;
+  std::map<ActiveKey, UShort2DArray>::const_iterator p_cit;
   
   Real integral = 0.;
   for (p1c_cit = prod_t1c_map.begin(),      p2c_cit  = prod_t2c_map.begin(),
@@ -3426,8 +3490,8 @@ expectation_gradient(const RealVector& x,
 		     const UShort3DArray& sm_mi,
 		     const UShort4DArray& colloc_key, size_t t1cg_index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, num_lev = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts;
   const SizetList&  r_ind = data_rep->randomIndices;
   const SizetList& nr_ind = data_rep->nonRandomIndices;
@@ -3459,8 +3523,8 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
 		     const UShort3DArray& sm_mi,
 		     const UShort4DArray& colloc_key, size_t deriv_index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, num_lev = t1_coeffs.size(), set, num_sets, pt, num_tp_pts, v,
     num_v = sharedDataRep->numVars;
   const SizetList&  r_ind = data_rep->randomIndices;
@@ -3508,8 +3572,8 @@ product_interpolant(const SDVArray& sdv_array, const SDRArray& sdr_array_1,
 		    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
 		    const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty(),
@@ -3631,8 +3695,8 @@ product_interpolant(const RealMatrix2DArray& var_sets,
 		    RealVector2DArray& prod_t1c, RealMatrix2DArray& prod_t2c,
 		    const UShort2DArray& set_partition)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, set, pt, num_lev = r1_t1c.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(),
@@ -3740,28 +3804,31 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
 			       const Sizet3DArray&  colloc_index,
 			       RealVector2DArray&   prod_t1c,
 			       RealMatrix2DArray&   prod_t2c,
-			       const UShortArray&   lf_key,
+			       const ActiveKey&     hf_key,
+			       const ActiveKey&     lf_key,
 			       const UShort2DArray& set_partition)
 {
   // Hierarchically interpolate R_1 * R_2 exactly as for R, i.e., hierarch
   // interp of discrepancies in R_1 * R_2 for model indices > first
-  // > For R, the differences are already in modSurrData as computed by
-  //   PolynomialApproximation::response_data_to_discrepancy_data()
+  // > For R, the differences are already in surrData as computed by
+  //   PolynomialApproximation::synchronize_surrogate_data()
   // **********************************************************************
   // > TO DO: carrying delta(R_1 R_2) and delta((R-1-mu_1)(R_2-mu_2))
-  //          within additional modSurrData keys could eliminate need to
+  //          within additional surrData keys could eliminate need to
   //          recompute, but unlike R, all covariance pairs must be tracked.
   // **********************************************************************
   // > only need to integrate terms in incr_key, but need to build up to them
   //   by evaluating all underlying contribs to the hierarchical interpolant
 
+  bool same = (surr_data_1.data_rep() == surr_data_2.data_rep());
   // This case is _not_ modular on SurrogateData instance:
   // it must use surrData to access lower level data
-  const SDVArray& sdv_array      = surr_data_1.variables_data();
-  const SDRArray& hf_sdr_array_1 = surr_data_1.response_data();
-  const SDRArray& hf_sdr_array_2 = surr_data_2.response_data();
+  const SDVArray& sdv_array      = surr_data_1.variables_data(hf_key);
+  const SDRArray& hf_sdr_array_1 = surr_data_1.response_data(hf_key);
+  const SDRArray& hf_sdr_array_2 = (same) ? hf_sdr_array_1 :
+    surr_data_2.response_data(hf_key);
 
-  // Accommodate level 0 --> lf_key is empty
+  // Accommodate level 0 --> lf_key is undefined
   if (lf_key.empty()) {
     product_interpolant(sdv_array, hf_sdr_array_1, hf_sdr_array_2, sm_mi,
 			colloc_key, colloc_index, prod_t1c, prod_t2c,
@@ -3769,21 +3836,18 @@ product_difference_interpolant(const SurrogateData& surr_data_1,
     return;
   }
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(), empty_c_index = colloc_index.empty(),
-    use_derivs = data_rep->basisConfigOptions.useDerivs,
-    same = (surr_data_1.data_rep() == surr_data_2.data_rep());
+    use_derivs = data_rep->basisConfigOptions.useDerivs;
   Real hf_fn1, lf_fn1, hf_fn2, lf_fn2, r1r2_l;
 
   // Support original (R) data for computing increments in R^2
-  std::map<UShortArray, SDRArray>::const_iterator
-    r_cit_1 = surr_data_1.response_data_map().find(lf_key),
-    r_cit_2 = (same) ? r_cit_1 : surr_data_2.response_data_map().find(lf_key);
-  const SDRArray& lf_sdr_array_1 = r_cit_1->second;
-  const SDRArray& lf_sdr_array_2 = r_cit_2->second;
+  const SDRArray& lf_sdr_array_1 = surr_data_1.response_data(lf_key);
+  const SDRArray& lf_sdr_array_2 = (same) ? lf_sdr_array_1 :
+    surr_data_2.response_data(lf_key);
 
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
 
@@ -3942,8 +4006,8 @@ central_product_interpolant(const SDVArray& sdv_array,
 {
   // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
 
   size_t lev, set, pt, num_lev = colloc_key.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
@@ -4059,8 +4123,8 @@ central_product_interpolant(const RealMatrix2DArray& var_sets,
 			    const UShort2DArray& set_partition)
 {
   // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, set, pt, num_lev = r1_t1c.size(), set_start = 0, set_end,
     num_sets, num_tp_pts, v, num_v = sharedDataRep->numVars;
   bool partial = !set_partition.empty(),
@@ -4325,23 +4389,33 @@ central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
 void HierarchInterpPolyApproximation::
 central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   Real mean_1, Real mean_2,
-  std::map<UShortArray, RealVector2DArray>& cov_t1c_map,
-  std::map<UShortArray, RealMatrix2DArray>& cov_t2c_map,
-  const std::map<UShortArray, UShort2DArray>& set_partition_map)
+  std::map<ActiveKey, RealVector2DArray>& cov_t1c_map,
+  std::map<ActiveKey, RealMatrix2DArray>& cov_t2c_map,
+  const std::map<ActiveKey, UShort2DArray>& set_partition_map)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
 
-  std::map<UShortArray, RealVector2DArray>::const_iterator t1c_cit1, t1c_cit2;
-  std::map<UShortArray, RealMatrix2DArray>::const_iterator
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
+
+  std::map<ActiveKey, RealVector2DArray>::const_iterator t1c_cit1, t1c_cit2;
+  std::map<ActiveKey, RealMatrix2DArray>::const_iterator
     t2c_cit1, t2c_cit2, v_cit;
-  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
-  std::map<UShortArray, UShort4DArray>::const_iterator ck_cit;
-  std::map<UShortArray,  Sizet3DArray>::const_iterator ci_cit;
-  std::map<UShortArray, UShort2DArray>::const_iterator p_cit;
-  std::map<UShortArray, SDVArray>::const_iterator sdv_cit;
-  std::map<UShortArray, SDRArray>::const_iterator sdr1_cit, sdr2_cit;
+  std::map<ActiveKey, UShort3DArray>::const_iterator sm_cit;
+  std::map<ActiveKey, UShort4DArray>::const_iterator ck_cit;
+  std::map<ActiveKey,  Sizet3DArray>::const_iterator ci_cit;
+  std::map<ActiveKey, UShort2DArray>::const_iterator p_cit;
+
+  const std::map<ActiveKey, SDVArray>& vars_data_map
+    = surrData.filtered_variables_data_map(REDUCTION_DATA_FILTER);
+  std::map<ActiveKey, SDVArray>::const_iterator sdv_cit
+    = vars_data_map.begin();
+  const std::map<ActiveKey, SDRArray>& resp_data_map1
+    = surrData.filtered_response_data_map(REDUCTION_DATA_FILTER);
+  const std::map<ActiveKey, SDRArray>& resp_data_map2
+    = hip_approx_2->surrData.filtered_response_data_map(REDUCTION_DATA_FILTER);
+  std::map<ActiveKey, SDRArray>::const_iterator
+    sdr1_cit = resp_data_map1.begin(), sdr2_cit = resp_data_map2.begin();
 
   bool same = (this == hip_approx_2),
     track_c_index = hsg_driver->track_collocation_indices();
@@ -4350,9 +4424,6 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
        t1c_cit2  = hip_approx_2->expansionType1Coeffs.begin(),
        t2c_cit1  = expansionType2Coeffs.begin(),
        t2c_cit2  = hip_approx_2->expansionType2Coeffs.begin(),
-       sdv_cit   = modSurrData.variables_data_map().begin(),
-       sdr1_cit  = modSurrData.response_data_map().begin(),
-       sdr2_cit  = hip_approx_2->modSurrData.response_data_map().begin(),
        v_cit     = hsg_driver->variable_sets_map().begin(),
        sm_cit    = hsg_driver->smolyak_multi_index_map().begin(),
        ck_cit    = hsg_driver->collocation_key_map().begin(),
@@ -4361,7 +4432,7 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
        t1c_cit1 != expansionType1Coeffs.end();
        ++t1c_cit1, ++t1c_cit2, ++t2c_cit1, ++t2c_cit2, ++sdv_cit, ++sdr1_cit,
        ++sdr2_cit, ++v_cit, ++sm_cit, ++ck_cit, ++ci_cit, ++p_cit) {
-    const UShortArray& key     = t1c_cit1->first;
+    const ActiveKey& key     = t1c_cit1->first;
     RealVector2DArray& cov_t1c = cov_t1c_map[key]; // update in place
     RealMatrix2DArray& cov_t2c = cov_t2c_map[key]; // update in place
 
@@ -4369,7 +4440,7 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
       central_product_interpolant(v_cit->second, sm_cit->second, ck_cit->second,
 	t1c_cit1->second, t2c_cit1->second, t1c_cit2->second, t2c_cit2->second,
 	same, mean_1, mean_2, cov_t1c, cov_t2c, p_cit->second);
-    else // use modSurrData & colloc_indices for forming central product interp
+    else // use surrData & colloc_indices for forming central product interp
       central_product_interpolant(sdv_cit->second, sdr1_cit->second,
 	sdr2_cit->second, mean_1, mean_2, sm_cit->second, ck_cit->second,
 	ci_cit->second, cov_t1c, cov_t2c, p_cit->second);
@@ -4393,15 +4464,15 @@ integrate_response_moments(size_t num_moments, const UShort3DArray& sm_mi,
     abort_handler(-1);
   }
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, set, pt, num_lev = colloc_key.size(), num_sets, num_tp_pts,
     cntr, c_index, v, num_v = sharedDataRep->numVars;
   int m_index, moment;
   bool empty_c_index = colloc_index.empty(),
     use_derivs = data_rep->basisConfigOptions.useDerivs;
 
-  RealVector& numer_mom = numMomentsIter->second;
+  RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.length() != num_moments)
     numer_mom.sizeUninitialized(num_moments);
   Real& mean = numer_mom[0];
@@ -4527,14 +4598,14 @@ integrate_response_moments(size_t num_moments,
     abort_handler(-1);
   }
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   size_t lev, set, pt, num_lev = colloc_key.size(), num_sets, num_tp_pts,
     v, num_v = sharedDataRep->numVars;
   int m_index, moment;
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
-  RealVector& numer_mom = numMomentsIter->second;
+  RealVector& numer_mom = primaryMomIter->second;
   if (numer_mom.length() != num_moments)
     numer_mom.sizeUninitialized(num_moments);
   Real& mean = numer_mom[0];
@@ -4671,8 +4742,8 @@ integrate_response_moments(size_t num_moments,
 void HierarchInterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   // Compute the partial integral corresponding to set_value
   Real& variance = partialVariance[data_rep->sobolIndexMap[set_value]];
 
@@ -4774,9 +4845,9 @@ member_coefficients_weights(const BitArray& member_bits,
   RealMatrix2DArray& member_t2_coeffs,  RealMatrix2DArray& member_t2_wts,
   UShort4DArray&     member_colloc_key, Sizet3DArray&      member_colloc_index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver = data_rep->hsg_driver();
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
@@ -4856,7 +4927,7 @@ member_coefficients_weights(const BitArray& member_bits,
 	// member dimensions later used in value()/gradient_basis_variables().
 	m_t1_wts_ls[m_index] = member_wt;
 	m_index_ls[m_index]  = (empty_c_index) ? p_cntr++ :
-	  colloc_index[lev][set][pt];   // links back to modSurrData c_vars
+	  colloc_index[lev][set][pt];   // links back to surrData c_vars
 	m_key_ls[m_index]    = key_lsp; // links back to interp polynomials
 
 	// now do the same for the type2 coeffs and weights
@@ -4904,10 +4975,10 @@ central_product_member_coefficients(const BitArray& m_bits,
   // product interpolant (used by compute_partial_variance()).
 
   // while colloc_{key,index} are redefined for member vars, sm_mi is not
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  std::shared_ptr<SharedHierarchInterpPolyApproxData> data_rep =
+    std::static_pointer_cast<SharedHierarchInterpPolyApproxData>(sharedDataRep);
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
-  const SDVArray& sdv_array = modSurrData.variables_data();
+  const SDVArray& sdv_array = surrData.variables_data();
   bool empty_c_index = m_colloc_index.empty();
 
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt, cntr = 0,

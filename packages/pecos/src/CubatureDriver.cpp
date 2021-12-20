@@ -79,8 +79,9 @@ initialize_grid_parameters(const MultivariateDistribution& mv_dist)
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
   short rv_type0 = mv_dist.random_variable_type(0);
-  MarginalsCorrDistribution* mvd_rep
-    = (MarginalsCorrDistribution*)mv_dist.multivar_dist_rep();
+  std::shared_ptr<MarginalsCorrDistribution> mvd_rep =
+    std::static_pointer_cast<MarginalsCorrDistribution>
+    (mv_dist.multivar_dist_rep());
   switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
     err_flag =
@@ -361,8 +362,9 @@ void CubatureDriver::compute_grid()
       --> consistent with monic polynomials (leading coefficient = 1)
       --> GAMMA0 = 1., DELTA0 = -alpha_0, C1 = beta_1
       */
-      NumericGenOrthogPolynomial* poly0_rep
-	= (NumericGenOrthogPolynomial*)poly0.polynomial_rep();
+      std::shared_ptr<NumericGenOrthogPolynomial> poly0_rep =
+	std::static_pointer_cast<NumericGenOrthogPolynomial>
+	(poly0.polynomial_rep());
       const Real& beta1  = poly0_rep->beta_recursion(1); // do order 1 first
       const Real& alpha0 = poly0_rep->alpha_recursion(0);
       webbur::gw_02_xiu(numVars, numPts, 1., -alpha0, beta1, 1., pts, wts);

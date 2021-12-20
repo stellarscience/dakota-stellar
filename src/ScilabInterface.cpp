@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -73,7 +74,7 @@ int ScilabInterface::derived_map_ac(const String& ac_name)
 {
 #ifdef MPI_DEBUG
     Cout << "analysis server " << analysisServerId << " invoking " << ac_name
-         << " within MatlabInterface." << std::endl;
+         << " within ScilabInterface." << std::endl;
 #endif // MPI_DEBUG
 
   int fail_code = scilab_engine_run(ac_name);
@@ -285,7 +286,7 @@ int ScilabInterface::scilab_engine_run(const String& ac_name)
   }
 	  
   /* Create boolean version of ASV.  Rows are fnval, grad, hess; col per fn
-     CAREFUL -- Matlab stores by column */
+     CAREFUL -- Scilab stores by column */
   // directFnASM
   x_tmp = (double *)malloc(sizeof(double) * 3 * numFns); // YC
   // x_tmp = new double[3 * numFns];
@@ -511,7 +512,7 @@ int ScilabInterface::scilab_engine_run(const String& ac_name)
     abort_handler(INTERFACE_ERROR);
   }
 
-  // build up an analysis command to execute in Matlab:
+  // build up an analysis command to execute in Scilab:
   // Dakota = function_name(Dakota[, analysisComponents]);
   analysis_command = "Dakota_out = " + function_name + "(Dakota";
   // append any optional analysis component data as quoted strings
@@ -602,7 +603,7 @@ int ScilabInterface::scilab_engine_run(const String& ac_name)
   }
   
   if( *x_tmp != 0 ) {
-    /* Matlab user indicated failure, don't process */
+    /* Scilab user indicated failure, don't process */
     fail_code = (int) *x_tmp;
   }
   else {

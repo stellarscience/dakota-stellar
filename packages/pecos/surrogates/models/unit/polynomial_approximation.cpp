@@ -91,7 +91,7 @@ int test_polynomial_regression_builder(RegressionType regression_type, Real atol
   // Generate the approximation coefficients using a regression based method
   //     generate at set of samples to build approximation
   OptionsList regression_opts;
-  regression_opts.set("regression_type",SVD_LEAST_SQ_REGRESSION);
+  regression_opts.set("regression_type",regression_type);
   regression_opts.set("num_samples",num_samples);
   regression_opts.set("sample_type","probabilistic_MC");
   RegressionBuilder builder;

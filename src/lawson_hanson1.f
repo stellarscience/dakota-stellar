@@ -1,7 +1,8 @@
 *   _______________________________________________________________________
 *
 *   DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-*   Copyright 2014 Sandia Corporation.
+*   Copyright 2014-2020
+*   National Technology & Engineering Solutions of Sandia, LLC (NTESS).
 *   This software is distributed under the GNU Lesser General Public License.
 *   For more information, see the README file in the top Dakota directory.
 *   _______________________________________________________________________
@@ -842,7 +843,7 @@ c     integer INDEX(N)
 c     double precision A(MDA,N), B(M), W(N), X(N), ZZ(M)   
       integer INDEX(*)  
       double precision A(MDA,*), B(*), W(*), X(*), ZZ(*)   
-      double precision ALPHA, ASAVE, CC, DIFF, DUMMY, FACTOR, RNORM
+      double precision ALPHA, ASAVE, CC, DIFF, DUMMY(1), FACTOR, RNORM
       double precision SM, SS, T, TEMP, TWO, UNORM, UP, WMAX
       double precision ZERO, ZTEST
       parameter(FACTOR = 0.01d0)

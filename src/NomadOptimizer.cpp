@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -41,7 +42,7 @@ NomadOptimizer::NomadOptimizer(ProblemDescDB& problem_db, Model& model):
   randomSeed = probDescDB.get_int("method.random_seed");
           
   // Set Max # of BB Evaluations
-  maxBlackBoxEvals = probDescDB.get_int("method.max_function_evaluations");
+  //maxBlackBoxEvals = probDescDB.get_sizet("method.max_function_evaluations");
           
   // STATS_FILE -- File Output    
   outputFormat = 
@@ -57,7 +58,7 @@ NomadOptimizer::NomadOptimizer(ProblemDescDB& problem_db, Model& model):
   epsilon = probDescDB.get_real("method.function_precision");
 
   // Maximum number of iterations.
-  maxIterations = probDescDB.get_int("method.max_iterations");
+  //maxIterations = probDescDB.get_sizet("method.max_iterations");
           
   // VNS = Variable Neighbor Search, it is used to escape local minima
   // if VNS >0.0, the NOMAD Parameter must be set with a Real number.
@@ -175,7 +176,7 @@ void NomadOptimizer::core_run()
   p.set_UPPER_BOUND(this->upperBound);
      
   // Set Max # of BB Evaluations
-  p.set_MAX_BB_EVAL (maxBlackBoxEvals);
+  p.set_MAX_BB_EVAL(maxFunctionEvals);//(maxBlackBoxEvals);
 
   // DISPLAY_STATS -- Standard Output
   // STATS_FILE -- File Output
@@ -210,13 +211,12 @@ void NomadOptimizer::core_run()
   // VNS = Variable Neighbor Search, it is used to escape local minima
   // if VNS >0.0, the NOMAD Parameter must be set with a Real number.
   if(vns>0.0) {
-    if (vns <= 1.0)
-      p.set_VNS_SEARCH( NOMAD::Double(vns) );
-    else {
+    if (vns > 1.0) {
       Cerr << "\nWarning: variable_neighborhood_search outside acceptable "
 	   << "range of (0,1].\nUsing default value of 0.75.\n\n";
-      p.set_VNS_SEARCH(0.75);
+      vns = 0.75;
     }
+    p.set_VNS_SEARCH(vns);
   }
      
   // Set the History File, which will contain all the evaluations history

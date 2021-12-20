@@ -1,0 +1,15 @@
+diff --git a/trilinos/cmake/tribits/core/package_arch/TribitsGlobalMacros.cmake b/trilinos/cmake/tribits/core/package_arch/TribitsGlobalMacros.cmake
+index 5c224dc..95f627d 100644
+--- a/trilinos/cmake/tribits/core/package_arch/TribitsGlobalMacros.cmake
++++ b/trilinos/cmake/tribits/core/package_arch/TribitsGlobalMacros.cmake
+@@ -3040,8 +3040,8 @@ MACRO(TRIBITS_SETUP_FOR_INSTALLATION)
+   TRIBITS_ADD_PROJECT_EXPORT_FILE_INSTALL_TARGETS()
+ 
+   # Set up for fixing group and permissions after the install
+-  ADD_SUBDIRECTORY("${${PROJECT_NAME}_TRIBITS_DIR}/core/add_install_group_and_perms_fixups"
+-    add_install_group_and_perms_fixups)
++#  ADD_SUBDIRECTORY("${${PROJECT_NAME}_TRIBITS_DIR}/core/add_install_group_and_perms_fixups"
++#    add_install_group_and_perms_fixups)
+ 
+   # Create custom 'install_package_by_package' target
+   TRIBITS_ADD_INSTALL_PACKAGE_BY_PACKAGE_TARGET()

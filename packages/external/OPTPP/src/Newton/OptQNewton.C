@@ -18,7 +18,7 @@
 #endif
 #include <float.h>
 #include "OptQNewton.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "ioformat.h"
 
 #include "Teuchos_SerialSymDenseMatrix.hpp"

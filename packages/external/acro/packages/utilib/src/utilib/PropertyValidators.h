@@ -59,7 +59,7 @@ public:
    {
       Any tmp;
       utilib::TypeManager()->lexical_cast(new_value, tmp, typeid(T));
-      return ! ( tmp.expose<T> < value );
+      return ! ( tmp.expose<T>() < value );
    }
 private:
    T value;
@@ -76,7 +76,7 @@ public:
    {
       Any tmp;
       utilib::TypeManager()->lexical_cast(new_value, tmp, typeid(T));
-      return ! ( value < tmp.expose<T> );
+      return ! ( value < tmp.expose<T>() );
    }
 private:
    T value;
@@ -93,7 +93,7 @@ public:
    {
       Any tmp;
       utilib::TypeManager()->lexical_cast(new_value, tmp, typeid(T));
-      return ! ( upper < tmp.expose<T> || tmp.expose<T>() < lower );
+      return ! ( upper < tmp.expose<T>() || tmp.expose<T>() < lower );
    }
 private:
    T lower;

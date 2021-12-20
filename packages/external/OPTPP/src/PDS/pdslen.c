@@ -10,7 +10,7 @@
 #include <math.h>
 
 #include "pds.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 double pdslen(int ndim, int type, double *s, double scale,
 	      double *work)

@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -34,14 +35,16 @@ extern PRPCache data_pairs;
 Analyzer::Analyzer(ProblemDescDB& problem_db, Model& model):
   Iterator(BaseConstructor(), problem_db), compactMode(true),
   numObjFns(0), numLSqTerms(0), // default: no best data tracking
-  writePrecision(probDescDB.get_int("environment.output_precision"))
+  writePrecision(problem_db.get_int("environment.output_precision"))
 {
   // set_db_list_nodes() is set by a higher context
   iteratedModel = model;
   update_from_model(iteratedModel); // variable/response counts & checks
 
-  // historical default convergence tolerance
-  if (convergenceTol < 0.0) convergenceTol = 1.0e-4;
+  // assign context-specific defaults
+  if (convergenceTol   < 0.) convergenceTol = 1.e-4; // historical default
+  //if (maxIterations    == SZ_MAX) maxIterations    = 100;
+  //if (maxFunctionEvals == SZ_MAX) maxFunctionEvals = 1000;
 
   if (model.primary_fn_type() == OBJECTIVE_FNS)
     numObjFns = model.num_primary_fns();
@@ -49,7 +52,7 @@ Analyzer::Analyzer(ProblemDescDB& problem_db, Model& model):
     numLSqTerms = model.num_primary_fns();
   else if (model.primary_fn_type() != GENERIC_FNS) {
     Cerr << "\nError: Unknown primary function type in Analyzer." << std::endl;
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
   }
   
   if (probDescDB.get_bool("method.variance_based_decomp")) 
@@ -136,7 +139,7 @@ void Analyzer::update_from_model(const Model& model)
   }
 
   if (err_flag)
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
 }
 
 
@@ -194,13 +197,11 @@ void Analyzer::finalize_run()
   // Finalize an initialized mapping.  This will correspond to the first
   // finalize_run() with an uninitialized mapping, such as the inner-iterator
   // in a recursion.
-  if (iteratedModel.mapping_initialized()) {
+  if (!iteratedModel.is_null() && iteratedModel.mapping_initialized()) {
     bool var_size_changed = iteratedModel.finalize_mapping();
     if (var_size_changed)
       /*bool reinit_comms =*/ resize(); // Ignore return value
   }
-
-  Iterator::finalize_run(); // included for completeness
 }
 
 
@@ -220,7 +221,6 @@ evaluate_parameter_sets(Model& model, bool log_resp_flag, bool log_best_flag)
   bool asynch_flag = model.asynch_flag();
 
   if (!asynch_flag && log_resp_flag) allResponses.clear();
-
 
   // Loop over parameter sets and compute responses.  Collect data
   // and track best evaluations based on flags.
@@ -264,10 +264,11 @@ evaluate_parameter_sets(Model& model, bool log_resp_flag, bool log_best_flag)
         for (i=0, r_cit=resp_map.begin(); r_cit!=resp_map.end(); ++i, ++r_cit)
           update_best(allVariables[i], r_cit->first, r_cit->second);
     }
-    if(resultsDB.active()) {
+    if (resultsDB.active()) {
       IntRespMCIter r_cit;
       for(r_cit=resp_map.begin(); r_cit!=resp_map.end(); ++r_cit)
-        archive_model_response(r_cit->second, std::distance(resp_map.begin(), r_cit));
+        archive_model_response(r_cit->second,
+			       std::distance(resp_map.begin(), r_cit));
     }
   }
 }
@@ -363,7 +364,7 @@ void Analyzer::get_vbd_parameter_sets(Model& model, int num_samples)
 {
   if (!compactMode) {
     Cerr << "\nError: get_vbd_parameter_sets requires compactMode.\n";
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
   }
 
   // BMA TODO: This may not be right for all LHS active/inactive
@@ -384,7 +385,7 @@ void Analyzer::get_vbd_parameter_sets(Model& model, int num_samples)
     Cerr << "\nError in Analyzer::variance_based_decomp(): Expected "
 	 << num_samples << " variable samples; received "
 	 << sample_1.numCols() << std::endl;
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
   }
   
   // populate the second num_samples cols of allSamples
@@ -395,7 +396,7 @@ void Analyzer::get_vbd_parameter_sets(Model& model, int num_samples)
     Cerr << "\nError in Analyzer::variance_based_decomp(): Expected "
 	 << num_samples << " variable samples; received "
 	 << sample_2.numCols() << std::endl;
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
   }
 
   // one additional replicate per variable
@@ -432,7 +433,7 @@ void Analyzer::compute_vbd_stats(const int num_samples,
     Cerr << "\nError in Analyzer::compute_vbd_stats: expected "
 	 << num_samples << " responses; received " << resp_samples.size()
 	 << std::endl;
-    abort_handler(-1);
+    abort_handler(METHOD_ERROR);
   }
   
   // BMA: for now copy the data to previous data structure 
@@ -631,8 +632,7 @@ void Analyzer::pre_output()
   TabularIO::write_header_tabular(tabular_file,
 				  iteratedModel.current_variables(), 
 				  iteratedModel.current_response(),
-				  "eval_id",
-				  tabular_format);
+				  "eval_id", "interface", tabular_format);
 
   tabular_file << std::setprecision(write_precision) 
 	       << std::resetiosflags(std::ios::floatfield);
@@ -1052,7 +1052,7 @@ void Analyzer::vary_pattern(bool pattern_flag)
   Cerr << "Error: Analyzer lacking redefinition of virtual vary_pattern() "
        << "function.\n       This analyzer does not support pattern variance."
        << std::endl;
-  abort_handler(-1);
+  abort_handler(METHOD_ERROR);
 }
 
 
@@ -1061,7 +1061,7 @@ void Analyzer::get_parameter_sets(Model& model)
   Cerr << "Error: Analyzer lacking redefinition of virtual get_parameter_sets"
        << "(1) function.\n       This analyzer does not support parameter sets."
        << std::endl;
-  abort_handler(-1);
+  abort_handler(METHOD_ERROR);
 }
 
 void Analyzer::get_parameter_sets(Model& model, const int num_samples, 
@@ -1070,7 +1070,7 @@ void Analyzer::get_parameter_sets(Model& model, const int num_samples,
   Cerr << "Error: Analyzer lacking redefinition of virtual get_parameter_sets"
        << "(3) function.\n       This analyzer does not support parameter sets."
        << std::endl;
-  abort_handler(-1);
+  abort_handler(METHOD_ERROR);
 }
 
 } // namespace Dakota

@@ -35,8 +35,6 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 				    bc_options, growth_rate);
   trackUniqueProdWeights = track_uniq_prod_wts;
 
-  // set a rule-dependent duplicateTol
-  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   //initialize_rule_pointers();
   // set levelGrowthToOrder
@@ -49,8 +47,6 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
 
-  // set a rule-dependent duplicateTol
-  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   //initialize_rule_pointers();
   // set levelGrowthToOrder
@@ -150,6 +146,26 @@ update_smolyak_arrays_aniso(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   UShort2DArray new_sm_mi; IntArray new_sm_coeffs;
   assign_smolyak_arrays(new_sm_mi, new_sm_coeffs);
 
+  size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size();
+  sm_coeffs.assign(num_old, 0); // zero out old prior to updates from new active
+  size_t start = 0, end = num_old;
+  for (i=0; i<num_new; ++i) {
+    UShortArray& new_sm_mi_i = new_sm_mi[i];
+    size_t index = find_index(sm_mi, new_sm_mi_i, start, end);// restrict search
+    if (index == _NPOS) {
+      sm_mi.push_back(new_sm_mi_i);
+      sm_coeffs.push_back(new_sm_coeffs[i]);
+    }
+    else {
+      sm_coeffs[index] = new_sm_coeffs[i];
+      // trim contiguous search range when straightforward to do so
+      // (this minimal performance optimization is easily defeated)
+      if      (index == start) ++start;
+      else if (index == end-1) --end;
+    }
+  }
+
+  /*
   // Assumptions to accelerate increment (relative to simplest option above):
   // > consistent ordering for index sets present in old & new
   // > leading sm_mi index sets that are unmatched at front of new_sm_mi
@@ -171,11 +187,15 @@ update_smolyak_arrays_aniso(UShort2DArray& sm_mi, IntArray& sm_coeffs)
       sm_coeffs[old_index] = new_sm_coeffs[i];
       ++old_index;
     }
-    else { // assumption: sm_mi lacks new_sm_mi index set, not visa versa
+    else {
       sm_mi.push_back(new_sm_mi_i);
       sm_coeffs.push_back(new_sm_coeffs[i]);
     }
   }
+  // Retired 4/19/21: these simplifying assumptions can be violated, e.g. level
+  // 1 isotropic mi {0,0},{1,0},{0,1} w/ coeffs {-1,1,1} incremented to level 2
+  // anisotropic mi {0,0},{2,0},{0,1} w/ same coeffs
+  */
 }
 
 
@@ -759,31 +779,31 @@ void IncrementalSparseGridDriver::clear_inactive()
 {
   CombinedSparseGridDriver::clear_inactive();
 
-  std::map<UShortArray, int>::iterator nu1_it = numUnique1.begin();
-  std::map<UShortArray, int>::iterator nu2_it = numUnique2.begin();
-  std::map<UShortArray, RealVector>::iterator z_it = zVec.begin();
-  std::map<UShortArray, RealVector>::iterator r1_it = r1Vec.begin();
-  std::map<UShortArray, RealVector>::iterator r2_it = r2Vec.begin();
-  std::map<UShortArray, RealMatrix>::iterator a1p_it = a1Points.begin();
-  std::map<UShortArray, RealVector>::iterator a11w_it = a1Type1Weights.begin();
-  std::map<UShortArray, RealMatrix>::iterator a12w_it = a1Type2Weights.begin();
-  std::map<UShortArray, RealMatrix>::iterator a2p_it = a2Points.begin();
-  std::map<UShortArray, RealVector>::iterator a21w_it = a2Type1Weights.begin();
-  std::map<UShortArray, RealMatrix>::iterator a22w_it = a2Type2Weights.begin();
-  std::map<UShortArray, IntArray>::iterator si1_it = sortIndex1.begin();
-  std::map<UShortArray, IntArray>::iterator si2_it = sortIndex2.begin();
-  std::map<UShortArray, IntArray>::iterator us1_it = uniqueSet1.begin();
-  std::map<UShortArray, IntArray>::iterator us2_it = uniqueSet2.begin();
-  std::map<UShortArray, IntArray>::iterator ui1_it = uniqueIndex1.begin();
-  std::map<UShortArray, IntArray>::iterator ui2_it = uniqueIndex2.begin();
-  std::map<UShortArray, BitArray>::iterator iu1_it = isUnique1.begin();
-  std::map<UShortArray, BitArray>::iterator iu2_it = isUnique2.begin();
-  std::map<UShortArray, IntArray>::iterator uim_it = uniqueIndexMapping.begin();
+  std::map<ActiveKey, int>::iterator nu1_it = numUnique1.begin();
+  std::map<ActiveKey, int>::iterator nu2_it = numUnique2.begin();
+  std::map<ActiveKey, RealVector>::iterator z_it = zVec.begin();
+  std::map<ActiveKey, RealVector>::iterator r1_it = r1Vec.begin();
+  std::map<ActiveKey, RealVector>::iterator r2_it = r2Vec.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a1p_it = a1Points.begin();
+  std::map<ActiveKey, RealVector>::iterator a11w_it = a1Type1Weights.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a12w_it = a1Type2Weights.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a2p_it = a2Points.begin();
+  std::map<ActiveKey, RealVector>::iterator a21w_it = a2Type1Weights.begin();
+  std::map<ActiveKey, RealMatrix>::iterator a22w_it = a2Type2Weights.begin();
+  std::map<ActiveKey, IntArray>::iterator si1_it = sortIndex1.begin();
+  std::map<ActiveKey, IntArray>::iterator si2_it = sortIndex2.begin();
+  std::map<ActiveKey, IntArray>::iterator us1_it = uniqueSet1.begin();
+  std::map<ActiveKey, IntArray>::iterator us2_it = uniqueSet2.begin();
+  std::map<ActiveKey, IntArray>::iterator ui1_it = uniqueIndex1.begin();
+  std::map<ActiveKey, IntArray>::iterator ui2_it = uniqueIndex2.begin();
+  std::map<ActiveKey, BitArray>::iterator iu1_it = isUnique1.begin();
+  std::map<ActiveKey, BitArray>::iterator iu2_it = isUnique2.begin();
+  std::map<ActiveKey, IntArray>::iterator uim_it = uniqueIndexMapping.begin();
 
-  std::map<UShortArray, IntArray>::iterator scr_it = smolyakCoeffsRef.begin();
-  std::map<UShortArray, RealVector>::iterator t1r_it
+  std::map<ActiveKey, IntArray>::iterator scr_it = smolyakCoeffsRef.begin();
+  std::map<ActiveKey, RealVector>::iterator t1r_it
     = type1WeightSetsRef.begin();
-  std::map<UShortArray, RealMatrix>::iterator t2r_it
+  std::map<ActiveKey, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
 
   while (a1p_it != a1Points.end())

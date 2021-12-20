@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -57,7 +58,7 @@ public:
   /// alternate constructor
   SurfpackApproximation(const SharedApproxData& shared_data);
   /// destructor
-  ~SurfpackApproximation();
+  ~SurfpackApproximation() { }
 
 protected:
 
@@ -65,17 +66,28 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  int min_coefficients() const;
-  int recommended_coefficients() const;
+  int min_coefficients() const override;
+  int recommended_coefficients() const override;
   //int num_constraints() const; // use default implementation
 
   /// SurfData object will be created from Dakota's SurrogateData,
   /// and the appropriate Surfpack build method will be invoked
-  void build();
+  void build() override;
+
+
+  /// validate imported labels and initialize map if needed
+  void map_variable_labels(const Variables& vars);
 
   /// export the Surpack model to disk or console
-  void export_model(const String& fn_label, const String& export_prefix = "", 
-                    const unsigned short export_format = NO_MODEL_FORMAT);
+  void export_model(const StringArray& var_labels, const String& fn_label,
+		    const String& export_prefix,
+                    const unsigned short export_format) override;
+
+  void
+  export_model(const Variables& vars, const String& fn_label,
+	       const String& export_prefix,
+	       const unsigned short export_format) override;
+
 
   // return #coefficients
   //RealVector approximation_coefficients(bool normalized) const;
@@ -84,50 +96,51 @@ protected:
   //                                bool normalized);
 
   /// Return the value of the Surfpack surface for a given parameter vector x
-  Real value(const Variables& vars);
+  Real value(const Variables& vars) override;
   /// retrieve the approximate function gradient for a given parameter vector x
-  const RealVector& gradient(const Variables& vars);
+  const RealVector& gradient(const Variables& vars) override;
   /// retrieve the approximate function Hessian for a given parameter vector x
-  const RealSymMatrix& hessian(const Variables& vars);
+  const RealSymMatrix& hessian(const Variables& vars) override;
   /// retrieve the variance of the predicted value for a given parameter set x
   /// (KrigingModel only)
-  Real prediction_variance(const Variables& vars);
+  Real prediction_variance(const Variables& vars) override;
     
   /// Return the value of the Surfpack surface for a given parameter vector x
-  Real value(const RealVector& c_vars);
+  Real value(const RealVector& c_vars) override;
   /// retrieve the approximate function gradient for a given parameter vector x
-  const RealVector& gradient(const RealVector& c_vars);
+  const RealVector& gradient(const RealVector& c_vars) override;
   /// retrieve the approximate function Hessian for a given parameter vector x
-  const RealSymMatrix& hessian(const RealVector& c_vars);
+  const RealSymMatrix& hessian(const RealVector& c_vars) override;
   /// retrieve the variance of the predicted value for a given parameter set x
   /// (KrigingModel only)
-  Real prediction_variance(const RealVector& c_vars);
+  Real prediction_variance(const RealVector& c_vars) override;
 
   /// check if the diagnostics are available (true for the Surfpack types)
-  bool diagnostics_available();
+  bool diagnostics_available() override;
   /// retrieve a single diagnostic metric for the diagnostic type specified
   /// on the primary model and data
-  Real diagnostic(const String& metric_type);
+  Real diagnostic(const String& metric_type) override;
   /// retrieve a single diagnostic metric for the diagnostic type specified
-  /// on the given model and data
+  /// on the given model and data - not inherited
   Real diagnostic(const String& metric_type, const SurfpackModel& model,
 		  const SurfData& data);
 
   /// compute and print all requested diagnostics and cross-validation 
-  void primary_diagnostics(int fn_index);
+  void primary_diagnostics(size_t fn_index) override;
   /// compute and print all requested diagnostics for user provided
   /// challenge pts
-  void challenge_diagnostics(int fn_index, const RealMatrix& challenge_points,
-                             const RealVector& challenge_responses);
+  void challenge_diagnostics(size_t fn_index,
+			     const RealMatrix& challenge_points,
+                             const RealVector& challenge_responses) override;
 
   /// compute and return cross-validation for metric_type with num_folds
-  RealArray cv_diagnostic(const StringArray& metric_types, unsigned num_folds);
+  RealArray cv_diagnostic(const StringArray& metric_types, unsigned num_folds) override;
   
   /// compute and print all requested diagnostics for user provided
   /// challenge pts
   RealArray challenge_diagnostic(const StringArray& metric_types,
 			    const RealMatrix& challenge_points,
-                            const RealVector& challenge_responses);
+                            const RealVector& challenge_responses) override;
  
 private:
 
@@ -135,14 +148,20 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// copy from SurrogateData to SurfPoint/SurfData
-  SurfData* surrogates_to_surf_data();
+  /// construct-time only import of serialized surrogate
+  void import_model(const ProblemDescDB& problem_db);
+
+  /// copy from SurrogateData to SurfPoint/SurfData in surfData
+  void surrogates_to_surf_data();
 
   /// set the anchor point (including gradient and hessian if present)
   /// into surf_data
   void add_constraints_to_surfdata(const Pecos::SurrogateDataVars& anchor_vars,
 				   const Pecos::SurrogateDataResp& anchor_resp,
-				   short fail_code, SurfData& surf_data);
+				   short fail_code);
+
+  /// extract active or all view as vector, mapping if needed for import
+  RealArray map_eval_vars(const Variables& vars);
 
   //
   //- Heading: Data
@@ -154,19 +173,21 @@ private:
   //RealVector coefficients;
 
   /// The native Surfpack approximation
-  SurfpackModel* model;
+  std::shared_ptr<SurfpackModel> spModel;
   /// factory for the SurfpackModel instance
-  SurfpackModelFactory* factory;
+  std::shared_ptr<SurfpackModelFactory> spFactory;
   /// The data used to build the approximation, in Surfpack format
-  SurfData* surfData;
+  std::shared_ptr<SurfData> surfData;
 
   // convenience pointer to shared data representation
-  //SharedSurfpackApproxData* sharedSurfDataRep;
+  //std::shared_ptr<SharedSurfpackApproxData> sharedSurfDataRep;
+
+  /// whether model serialized in from disk
+  bool modelIsImported;
 };
 
 
-inline SurfpackApproximation::SurfpackApproximation():
-  surfData(NULL), model(NULL), factory(NULL)//, sharedDataRep(NULL)
+inline SurfpackApproximation::SurfpackApproximation() // : sharedDataRep(NULL)
 { }
 
 

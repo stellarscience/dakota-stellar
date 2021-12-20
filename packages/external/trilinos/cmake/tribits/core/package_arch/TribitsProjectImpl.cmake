@@ -66,6 +66,7 @@ INCLUDE(TribitsIncludeDirectories)
 INCLUDE(TribitsFindPythonInterp)
 INCLUDE(TribitsGlobalMacros)
 INCLUDE(TribitsConfigureCTestCustom)
+INCLUDE(TribitsGenerateResourceSpecFile)
 
 INCLUDE(AdvancedSet)
 INCLUDE(AdvancedOption)
@@ -99,6 +100,10 @@ MACRO(TRIBITS_PROJECT_IMPL)
   # configuration
   TRIBITS_SETUP_BASIC_SYSTEM_VARS()
   TRIBITS_FIND_PYTHON_INTERP()
+  FIND_PACKAGE(Git)
+  IF (NOT "${GIT_VERSION_STRING_OVERRIDE}" STREQUAL "")
+    SET(GIT_VERSION_STRING ${GIT_VERSION_STRING_OVERRIDE}) # For testing!
+  ENDIF()
 
   #
   # A.4) Read in the Project's version file
@@ -245,6 +250,8 @@ MACRO(TRIBITS_PROJECT_IMPL)
   IF (NOT ${PROJECT_NAME}_TRACE_DEPENDENCY_HANDLING_ONLY)
     TRIBITS_REPOSITORY_CONFIGURE_ALL_VERSION_HEADER_FILES(
       ${${PROJECT_NAME}_ALL_REPOSITORIES})
+    TRIBITS_REPOSITORY_CONFIGURE_ALL_VERSION_DATE_FILES(
+      ${${PROJECT_NAME}_ALL_REPOSITORIES})
   ENDIF()
 
   TRIBITS_CONFIGURE_ENABLED_PACKAGES()
@@ -315,7 +322,13 @@ MACRO(TRIBITS_PROJECT_IMPL)
   ENDIF()
 
   #
-  # N) Show final timing and end
+  # N) Generate resource spec file if applicable
+  #
+
+  TRIBITS_GENERATE_CTEST_RESOURCE_SPEC_FILE_PROJECT_LOGIC()
+
+  #
+  # O) Show final timing and end
   #
 
   MESSAGE("")

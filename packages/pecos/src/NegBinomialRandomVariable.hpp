@@ -103,13 +103,13 @@ protected:
   unsigned int numTrials;
 
   /// pointer to the Boost negative_binomial_distribution instance
-  negative_binomial_dist* negBinomialDist;
+  std::unique_ptr<negative_binomial_dist> negBinomialDist;
 };
 
 
 inline NegBinomialRandomVariable::NegBinomialRandomVariable():
   RandomVariable(BaseConstructor()), probPerTrial(1.), numTrials(1),
-  negBinomialDist(NULL)
+  negBinomialDist(new negative_binomial_dist((Real)numTrials, probPerTrial))
 { ranVarType = NEGATIVE_BINOMIAL; }
 
 
@@ -122,7 +122,7 @@ NegBinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
 
 
 inline NegBinomialRandomVariable::~NegBinomialRandomVariable()
-{ if (negBinomialDist) delete negBinomialDist; }
+{ }
 
 
 inline Real NegBinomialRandomVariable::cdf(Real x) const
@@ -235,8 +235,9 @@ inline RealRealPair NegBinomialRandomVariable::distribution_bounds() const
 
 inline void NegBinomialRandomVariable::update_boost()
 {
-  if (negBinomialDist) delete negBinomialDist;
-  negBinomialDist = new negative_binomial_dist((Real)numTrials, probPerTrial);
+  negBinomialDist.reset
+    (new negative_binomial_dist((Real)numTrials, probPerTrial))
+;
 }
 
 

@@ -116,6 +116,8 @@ inline bool process_bounds( TiXmlElement* elt,
                             const Type ninfty, 
                             const Type pinfty )
 {
+  using utilib::operator<<;
+
    typedef boost::bimap<size_t, std::string> labels_t;
 
    bool bounds_flag = false;

@@ -321,18 +321,38 @@ inline void intervals_to_xy_pdf(const RealRealPairRealMap& ci_bpa,
 void int_range_to_xy_pdf(int l_bnd, int u_bnd,
 			 RealArray& x_val, RealArray& y_val);
 
-
 /// histogram bins: pairs are defined from an abscissa in the first field
 /// and a density (not a count) in the second field.  This distinction is
 /// important for unequal bin widths.
 void bins_to_xy_cdf(const RealRealMap& h_bin_prs,
 		    RealArray& x_val, RealArray& y_val);
 
-
 /// LHS "continuous linear" distribution accumulates a CDF with first y=0
 /// and last y=1.
 void intervals_to_xy_cdf(const RealRealPairRealMap& ci_bpa,
 			 RealArray& x_val, RealArray& y_val);
+
+/// helper to accumulate sum of finite samples
+void accumulate_mean(const RealVectorArray& fn_samples, size_t q,
+		     size_t& num_samp, Real& mean);
+/// helper to accumulate sum of finite samples
+void accumulate_mean(const SDRArray& sdr_samples, size_t& num_samp, Real& mean);
+
+/// helper to accumulate sum of finite samples
+void accumulate_variance(const RealVectorArray& fn_samples, Real mean,
+			 size_t q, size_t& num_samp, Real& var);
+/// helper to accumulate sum of finite samples
+void accumulate_variance(const SDRArray& sdr_samples, Real mean,
+			 size_t& num_samp, Real& var);
+
+/// helper to accumulate higher order sums of finite samples
+void accumulate_moments(const RealVectorArray& fn_samples, size_t q,
+			short moments_type, Real* moments);
+/// helper to accumulate gradient sums
+void accumulate_moment_gradients(const RealVectorArray& fn_samples,
+				 const RealMatrixArray& grad_samples,
+				 size_t q, short moments_type, Real mean,
+				 Real mom2, Real* mean_grad, Real* mom2_grad);
 
 } // namespace Pecos
 

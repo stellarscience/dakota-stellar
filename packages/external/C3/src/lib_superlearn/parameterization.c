@@ -154,6 +154,20 @@ void ft_param_free(struct FTparam * ftr)
 }
 
 
+/**********************************************************//**
+    Copy a function-train parameterization
+    
+    \param[in] ftp - parameterized FT
+
+    \returns copied
+***************************************************************/
+struct FTparam * ft_param_copy(struct FTparam * ftp)
+{
+    struct FTparam * copied = ft_param_alloc(ftp->dim, ftp->approx_opts, ftp->params,
+                                             function_train_get_ranks(ftp->ft));
+    return copied;
+}
+
 /***********************************************************//**
     Get a parameter
 
@@ -491,7 +505,7 @@ void ft_param_create_constant(struct FTparam * ftp, double val,
     \param[in]     x       - features
     \param[in]     y       - labels
     \param[in]     perturb - perturbation to zero elements
-
+    \param[in]     seed    - seed to use for random number generation
     \note
     If ranks are < 2 then performs a constant fit at the mean of the data
     Else creates top 2x2 blocks to be a linear least squares fit and sets everything
@@ -499,7 +513,7 @@ void ft_param_create_constant(struct FTparam * ftp, double val,
 ***************************************************************/
 void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
                                  const double * x, const double * y,
-                                 double perturb)
+                                 double perturb, const unsigned int * seed)
 {
 
     // perform LS
@@ -546,6 +560,12 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     
     // free previous parameters
     free(ftp->params); ftp->params = NULL;
+
+    if (seed != NULL){
+        /* printf("fixed seed to %u\n", *seed);         */
+        srand(*seed);
+    }
+
     ftp->params = calloc_double(ftp->nparams);
     for (size_t ii = 0; ii < ftp->nparams; ii++){
         ftp->params[ii] = perturb*(randu()*2.0-1.0);
@@ -622,6 +642,9 @@ void ft_param_create_from_lin_ls(struct FTparam * ftp, size_t N,
     // update the function train
     function_train_update_params(ftp->ft,ftp->params);
 
+    /* fprintf(stdout, "Function train parameters = \n"); */
+    /* dprint(ftp->nparams, ftp->params); */
+    
     function_train_free(const_temp); const_temp = NULL;
     function_train_free(linear_temp); linear_temp = NULL;
     free(a); a = NULL;

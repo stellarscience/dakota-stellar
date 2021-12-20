@@ -90,7 +90,7 @@ private:
   //
 
   /// return driverRep cast to requested derived type
-  HierarchSparseGridDriver* hsg_driver();
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver();
 
   //
   //- Heading: Data
@@ -130,7 +130,8 @@ inline void SharedHierarchInterpPolyApproxData::
 set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
 {
   unsigned short bi_j; UShortArray delta_key;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   for (size_t j=0; j<numVars; ++j) {
     bi_j = basis_index[j];
     if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
@@ -147,7 +148,8 @@ set_new_point(const RealVector& x, const UShortArray& basis_index,
 {
   SizetList::const_iterator cit; size_t j; unsigned short bi_j;
   UShortArray delta_key;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit; bi_j = basis_index[j];
     if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
@@ -183,7 +185,8 @@ tensor_product_max_key(size_t i, unsigned short level_i)
 inline void SharedHierarchInterpPolyApproxData::
 precompute_keys(const UShortArray& basis_index)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
   if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
   UShortUShortPair key_pr;
@@ -197,7 +200,8 @@ precompute_keys(const UShortArray& basis_index)
 inline void SharedHierarchInterpPolyApproxData::
 precompute_keys(const UShortArray& basis_index, const SizetList& subset_indices)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
   if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
   SizetList::const_iterator cit; size_t i; UShortUShortPair key_pr;
@@ -212,7 +216,8 @@ precompute_keys(const UShortArray& basis_index, const SizetList& subset_indices)
 inline void SharedHierarchInterpPolyApproxData::
 precompute_max_keys(const UShortArray& basis_index)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
   for (size_t i=0; i<numVars; ++i)
     tpMaxKeys[i] = hsg_driver->level_to_delta_pair(i, basis_index[i]).second;
@@ -223,7 +228,8 @@ inline void SharedHierarchInterpPolyApproxData::
 precompute_max_keys(const UShortArray& basis_index,
 		    const SizetList& subset_indices)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  std::shared_ptr<HierarchSparseGridDriver> hsg_driver =
+    std::static_pointer_cast<HierarchSparseGridDriver>(driverRep);
   if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
   SizetList::const_iterator cit; size_t i;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
@@ -233,9 +239,9 @@ precompute_max_keys(const UShortArray& basis_index,
 }
 
 
-inline HierarchSparseGridDriver* SharedHierarchInterpPolyApproxData::
-hsg_driver()
-{ return (HierarchSparseGridDriver*)driverRep; }
+inline std::shared_ptr<HierarchSparseGridDriver>
+SharedHierarchInterpPolyApproxData::hsg_driver()
+{ return std::static_pointer_cast<HierarchSparseGridDriver>(driverRep); }
 
 } // namespace Pecos
 

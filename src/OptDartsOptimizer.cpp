@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -42,9 +43,9 @@ OptDartsOptimizer::OptDartsOptimizer(ProblemDescDB& problem_db, Model& model):
      randomSeed = probDescDB.get_int("method.random_seed");
           
      // Set Max # of BB Evaluations
-     maxBlackBoxEvals = probDescDB.get_int("method.max_function_evaluations");
+     //maxBlackBoxEvals = probDescDB.get_sizet("method.max_function_evaluations");
           
-     maxIterations = probDescDB.get_int("method.max_iterations");
+     //maxIterations = probDescDB.get_sizet("method.max_iterations");
      if (methodName == GENIE_OPT_DARTS) 
        use_DIRECT = false;
      else 
@@ -66,7 +67,7 @@ void OptDartsOptimizer::core_run()
     
     size_t num_dim = numTotalVars;
     
-    size_t budget = maxBlackBoxEvals;
+    size_t budget = maxFunctionEvals;//maxBlackBoxEvals;
     
     double* xmin = new double[num_dim];
     double* xmax = new double[num_dim];

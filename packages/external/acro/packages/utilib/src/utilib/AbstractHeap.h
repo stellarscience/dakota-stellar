@@ -30,15 +30,13 @@ namespace utilib {
 template <class T, class KEY, class Compare>
 class AbstractHeap;
 
-}
-
 template <class T, class KEY, class Compare>
 std::ostream& operator<< (std::ostream& os, const utilib::AbstractHeap<T,KEY,Compare>& obj);
 
 template <class T, class KEY, class Compare>
 utilib::PackBuffer& operator<<(utilib::PackBuffer& os, const utilib::AbstractHeap<T,KEY,Compare>& obj);
 
-namespace utilib {
+
 /**
  * Implements an abstract class for defining the core operations of a heap.
  *
@@ -52,9 +50,9 @@ class AbstractHeap
 {
   #if !defined(DOXYGEN)
   #if !defined(UTILIB_NO_MEMBER_TEMPLATE_FRIENDS)
-  friend std::ostream& ::operator<< <T,KEY,Compare>(std::ostream& os, const utilib::AbstractHeap<T,KEY,Compare>& obj);
+  friend std::ostream& operator<< <T,KEY,Compare>(std::ostream& os, const utilib::AbstractHeap<T,KEY,Compare>& obj);
 
-  friend utilib::PackBuffer& ::operator<< <T,KEY,Compare>(utilib::PackBuffer& os, const utilib::AbstractHeap<T,KEY,Compare>& obj);
+  friend utilib::PackBuffer& operator<< <T,KEY,Compare>(utilib::PackBuffer& os, const utilib::AbstractHeap<T,KEY,Compare>& obj);
   #endif
   #endif
 
@@ -370,8 +368,8 @@ AbstractHeap<T,KEY,Compare>::~AbstractHeap()
 template <class T, class KEY, class Compare>
 void AbstractHeap<T,KEY,Compare>::swap(int a,int b) 
 {
-register T* t1 = tree[a];
-register T* t2 = tree[b];
+T* t1 = tree[a];
+T* t2 = tree[b];
 tree[a] = t2;
 tree[b] = t1;
 element(t1)=b;

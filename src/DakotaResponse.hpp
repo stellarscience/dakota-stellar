@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -33,11 +34,16 @@ class ProblemDescDB;
     second (functionHessians) derivatives.  The functions may involve
     objective and constraint functions (optimization data set), least
     squares terms (parameter estimation data set), or generic response
-    functions (uncertainty quantification data set).  For memory
-    efficiency, it employs the "letter-envelope idiom" approach to
-    reference counting and representation sharing (see Coplien
-    "Advanced C++"), for which the base Response class serves as the
-    envelope and one of its derived classes serves as the letter. */
+    functions (uncertainty quantification data set). When field
+    responses are present, the stored response elements are ordered:
+    [primary_scalar, primary_field, nonlinear_inequality,
+    nonlinear_equality].
+
+    For memory efficiency, it employs the "letter-envelope idiom"
+    approach to reference counting and representation sharing (see
+    Coplien "Advanced C++"), for which the base Response class serves
+    as the envelope and one of its derived classes serves as the
+    letter. */
 
 class Response
 {
@@ -95,16 +101,25 @@ public:
   const ActiveSet& active_set() const;
   /// set the active set
   void active_set(const ActiveSet& set);
+
   /// return the active set request vector
   const ShortArray& active_set_request_vector() const;
+  /// return the active set request vector
+  ShortArray& active_set_request_vector();
   /// set the active set request vector and verify consistent number
   /// of response functions
   void active_set_request_vector(const ShortArray& asrv);
+
   /// return the active set derivative vector
   const SizetArray& active_set_derivative_vector() const;
+  /// return the active set derivative vector
+  SizetArray& active_set_derivative_vector();
   /// set the active set derivative vector and reshape
   /// functionGradients/functionHessians if needed
   void active_set_derivative_vector(const SizetArray& asdv);
+
+  // NOTE: Responses are stored:
+  // [primary_scalar, primary_field, nonlinear_inequality, nonlinear_equality]
 
   /// return a function value
   const Real& function_value(size_t i) const;
@@ -121,7 +136,6 @@ public:
   void function_value(const Real& fn_val, size_t i);
   /// set all function values
   void function_values(const RealVector& fn_vals);
-
 
   /// return the i-th function gradient as a const Real*
   const Real* function_gradient(int i) const;
@@ -166,34 +180,33 @@ public:
   /// set all function Hessians
   void function_hessians(const RealSymMatrixArray& fn_hessians);
 
-  /// return const field values
-  RealVector field_values_view(size_t i) const;
-  /// return a "view" of a field value for updating in place
-  RealVector field_values_view(size_t i);
-  /// set a field value
-  void field_values(const RealVector& field_val, size_t i);
-  /// return a "view" of a field value's coordinates
-  RealMatrix field_coords_view(size_t i);
-  /// return a const "view" of a field value's coordinates
-  const RealMatrix field_coords_view(size_t i) const;
-  /// set a field value's coordinates
-  void field_coords(const RealMatrix& field_coords, size_t i);
+  // NOTE: Responses are stored:
+  // [primary_scalar, primary_field, nonlinear_inequality, nonlinear_equality]
 
-  /// return a view of the gradients of each field element
+  /// return the field lengths (from SharedResponseData)
+  const IntVector& field_lengths() const;
+  /// set the field lengths (within SharedResponseData)
+  void field_lengths(const IntVector& field_lens);
+
+  /// return const field values for the i-th field
+  RealVector field_values_view(size_t i) const;
+  /// return a "view" of the i-th field values for updating in place
+  RealVector field_values_view(size_t i);
+  /// set the values for the i-th field
+  void field_values(const RealVector& field_val, size_t i);
+  /// return a view of the gradients of each element of the i-th field
   RealMatrix field_gradients_view(size_t i) const;
-  /// return a view of the hessians of each field element
+  /// return a view of the hessians of each element of the i-th field
   RealSymMatrixArray field_hessians_view(size_t i) const;
 
-  /// return the field lengths from sharedRespData
-  const IntVector& field_lengths() const;
-  /// set the field lengths within sharedRespData
-  void field_lengths(const IntVector& field_lens);
-  /// return the num_coords_per_field from sharedRespData
+  /// return a "view" of the i-th field's coordinates
+  RealMatrix field_coords_view(size_t i);
+  /// return a const "view" of the i-th field's coordinates
+  const RealMatrix field_coords_view(size_t i) const;
+  /// set the i-th field's coordinates
+  void field_coords(const RealMatrix& field_coords, size_t i);
+  /// return the number of coordinates each field has (from SharedResponseData)
   const IntVector& num_coords_per_field() const;
-  /// set the coordinate values per field 
-  void set_coord_values(const RealMatrix& coord_values, const size_t i);
-  /// return the coordinate values per field 
-  const RealMatrix& get_coord_values(const size_t i) const;
 
   /// return the fine-grained (unrolled) response function identifier
   /// strings from sharedRespData
@@ -340,7 +353,7 @@ protected:
   /// Implementation of data copy for Response letters (specialized by
   /// some derived letter types); pulls base class data from
   /// source_resp_rep into the this object.  
-  virtual void copy_rep(Response* source_resp_rep);
+  virtual void copy_rep(std::shared_ptr<Response> source_resp_rep);
 
   //
   //- Heading: Protected data members
@@ -351,7 +364,8 @@ protected:
 
   // An abstract set of functions and their first and second derivatives.
 
-  /// abstract set of response functions
+  /// Abstract set of response functions. Ordered:
+  /// [primary_scalar, primary_field, nonlinear_inequality, nonlinear_equality]
   RealVector functionValues;
   /// first derivatives of the response functions
   /** the gradient vectors (plural) are column vectors in the matrix
@@ -359,7 +373,7 @@ protected:
   RealMatrix functionGradients;
   /// second derivatives of the response functions
   RealSymMatrixArray functionHessians;
-  /// coordinates for the field values
+  /// coordinates (independent vars like x,t) on which field values depend
   IntRealMatrixMap fieldCoords; // not all field have associated coords - RWH
 
   /// copy of the ActiveSet used by the Model to generate a Response instance
@@ -400,17 +414,17 @@ private:
 
 
   /// Used by standard envelope constructor to instantiate a new letter class
-  Response* get_response(short type, const Variables& vars,
-			 const ProblemDescDB& problem_db) const;
+  std::shared_ptr<Response>get_response(short type, const Variables& vars,
+					const ProblemDescDB& problem_db) const;
   /// Used by alternate envelope constructor to instantiate a new letter class
-  Response* get_response(const SharedResponseData& srd,
-			 const ActiveSet& set) const;
+  std::shared_ptr<Response> get_response(const SharedResponseData& srd,
+					 const ActiveSet& set) const;
   /// Used by alternate envelope constructor to instantiate a new letter class
-  Response* get_response(short type, const ActiveSet& set) const;
+  std::shared_ptr<Response> get_response(short type, const ActiveSet& set) const;
   /// Used by copy() to instantiate a new letter class
-  Response* get_response(const SharedResponseData& srd) const;
+  std::shared_ptr<Response> get_response(const SharedResponseData& srd) const;
   /// Used by read functions to instantiate a new letter class
-  Response* get_response(short type) const;
+  std::shared_ptr<Response> get_response(short type) const;
 
   /// read a letter object in annotated format from an std::istream
   void read_annotated_rep(std::istream& s);
@@ -461,9 +475,7 @@ private:
   //
 
   /// pointer to the body (handle-body idiom)
-  Response* responseRep;
-  /// number of handle objects sharing responseRep
-  int referenceCount;
+  std::shared_ptr<Response> responseRep;
 };
 
 
@@ -508,7 +520,7 @@ inline RealVector Response::field_values_view(size_t i) const
   if (responseRep)
     return responseRep->field_values_view(i);
   else {
-    size_t j, cntr = sharedRespData.num_scalar_responses();
+    size_t j, cntr = sharedRespData.num_scalar_primary();
     const IntVector& field_len = sharedRespData.field_lengths();
     for (j=0; j<i; j++)
       cntr += field_len[j];
@@ -522,7 +534,7 @@ inline RealVector Response::field_values_view(size_t i)
   if (responseRep)
     return responseRep->field_values_view(i);
   else {
-    size_t j, cntr = sharedRespData.num_scalar_responses();
+    size_t j, cntr = sharedRespData.num_scalar_primary();
     const IntVector& field_len = sharedRespData.field_lengths();
     for (j=0; j<i; j++)
       cntr += field_len[j];
@@ -586,7 +598,7 @@ inline void Response::field_values(const RealVector& field_vals, size_t i)
     responseRep->field_values(field_vals, i);
   else {
     const IntVector& field_len = sharedRespData.field_lengths();
-    size_t j, cntr = sharedRespData.num_scalar_responses();
+    size_t j, cntr = sharedRespData.num_scalar_primary();
     for (j=0; j<i; j++)
       cntr += field_len[j];
     size_t len_i = field_len[i];
@@ -844,7 +856,21 @@ inline const ShortArray& Response::active_set_request_vector() const
 }
 
 
+inline ShortArray& Response::active_set_request_vector()
+{
+  if (responseRep) return responseRep->responseActiveSet.request_vector();
+  else             return responseActiveSet.request_vector();
+}
+
+
 inline const SizetArray& Response::active_set_derivative_vector() const
+{
+  if (responseRep) return responseRep->responseActiveSet.derivative_vector();
+  else             return responseActiveSet.derivative_vector();
+}
+
+
+inline SizetArray& Response::active_set_derivative_vector()
 {
   if (responseRep) return responseRep->responseActiveSet.derivative_vector();
   else             return responseActiveSet.derivative_vector();
@@ -879,7 +905,7 @@ inline RealMatrix Response::field_gradients_view(size_t i) const
   if (responseRep)
     return responseRep->field_gradients_view(i);
   else {
-    size_t j, cntr = sharedRespData.num_scalar_responses();
+    size_t j, cntr = sharedRespData.num_scalar_primary();
     const IntVector& field_len = sharedRespData.field_lengths();
     for (j=0; j<i; j++)
       cntr += field_len[j];
@@ -897,7 +923,7 @@ inline RealSymMatrixArray Response::field_hessians_view(size_t i) const
   else {
     const IntVector& field_len = sharedRespData.field_lengths();
     size_t j, num_field_hess = field_len[i], 
-      cntr = sharedRespData.num_scalar_responses();;
+      cntr = sharedRespData.num_scalar_primary();;
     for (j=0; j<i; j++)
       cntr += field_len[j];
     RealSymMatrixArray fn_hessians_view(num_field_hess);

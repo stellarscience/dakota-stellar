@@ -23,6 +23,7 @@ namespace Pecos {
 class MultivariateDistribution;
 class ExpansionConfigOptions;
 class BasisConfigOptions;
+class ActiveKey;
 
 
 /// base class for generating N-dimensional grids for numerical evaluation
@@ -79,15 +80,17 @@ public:
 					  const SizetList& reinterp_indices);
 
   /// set key identifying active data set
-  virtual void active_key(const UShortArray& key);
+  virtual void active_key(const ActiveKey& key);
   /// remove all keyed data sets
   virtual void clear_keys();
-
   /// clear inactive grid settings following their usage/combination
   virtual void clear_inactive();
 
+  /// reset the grid state (undo refinements)
+  virtual void reset();
+
   /// return the key of the maximal stored grid state
-  virtual const UShortArray& maximal_grid();
+  virtual const ActiveKey& maximal_grid();
 
   /// combine grid data and points/weights
   virtual void combine_grid();
@@ -105,27 +108,27 @@ public:
   virtual const RealMatrix& type2_weight_sets() const;
   /// return variableSets[key] for TensorProduct/CombinedSparseGrid
   /// (HierarchSparseGridDriver::variableSets is 2DArray)
-  virtual const RealMatrix& variable_sets(const UShortArray& key) const;
+  virtual const RealMatrix& variable_sets(const ActiveKey& key) const;
   /// return type1WeightSets[key] from TensorProduct/CombinedSparseGrid
   /// (HierarchSparseGridDriver::type1WeightSets is 2DArray)
-  virtual const RealVector& type1_weight_sets(const UShortArray& key) const;
+  virtual const RealVector& type1_weight_sets(const ActiveKey& key) const;
   /// return type2WeightSets[key] from TensorProduct/CombinedSparseGrid
   /// (HierarchSparseGridDriver::type2WeightSets is 2DArray)
-  virtual const RealMatrix& type2_weight_sets(const UShortArray& key) const;
+  virtual const RealMatrix& type2_weight_sets(const ActiveKey& key) const;
 
   /// return combinedVarSets for TensorProduct/CombinedSparseGrid
   virtual const RealMatrix& combined_variable_sets() const;
   /// return combinedT1WeightSets for TensorProduct/CombinedSparseGrid
-  virtual const RealVector& combined_type1_weight_sets();
+  virtual const RealVector& combined_type1_weight_sets() const;
   /// return combinedT2WeightSets for TensorProduct/CombinedSparseGrid
-  virtual const RealMatrix& combined_type2_weight_sets();
+  virtual const RealMatrix& combined_type2_weight_sets() const;
 
   //
   //- Heading: Member functions
   //
 
   /// assign letter or replace existing letter with a new one
-  void assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr);
+  void assign_rep(std::shared_ptr<IntegrationDriver> driver_rep);
 
   /// compute variable sets for a tensor-product grid
   void compute_tensor_grid(const UShortArray& quad_order,
@@ -134,9 +137,14 @@ public:
 			   RealMatrix& variable_sets,
 			   UShort2DArray& colloc_key);
 
-  /// update collocPts1D and type{1,2}CollocWts1D
-  void update_1d_collocation_points_weights(const UShortArray& quad_order,
+  /// assign collocPts1D and type{1,2}CollocWts1D for level/order
+  void assign_1d_collocation_points_weights(const UShortArray& quad_order,
 					    const UShortArray& lev_index);
+  /// assign collocPts1D and type{1,2}CollocWts1D for level/order
+  /// for subset variables
+  void assign_1d_collocation_points_weights(const UShortArray& quad_order,
+					    const UShortArray& lev_index,
+					    const SizetList& subset_indices);
 
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
@@ -144,6 +152,9 @@ public:
   std::vector<BasisPolynomial>& polynomial_basis();
   /// set polynomialBasis
   void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
+
+  /// return basisParamUpdates
+  const BitArray& polynomial_basis_parameter_updates() const;
 
   /// set driverMode
   void mode(short driver_mode);
@@ -176,7 +187,7 @@ public:
 
   /// returns driverRep for access to derived class member functions
   /// that are not mapped to the base level
-  IntegrationDriver* driver_rep() const;
+  std::shared_ptr<IntegrationDriver> driver_rep() const;
 
 protected:
 
@@ -201,13 +212,14 @@ protected:
 			   RealMatrix& t2_weight_sets,
 			   UShort2DArray& colloc_key);
 
-  /// update collocPts1D and type{1,2}CollocWts1D for subset variables
-  void update_1d_collocation_points_weights(const UShortArray& quad_order,
-					    const UShortArray& lev_index,
-					    const SizetList& subset_indices);
+  /// resize collocPts1D and type{1,2}CollocWts1D
+  void resize_1d_collocation_points_weights(const UShortArray& lev_index);
   /// update collocPts1D[lev_index][i] and type{1,2}CollocWts1D[lev_index][i]
+  /// using points/weights of order quad_order
   void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 					    unsigned short lev_index);
+  /// clear collocPts1D and type{1,2}CollocWts1D
+  void clear_1d_collocation_points_weights();
 
   //
   //- Heading: Data
@@ -228,6 +240,8 @@ protected:
   /// array of one-dimensional orthogonal polynomials used in
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
+  /// set of flags indicating parameter updates to polynomialBasis
+  BitArray basisParamUpdates;
 
   /// num_levels_per_var x numVars sets of 1D collocation points
   Real3DArray collocPts1D;
@@ -266,16 +280,14 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// driverRep to the appropriate derived type.
-  IntegrationDriver* get_driver(short driver_type);
+  std::shared_ptr<IntegrationDriver> get_driver(short driver_type);
 
   //
   //- Heading: Data members
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  IntegrationDriver* driverRep;
-  /// number of objects sharing driverRep
-  int referenceCount;
+  std::shared_ptr<IntegrationDriver> driverRep;
 };
 
 
@@ -294,6 +306,11 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
   if (driverRep) driverRep->polynomialBasis = poly_basis;
   else           polynomialBasis = poly_basis;
 }
+
+
+inline const BitArray& IntegrationDriver::
+polynomial_basis_parameter_updates() const
+{ return (driverRep) ? driverRep->basisParamUpdates : basisParamUpdates; }
 
 
 inline void IntegrationDriver::mode(short driver_mode)
@@ -319,6 +336,39 @@ type1_collocation_weights_1d() const
 inline const Real3DArray& IntegrationDriver::
 type2_collocation_weights_1d() const
 { return type2CollocWts1D; }
+
+
+/** Don't worry about preserving layout as {update,assign}_1d can manage. */
+inline void IntegrationDriver::clear_1d_collocation_points_weights()
+{ collocPts1D.clear(); type1CollocWts1D.clear(); type2CollocWts1D.clear(); }
+
+
+inline void IntegrationDriver::
+assign_1d_collocation_points_weights(const UShortArray& quad_order,
+				     const UShortArray& lev_index)
+{
+  // resize arrays
+  resize_1d_collocation_points_weights(lev_index);
+  // assign values
+  for (size_t i=0; i<numVars; ++i)
+    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
+}
+
+
+inline void IntegrationDriver::
+assign_1d_collocation_points_weights(const UShortArray& quad_order,
+				     const UShortArray& lev_index,
+				     const SizetList& subset_indices)
+{
+  // resize arrays (all variables for simplicity)
+  resize_1d_collocation_points_weights(lev_index);
+  // assign values for subset variables (for memory efficiency)
+  SizetList::const_iterator cit;  size_t i;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    i = *cit;
+    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
+  }
+}
 
 
 inline const ShortArray& IntegrationDriver::collocation_rules() const
@@ -351,7 +401,7 @@ inline const UShortArray& IntegrationDriver::genz_keister_precision() const
 { return (driverRep) ? driverRep->precGenzKeister : precGenzKeister; }
 
 
-inline IntegrationDriver* IntegrationDriver::driver_rep() const
+inline std::shared_ptr<IntegrationDriver> IntegrationDriver::driver_rep() const
 { return driverRep; }
 
 } // namespace Pecos

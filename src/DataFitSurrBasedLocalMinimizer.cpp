@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -255,7 +256,7 @@ void DataFitSurrBasedLocalMinimizer::build()
 
   // Update graphics for iteration 0 (initial guess).
   if (globalIterCount == 0)
-    parallelLib.output_manager().add_datapoint(trustRegionData.vars_center(),
+    parallelLib.output_manager().add_tabular_data(trustRegionData.vars_center(),
       iteratedModel.truth_model().interface_id(),
       trustRegionData.response_center(CORR_TRUTH_RESPONSE));
 
@@ -406,7 +407,7 @@ void DataFitSurrBasedLocalMinimizer::verify()
   Cout << "\n>>>>> Evaluating approximate solution with actual model.\n";
   // since we're bypassing iteratedModel, iteratedModel.serve()
   // must be in the correct server mode.
-  iteratedModel.component_parallel_mode(TRUTH_MODEL);
+  iteratedModel.component_parallel_mode(TRUTH_MODEL_MODE);
   Model& truth_model = iteratedModel.truth_model();
   truth_model.active_variables(trustRegionData.vars_star());
   // In all cases (including gradient mode), we only need the truth fn
@@ -432,7 +433,7 @@ void DataFitSurrBasedLocalMinimizer::verify()
   // record the iteration results, even if no change in center iterate
   iteratedModel.active_variables(trustRegionData.vars_center());
   OutputManager& output_mgr = parallelLib.output_manager();
-  output_mgr.add_datapoint(trustRegionData.vars_center(),
+  output_mgr.add_tabular_data(trustRegionData.vars_center(),
     truth_model.interface_id(),
     trustRegionData.response_center(CORR_TRUTH_RESPONSE));
 
@@ -515,7 +516,7 @@ void DataFitSurrBasedLocalMinimizer::find_center_truth()
     Cout << "\n>>>>> Evaluating actual model at trust region center.\n";
     // since we're bypassing iteratedModel, iteratedModel.serve()
     // must be in the correct server mode.
-    iteratedModel.component_parallel_mode(TRUTH_MODEL);
+    iteratedModel.component_parallel_mode(TRUTH_MODEL_MODE);
     Model& truth_model = iteratedModel.truth_model();
     truth_model.active_variables(trustRegionData.vars_center());
     if (multiLayerBypassFlag) {

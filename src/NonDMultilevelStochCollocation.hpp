@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -59,11 +60,18 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void initialize_u_space_model();
+  //void initialize_u_space_model();
+
   void core_run();
+
+  int random_seed() const;
+  int first_seed() const;
+
   void assign_specification_sequence();
   void increment_specification_sequence();
+
   //void combined_to_active();
+
   void print_results(std::ostream& s, short results_state = FINAL_RESULTS);
 
 private:
@@ -72,27 +80,27 @@ private:
   //- Heading: Utility functions
   //
 
-  /// verify supported and define default discrepancy emulation mode
-  void assign_discrepancy_mode();
-  /// define the surrogate response mode for a hierarchical model in 
-  /// multilevel/multifidelity expansions
-  void assign_hierarchical_response_mode();
 
   //
   //- Heading: Data
   //
 
-  /// type of sample allocation scheme for discretization levels / model forms
-  /// within multilevel / multifidelity methods
-  short mlmfAllocControl;
-
   /// user request of quadrature order
   UShortArray quadOrderSeqSpec;
   /// user request of sparse grid level
   UShortArray ssgLevelSeqSpec;
-  /// sequence index for quadOrderSeqSpec and ssgLevelSeqSpec
+
+  /// sequence index for {quadOrder,ssgLevel}SeqSpec
   size_t sequenceIndex;
 };
+
+
+inline int NonDMultilevelStochCollocation::random_seed() const
+{ return NonDExpansion::random_seed(sequenceIndex); }
+
+
+inline int NonDMultilevelStochCollocation::first_seed() const
+{ return NonDExpansion::random_seed(0); }
 
 } // namespace Dakota
 

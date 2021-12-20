@@ -2,7 +2,7 @@
 #include <math.h>
 
 #include "pds.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 
 double d_sign_(double *a, double *b)
 {

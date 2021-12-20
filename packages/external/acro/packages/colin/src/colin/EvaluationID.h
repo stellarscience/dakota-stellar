@@ -21,15 +21,16 @@
 #include <acro_config.h>
 #include <colin/QueueManager.h>
 
-// forward declaration of stream output function
-std::ostream& operator<<(std::ostream& os, const colin::EvaluationID& id);
 
 namespace colin
 {
 
+// forward declaration of stream output function
+std::ostream& operator<<(std::ostream& os, const colin::EvaluationID& id);
+
 class EvaluationID
 {
-   friend std::ostream& ::operator<<
+   friend std::ostream& colin::operator<<
       (std::ostream& os, const colin::EvaluationID& id);
 
 public:

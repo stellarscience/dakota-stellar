@@ -18,7 +18,7 @@ DIST_SUBDIRS = src tests docs
 include_HEADERS = include/abbrev_copyright.h		     \
 		  include/Appl_Data.h		include/Appl_Data_NPSOL.h    \
 		  include/BoolVector.h		include/BoundConstraint.h    \
-		  include/cblas.h			     \
+		  include/optpp_blas_wrap.h			             \
 		  include/common.h		include/CompoundConstraint.h \
 		  include/ConstraintBase.h	include/Constraint.h	     \
 		  include/GenSetBase.h		include/GenSetBox2d.h	     \

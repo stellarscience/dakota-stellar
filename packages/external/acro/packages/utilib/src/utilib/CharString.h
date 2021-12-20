@@ -382,8 +382,6 @@ if (len > 0)
   }
 }
 
-} // namespace utilib
-
 /// Out-stream operator for writing the contents of a CharString
 inline std::ostream& operator<<(std::ostream& os, const utilib::CharString& obj)
 { obj.write(os); return(os); }
@@ -402,8 +400,9 @@ inline utilib::UnPackBuffer& operator>>(utilib::UnPackBuffer& is,
                                         utilib::CharString& obj)
 { obj.read(is); return(is); }
 
-namespace utilib {
 DEFINE_FULL_ANY_EXTENSIONS(utilib::CharString);
+
 } // namespace utilib
+
 
 #endif

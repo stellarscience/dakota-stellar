@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -59,13 +60,15 @@ public:
   /// initialize response objects via copy
   void initialize_data(const Variables& vars, const Response& approx_resp,
 		       const Response& truth_resp, bool uncorr = true);
-  /// initialize model forms and discretization levels
-  void initialize_keys(unsigned short approx_form, unsigned short truth_form,
-		       unsigned short approx_level = USHRT_MAX,
-		       unsigned short truth_level  = USHRT_MAX);
-  /// initialize model forms and discretization levels
-  void initialize_keys(const UShortArray& approx_key,
-		       const UShortArray& truth_key);
+
+  /// return pairedKey
+  const Pecos::ActiveKey& paired_key() const;
+  /// assign pairedKey
+  void paired_key(const Pecos::ActiveKey& aggregate_key);
+  /// initialize pairedKey from model forms and discretization levels
+  void paired_key(unsigned short group, unsigned short truth_form,
+		  size_t truth_level,   unsigned short approx_form,
+		  size_t approx_level,  unsigned short reduction);
 
   /// perform several reset operations to restore initialized state
   void reset();
@@ -148,13 +151,13 @@ public:
 		       bool uncorr = true);
   void active_set_star(short request, short response_type, bool uncorr = true);
 
-  unsigned short approx_model_form();
-  unsigned short approx_model_level();
+  unsigned short data_group();
 
   unsigned short truth_model_form();
-  unsigned short truth_model_level();
+  size_t truth_model_level();
 
-  UShortArrayPair model_keys();
+  unsigned short approx_model_form();
+  size_t approx_model_level();
 
   const RealVector& tr_lower_bounds() const;
   Real tr_lower_bound(size_t i) const;
@@ -219,10 +222,8 @@ private:
   /// count reaches softConvLimit, stop SBLM.
   unsigned short softConvCount;
 
-  /// model form and discretization level indices for the approximate model
-  UShortArray approxModelKey;
-  /// model form and discretization level indices for the truth model
-  UShortArray truthModelKey;
+  /// aggregation of {truth,approximation} key data, in that order
+  Pecos::ActiveKey pairedKey;
 
   /// Trust region lower bounds
   RealVector trLowerBounds;
@@ -233,7 +234,7 @@ private:
 
 inline SurrBasedLevelData::SurrBasedLevelData():
   trustRegionFactor(1.), trustRegionStatus(NEW_CENTER | NEW_TR_FACTOR),
-  softConvCount(0)//, approxModelKey(0, _NPOS), truthModelKey(0, _NPOS)
+  softConvCount(0)
 { responseStarTruthCorrected.first = responseCenterTruthCorrected.first = 0; }
 
 
@@ -248,9 +249,23 @@ inline void SurrBasedLevelData::initialize_bounds(size_t num_c_vars)
 }
 
 
+inline const Pecos::ActiveKey& SurrBasedLevelData::paired_key() const
+{ return pairedKey; }
+
+
 inline void SurrBasedLevelData::
-initialize_keys(const UShortArray& approx_key, const UShortArray& truth_key)
-{ approxModelKey = approx_key; truthModelKey = truth_key; }
+paired_key(const Pecos::ActiveKey& aggregate_key)
+{ pairedKey = aggregate_key; } // shared rep
+
+
+inline void SurrBasedLevelData::
+paired_key(unsigned short group, unsigned short truth_form, size_t truth_level,
+	   unsigned short approx_form, size_t approx_level,
+	   unsigned short reduction)
+{
+  pairedKey.form_key(group, truth_form, truth_level, approx_form, approx_level,
+		     reduction);
+}
 
 
 inline unsigned short SurrBasedLevelData::status()
@@ -407,24 +422,24 @@ response_center_pair(IntResponsePair& pair, short corr_response_type)
 { response_center_pair(pair.first, pair.second, corr_response_type); }
 
 
-inline unsigned short SurrBasedLevelData::approx_model_form()
-{ return (approxModelKey.empty()) ? USHRT_MAX : approxModelKey[0]; }
+inline unsigned short SurrBasedLevelData::data_group()
+{ return pairedKey.id(); } // USHRT_MAX if empty key
 
 
 inline unsigned short SurrBasedLevelData::truth_model_form()
-{ return (truthModelKey.empty()) ? USHRT_MAX : truthModelKey[0]; }
+{ return pairedKey.retrieve_model_form(0); } // {d,m}_index=0
 
 
-inline unsigned short SurrBasedLevelData::approx_model_level()
-{ return (approxModelKey.size() > 1) ? approxModelKey.back() : USHRT_MAX; }
+inline size_t SurrBasedLevelData::truth_model_level()
+{ return pairedKey.retrieve_resolution_level(0); } // {d,hp}_index=0
 
 
-inline unsigned short SurrBasedLevelData::truth_model_level()
-{ return (truthModelKey.size() > 1) ? truthModelKey.back() : USHRT_MAX; }
+inline unsigned short SurrBasedLevelData::approx_model_form()
+{ return pairedKey.retrieve_model_form(1); } // d_index=1,m_index=0
 
 
-inline UShortArrayPair SurrBasedLevelData::model_keys()
-{ return std::make_pair(approxModelKey, truthModelKey); }
+inline size_t SurrBasedLevelData::approx_model_level()
+{ return pairedKey.retrieve_resolution_level(1); } // d_index=1,hp_index=0
 
 
 inline void SurrBasedLevelData::reset_filter()

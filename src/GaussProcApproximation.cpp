@@ -1,7 +1,8 @@
 /*  _______________________________________________________________________
 
     DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright 2014 Sandia Corporation.
+    Copyright 2014-2020
+    National Technology & Engineering Solutions of Sandia, LLC (NTESS).
     This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -175,7 +176,7 @@ int GaussProcApproximation::min_coefficients() const
 
 
 //int GaussProcApproximation::num_constraints() const
-//{ return (surrogate_data().anchor()) ? 1 : 0; }
+//{ return (approxData.anchor()) ? 1 : 0; }
 
 
 void GaussProcApproximation::build()
@@ -184,16 +185,15 @@ void GaussProcApproximation::build()
   Approximation::build();
 
   size_t i, j, num_v = sharedDataRep->numVars;
-  const Pecos::SurrogateData& approx_data = surrogate_data();
-  numObs = approx_data.points();
+  numObs = approxData.points();
 
   // Transfer the training data to the Teuchos arrays used by the GP
   trainPoints.shapeUninitialized(numObs, num_v);
   trainValues.shapeUninitialized(numObs, 1);
 
   // process currentPoints
-  const Pecos::SDVArray& sdv_array = approx_data.variables_data();
-  const Pecos::SDRArray& sdr_array = approx_data.response_data();
+  const Pecos::SDVArray& sdv_array = approxData.variables_data();
+  const Pecos::SDRArray& sdr_array = approxData.response_data();
   for (i=0; i<numObs; ++i) {
     const RealVector& c_vars = sdv_array[i].continuous_variables();
     for (j=0; j<num_v; j++)
@@ -386,10 +386,9 @@ void GaussProcApproximation::optimize_theta_global()
 #ifdef HAVE_NCSU  
   // NCSU DIRECT optimize of Negative Log Likelihood
   // Uses default convergence tolerance settings in NCSUOptimizer wrapper!
-  int max_iterations = 1000, max_fn_evals = 10000;
-  nll_optimizer.assign_rep(
-    new NCSUOptimizer(theta_lbnds,theta_ubnds,max_iterations,max_fn_evals,
-		      negloglikNCSU),false);
+  size_t max_iter = 1000, max_eval = 10000;
+  nll_optimizer.assign_rep(std::make_shared<NCSUOptimizer>
+    (theta_lbnds, theta_ubnds, max_iter, max_eval, negloglikNCSU));
   nll_optimizer.run(); // no pl_iter needed for this optimization
   const Variables& vars_star = nll_optimizer.variables_results();
   const Response&  resp_star = nll_optimizer.response_results();
@@ -805,7 +804,12 @@ void GaussProcApproximation::optimize_theta_multipoint()
   // bounds for non-log transformation - ie, no exp(theta)
   //RealVector theta_lbnds(num_v,1.e-5), theta_ubnds(num_v,150.);
   // bounds for log transformation of correlation parameters
-  RealVector theta_lbnds(num_v,-9.), theta_ubnds(num_v,5.);
+  // BMA: This is a bug and would have been initializing vectors all to 0
+  // May have to tackle in another pass
+  //RealVector theta_lbnds(num_v,-9.), theta_ubnds(num_v,5.);
+  RealVector theta_lbnds(num_v), theta_ubnds(num_v);
+  theta_lbnds = -9.;
+  theta_ubnds = 5.;
   RealMatrix lin_ineq_coeffs, lin_eq_coeffs;
   RealVector lin_ineq_lower_bnds, lin_ineq_upper_bnds, lin_eq_targets,
     nln_ineq_lower_bnds, nln_ineq_upper_bnds, nln_eq_targets; 
@@ -822,12 +826,12 @@ void GaussProcApproximation::optimize_theta_multipoint()
   for (i=0; i<3; i++) {
     for (j=0; j<num_v; j++)
       thetaParams[j] = THETA_INIT_STARTS[i];
-    nll_optimizer.assign_rep(
-      new SNLLOptimizer(
+    nll_optimizer.assign_rep
+      (std::make_shared<SNLLOptimizer>(
         thetaParams, theta_lbnds, theta_ubnds, lin_ineq_coeffs,
 	lin_ineq_lower_bnds, lin_ineq_lower_bnds, lin_eq_coeffs,
 	lin_eq_targets, nln_ineq_lower_bnds, nln_ineq_upper_bnds,
-	nln_eq_targets, negloglik, constraint_eval), false);
+	nln_eq_targets, negloglik, constraint_eval));
     nll_optimizer.run(); // no pl_iter needed for this optimization
     const Variables& vars_star = nll_optimizer.variables_results();
     const Response&  resp_star = nll_optimizer.response_results();

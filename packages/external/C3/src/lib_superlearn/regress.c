@@ -49,6 +49,7 @@
 #include "lib_optimization.h"
 #include "regress.h"
 #include "objective_functions.h"
+#include "superlearn_util.h"
 
 
 /** \struct FTRegress
@@ -84,6 +85,8 @@ struct FTRegress
     size_t kfold;
     int finalize;
     int opt_restricted;
+
+    unsigned int seed;
 
 };
 
@@ -456,7 +459,6 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
                       size_t N, const double * x, const double * y)
 {
 
-
     enum FTPARAM_ST structure = ft_param_extract_structure(ftp);
     struct SLMemManager * mem = sl_mem_manager_alloc(ftp->dim,N,ftp->nparams,structure);
     sl_mem_manager_check_structure(mem,ftp,x);
@@ -480,7 +482,11 @@ c3_regression_run_aio(struct FTparam * ftp, struct RegressOpts * ropts,
     slp.mem = mem;
     slp.nparams = nparams;
     int res = slp_solve(&slp,guess);
-    assert (res == 0);
+    if (res != 0){
+        fprintf(stderr, "Failure to run slp_solve in c3_regression_run_aio\n");
+        exit(1);
+    }
+    /* assert (res == 0); */
 
     double val = slp_get_minimum(&slp);
     
@@ -594,7 +600,11 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             function_train_core_get_params(ftp->ft,ii,guess);
             
             int res = slp_solve(&slp,guess);
-            assert (res == 0);
+            if (res != 0){
+                fprintf(stderr, "Failure to run slp_solve in c3_regression_run_als\n");
+                exit(1);
+            }
+            /* assert (res == 0); */
             double val = slp_get_minimum(&slp);
             if (stored_fvals != NULL){
                 for (size_t zz = 0; zz < c3opt_get_niters(optimizer); zz++){
@@ -669,7 +679,11 @@ c3_regression_run_als(struct FTparam * ftp, struct RegressOpts * ropts, struct c
             double * guess = calloc_double(ftp->nparams_per_core[ii]);
             function_train_core_get_params(ftp->ft,ii,guess);
             int res = slp_solve(&slp,guess);
-            assert (res == 0);
+            if (res != 0){
+                fprintf(stderr, "Failure to run slp_solve in c3_regression_run_als\n");
+                exit(1);
+            }
+            /* assert (res == 0); */
             double val = slp_get_minimum(&slp);
             if (stored_fvals != NULL){
                 for (size_t zz = 0; zz < c3opt_get_niters(optimizer); zz++){
@@ -831,7 +845,25 @@ ft_regress_alloc(size_t dim, struct MultiApproxOpts * aopts, size_t * ranks)
     ftr->finalize = 1;
     ftr->opt_restricted = 0;
 
+
+    ftr->seed = time(NULL);
     return ftr;
+}
+
+
+
+/***********************************************************//**
+    Set a seed for random number generation
+    
+    \param[in] ftr  - regression structure
+    \param[in] seed - random number seed
+
+***************************************************************/
+void ft_regress_set_seed(struct FTRegress * ftr, unsigned int seed)
+{
+    assert (ftr != NULL);
+    assert (ftr->regopts != NULL);
+    ftr->seed = seed;
 }
 
 /***********************************************************//**
@@ -1177,7 +1209,11 @@ double ft_regress_get_stored_fvals(const struct FTRegress * opts, size_t index)
 {
     assert (opts != NULL);
     size_t nepochs = regress_opts_get_nepochs(opts->regopts);
-    assert (index < nepochs);
+    if (index >= nepochs){
+        fprintf(stderr, "Asking for stored value beyond storage capacity\n");
+        exit(1);
+    }
+    /* assert (index < nepochs); */
     double * fvals = regress_opts_get_stored_fvals(opts->regopts);
     return fvals[index];
 }
@@ -1200,14 +1236,18 @@ ft_regress_run(struct FTRegress * ftr, struct c3Opt * optimizer,
     assert (ftr != NULL);
     assert (ftr->ftp != NULL);
     assert (ftr->regopts != NULL);
+
+    /* printf("seed = %d\n", ftr->seed); */
+    /* srand(ftr->seed); */
     double param_norm = cblas_ddot(ftr->ftp->nparams,ftr->ftp->params,1,ftr->ftp->params,1);
+    /* printf("param_norm = %3.15E\n", param_norm); */
     if (fabs(param_norm) <= 1e-15){
         /* double yavg = 0.0; for (size_t ii = 0; ii < N; ii++){ yavg += y[ii];} */
         /* yavg /= (double) N; */
 
         /* size_t dim = ftr->dim; */
         /* ft_param_create_from_lin_ls(ftr->ftp,N,x,y,pow(1e-3, 1.0/dim)); */
-        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-2);
+        ft_param_create_from_lin_ls(ftr->ftp,N,x,y,1e-2, &(ftr->seed));
 
         
         /* ft_param_create_from_constant */
@@ -1304,6 +1344,14 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
         if (ftr->regopts->verbose > 0){
             printf("Rounded ranks: "); iprint_sz(ftr->dim+1,ftr_ranks);
         }
+
+        int allmax = 1;
+        for (size_t ii = 1; ii < ft->dim;ii++){
+            if (ranks[ii] < maxrank){
+                allmax = 0;                
+                break;
+            }
+        }
         
         kicked = 0;
 
@@ -1318,13 +1366,7 @@ ft_regress_run_rankadapt(struct FTRegress * ftr,
             }
         }
 
-        int allmax = 1;
-        for (size_t ii = 1; ii < ft->dim;ii++){
-            if (ranks[ii] < maxrank){
-                allmax = 0;                
-                break;
-            }
-        }
+
 
         /* printf("kicked == %zu\n",kicked); */
         if ((kicked == 0) || (allmax == 1)){
@@ -1573,9 +1615,10 @@ double cross_validate_run(struct CrossValidate * cv,
     double norm = 0.0;
 
     // keep the same starting parameters for each cv;
-    double * params = calloc_double(reg->ftp->nparams);
-    memmove(params,reg->ftp->params, reg->ftp->nparams * sizeof(double));
+    struct FTparam * ftp_original = ft_param_copy(reg->ftp);
+    ft_param_free(reg->ftp); reg->ftp = NULL;
     for (size_t ii = 0; ii < cv->kfold; ii++){
+        reg->ftp = ft_param_copy(ftp_original);
 
         if (ii == cv->kfold-1){
             batch = cv->N - start_num;
@@ -1624,8 +1667,10 @@ double cross_validate_run(struct CrossValidate * cv,
         start_num += batch;
 
         // reset parameters
-        ft_regress_update_params(reg,params);
+        ft_param_free(reg->ftp); reg->ftp = NULL;
+        reg->ftp = ftp_original;
     }
+
     if (cv->verbose > 1){
         printf("\t CV Err = %G, norm  = %G, relative_err = %G\n",erri/cv->N,norm/cv->N,erri/norm);
     }
@@ -1636,7 +1681,7 @@ double cross_validate_run(struct CrossValidate * cv,
     free(ytrain); ytrain = NULL;
     free(xtest); xtest = NULL;
     free(ytest); ytest = NULL;
-    free(params); params = NULL;
+    
 
     return err;
 }

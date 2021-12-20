@@ -1,6 +1,6 @@
 #include "NLP.h"
 #include "dims.h"
-#include "cblas.h"
+#include "optpp_blas_wrap.h"
 #include "pds.h"
 
 using NEWMAT::ColumnVector;

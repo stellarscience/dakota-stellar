@@ -1,3 +1,12 @@
+#  _______________________________________________________________________
+#
+#  DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
+#  Copyright 2014-2020
+#  National Technology & Engineering Solutions of Sandia, LLC (NTESS).
+#  This software is distributed under the GNU Lesser General Public License.
+#  For more information, see the README file in the top Dakota directory.
+#  _______________________________________________________________________
+
 install(PROGRAMS "dprepro.perl" DESTINATION "bin")
 # dakota.bat is useful in both native and Cygwin due to command prompt usage
 add_subdirectory("pyprepro")
@@ -7,6 +16,7 @@ endif()
 # dakota.sh is useful for all except native windows builds
 if(NOT MSVC)
   install(PROGRAMS "dakota.sh" DESTINATION "bin")
+  install(PROGRAMS "dakota-ui.sh" DESTINATION "bin")
 endif()
 
 

@@ -903,9 +903,6 @@ DEFINE_DEFAULT_ANY_COMPARATOR(Privileged_Property);
 DEFINE_DEFAULT_ANY_READER(Property);
 DEFINE_DEFAULT_ANY_READER(Privileged_Property);
 
-} // namespace utilib
-
-
 
 /// Method for printing out the value of properties
 std::ostream& operator<<(std::ostream& os, 
@@ -913,6 +910,8 @@ std::ostream& operator<<(std::ostream& os,
 
 /// Method for reading into properties
 std::istream& operator>>( std::istream& is, utilib::Property& property );
+
+} // namespace utilib
 
 
 
