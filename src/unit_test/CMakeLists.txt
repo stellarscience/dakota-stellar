@@ -206,7 +206,16 @@ if(DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS)
 
 endif() # DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS
 
-
+# Stellar Science addition - start
+# libc < 2.17 requires linking against librt for the following libraries
+find_library(LIBRT rt)
+if(LIBRT)
+  target_link_libraries(bootstrap_util_test ${LIBRT})
+  target_link_libraries(min_unit_test ${LIBRT})
+  target_link_libraries(auto_unit_test ${LIBRT})
+  target_link_libraries(test_field_covariance_utils ${LIBRT})
+endif()
+# Stellar Science addition - end
 
 # Add a single target for all copied files
 add_custom_target(dakota_unit_test_files ALL

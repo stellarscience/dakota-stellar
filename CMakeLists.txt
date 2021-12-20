@@ -360,7 +360,7 @@ if(WIN32)
   set(Boost_USE_STATIC_LIBS TRUE)
 endif()
 # Dakota requires Boost 1.49 or newer; enforce for all libs in the build
-find_package(Boost 1.49 REQUIRED COMPONENTS "${dakota_boost_components}")
+find_package(Boost 1.49 REQUIRED COMPONENTS ${dakota_boost_components})
 # This cache variable is used to package the Boost liraries on Darwin (see
 # cmake/InstallDarwinDylibs.cmake). The variable Boost_LIBRARY_DIRS is set
 # in this scope by the CMake Boost probe (at least for CMake 3.5.2), but
