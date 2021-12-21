@@ -324,6 +324,17 @@ void SysCallApplicInterface::spawn_evaluation_to_shell(bool block_flag)
     if (commandLineArgs)  {
         shell << " " << params_file << " " << results_file;
     }
+
+    // Stellar Science - start
+    // Pass an extra argument to the analysis driver indicating whether
+    // or not it should execute in blocking or non-blocking mode.
+    if (block_flag) {
+      shell << " 1";
+    } else {
+      shell << " 0";
+    }
+    // Stellar Science - end
+
     if (i != num_programs-1) {
       shell << "; ";
     }
