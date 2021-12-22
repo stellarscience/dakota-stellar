@@ -1,0 +1,13 @@
+Stellar Science modifications are distributed under the same license as Dakota (GNU LGPL 2.1).
+[Stellar internal: see <Galaxy-Wiki>/Dakota_for_Galaxy#Licensing-of-Stellar-developed-Patches]
+
+Branch Descriptions
+* <version>/driver-blocking-flag: modifications to pass the blocking mode to the analysis drivers
+* vendor: tracks public releases of Sandia's Dakota software
+* build-fixes-for-vendor-branch: modifications that were needed to compile the vendor branch on various platforms
+* master: tracks the Dakota version that is compatible with the current version of Stellar Science Galaxy, and includes Stellar-developed patches
+
+Users of Stellar Science Galaxy should check out the master branch and build a non-MPI Dakota,
+following the instructions in the INSTALL file.  Take note of the following:
+* Ensure that the following packages are installed before running CMake: blas, blas-devel, lapack, lapack-devel, boost, boost-devel, gcc, gfortran.
+* In BuildDakotaCustom.cmake, set DAKOTA_HAVE_MPI to OFF, and give an appropriate value to CMAKE_INSTALL_PREFIX.
